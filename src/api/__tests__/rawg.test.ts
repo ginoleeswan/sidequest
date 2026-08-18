@@ -61,3 +61,21 @@ describe('rawg client', () => {
     await expect(getGame(1)).rejects.toThrow(/EXPO_PUBLIC_RAWG_API_KEY/);
   });
 });
+
+describe('api key hygiene', () => {
+  it('strips whitespace pasted into the env var', async () => {
+    process.env.EXPO_PUBLIC_RAWG_API_KEY = '  abc123\n\n';
+    const spy = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      json: async () => ({}),
+    });
+    global.fetch = spy as unknown as typeof fetch;
+    await getGame(1);
+    const url = new URL(
+      (spy.mock.calls[0][0] as string).replace(/^\/rawg/, 'https://x/rawg')
+    );
+    expect(url.searchParams.get('key')).toBe('abc123');
+  });
+});

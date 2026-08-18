@@ -30,7 +30,9 @@ export function mediaUri(uri: string | null | undefined): string | undefined {
 
 /** Read lazily: reading at module scope couples import order to env setup. */
 function apiKey(): string {
-  const key = process.env.EXPO_PUBLIC_RAWG_API_KEY;
+  // Trim: keys pasted into a hosting dashboard routinely carry a trailing
+  // newline, which URLSearchParams encodes as %0A and RAWG rejects.
+  const key = process.env.EXPO_PUBLIC_RAWG_API_KEY?.trim();
   if (!key) {
     throw new Error(
       'EXPO_PUBLIC_RAWG_API_KEY is not set — copy .env.example to .env'

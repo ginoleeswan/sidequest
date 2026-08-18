@@ -308,13 +308,15 @@ export default function GameInfoScreen() {
 
   return (
     <Textured style={styles.background}>
-      <SafeAreaView edges={['right', 'left']} style={styles.container}>
+      <View style={styles.container}>
         <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
           <BackButton />
         </View>
 
         <ScrollView
-          contentContainerStyle={{ paddingBottom: 60 + insets.bottom }}
+          // Generous tail: the last content clears iOS Safari's floating
+          // toolbar, and the page scrolls beneath it rather than stopping.
+          contentContainerStyle={{ paddingBottom: insets.bottom + 140 }}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.heroCompact}>{heroContent}</View>
@@ -328,7 +330,7 @@ export default function GameInfoScreen() {
         </ScrollView>
 
         <Lightbox uri={lightboxUri} onClose={() => setLightboxUri(null)} />
-      </SafeAreaView>
+      </View>
     </Textured>
   );
 }

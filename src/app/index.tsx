@@ -1,4 +1,5 @@
 import { useQueries, useQuery } from '@tanstack/react-query';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef, useState } from 'react';
 import {
   FlatList,
@@ -79,6 +80,8 @@ export default function HomeScreen() {
   const { isExpanded, columns } = useBreakpoint();
   const insets = useSafeAreaInsets();
   const searchRef = useRef<TextInput | null>(null);
+  // Measured so the list can reserve exactly the floating header's height.
+  const [headerHeight, setHeaderHeight] = useState(132);
 
   // "/" focuses search, Escape clears it — desktop table stakes.
   useEffect(() => {
@@ -250,84 +253,101 @@ export default function HomeScreen() {
 
   return (
     <Textured style={styles.background}>
-      <SafeAreaView style={styles.container} edges={['right', 'top', 'left']}>
-        <View style={styles.compactShell}>
-          <View style={styles.header}>
-            <View style={styles.titleRow}>
-              <Text style={styles.wordmark}>SIDEQUEST</Text>
-              <SearchInput
-                value={query}
-                onChangeText={setQuery}
-                style={styles.searchCompact}
-              />
+      <View style={styles.compactShell}>
+        {status ??
+          (isPending ? (
+            <View style={{ paddingTop: headerHeight }}>
+              <SkeletonCompactHome />
             </View>
+          ) : (
             <FlatList
-              data={CATEGORIES}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(item) => item.key}
-              renderItem={({ item }) => (
-                <Chip
-                  title={item.title}
-                  selected={!searching && category.key === item.key}
-                  iconName={item.iconName}
-                  iconType={item.iconType}
-                  onPress={() => selectCategory(item)}
-                />
-              )}
-              contentContainerStyle={styles.chips}
+              data={listed}
+              keyExtractor={(item) => String(item.id)}
+              renderItem={({ item }) => <GameInfoCard game={item} />}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              showsVerticalScrollIndicator={false}
+              refreshControl={refresh}
+              // Header floats above; reserve its height so nothing starts hidden.
+              contentContainerStyle={[
+                styles.list,
+                {
+                  paddingTop: headerHeight,
+                  // Generous tail so the last row clears iOS Safari's
+                  // floating toolbar and content flows beneath it.
+                  paddingBottom: insets.bottom + SPACING.xl * 4,
+                },
+              ]}
+              ListHeaderComponent={
+                <View>
+                  {featured.length > 0 && (
+                    <View style={styles.carouselBleed}>
+                      <Rail
+                        data={featured}
+                        keyExtractor={(item) => String(item.id)}
+                        renderItem={(item) => <GameCard game={item} wide />}
+                        inset={SPACING.md}
+                        gap={SPACING.md}
+                        snapInterval={LAYOUT.cardWideWidth + SPACING.md}
+                      />
+                    </View>
+                  )}
+                  <View style={styles.sectionRow}>
+                    <DynamicIcon
+                      type={compactSection.iconType}
+                      name={compactSection.iconName}
+                      color={COLORS.mediumGrey}
+                    />
+                    <Text style={[TYPE.h3, styles.sectionTitle]}>
+                      {compactSection.title}
+                    </Text>
+                  </View>
+                </View>
+              }
+              ListFooterComponent={
+                <Text style={styles.attribution}>Game data by RAWG</Text>
+              }
+            />
+          ))}
+
+        <View
+          style={[styles.headerFloat, { paddingTop: insets.top + SPACING.sm }]}
+          onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
+        >
+          {/* Opaque behind the controls, dissolving to nothing below, so
+              content melts away as it scrolls under rather than clipping. */}
+          <LinearGradient
+            colors={[COLORS.darkGrey, COLORS.darkGrey, 'rgba(51,61,81,0)']}
+            locations={[0, 0.68, 1]}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+          <View style={styles.titleRow}>
+            <Text style={styles.wordmark}>SIDEQUEST</Text>
+            <SearchInput
+              value={query}
+              onChangeText={setQuery}
+              style={styles.searchCompact}
             />
           </View>
-
-          {status ??
-            (isPending ? (
-              <SkeletonCompactHome />
-            ) : (
-              <FlatList
-                data={listed}
-                keyExtractor={(item) => String(item.id)}
-                renderItem={({ item }) => <GameInfoCard game={item} />}
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="on-drag"
-                showsVerticalScrollIndicator={false}
-                refreshControl={refresh}
-                ListHeaderComponent={
-                  <View>
-                    {featured.length > 0 && (
-                      <View style={styles.carouselBleed}>
-                        <Rail
-                          data={featured}
-                          keyExtractor={(item) => String(item.id)}
-                          renderItem={(item) => <GameCard game={item} wide />}
-                          inset={SPACING.md}
-                          gap={SPACING.md}
-                          snapInterval={LAYOUT.cardWideWidth + SPACING.md}
-                        />
-                      </View>
-                    )}
-                    <View style={styles.sectionRow}>
-                      <DynamicIcon
-                        type={compactSection.iconType}
-                        name={compactSection.iconName}
-                        color={COLORS.mediumGrey}
-                      />
-                      <Text style={[TYPE.h3, styles.sectionTitle]}>
-                        {compactSection.title}
-                      </Text>
-                    </View>
-                  </View>
-                }
-                ListFooterComponent={
-                  <Text style={styles.attribution}>Game data by RAWG</Text>
-                }
-                contentContainerStyle={[
-                  styles.list,
-                  { paddingBottom: insets.bottom + SPACING.xl * 2 },
-                ]}
+          <FlatList
+            data={CATEGORIES}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item) => item.key}
+            renderItem={({ item }) => (
+              <Chip
+                title={item.title}
+                selected={!searching && category.key === item.key}
+                iconName={item.iconName}
+                iconType={item.iconType}
+                onPress={() => selectCategory(item)}
               />
-            ))}
+            )}
+            contentContainerStyle={styles.chips}
+          />
         </View>
-      </SafeAreaView>
+      </View>
     </Textured>
   );
 }
@@ -408,7 +428,14 @@ const styles = StyleSheet.create({
     maxWidth: LAYOUT.maxContentWidth,
     alignSelf: 'center',
   },
-  header: { zIndex: 10, paddingBottom: SPACING.md },
+  headerFloat: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    paddingBottom: SPACING.lg,
+  },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',

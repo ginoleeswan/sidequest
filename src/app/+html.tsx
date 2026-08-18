@@ -37,6 +37,17 @@ const css = `
   }
   ::selection { background: #1E69E1; color: #fff; }
 
+  /* Full-bleed: the page owns the whole viewport including behind the
+     iOS status bar and floating toolbar. */
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+  }
+  body {
+    /* Stop the rubber-band from revealing a white void past the ends. */
+    overscroll-behavior-y: none;
+  }
+
   * {
     scrollbar-width: thin;
     scrollbar-color: rgba(255,255,255,0.18) transparent;
