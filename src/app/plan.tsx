@@ -5,12 +5,15 @@ import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useBreakpoint } from '@/hooks/useBreakpoint';
+
 import type { Game } from '@/api/types';
 import { BackButton } from '@/components/BackButton';
 import { Chip } from '@/components/Chip';
 import { CoverImage } from '@/components/CoverImage';
 import { FadeInView } from '@/components/FadeInView';
-import { FooterLinks } from '@/components/FooterLinks';
+import { AppHeader } from '@/components/AppHeader';
+import { SiteFooter } from '@/components/SiteFooter';
 import { Message } from '@/components/Message';
 import { SectionHeader } from '@/components/SectionHeader';
 import { SteamConnect } from '@/components/SteamConnect';
@@ -81,6 +84,7 @@ function ScheduleRow({
 export default function PlanScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { isExpanded } = useBreakpoint();
   const { byStatus } = useLibrary();
 
   const [pace, setPace] = usePersistedState('sidequest.plan.pace', 6);
@@ -161,14 +165,25 @@ export default function PlanScreen() {
       <Head>
         <title>The Plan — Sidequest</title>
       </Head>
-      <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
-        <BackButton />
-      </View>
+      {isExpanded ? (
+        <AppHeader />
+      ) : (
+        <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
+          <BackButton />
+        </View>
+      )}
 
-      <View style={{ paddingBottom: insets.bottom + 84 }}>
+      <View style={{ paddingBottom: SPACING.xl * 1.5 }}>
         <FadeInView>
           <View
-            style={[styles.inner, { paddingTop: insets.top + SPACING.xl * 2 }]}
+            style={[
+              styles.inner,
+              {
+                paddingTop: isExpanded
+                  ? SPACING.xl * 1.5
+                  : insets.top + SPACING.xl * 2,
+              },
+            ]}
           >
             <SectionHeader
               title="The Plan"
@@ -346,10 +361,10 @@ export default function PlanScreen() {
                 )}
               </>
             )}
-            <FooterLinks />
           </View>
         </FadeInView>
       </View>
+      <SiteFooter />
     </Textured>
   );
 }

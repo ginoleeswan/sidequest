@@ -16,6 +16,7 @@ interface Props {
   activeScale?: number;
   /** Scale while the pointer hovers (web/desktop). 1 disables. */
   hoverScale?: number;
+  accessibilityLabel?: string;
 }
 
 /**
@@ -30,6 +31,7 @@ export function ScaleButton({
   style,
   activeScale = 0.9,
   hoverScale = 1,
+  accessibilityLabel,
 }: Props) {
   const scale = useAnimatedValue(1);
 
@@ -43,6 +45,8 @@ export function ScaleButton({
 
   return (
     <AnimatedPressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       onPress={onPress}
       onPressIn={() => to(activeScale)}
       onPressOut={() => to(hoverScale > 1 ? hoverScale : 1)}

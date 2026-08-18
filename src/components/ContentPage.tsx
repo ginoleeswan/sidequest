@@ -1,8 +1,11 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AppHeader } from './AppHeader';
 import { BackButton } from './BackButton';
+import { SiteFooter } from './SiteFooter';
 import { Textured } from './Textured';
+import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { COLORS } from '@/styles/colors';
 import { SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
@@ -16,17 +19,24 @@ interface Props {
 /** Shared layout for static pages: About, Terms, Privacy. */
 export function ContentPage({ title, updated, children }: Props) {
   const insets = useSafeAreaInsets();
+  const { isExpanded } = useBreakpoint();
   return (
     <Textured style={styles.background}>
-      <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
-        <BackButton />
-      </View>
+      {isExpanded ? (
+        <AppHeader />
+      ) : (
+        <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
+          <BackButton />
+        </View>
+      )}
       <View
         style={[
           styles.scroll,
           {
-            paddingTop: insets.top + SPACING.xl * 2.5,
-            paddingBottom: insets.bottom + 84,
+            paddingTop: isExpanded
+              ? SPACING.xl * 1.5
+              : insets.top + SPACING.xl * 2.5,
+            paddingBottom: SPACING.xl * 1.5,
           },
         ]}
       >
@@ -39,6 +49,7 @@ export function ContentPage({ title, updated, children }: Props) {
           <View style={styles.body}>{children}</View>
         </View>
       </View>
+      <SiteFooter />
     </Textured>
   );
 }

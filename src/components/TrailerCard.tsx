@@ -18,18 +18,16 @@ export function TrailerCard({ trailer }: { trailer: Movie }) {
 }
 
 const styles = StyleSheet.create({
-  container: { width: 320 },
+  container: { width: 320, gap: 8 },
   name: {
-    fontFamily: 'Noah-Regular',
+    fontFamily: 'Noah-Bold',
     fontSize: 12,
     color: COLORS.lightGrey,
-    paddingBottom: 8,
   },
   video: {
-    width: 300,
-    height: 200,
-    marginRight: 15,
-    borderRadius: 10,
+    width: 320,
+    height: 180,
+    borderRadius: 12,
     backgroundColor: 'black',
   },
 });

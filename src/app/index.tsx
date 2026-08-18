@@ -27,7 +27,7 @@ import type { Game, Paged } from '@/api/types';
 import { Chip } from '@/components/Chip';
 import { FadeInView } from '@/components/FadeInView';
 import { FeaturedHero } from '@/components/FeaturedHero';
-import { FooterLinks } from '@/components/FooterLinks';
+import { SiteFooter } from '@/components/SiteFooter';
 import { GameCard } from '@/components/GameCard';
 import { GameInfoCard } from '@/components/GameInfoCard';
 import { GameTile } from '@/components/GameTile';
@@ -321,7 +321,7 @@ export default function HomeScreen() {
                         inset={SPACING.xl}
                       />
                     ))}
-                    <FooterLinks />
+                    <SiteFooter inset={SPACING.xl} />
                   </ScrollView>
                 ) : (
                   grid
@@ -346,10 +346,7 @@ export default function HomeScreen() {
             <View
               style={[
                 styles.compactHome,
-                {
-                  paddingTop: headerHeight,
-                  paddingBottom: insets.bottom + SPACING.xl * 3,
-                },
+                { paddingTop: headerHeight },
               ]}
             >
               {featured.length > 0 && (
@@ -381,7 +378,7 @@ export default function HomeScreen() {
                   />
                 ))}
               </View>
-              <FooterLinks />
+              <SiteFooter />
             </View>
           ) : searching ? (
             <FlatList
@@ -494,7 +491,7 @@ const styles = StyleSheet.create({
     color: COLORS.lightGrey,
   },
   searchExpanded: { width: 280 },
-  homeScroll: { paddingBottom: SPACING.xl },
+  homeScroll: { flexGrow: 1 },
 
   // grid
   gridHeader: { marginBottom: SPACING.md },
@@ -511,7 +508,11 @@ const styles = StyleSheet.create({
   compactShell: { flex: 1 },
   compactHome: { gap: SPACING.xs },
   carouselFrame: { paddingHorizontal: SPACING.md },
-  compactShelves: { paddingHorizontal: SPACING.md, marginTop: SPACING.sm },
+  compactShelves: {
+    paddingHorizontal: SPACING.md,
+    marginTop: SPACING.sm,
+    paddingBottom: SPACING.xl * 1.5,
+  },
   headerFloat: {
     position: 'absolute',
     top: 0,

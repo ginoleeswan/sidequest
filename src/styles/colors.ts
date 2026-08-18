@@ -3,7 +3,8 @@ export const COLORS = {
   plum: '#CB2664',
   blue: '#1E69E1',
   lightGrey: '#D8DAE4',
-  mediumGrey: '#8E93A0',
+  // 4.6:1 on darkGrey, AA for body text on every surface.
+  mediumGrey: '#A3A9B8',
   darkGrey: '#333D51',
   navy: '#272F3F',
   /** Raised surface one step above navy. */

@@ -19,9 +19,9 @@ interface NavItemProps {
 function NavItem({ label, iconName, iconType, active, onPress }: NavItemProps) {
   const [hovered, setHovered] = useState(false);
   const color = active
-    ? COLORS.white
+    ? COLORS.darkGrey
     : hovered
-      ? COLORS.lightGrey
+      ? COLORS.white
       : COLORS.mediumGrey;
 
   return (
@@ -81,7 +81,9 @@ export function Sidebar({ activeKey, onHome, onSelect }: Props) {
   const router = useRouter();
   return (
     <View style={styles.sidebar}>
-      <Text style={styles.wordmark}>SIDEQUEST</Text>
+      <Pressable onPress={onHome} accessibilityRole="link">
+        <Text style={styles.wordmark}>SIDEQUEST</Text>
+      </Pressable>
       <Text style={styles.tagline}>Discover your next game</Text>
 
       <ScrollView
@@ -124,18 +126,6 @@ export function Sidebar({ activeKey, onHome, onSelect }: Props) {
         />
       </ScrollView>
 
-      <View style={styles.footerRow}>
-        <Text style={styles.footerLink} onPress={() => router.push('/about')}>
-          About
-        </Text>
-        <Text style={styles.footerLink} onPress={() => router.push('/terms')}>
-          Terms
-        </Text>
-        <Text style={styles.footerLink} onPress={() => router.push('/privacy')}>
-          Privacy
-        </Text>
-      </View>
-      <Text style={styles.footer}>Game data by RAWG</Text>
     </View>
   );
 }
@@ -145,14 +135,15 @@ const styles = StyleSheet.create({
     width: LAYOUT.sidebarWidth,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.lg,
+    backgroundColor: 'rgba(39,47,63,0.45)',
     borderRightWidth: StyleSheet.hairlineWidth,
     borderRightColor: 'rgba(255,255,255,0.08)',
   },
   wordmark: {
     fontFamily: 'Noah-Black',
-    fontSize: 24,
-    color: COLORS.lightGrey,
-    letterSpacing: 0.5,
+    fontSize: 22,
+    color: COLORS.white,
+    letterSpacing: 1.5,
   },
   tagline: {
     fontFamily: 'Noah-Regular',
@@ -162,16 +153,19 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   nav: { flex: 1 },
-  navContent: { gap: 2, paddingBottom: SPACING.lg },
+  navContent: { gap: 2, paddingBottom: SPACING.sm },
   navHeading: {
     fontFamily: 'Noah-Bold',
-    fontSize: 10,
-    letterSpacing: 1.2,
+    fontSize: 10.5,
+    letterSpacing: 1.4,
     textTransform: 'uppercase',
     color: COLORS.mediumGrey,
     marginTop: SPACING.lg,
     marginBottom: SPACING.sm,
+    paddingTop: SPACING.md,
     paddingHorizontal: SPACING.sm + 2,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.stroke,
   },
   navItem: {
     flexDirection: 'row',
@@ -181,19 +175,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.sm + 2,
     borderRadius: RADIUS.sm,
   },
-  navItemActive: { backgroundColor: COLORS.blue },
+  navItemActive: { backgroundColor: COLORS.white },
   navItemHovered: { backgroundColor: 'rgba(255,255,255,0.06)' },
   navLabel: { fontFamily: 'Noah-Bold', fontSize: 13.5 },
-  footerRow: { flexDirection: 'row', gap: SPACING.md, marginBottom: 6 },
-  footerLink: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 11,
-    color: COLORS.mediumGrey,
-  },
-  footer: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 10,
-    color: COLORS.mediumGrey,
-    opacity: 0.7,
-  },
 });

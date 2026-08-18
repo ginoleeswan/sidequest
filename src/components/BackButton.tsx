@@ -7,8 +7,21 @@ import { COLORS } from '@/styles/colors';
 
 export function BackButton() {
   const router = useRouter();
+  // Deep links (shared URLs, fresh tabs) have no history to pop - fall
+  // back to home instead of a button that silently does nothing.
+  const goBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/');
+    }
+  };
   return (
-    <ScaleButton onPress={() => router.back()} style={styles.button}>
+    <ScaleButton
+      onPress={goBack}
+      style={styles.button}
+      accessibilityLabel="Go back"
+    >
       <Ionicons name="chevron-back" style={styles.icon} />
     </ScaleButton>
   );

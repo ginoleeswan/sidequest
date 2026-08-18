@@ -109,6 +109,48 @@ export function SkeletonCompactHome() {
   );
 }
 
+/**
+ * Desktop detail silhouette: mirrors the expanded hero (title block beside
+ * a framed 16:9 art card) and the two-column body, so the loaded page
+ * lands exactly where the bones were.
+ */
+export function SkeletonDetailExpanded() {
+  return (
+    <View>
+      <View style={styles.deskHero}>
+        <View style={styles.deskHeroCopy}>
+          <Skeleton style={styles.lineNarrow} />
+          <Skeleton style={styles.deskTitle} />
+          <View style={styles.row}>
+            <Skeleton style={styles.detailStat} />
+            <Skeleton style={styles.detailStat} />
+            <Skeleton style={styles.detailStat} />
+            <Skeleton style={styles.detailStat} />
+          </View>
+          <View style={styles.row}>
+            <Skeleton style={styles.detailChip} />
+            <Skeleton style={styles.detailChip} />
+            <Skeleton style={styles.detailChip} />
+          </View>
+        </View>
+        <Skeleton style={styles.deskArt} />
+      </View>
+      <View style={styles.deskColumns}>
+        <View style={styles.deskMain}>
+          <Skeleton style={styles.lineFull} />
+          <Skeleton style={styles.lineFull} />
+          <Skeleton style={styles.lineWide} />
+          <SkeletonShelf tiles={3} />
+        </View>
+        <View style={styles.deskRail}>
+          <Skeleton style={styles.deskRailCard} />
+          <Skeleton style={styles.deskRailCard} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
 /** Detail-page silhouette: full-bleed hero, title stack, stats, prose. */
 export function SkeletonDetail() {
   return (
@@ -144,8 +186,8 @@ const styles = StyleSheet.create({
   tileArt: { width: '100%', aspectRatio: LAYOUT.tileAspect },
   lineWide: { height: 12, width: '80%' },
   lineNarrow: { height: 10, width: '45%' },
-  heading: { height: 16, width: 140, marginBottom: SPACING.sm },
-  shelf: { marginBottom: SPACING.xl, gap: SPACING.sm },
+  heading: { height: 18, width: 140 },
+  shelf: { marginBottom: SPACING.xl, gap: SPACING.sm + 2 },
   row: { flexDirection: 'row', gap: LAYOUT.gridGap, overflow: 'hidden' },
   hero: {
     flexDirection: 'row',
@@ -183,4 +225,35 @@ const styles = StyleSheet.create({
   detailStat: { height: 34, width: 64 },
   detailChip: { height: 26, width: 84, borderRadius: 14 },
   lineFull: { height: 12, width: '100%' },
+  deskHero: {
+    width: '100%',
+    maxWidth: LAYOUT.maxExpandedWidth,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xl * 1.5,
+    paddingHorizontal: SPACING.xl * 2,
+    paddingVertical: SPACING.xl * 1.6,
+  },
+  deskHeroCopy: { flex: 1, gap: SPACING.sm },
+  deskTitle: { height: 44, width: '70%' },
+  deskArt: {
+    width: '42%',
+    maxWidth: 520,
+    aspectRatio: 16 / 9,
+    borderRadius: RADIUS.lg,
+  },
+  deskColumns: {
+    flexDirection: 'row',
+    gap: SPACING.xl,
+    alignItems: 'flex-start',
+    width: '100%',
+    maxWidth: LAYOUT.maxExpandedWidth,
+    alignSelf: 'center',
+    paddingHorizontal: SPACING.xl * 2,
+    paddingTop: SPACING.lg,
+  },
+  deskMain: { flex: 2, gap: SPACING.md },
+  deskRail: { flex: 1, maxWidth: 360, gap: SPACING.md },
+  deskRailCard: { height: 180, borderRadius: RADIUS.md },
 });

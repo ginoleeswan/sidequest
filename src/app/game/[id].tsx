@@ -24,6 +24,7 @@ import {
   mediaUri,
 } from '@/api/rawg';
 import type { Game, GameDetail, Movie, Named, Screenshot } from '@/api/types';
+import { AppHeader } from '@/components/AppHeader';
 import { BackButton } from '@/components/BackButton';
 import { Chip } from '@/components/Chip';
 import { CommunityStats } from '@/components/CommunityStats';
@@ -36,19 +37,40 @@ import { RatingsBreakdown } from '@/components/RatingsBreakdown';
 import { ReadMoreText } from '@/components/ReadMoreText';
 import { ScorePill } from '@/components/ScorePill';
 import { SectionHeader } from '@/components/SectionHeader';
-import { SkeletonDetail } from '@/components/Skeleton';
+import {
+  SkeletonDetail,
+  SkeletonDetailExpanded,
+} from '@/components/Skeleton';
 import { StatusActions } from '@/components/StatusActions';
-import { StoreLinks } from '@/components/StoreLinks';
+import { LinkPill, StoreLinks } from '@/components/StoreLinks';
+import { SiteFooter } from '@/components/SiteFooter';
 import { Textured } from '@/components/Textured';
 import { TrailerCard } from '@/components/TrailerCard';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { findSection } from '@/constants/categories';
 import { COLORS } from '@/styles/colors';
-import { LAYOUT, RADIUS, SHADOW_ROOM, SPACING } from '@/styles/theme';
+import { LAYOUT, RADIUS, SHADOW, SHADOW_ROOM, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 const HTML_TAGS = /(<([^>]+)>)/gi;
+
+/** RAWG descriptions arrive as HTML: after stripping tags, unescape the
+    handful of entities that actually occur in them. */
+const ENTITIES: Record<string, string> = {
+  '&amp;': '&',
+  '&lt;': '<',
+  '&gt;': '>',
+  '&quot;': '"',
+  '&#39;': "'",
+  '&apos;': "'",
+  '&nbsp;': ' ',
+};
+function decodeEntities(text: string): string {
+  return text
+    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
+    .replace(/&[a-z]+;/g, (m) => ENTITIES[m] ?? m);
+}
 
 /* ------------------------------------------------------------------ atoms */
 
@@ -175,11 +197,15 @@ export default function GameInfoScreen() {
   if (isPending) {
     return (
       <Textured style={styles.background}>
-        <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
-          <BackButton />
-        </View>
-        <View style={styles.skeletonShell}>
-          <SkeletonDetail />
+        {isExpanded ? (
+          <AppHeader />
+        ) : (
+          <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
+            <BackButton />
+          </View>
+        )}
+        <View style={isExpanded ? styles.skeletonShellWide : styles.skeletonShell}>
+          {isExpanded ? <SkeletonDetailExpanded /> : <SkeletonDetail />}
         </View>
       </Textured>
     );
@@ -201,7 +227,9 @@ export default function GameInfoScreen() {
   }
 
   const { game, screenshots, trailers, series, storeLinks } = data;
-  const summary = game.description.replace(HTML_TAGS, '').trim();
+  const summary = decodeEntities(
+    game.description.replace(HTML_TAGS, '')
+  ).trim();
   const railInset = isExpanded ? 0 : SPACING.md;
 
   const openGenre = (genre: Named) => {
@@ -213,7 +241,7 @@ export default function GameInfoScreen() {
   /* -------------------------------------------------------------- pieces */
 
   const hero = (
-    <View style={[styles.hero, isExpanded && styles.heroExpanded]}>
+    <View style={styles.hero}>
       <CoverImage
         uri={game.background_image}
         style={styles.heroImage}
@@ -227,21 +255,63 @@ export default function GameInfoScreen() {
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
-      {/* And from above: the art blends out of the browser chrome instead
-          of being guillotined by it. */}
+      {/* From above, an eased near-black vignette: enough depth for the
+          status bar and back button to read, while the artwork stays
+          visible instead of dissolving into a page-colour fog band. */}
       <LinearGradient
-        colors={[COLORS.darkGrey, '#333D5100']}
-        locations={[0, 1]}
+        colors={[
+          'rgba(9,12,19,0.55)',
+          'rgba(9,12,19,0.30)',
+          'rgba(9,12,19,0.11)',
+          'rgba(9,12,19,0)',
+        ]}
+        locations={[0, 0.38, 0.7, 1]}
         style={styles.topScrim}
         pointerEvents="none"
       />
-      <View style={[styles.heroCopy, isExpanded && styles.heroCopyExpanded]}>
+      <View style={styles.heroCopy}>
         <PlatformIcons platforms={game.parent_platforms ?? []} />
-        <Text style={[styles.heroTitle, isExpanded && styles.heroTitleLarge]}>
-          {game.name}
-        </Text>
+        <Text style={styles.heroTitle}>{game.name}</Text>
         <StatStrip game={game} />
         <StatusActions game={game} />
+      </View>
+    </View>
+  );
+
+  /* A tall banner works on a phone; on desktop it's a wall. The art
+     becomes a framed card beside the title block, sitting on an ambient
+     blur of itself that melts into the page. */
+  const deskHero = (
+    <View style={styles.deskHero}>
+      <View style={styles.deskBackdrop} pointerEvents="none">
+        {game.background_image ? (
+          <Image
+            source={{ uri: mediaUri(game.background_image) ?? undefined }}
+            style={styles.deskBackdropImage}
+            contentFit="cover"
+            blurRadius={60}
+          />
+        ) : null}
+        <LinearGradient
+          colors={['rgba(51,61,81,0.55)', 'rgba(51,61,81,0.82)', COLORS.darkGrey]}
+          locations={[0, 0.62, 1]}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
+      <View style={styles.deskHeroInner}>
+        <View style={styles.deskHeroCopy}>
+          <PlatformIcons platforms={game.parent_platforms ?? []} />
+          <Text style={styles.deskTitle}>{game.name}</Text>
+          <StatStrip game={game} />
+          <StatusActions game={game} />
+        </View>
+        <View style={styles.deskArtFrame}>
+          <CoverImage
+            uri={game.background_image}
+            style={styles.deskArt}
+            iconSize={64}
+          />
+        </View>
       </View>
     </View>
   );
@@ -336,7 +406,7 @@ export default function GameInfoScreen() {
         </View>
       )}
 
-      {trailers.length > 0 && (
+      {trailers.length > 0 ? (
         <View style={styles.block}>
           <SectionHeader title="Trailers" />
           <Rail<Movie>
@@ -344,6 +414,15 @@ export default function GameInfoScreen() {
             keyExtractor={(item) => String(item.id)}
             inset={railInset}
             renderItem={(item) => <TrailerCard trailer={item} />}
+          />
+        </View>
+      ) : (
+        <View style={styles.trailerFallback}>
+          <LinkPill
+            label="Watch trailer on YouTube"
+            url={`https://www.youtube.com/results?search_query=${encodeURIComponent(
+              `${game.name} trailer`
+            )}`}
           />
         </View>
       )}
@@ -389,7 +468,6 @@ export default function GameInfoScreen() {
       </View>
     ) : null;
 
-  const attribution = <Text style={styles.attribution}>Game data by RAWG</Text>;
 
   /* -------------------------------------------------------------- layout */
 
@@ -399,14 +477,18 @@ export default function GameInfoScreen() {
         <title>{`${game.name} — Sidequest`}</title>
       </Head>
       <View style={styles.container}>
-        <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
-          <BackButton />
-        </View>
+        {isExpanded ? (
+          <AppHeader />
+        ) : (
+          <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
+            <BackButton />
+          </View>
+        )}
 
-        <View style={{ paddingBottom: insets.bottom + 84 }}>
+        <View style={{ paddingBottom: SPACING.xl * 1.5 }}>
           {isExpanded ? (
             <View style={styles.expandedInner}>
-              {hero}
+              {deskHero}
               <Animated.View style={[styles.twoColumn, { opacity }]}>
                 <View style={styles.columnMain}>
                   {genres}
@@ -421,7 +503,6 @@ export default function GameInfoScreen() {
                   {tags}
                 </View>
               </Animated.View>
-              {attribution}
             </View>
           ) : (
             <>
@@ -435,12 +516,12 @@ export default function GameInfoScreen() {
                 {links}
                 {details}
                 {tags}
-                {attribution}
               </Animated.View>
             </>
           )}
         </View>
 
+        <SiteFooter />
         <Lightbox uri={lightboxUri} onClose={() => setLightboxUri(null)} />
       </View>
     </Textured>
@@ -459,9 +540,8 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 110,
+    height: 150,
   },
-  heroExpanded: { height: 520 },
   heroImage: {
     position: 'absolute',
     top: 0,
@@ -478,10 +558,6 @@ const styles = StyleSheet.create({
     maxWidth: LAYOUT.maxContentWidth,
     alignSelf: 'center',
   },
-  heroCopyExpanded: {
-    maxWidth: LAYOUT.maxExpandedWidth,
-    paddingHorizontal: SPACING.xl * 2,
-  },
   heroTitle: {
     fontFamily: 'Noah-Black',
     fontSize: 32,
@@ -491,7 +567,6 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 10,
   },
-  heroTitleLarge: { fontSize: 48, lineHeight: 52 },
 
   // stats
   statStrip: {
@@ -515,17 +590,74 @@ const styles = StyleSheet.create({
   },
 
   // body
-  expandedInner: {
-    width: '100%',
-    maxWidth: LAYOUT.maxExpandedWidth,
-    alignSelf: 'center',
-  },
+  expandedInner: { width: '100%' },
   twoColumn: {
     flexDirection: 'row',
     gap: SPACING.xl,
     alignItems: 'flex-start',
+    width: '100%',
+    maxWidth: LAYOUT.maxExpandedWidth,
+    alignSelf: 'center',
     paddingHorizontal: SPACING.xl * 2,
     paddingTop: SPACING.lg,
+  },
+
+  // desktop hero
+  deskHero: { width: '100%' },
+  deskBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    overflow: 'hidden',
+  },
+  deskBackdropImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    opacity: 0.75,
+  },
+  deskHeroInner: {
+    width: '100%',
+    maxWidth: LAYOUT.maxExpandedWidth,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xl * 1.5,
+    paddingHorizontal: SPACING.xl * 2,
+    paddingVertical: SPACING.xl * 1.6,
+  },
+  deskHeroCopy: {
+    flex: 1,
+    gap: SPACING.sm,
+    alignItems: 'flex-start',
+  },
+  deskTitle: {
+    fontFamily: 'Noah-Black',
+    fontSize: 44,
+    lineHeight: 50,
+    color: COLORS.white,
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 12,
+  },
+  deskArtFrame: {
+    width: '42%',
+    maxWidth: 520,
+    borderRadius: RADIUS.lg,
+    ...SHADOW.card,
+  },
+  deskArt: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: RADIUS.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.strokeStrong,
+    backgroundColor: COLORS.navy,
   },
   columnMain: { flex: 2, gap: SPACING.sm },
   columnRail: { flex: 1, gap: SPACING.md, maxWidth: 360 },
@@ -572,20 +704,18 @@ const styles = StyleSheet.create({
     height: LAYOUT.mediaHeight,
     borderRadius: RADIUS.sm,
   },
-  attribution: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 11,
-    color: COLORS.mediumGrey,
-    opacity: 0.7,
-    textAlign: 'center',
-    paddingVertical: SPACING.lg,
-  },
 
   // skeleton / lightbox
   skeletonShell: {
     width: '100%',
     maxWidth: LAYOUT.maxContentWidth,
     alignSelf: 'center',
+  },
+  skeletonShellWide: { width: '100%' },
+  trailerFallback: {
+    flexDirection: 'row',
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.md,
   },
   lightbox: {
     flex: 1,

@@ -12,7 +12,7 @@ interface Props {
   website?: string;
 }
 
-function LinkPill({ label, url }: { label: string; url: string }) {
+export function LinkPill({ label, url }: { label: string; url: string }) {
   const [hovered, setHovered] = useState(false);
   return (
     <Pressable

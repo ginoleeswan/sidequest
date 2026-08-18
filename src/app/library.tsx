@@ -16,7 +16,8 @@ import type { Game } from '@/api/types';
 import { BackButton } from '@/components/BackButton';
 import { Chip } from '@/components/Chip';
 import { FadeInView } from '@/components/FadeInView';
-import { FooterLinks } from '@/components/FooterLinks';
+import { AppHeader } from '@/components/AppHeader';
+import { SiteFooter } from '@/components/SiteFooter';
 import { GameTile } from '@/components/GameTile';
 import { Message } from '@/components/Message';
 import { SectionHeader } from '@/components/SectionHeader';
@@ -67,7 +68,7 @@ function chunk<T>(items: T[], size: number): T[][] {
 export default function LibraryScreen() {
   const router = useRouter();
   const { byStatus, count, exportJson, importJson } = useLibrary();
-  const { columns } = useBreakpoint();
+  const { columns, isExpanded } = useBreakpoint();
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const [tab, setTab] = useState<LibraryStatus>('wishlist');
@@ -104,13 +105,24 @@ export default function LibraryScreen() {
       <Head>
         <title>My Library — Sidequest</title>
       </Head>
-      <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
-        <BackButton />
-      </View>
+      {isExpanded ? (
+        <AppHeader />
+      ) : (
+        <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
+          <BackButton />
+        </View>
+      )}
 
       <FadeInView style={styles.container}>
         <View
-          style={[styles.inner, { paddingTop: insets.top + SPACING.xl * 2 }]}
+          style={[
+            styles.inner,
+            {
+              paddingTop: isExpanded
+                ? SPACING.xl * 1.5
+                : insets.top + SPACING.xl * 2,
+            },
+          ]}
         >
           <SectionHeader
             title="My Library"
@@ -185,9 +197,9 @@ export default function LibraryScreen() {
               ))}
             </View>
           )}
-          <FooterLinks />
         </View>
       </FadeInView>
+      <SiteFooter />
 
       <Modal
         visible={importOpen}
@@ -239,6 +251,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     paddingHorizontal: SPACING.xl,
     gap: SPACING.md,
+    paddingBottom: SPACING.xl * 1.5,
   },
   tabs: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
   gridRow: { flexDirection: 'row', gap: LAYOUT.gridGap },
