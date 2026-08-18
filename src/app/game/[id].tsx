@@ -1,18 +1,20 @@
 import { Image } from 'expo-image';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
+
 import {
   ActivityIndicator,
   Animated,
   FlatList,
   ImageBackground,
   Modal,
-  useAnimatedValue,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+
+import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -59,18 +61,15 @@ function NameList({ items }: { items?: { id: number; name: string }[] }) {
 
 export default function GameInfoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-
   const [game, setGame] = useState<GameDetail | null>(null);
   const [screenshots, setScreenshots] = useState<Screenshot[]>([]);
   const [trailers, setTrailers] = useState<Movie[]>([]);
   const [series, setSeries] = useState<Game[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
-
   const insets = useSafeAreaInsets();
   const scrollY = useAnimatedValue(0);
   const opacity = useAnimatedValue(0);
-
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -100,7 +99,6 @@ export default function GameInfoScreen() {
       cancelled = true;
     };
   }, [id, opacity]);
-
   const translateY = scrollY.interpolate({
     inputRange: [0, 270 + insets.top],
     outputRange: [0, insets.top - 270],
@@ -121,7 +119,6 @@ export default function GameInfoScreen() {
     outputRange: [1, 0],
     extrapolate: 'clamp',
   });
-
   if (error) {
     return (
       <View style={[styles.background, styles.center]}>
@@ -130,7 +127,6 @@ export default function GameInfoScreen() {
       </View>
     );
   }
-
   if (!game) {
     return (
       <View style={[styles.background, styles.center]}>
@@ -138,9 +134,7 @@ export default function GameInfoScreen() {
       </View>
     );
   }
-
   const summary = game.description.replace(HTML_TAGS, '');
-
   return (
     <ImageBackground
       source={require('../../../assets/images/noise.png')}

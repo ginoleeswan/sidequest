@@ -1,10 +1,11 @@
 import {
   Animated,
   Pressable,
-  useAnimatedValue,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+
+import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 
 interface Props {
   onPress: () => void;
@@ -21,7 +22,6 @@ export function ScaleButton({
   activeScale = 0.9,
 }: Props) {
   const scale = useAnimatedValue(1);
-
   const to = (value: number) =>
     Animated.spring(scale, {
       toValue: value,
@@ -29,7 +29,6 @@ export function ScaleButton({
       friction: 4,
       useNativeDriver: true,
     }).start();
-
   return (
     <Pressable
       onPress={onPress}

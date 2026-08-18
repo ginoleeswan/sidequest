@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+
 import {
   ActivityIndicator,
   Animated,
@@ -6,11 +7,12 @@ import {
   FlatList,
   ImageBackground,
   Keyboard,
-  useAnimatedValue,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+
+import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import {
   SafeAreaView,
   useSafeAreaInsets,
@@ -129,11 +131,9 @@ export default function HomeScreen() {
   const [query, setQuery] = useState('');
   const [selectedChip, setSelectedChip] = useState(0);
   const [section, setSection] = useState<typeof SEARCH_SECTION>(CATEGORIES[0]);
-
   const insets = useSafeAreaInsets();
   const scrollY = useAnimatedValue(0);
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const translateY = scrollY.interpolate({
     inputRange: [0, 200 + insets.top],
     outputRange: [0, insets.top - 260],
@@ -144,7 +144,6 @@ export default function HomeScreen() {
     outputRange: [1, 0],
     extrapolate: 'clamp',
   });
-
   const load = useCallback(
     async (fetcher: () => Promise<{ results: Game[] }>) => {
       setLoading(true);
@@ -161,7 +160,6 @@ export default function HomeScreen() {
     },
     []
   );
-
   const selectCategory = useCallback(
     (category: Category) => {
       setQuery('');
@@ -171,7 +169,6 @@ export default function HomeScreen() {
     },
     [load]
   );
-
   const onSearchChange = (text: string) => {
     setQuery(text);
     if (debounce.current) clearTimeout(debounce.current);
@@ -184,15 +181,12 @@ export default function HomeScreen() {
       }
     }, 400);
   };
-
   useEffect(() => {
     // Initial category load: intentionally kicked off synchronously on mount.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load(CATEGORIES[0].fetch);
   }, [load]);
-
   const searching = query.trim() !== '';
-
   return (
     <ImageBackground
       source={require('../../assets/images/noise.png')}
