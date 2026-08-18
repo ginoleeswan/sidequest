@@ -43,6 +43,23 @@ const css = `
     height: 100%;
     margin: 0;
   }
+
+  /*
+   * React Native Web renders every FlatList as its own nested scroll
+   * container sized to its parent. At height:100% that parent is the
+   * *small* viewport - the area excluding iOS Safari's floating toolbar -
+   * so list content stops dead at the toolbar instead of running beneath
+   * it (which is why the skeletons, which are not inside a scroller and
+   * therefore scroll the document, looked right and the loaded lists did
+   * not). Sizing to the large viewport makes the scroller itself extend
+   * behind the browser chrome.
+   */
+  @supports (height: 100lvh) {
+    html, body, #root {
+      height: 100lvh;
+    }
+  }
+
   body {
     /* Stop the rubber-band from revealing a white void past the ends. */
     overscroll-behavior-y: none;

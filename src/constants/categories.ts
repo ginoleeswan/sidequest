@@ -1,4 +1,4 @@
-import { getGames, getMustPlayGames } from '@/api/rawg';
+import { getGames, getMustPlayGames, getTrendingGames } from '@/api/rawg';
 import type { Game } from '@/api/types';
 import type { IconType } from '@/components/DynamicIcon';
 
@@ -14,7 +14,7 @@ export const CATEGORIES: Category[] = [
   {
     key: 'trending',
     title: 'Trending',
-    fetch: () => getGames(),
+    fetch: getTrendingGames,
     iconName: 'trending-up',
     iconType: 'feather',
   },

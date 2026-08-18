@@ -51,8 +51,33 @@ async function rawg<T>(
   return res.json() as Promise<T>;
 }
 
+/** YYYY-MM-DD, `days` before today. */
+function daysAgo(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d.toISOString().slice(0, 10);
+}
+
+const YEAR = 365;
+
+/** RAWG's default /games ordering is all-time popularity, which surfaces
+ *  2007-2015 classics. Every browse view uses an explicit recent window
+ *  ordered by how many players are adding the game right now. */
+function recentWindow(days: number) {
+  return { dates: `${daysAgo(days)},${daysAgo(0)}`, ordering: '-added' };
+}
+
+/** Genuinely current: what people are adding this year. */
+export function getTrendingGames(): Promise<Paged<Game>> {
+  return rawg('games', recentWindow(YEAR));
+}
+
+/** Genre browsing: a wider window so there's depth, still modern. */
 export function getGames(genre?: string): Promise<Paged<Game>> {
-  return rawg('games', genre ? { genres: genre } : {});
+  return rawg('games', {
+    ...recentWindow(YEAR * 3),
+    ...(genre ? { genres: genre } : {}),
+  });
 }
 
 export async function getMustPlayGames(): Promise<Paged<Game>> {
