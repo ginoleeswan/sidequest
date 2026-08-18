@@ -242,7 +242,7 @@ export default function LibraryScreen() {
 }
 
 const styles = StyleSheet.create({
-  background: { flex: 1, backgroundColor: COLORS.darkGrey },
+  background: { flexGrow: 1, backgroundColor: COLORS.darkGrey },
   backButton: { position: 'absolute', left: SPACING.lg, zIndex: 30 },
   container: {},
   inner: {

@@ -61,15 +61,20 @@ function InlineValue({
   onPress: () => void;
 }) {
   return (
-    <Text
-      style={styles.inlineValue}
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`${hint}: ${label}. Tap to change.`}
-      suppressHighlighting
-    >
-      {' '}
-      {label} <Text style={styles.inlineCaret}>▾</Text>{' '}
+    <Text>
+      {'  '}
+      <Text
+        style={styles.inlineValue}
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`${hint}: ${label}. Tap to change.`}
+        suppressHighlighting
+      >
+        {'\u00A0'}
+        {label} <Text style={styles.inlineCaret}>▾</Text>
+        {'\u00A0'}
+      </Text>
+      {'  '}
     </Text>
   );
 }
@@ -87,15 +92,18 @@ function QuestRow({
   item,
   index,
   isLast,
+  maxHours,
   game,
   onPress,
 }: {
   item: ScheduledItem;
   index: number;
   isLast: boolean;
+  maxHours: number;
   game?: Game;
   onPress: () => void;
 }) {
+  const barPct = Math.max(6, Math.round((item.hours / maxHours) * 100));
   return (
     <Pressable style={styles.quest} onPress={onPress}>
       {/* the path: a node per game, a thread connecting them */}
@@ -115,7 +123,12 @@ function QuestRow({
         <Text style={styles.questTitle} numberOfLines={1}>
           {item.name}
         </Text>
-        <Text style={styles.questMeta}>~{Math.round(item.hours)}h</Text>
+        <View style={styles.questMetaRow}>
+          <View style={styles.questBarTrack}>
+            <View style={[styles.questBarFill, { width: `${barPct}%` }]} />
+          </View>
+          <Text style={styles.questMeta}>~{Math.round(item.hours)}h</Text>
+        </View>
       </View>
       <View style={styles.questWhen}>
         <Text style={styles.questDate}>{finishDate(item.finishAt)}</Text>
@@ -200,6 +213,11 @@ export default function PlanScreen() {
       ? 'Continue'
       : 'Start';
 
+  const maxRouteHours = Math.max(
+    1,
+    ...schedule.scheduled.map((item) => item.hours)
+  );
+
   const empty = entries.length === 0;
   const allFit = schedule.dropped.length === 0 && schedule.scheduled.length > 0;
   const lastFinish =
@@ -223,6 +241,7 @@ export default function PlanScreen() {
           <View
             style={[
               styles.inner,
+              isExpanded && styles.innerWide,
               {
                 paddingTop: isExpanded
                   ? SPACING.xl * 1.5
@@ -244,7 +263,8 @@ export default function PlanScreen() {
                 onAction={() => router.push('/')}
               />
             ) : (
-              <>
+              <View style={isExpanded ? styles.columns : styles.stack}>
+                <View style={isExpanded ? styles.colLeft : styles.stack}>
                 {/* the answer, first */}
                 <View style={styles.verdict}>
                   <View style={styles.verdictBar} />
@@ -255,11 +275,36 @@ export default function PlanScreen() {
                         ? 'You can finish all of it'
                         : `${schedule.scheduled.length} of these will get done`}
                   </Text>
-                  <Text style={styles.verdictDetail}>
-                    {schedule.scheduled.length > 0 && lastFinish
-                      ? `~${Math.round(schedule.totalHours)} hours of play — credits on the last one by ${finishDate(lastFinish)}.`
-                      : 'Give it more time or a wider window — or let a few of these go. That’s allowed.'}
-                  </Text>
+                  {schedule.scheduled.length > 0 && lastFinish ? (
+                    <View style={styles.verdictStats}>
+                      <View style={styles.vStat}>
+                        <Text style={styles.vStatValue}>
+                          {schedule.scheduled.length}
+                          <Text style={styles.vStatDim}>
+                            /{entries.length}
+                          </Text>
+                        </Text>
+                        <Text style={styles.vStatLabel}>games fit</Text>
+                      </View>
+                      <View style={styles.vStat}>
+                        <Text style={styles.vStatValue}>
+                          ~{Math.round(schedule.totalHours)}h
+                        </Text>
+                        <Text style={styles.vStatLabel}>of play</Text>
+                      </View>
+                      <View style={styles.vStat}>
+                        <Text style={styles.vStatValue}>
+                          {finishDate(lastFinish)}
+                        </Text>
+                        <Text style={styles.vStatLabel}>last credits</Text>
+                      </View>
+                    </View>
+                  ) : (
+                    <Text style={styles.verdictDetail}>
+                      Give it more time or a wider window — or let a few of
+                      these go. That’s allowed.
+                    </Text>
+                  )}
 
                   {/* the whole setup is one sentence */}
                   <Text style={styles.sentence}>
@@ -361,10 +406,16 @@ export default function PlanScreen() {
                   </Pressable>
                 )}
 
+                </View>
+
+                <View style={isExpanded ? styles.colRight : styles.stack}>
                 {/* the route */}
                 {schedule.scheduled.length > 0 && (
                   <View style={styles.section}>
                     <SectionHeader title="Your route" />
+                    <Text style={styles.routeNote}>
+                      Quick wins first — momentum is the strategy.
+                    </Text>
                     <View>
                       {schedule.scheduled.map((item, index) => (
                         <QuestRow
@@ -372,6 +423,7 @@ export default function PlanScreen() {
                           item={item}
                           index={index}
                           isLast={index === schedule.scheduled.length - 1}
+                          maxHours={maxRouteHours}
                           game={gamesById.get(item.id)}
                           onPress={() => router.push(`/game/${item.id}`)}
                         />
@@ -431,7 +483,8 @@ export default function PlanScreen() {
                     </Text>
                   </View>
                 )}
-              </>
+                </View>
+              </View>
             )}
           </View>
         </FadeInView>
@@ -442,7 +495,7 @@ export default function PlanScreen() {
 }
 
 const styles = StyleSheet.create({
-  background: { flex: 1, backgroundColor: COLORS.darkGrey },
+  background: { flexGrow: 1, backgroundColor: COLORS.darkGrey },
   backButton: { position: 'absolute', left: SPACING.lg, zIndex: 30 },
   inner: {
     width: '100%',
@@ -451,6 +504,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     gap: SPACING.lg,
   },
+  innerWide: { maxWidth: 1120, paddingHorizontal: SPACING.xl },
+  stack: { gap: SPACING.lg },
+  columns: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: SPACING.xl * 1.5,
+  },
+  colLeft: { width: 400, gap: SPACING.lg },
+  colRight: { flex: 1, gap: SPACING.lg },
   verdict: {
     backgroundColor: COLORS.surface,
     borderWidth: 1,
@@ -472,6 +534,32 @@ const styles = StyleSheet.create({
     fontFamily: 'Noah-Black',
     fontSize: 19,
     color: COLORS.white,
+  },
+  verdictStats: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.xl,
+    marginTop: 2,
+  },
+  vStat: { gap: 2, alignItems: 'flex-start' },
+  vStatValue: {
+    fontFamily: 'Noah-Black',
+    fontSize: 17,
+    color: COLORS.white,
+  },
+  vStatDim: { color: COLORS.mediumGrey, fontSize: 14 },
+  vStatLabel: {
+    fontFamily: 'Noah-Bold',
+    fontSize: 9.5,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: COLORS.mediumGrey,
+  },
+  routeNote: {
+    fontFamily: 'Noah-Regular',
+    fontSize: 12.5,
+    color: COLORS.mediumGrey,
+    marginTop: -SPACING.xs,
   },
   verdictDetail: {
     fontFamily: 'Noah-Regular',
@@ -598,6 +686,25 @@ const styles = StyleSheet.create({
     fontFamily: 'Noah-Bold',
     fontSize: 14.5,
     color: COLORS.lightGrey,
+  },
+  questMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginTop: 3,
+  },
+  questBarTrack: {
+    flex: 1,
+    maxWidth: 160,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    overflow: 'hidden',
+  },
+  questBarFill: {
+    height: '100%',
+    borderRadius: 2,
+    backgroundColor: COLORS.plum,
   },
   questMeta: {
     fontFamily: 'Noah-Regular',

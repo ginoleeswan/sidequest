@@ -466,7 +466,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  background: { flex: 1, backgroundColor: COLORS.darkGrey },
+  background: { flexGrow: 1, backgroundColor: COLORS.darkGrey },
   container: { flex: 1 },
 
   // expanded
@@ -474,8 +474,6 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     width: '100%',
-    maxWidth: LAYOUT.maxExpandedWidth,
-    alignSelf: 'center',
   },
   main: { flex: 1, paddingHorizontal: SPACING.xl },
   mainHeader: {
@@ -505,7 +503,7 @@ const styles = StyleSheet.create({
   moreSpinner: { paddingVertical: SPACING.lg },
 
   // compact
-  compactShell: { flex: 1 },
+  compactShell: { flexGrow: 1 },
   compactHome: { gap: SPACING.xs },
   carouselFrame: { paddingHorizontal: SPACING.md },
   compactShelves: {

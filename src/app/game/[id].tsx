@@ -44,7 +44,7 @@ import {
 import { StatusActions } from '@/components/StatusActions';
 import { LinkPill, StoreLinks } from '@/components/StoreLinks';
 import { SiteFooter } from '@/components/SiteFooter';
-import { Textured } from '@/components/Textured';
+import { GrainScrim, Textured } from '@/components/Textured';
 import { TrailerCard } from '@/components/TrailerCard';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
@@ -255,6 +255,7 @@ export default function GameInfoScreen() {
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
+      <GrainScrim style={styles.heroGrain} />
       {/* From above, an eased near-black vignette: enough depth for the
           status bar and back button to read, while the artwork stays
           visible instead of dissolving into a page-colour fog band. */}
@@ -297,6 +298,7 @@ export default function GameInfoScreen() {
           locations={[0, 0.62, 1]}
           style={StyleSheet.absoluteFill}
         />
+        <GrainScrim style={styles.deskGrain} />
       </View>
       <View style={styles.deskHeroInner}>
         <View style={styles.deskHeroCopy}>
@@ -529,12 +531,27 @@ export default function GameInfoScreen() {
 }
 
 const styles = StyleSheet.create({
-  background: { flex: 1, backgroundColor: COLORS.darkGrey },
-  container: { flex: 1 },
+  // flexGrow + auto basis: wraps tall content, still fills 100dvh when short.
+  background: { flexGrow: 1, backgroundColor: COLORS.darkGrey },
+  container: { flexGrow: 1 },
   backButton: { position: 'absolute', left: SPACING.lg, zIndex: 30 },
 
   // hero
   hero: { height: 480, justifyContent: 'flex-end' },
+  heroGrain: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '55%',
+  },
+  deskGrain: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '70%',
+  },
   topScrim: {
     position: 'absolute',
     top: 0,
