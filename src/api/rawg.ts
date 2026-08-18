@@ -8,19 +8,24 @@ import type {
 } from './types';
 
 const BASE_URL = 'https://api.rawg.io/api';
-const API_KEY = process.env.EXPO_PUBLIC_RAWG_API_KEY;
+
+/** Read lazily: reading at module scope couples import order to env setup. */
+function apiKey(): string {
+  const key = process.env.EXPO_PUBLIC_RAWG_API_KEY;
+  if (!key) {
+    throw new Error(
+      'EXPO_PUBLIC_RAWG_API_KEY is not set — copy .env.example to .env'
+    );
+  }
+  return key;
+}
 
 async function rawg<T>(
   path: string,
   params: Record<string, string> = {}
 ): Promise<T> {
-  if (!API_KEY) {
-    throw new Error(
-      'EXPO_PUBLIC_RAWG_API_KEY is not set — copy .env.example to .env'
-    );
-  }
   const url = new URL(`${BASE_URL}/${path}`);
-  url.searchParams.set('key', API_KEY);
+  url.searchParams.set('key', apiKey());
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
 
   const res = await fetch(url.toString());

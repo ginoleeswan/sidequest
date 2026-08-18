@@ -4,16 +4,20 @@ import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { ScaleButton } from './ScaleButton';
-import { COLORS } from '@/styles/colors';
 import type { Game } from '@/api/types';
+import { COLORS } from '@/styles/colors';
+import { RADIUS, SHADOW, SPACING } from '@/styles/theme';
 
-/** Row-style result card: thumbnail, title, rating. */
+/** Row-style result card: thumbnail, title, rating, release year. */
 export function GameInfoCard({ game }: { game: Game }) {
   const router = useRouter();
+  const year = game.released?.slice(0, 4);
+
   return (
     <ScaleButton
       onPress={() => router.push(`/game/${game.id}`)}
       style={styles.card}
+      activeScale={0.96}
     >
       <Image
         source={{ uri: game.background_image ?? undefined }}
@@ -25,9 +29,10 @@ export function GameInfoCard({ game }: { game: Game }) {
         <Text style={styles.title} numberOfLines={2}>
           {game.name}
         </Text>
-        <View style={styles.ratingRow}>
-          <Ionicons name="star" size={16} color="#FFD300" />
-          <Text style={styles.rating}>{game.rating}</Text>
+        <View style={styles.metaRow}>
+          <Ionicons name="star" size={14} color="#FFD300" />
+          <Text style={styles.meta}>{game.rating.toFixed(1)}</Text>
+          {year ? <Text style={styles.meta}>· {year}</Text> : null}
         </View>
       </View>
     </ScaleButton>
@@ -38,32 +43,28 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    width: 330,
-    backgroundColor: '#383838',
-    borderRadius: 30,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
-    elevation: 8,
+    alignSelf: 'stretch',
+    backgroundColor: COLORS.navy,
+    borderRadius: RADIUS.lg,
+    marginBottom: SPACING.md,
+    ...SHADOW.card,
   },
   thumb: {
     width: 80,
     height: 80,
-    borderRadius: 22,
-    margin: 10,
+    borderRadius: RADIUS.md,
+    margin: SPACING.sm + 2,
   },
-  info: { flex: 1, paddingRight: 15, gap: 6 },
+  info: { flex: 1, paddingRight: SPACING.md, gap: SPACING.xs + 2 },
   title: {
     fontFamily: 'Noah-Black',
     fontSize: 16,
     color: COLORS.lightGrey,
   },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  rating: {
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
+  meta: {
     fontFamily: 'Noah-Regular',
     fontSize: 12,
-    color: COLORS.lightGrey,
+    color: COLORS.mediumGrey,
   },
 });

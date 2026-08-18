@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -6,7 +7,6 @@ import {
   ActivityIndicator,
   Animated,
   FlatList,
-  ImageBackground,
   Modal,
   Pressable,
   StyleSheet,
@@ -20,8 +20,8 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 
+import { queryKeys } from '@/api/queryClient';
 import { getGame, getGameSeries, getMovies, getScreenshots } from '@/api/rawg';
-import type { Game, GameDetail, Movie, Screenshot } from '@/api/types';
 import { BackButton } from '@/components/BackButton';
 import { Chip } from '@/components/Chip';
 import { GameCard } from '@/components/GameCard';
@@ -29,7 +29,10 @@ import { PlatformIcons } from '@/components/PlatformIcons';
 import { ReadMoreText } from '@/components/ReadMoreText';
 import { Stars } from '@/components/Stars';
 import { TrailerCard } from '@/components/TrailerCard';
+import { Message } from '@/components/Message';
+import { Textured } from '@/components/Textured';
 import { COLORS } from '@/styles/colors';
+import { LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 const HTML_TAGS = /(<([^>]+)>)/gi;
@@ -61,44 +64,42 @@ function NameList({ items }: { items?: { id: number; name: string }[] }) {
 
 export default function GameInfoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [game, setGame] = useState<GameDetail | null>(null);
-  const [screenshots, setScreenshots] = useState<Screenshot[]>([]);
-  const [trailers, setTrailers] = useState<Movie[]>([]);
-  const [series, setSeries] = useState<Game[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
+
   const insets = useSafeAreaInsets();
   const scrollY = useAnimatedValue(0);
   const opacity = useAnimatedValue(0);
+
+  const { data, isPending, error } = useQuery({
+    queryKey: queryKeys.game(id),
+    // The detail screen needs four endpoints; fetch them as one unit so the
+    // screen has a single loading and error state.
+    queryFn: async () => {
+      const [game, screenshots, trailers, series] = await Promise.all([
+        getGame(id),
+        getScreenshots(id),
+        getMovies(id),
+        getGameSeries(id),
+      ]);
+      return {
+        game,
+        screenshots: screenshots.results,
+        trailers: trailers.results,
+        series: series.results,
+      };
+    },
+  });
+
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const [detail, shots, movies, related] = await Promise.all([
-          getGame(id),
-          getScreenshots(id),
-          getMovies(id),
-          getGameSeries(id),
-        ]);
-        if (cancelled) return;
-        setGame(detail);
-        setScreenshots(shots.results);
-        setTrailers(movies.results);
-        setSeries(related.results);
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 250,
-          useNativeDriver: true,
-        }).start();
-      } catch (e) {
-        if (!cancelled)
-          setError(e instanceof Error ? e.message : 'Something went wrong');
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [id, opacity]);
+    if (data) {
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [data, opacity]);
+
   const translateY = scrollY.interpolate({
     inputRange: [0, 270 + insets.top],
     outputRange: [0, insets.top - 270],
@@ -119,30 +120,35 @@ export default function GameInfoScreen() {
     outputRange: [1, 0],
     extrapolate: 'clamp',
   });
-  if (error) {
-    return (
-      <View style={[styles.background, styles.center]}>
-        <Text style={TYPE.p}>{error}</Text>
-        <BackButton />
-      </View>
-    );
-  }
-  if (!game) {
+  if (isPending) {
     return (
       <View style={[styles.background, styles.center]}>
         <ActivityIndicator size="large" color={COLORS.lightGrey} />
       </View>
     );
   }
-  const summary = game.description.replace(HTML_TAGS, '');
+
+  if (error || !data) {
+    return (
+      <View style={styles.background}>
+        <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
+          <BackButton />
+        </View>
+        <Message
+          icon="cloud-offline-outline"
+          title="Couldn't load this game"
+          detail={error instanceof Error ? error.message : undefined}
+        />
+      </View>
+    );
+  }
+
+  const { game, screenshots, trailers, series } = data;
+  const summary = game.description.replace(HTML_TAGS, '').trim();
   return (
-    <ImageBackground
-      source={require('../../../assets/images/noise.png')}
-      resizeMode="repeat"
-      style={styles.background}
-    >
+    <Textured style={styles.background}>
       <SafeAreaView edges={['right', 'left']} style={styles.container}>
-        <View style={[styles.backButton, { top: insets.top + 10 }]}>
+        <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
           <BackButton />
         </View>
 
@@ -194,9 +200,13 @@ export default function GameInfoScreen() {
           <Animated.View style={{ opacity }}>
             <View style={styles.section}>
               <Text style={TYPE.h2}>About</Text>
-              <ReadMoreText style={TYPE.p} numberOfLines={3}>
-                {summary}
-              </ReadMoreText>
+              {summary ? (
+                <ReadMoreText style={TYPE.p} numberOfLines={3}>
+                  {summary}
+                </ReadMoreText>
+              ) : (
+                <Text style={TYPE.p}>No description available.</Text>
+              )}
             </View>
 
             <View style={styles.columns}>
@@ -285,7 +295,7 @@ export default function GameInfoScreen() {
                 <Text style={TYPE.h2}>Tags</Text>
                 <View style={styles.tags}>
                   {game.tags.map((tag) => (
-                    <Chip key={tag.id} title={tag.name} selected />
+                    <Chip key={tag.id} title={tag.name} quiet />
                   ))}
                 </View>
               </View>
@@ -313,7 +323,7 @@ export default function GameInfoScreen() {
           </Pressable>
         </Modal>
       </SafeAreaView>
-    </ImageBackground>
+    </Textured>
   );
 }
 
@@ -321,26 +331,23 @@ const styles = StyleSheet.create({
   background: { flex: 1, backgroundColor: COLORS.darkGrey },
   container: { flex: 1 },
   center: { justifyContent: 'center', alignItems: 'center', gap: 12 },
-  backButton: { position: 'absolute', left: 20, zIndex: 20 },
+  backButton: { position: 'absolute', left: SPACING.lg, zIndex: 20 },
   heroContainer: {
     position: 'absolute',
     top: 0,
-    left: 0,
+    alignSelf: 'center',
     width: '100%',
+    maxWidth: LAYOUT.maxContentWidth,
     zIndex: 10,
-    borderBottomStartRadius: 40,
-    borderBottomEndRadius: 40,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.55,
-    shadowRadius: 3.84,
-    elevation: 10,
+    borderBottomStartRadius: RADIUS.xl,
+    borderBottomEndRadius: RADIUS.xl,
+    ...SHADOW.hero,
   },
   heroImage: {
     width: '100%',
     height: 350,
-    borderBottomStartRadius: 40,
-    borderBottomEndRadius: 40,
+    borderBottomStartRadius: RADIUS.xl,
+    borderBottomEndRadius: RADIUS.xl,
   },
   heroOverlay: {
     position: 'absolute',
@@ -351,8 +358,8 @@ const styles = StyleSheet.create({
     height: 350,
     backgroundColor: 'black',
     opacity: 0.4,
-    borderBottomStartRadius: 40,
-    borderBottomEndRadius: 40,
+    borderBottomStartRadius: RADIUS.xl,
+    borderBottomEndRadius: RADIUS.xl,
   },
   heroInfo: {
     position: 'absolute',
@@ -375,9 +382,16 @@ const styles = StyleSheet.create({
     color: COLORS.darkGrey,
   },
   gameTitle: { textAlign: 'center', marginVertical: 10 },
-  scrollContent: { flexGrow: 1, paddingTop: 360, paddingBottom: 120 },
-  section: { padding: 10 },
-  sectionHeader: { padding: 10, paddingBottom: 10 },
+  scrollContent: {
+    flexGrow: 1,
+    paddingTop: 360,
+    paddingBottom: 120,
+    width: '100%',
+    maxWidth: LAYOUT.maxContentWidth,
+    alignSelf: 'center',
+  },
+  section: { padding: SPACING.sm + 2 },
+  sectionHeader: { padding: SPACING.sm + 2 },
   columns: {
     padding: 10,
     flexDirection: 'row',
@@ -395,7 +409,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 15,
   },
-  screenshot: { width: 300, height: 200, borderRadius: 10 },
+  screenshot: {
+    width: LAYOUT.mediaWidth,
+    height: LAYOUT.mediaHeight,
+    borderRadius: RADIUS.sm,
+  },
   tags: {
     flexDirection: 'row',
     flexWrap: 'wrap',

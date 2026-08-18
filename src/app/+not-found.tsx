@@ -1,0 +1,37 @@
+import { Link, Stack } from 'expo-router';
+import { StyleSheet, Text, View } from 'react-native';
+
+import { Message } from '@/components/Message';
+import { COLORS } from '@/styles/colors';
+import { SPACING } from '@/styles/theme';
+
+export default function NotFoundScreen() {
+  return (
+    <>
+      <Stack.Screen options={{ title: 'Not Found' }} />
+      <View style={styles.container}>
+        <Message
+          icon="game-controller-outline"
+          title="This screen doesn't exist"
+        />
+        <Link href="/" style={styles.link}>
+          <Text style={styles.linkText}>Go back home</Text>
+        </Link>
+      </View>
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    backgroundColor: COLORS.darkGrey,
+  },
+  link: { alignSelf: 'center', paddingVertical: SPACING.md },
+  linkText: {
+    fontFamily: 'Noah-Bold',
+    fontSize: 14,
+    color: COLORS.blue,
+  },
+});

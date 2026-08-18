@@ -38,7 +38,8 @@
       "expo-video"
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": true,
+      "reactCompiler": true
     },
     "description": "A video game backlog you can actually finish",
     "githubUrl": "https://github.com/ginoleeswan/arcade"
