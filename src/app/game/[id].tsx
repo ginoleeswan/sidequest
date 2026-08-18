@@ -37,6 +37,7 @@ import { ReadMoreText } from '@/components/ReadMoreText';
 import { ScorePill } from '@/components/ScorePill';
 import { SectionHeader } from '@/components/SectionHeader';
 import { Skeleton, SkeletonShelf } from '@/components/Skeleton';
+import { StatusActions } from '@/components/StatusActions';
 import { StoreLinks } from '@/components/StoreLinks';
 import { Textured } from '@/components/Textured';
 import { TrailerCard } from '@/components/TrailerCard';
@@ -235,6 +236,7 @@ export default function GameInfoScreen() {
           {game.name}
         </Text>
         <StatStrip game={game} />
+        <StatusActions game={game} />
       </View>
     </View>
   );
@@ -446,8 +448,8 @@ const styles = StyleSheet.create({
   backButton: { position: 'absolute', left: SPACING.lg, zIndex: 30 },
 
   // hero
-  hero: { height: 440, justifyContent: 'flex-end' },
-  heroExpanded: { height: 480 },
+  hero: { height: 480, justifyContent: 'flex-end' },
+  heroExpanded: { height: 520 },
   heroImage: {
     position: 'absolute',
     top: 0,

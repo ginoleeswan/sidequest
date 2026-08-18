@@ -96,6 +96,13 @@ export function Sidebar({ activeKey, onHome, onSelect }: Props) {
           active={activeKey === 'home'}
           onPress={onHome}
         />
+        <NavItem
+          label="My Library"
+          iconName="library"
+          iconType="ionicon"
+          active={false}
+          onPress={() => router.push('/library')}
+        />
         <NavGroup
           heading="Discover"
           sections={DISCOVER}

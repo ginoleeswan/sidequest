@@ -1,7 +1,8 @@
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CoverImage } from './CoverImage';
 import { PlatformIcons } from './PlatformIcons';
@@ -9,6 +10,7 @@ import { ScaleButton } from './ScaleButton';
 import { ScorePill } from './ScorePill';
 import { Textured } from './Textured';
 import type { Game } from '@/api/types';
+import { useLibrary } from '@/lib/library';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
 
@@ -21,11 +23,33 @@ interface Props {
 /**
  * Cover-art tile. The art carries glanceable facts — Metacritic in the top
  * corner, platform glyphs along the bottom — and the caption carries
- * identity: title, then genre · year · rating in one quiet line.
+ * identity. On pointer hover the art cycles through the game's actual
+ * screenshots, and a quick-save control appears.
  */
 export function GameTile({ game, width }: Props) {
   const router = useRouter();
+  const { statusOf, setStatus } = useLibrary();
   const [hovered, setHovered] = useState(false);
+  const [shot, setShot] = useState(0);
+
+  const saved = statusOf(game.id) != null;
+  const images = [
+    game.background_image,
+    ...(game.short_screenshots ?? [])
+      .map((s) => s.image)
+      .filter((uri) => uri && uri !== game.background_image)
+      .slice(0, 4),
+  ].filter(Boolean) as string[];
+
+  // Cycle screenshots while hovered — a living preview of the game itself.
+  useEffect(() => {
+    if (!hovered || images.length < 2) return;
+    const timer = setInterval(
+      () => setShot((i) => (i + 1) % images.length),
+      1100
+    );
+    return () => clearInterval(timer);
+  }, [hovered, images.length]);
 
   const year = game.released?.slice(0, 4);
   const genre = game.genres?.[0]?.name;
@@ -41,7 +65,10 @@ export function GameTile({ game, width }: Props) {
     <View
       style={width != null ? { width } : styles.flexCell}
       onPointerEnter={() => setHovered(true)}
-      onPointerLeave={() => setHovered(false)}
+      onPointerLeave={() => {
+        setHovered(false);
+        setShot(0);
+      }}
     >
       <ScaleButton
         onPress={() => router.push(`/game/${game.id}`)}
@@ -50,7 +77,7 @@ export function GameTile({ game, width }: Props) {
         hoverScale={1.03}
       >
         <View style={[styles.art, hovered && styles.artHovered]}>
-          <CoverImage uri={game.background_image} style={styles.image} />
+          <CoverImage uri={images[shot] ?? null} style={styles.image} />
           <Textured fill />
           <LinearGradient
             colors={['#00000000', '#00000059', '#000000a6']}
@@ -62,6 +89,19 @@ export function GameTile({ game, width }: Props) {
             <View style={styles.scoreCorner}>
               <ScorePill score={game.metacritic} size="sm" />
             </View>
+          )}
+          {(hovered || saved) && (
+            <Pressable
+              onPress={() => setStatus(game, saved ? null : 'wishlist')}
+              hitSlop={6}
+              style={styles.saveCorner}
+            >
+              <Ionicons
+                name={saved ? 'bookmark' : 'bookmark-outline'}
+                size={15}
+                color={saved ? '#9CC2FF' : COLORS.white}
+              />
+            </Pressable>
           )}
           {game.parent_platforms && game.parent_platforms.length > 0 && (
             <View style={styles.platforms}>
@@ -75,7 +115,7 @@ export function GameTile({ game, width }: Props) {
         </View>
         <Text
           style={[styles.title, hovered && styles.titleHovered]}
-          numberOfLines={2}
+          numberOfLines={1}
         >
           {game.name}
         </Text>
@@ -106,6 +146,17 @@ const styles = StyleSheet.create({
   image: { width: '100%', height: '100%' },
   gradient: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   scoreCorner: { position: 'absolute', top: SPACING.sm, right: SPACING.sm },
+  saveCorner: {
+    position: 'absolute',
+    top: SPACING.sm,
+    left: SPACING.sm,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   platforms: {
     position: 'absolute',
     bottom: SPACING.sm,

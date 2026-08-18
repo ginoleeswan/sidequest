@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useQueries } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -18,10 +18,13 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 
+import { Ionicons } from '@expo/vector-icons';
+
 import { queryKeys } from '@/api/queryClient';
 import { searchGames } from '@/api/rawg';
 import type { Game, Paged } from '@/api/types';
 import { Chip } from '@/components/Chip';
+import { FadeInView } from '@/components/FadeInView';
 import { FeaturedHero } from '@/components/FeaturedHero';
 import { FooterLinks } from '@/components/FooterLinks';
 import { GameCard } from '@/components/GameCard';
@@ -74,6 +77,7 @@ const dedupeById = (items: Game[]): Game[] => {
 };
 
 export default function HomeScreen() {
+  const router = useRouter();
   const params = useLocalSearchParams<{ category?: string }>();
   const [query, setQuery] = useState('');
   // 'home' = storefront; otherwise a section key.
@@ -216,34 +220,39 @@ export default function HomeScreen() {
   ) : null;
 
   const grid = (
-    <FlatList
-      // numColumns is immutable per instance; remount on change.
-      key={`grid-${columns}`}
-      data={padToRows(games, columns)}
-      numColumns={columns}
-      columnWrapperStyle={styles.gridRow}
-      keyExtractor={(item, index) =>
-        isSpacer(item) ? `spacer-${index}` : String(item.id)
-      }
-      renderItem={({ item }) =>
-        isSpacer(item) ? (
-          <View style={styles.gridSpacer} />
-        ) : (
-          <GameTile game={item} />
-        )
-      }
-      showsVerticalScrollIndicator={false}
-      refreshControl={refresh}
-      onEndReached={loadMore}
-      onEndReachedThreshold={1.2}
-      ListHeaderComponent={gridHeader}
-      ListFooterComponent={footerSpinner}
-      contentContainerStyle={[
-        styles.gridContent,
-        !isExpanded && { paddingTop: headerHeight },
-        { paddingBottom: insets.bottom + SPACING.xl * 3 },
-      ]}
-    />
+    <FadeInView
+      key={searching ? `s-${debouncedQuery}` : section.key}
+      style={styles.gridFade}
+    >
+      <FlatList
+        // numColumns is immutable per instance; remount on change.
+        key={`grid-${columns}`}
+        data={padToRows(games, columns)}
+        numColumns={columns}
+        columnWrapperStyle={styles.gridRow}
+        keyExtractor={(item, index) =>
+          isSpacer(item) ? `spacer-${index}` : String(item.id)
+        }
+        renderItem={({ item }) =>
+          isSpacer(item) ? (
+            <View style={styles.gridSpacer} />
+          ) : (
+            <GameTile game={item} />
+          )
+        }
+        showsVerticalScrollIndicator={false}
+        refreshControl={refresh}
+        onEndReached={loadMore}
+        onEndReachedThreshold={1.2}
+        ListHeaderComponent={gridHeader}
+        ListFooterComponent={footerSpinner}
+        contentContainerStyle={[
+          styles.gridContent,
+          !isExpanded && { paddingTop: headerHeight },
+          { paddingBottom: insets.bottom + SPACING.xl * 3 },
+        ]}
+      />
+    </FadeInView>
   );
 
   // ------------------------------------------------------------- expanded
@@ -291,7 +300,9 @@ export default function HomeScreen() {
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.homeScroll}
                   >
-                    <FeaturedHero games={featured} />
+                    <FadeInView>
+                      <FeaturedHero games={featured} />
+                    </FadeInView>
                     <Shelf
                       section={DISCOVER[0]}
                       games={trendingShelf}
@@ -414,6 +425,13 @@ export default function HomeScreen() {
               onChangeText={setQuery}
               style={styles.searchCompact}
             />
+            <Ionicons
+              name="library-outline"
+              size={22}
+              color={COLORS.lightGrey}
+              onPress={() => router.push('/library')}
+              style={styles.libraryButton}
+            />
           </View>
           <FlatList
             data={CHIP_SECTIONS}
@@ -473,6 +491,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
   },
   gridSpacer: { flex: 1 },
+  gridFade: { flex: 1 },
   moreSpinner: { paddingVertical: SPACING.lg },
 
   // compact
@@ -503,6 +522,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   searchCompact: { flex: 1, width: 'auto', maxWidth: 230 },
+  libraryButton: { padding: 4 },
   chips: {
     alignItems: 'center',
     paddingHorizontal: SPACING.md,

@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { queryClient } from '@/api/queryClient';
+import { LibraryProvider } from '@/lib/library';
 import { COLORS } from '@/styles/colors';
 
 export { ErrorBoundary } from 'expo-router';
@@ -29,15 +30,17 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <SafeAreaProvider>
-        <StatusBar style="light" />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: COLORS.darkGrey },
-          }}
-        />
-      </SafeAreaProvider>
+      <LibraryProvider>
+        <SafeAreaProvider>
+          <StatusBar style="light" />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: COLORS.darkGrey },
+            }}
+          />
+        </SafeAreaProvider>
+      </LibraryProvider>
     </QueryClientProvider>
   );
 }

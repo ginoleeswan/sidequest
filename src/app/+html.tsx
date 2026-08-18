@@ -80,4 +80,17 @@ const css = `
 
   /* Cards and nav are controls: dragging across them shouldn't select text. */
   [role="button"], [role="link"] { user-select: none; }
+
+  /* Hover/active color changes ease instead of snapping. Transform and
+     opacity stay out: React Native's Animated drives those per-frame and
+     a CSS transition would fight it. */
+  [role="button"], [role="link"], a {
+    transition:
+      background-color 0.18s ease,
+      border-color 0.18s ease,
+      color 0.18s ease;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [role="button"], [role="link"], a { transition: none; }
+  }
 `;

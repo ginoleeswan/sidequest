@@ -21,6 +21,7 @@ export interface Game {
   metacritic?: number | null;
   parent_platforms?: PlatformRef[];
   genres?: Named[];
+  short_screenshots?: { id: number; image: string }[];
 }
 
 export interface RatingBucket {
