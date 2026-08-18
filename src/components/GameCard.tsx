@@ -49,8 +49,6 @@ const styles = StyleSheet.create({
     width: LAYOUT.cardWidth,
     height: LAYOUT.cardHeight,
     borderRadius: RADIUS.xl,
-    marginHorizontal: SPACING.sm,
-    marginBottom: SPACING.lg,
     overflow: 'hidden',
     backgroundColor: COLORS.navy,
   },

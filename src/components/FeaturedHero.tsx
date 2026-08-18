@@ -38,8 +38,8 @@ export function FeaturedHero({ games }: Props) {
           />
           <Textured fill />
           <LinearGradient
-            colors={['#00000000', '#000000f0']}
-            locations={[0.35, 1]}
+            colors={['#00000000', '#000000b0', '#000000f2']}
+            locations={[0.3, 0.72, 1]}
             style={styles.gradient}
             pointerEvents="none"
           />
@@ -115,12 +115,18 @@ const styles = StyleSheet.create({
     fontFamily: 'Noah-Bold',
     fontSize: 10,
     letterSpacing: 1.4,
-    color: COLORS.blue,
+    color: '#7EB1FF',
+    textShadowColor: 'rgba(0,0,0,0.9)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   leadTitle: {
     fontFamily: 'Noah-Black',
     fontSize: 28,
     color: COLORS.white,
+    textShadowColor: 'rgba(0,0,0,0.9)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
   },
   rail: { flex: 1, gap: SPACING.md, justifyContent: 'space-between' },
   railItem: {

@@ -54,7 +54,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.blue,
     paddingHorizontal: 14,
     paddingVertical: SPACING.sm,
-    marginHorizontal: SPACING.xs + 1,
   },
   solid: { backgroundColor: COLORS.blue },
   outline: { backgroundColor: 'transparent' },
@@ -64,7 +63,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    marginHorizontal: 0,
   },
   title: {
     fontFamily: 'Noah-Bold',

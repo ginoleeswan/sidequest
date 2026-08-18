@@ -5,7 +5,12 @@
   "outputDirectory": "dist",
   "cleanUrls": true,
   "trailingSlash": false,
-  "rewrites": [{ "source": "/game/:id", "destination": "/game/[id].html" }],
+  "rewrites": [
+    {
+      "source": "/game/:id",
+      "destination": "/game/[id]"
+    }
+  ],
   "headers": [
     {
       "source": "/_expo/static/(.*)",

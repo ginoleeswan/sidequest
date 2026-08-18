@@ -26,6 +26,7 @@ import { GameCard } from '@/components/GameCard';
 import { GameInfoCard } from '@/components/GameInfoCard';
 import { GameTile } from '@/components/GameTile';
 import { Message } from '@/components/Message';
+import { Rail } from '@/components/Rail';
 import { SearchInput } from '@/components/SearchInput';
 import { Shelf } from '@/components/Shelf';
 import {
@@ -208,6 +209,7 @@ export default function HomeScreen() {
                       category={CATEGORIES[0]}
                       games={listed}
                       onViewAll={selectCategory}
+                      inset={SPACING.xl}
                     />
                     {SHELF_CATEGORIES.map((shelf, index) => (
                       <Shelf
@@ -215,6 +217,7 @@ export default function HomeScreen() {
                         category={shelf}
                         games={shelfResults[index].data ?? []}
                         onViewAll={selectCategory}
+                        inset={SPACING.xl}
                       />
                     ))}
                   </ScrollView>
@@ -299,13 +302,13 @@ export default function HomeScreen() {
               >
                 {featured.length > 0 && (
                   <Animated.View style={{ opacity: fadeOutOnScroll }}>
-                    <FlatList
+                    <Rail
                       data={featured}
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
                       keyExtractor={(item) => String(item.id)}
-                      renderItem={({ item }) => <GameCard game={item} wide />}
-                      contentContainerStyle={styles.carousel}
+                      renderItem={(item) => <GameCard game={item} wide />}
+                      inset={SPACING.md}
+                      gap={SPACING.md}
+                      snapInterval={LAYOUT.cardWideWidth + SPACING.md}
                     />
                   </Animated.View>
                 )}
@@ -442,11 +445,11 @@ const styles = StyleSheet.create({
   },
   chips: {
     alignItems: 'center',
-    paddingHorizontal: SPACING.sm + 2,
+    paddingHorizontal: SPACING.md,
+    gap: SPACING.sm,
     height: 50,
   },
   body: { flex: 1 },
-  carousel: { paddingHorizontal: SPACING.sm, paddingTop: SPACING.xs },
   list: { flexGrow: 1, paddingHorizontal: SPACING.md },
 
   // shared

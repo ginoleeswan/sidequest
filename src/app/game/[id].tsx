@@ -4,7 +4,6 @@ import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   Animated,
-  FlatList,
   Modal,
   Pressable,
   ScrollView,
@@ -27,6 +26,7 @@ import { Chip } from '@/components/Chip';
 import { GameCard } from '@/components/GameCard';
 import { Message } from '@/components/Message';
 import { PlatformIcons } from '@/components/PlatformIcons';
+import { Rail } from '@/components/Rail';
 import { ReadMoreText } from '@/components/ReadMoreText';
 import { Stars } from '@/components/Stars';
 import { Textured } from '@/components/Textured';
@@ -72,27 +72,6 @@ function MetaRow({ label, items }: { label: string; items?: Named[] }) {
 
 function SectionTitle({ children }: { children: string }) {
   return <Text style={styles.sectionTitle}>{children}</Text>;
-}
-
-function MediaRail<T>({
-  data,
-  renderItem,
-  keyExtractor,
-}: {
-  data: T[];
-  renderItem: (item: T) => React.ReactElement;
-  keyExtractor: (item: T) => string;
-}) {
-  return (
-    <FlatList
-      horizontal
-      data={data}
-      showsHorizontalScrollIndicator={false}
-      keyExtractor={keyExtractor}
-      renderItem={({ item }) => renderItem(item)}
-      contentContainerStyle={styles.mediaList}
-    />
-  );
 }
 
 /* ------------------------------------------------------------------ screen */
@@ -168,6 +147,10 @@ export default function GameInfoScreen() {
 
   const { game, screenshots, trailers, series } = data;
   const summary = game.description.replace(HTML_TAGS, '').trim();
+  // Compact rails bleed across the page padding; the desktop two-column
+  // layout keeps rails inside the main column (bleeding would cross the
+  // Details rail).
+  const railInset = isExpanded ? 0 : SPACING.md;
 
   /* ---------------------------------------------------------- sub-sections */
 
@@ -214,9 +197,10 @@ export default function GameInfoScreen() {
       {screenshots.length > 0 && (
         <View style={styles.block}>
           <SectionTitle>Screenshots</SectionTitle>
-          <MediaRail<Screenshot>
+          <Rail<Screenshot>
             data={screenshots}
             keyExtractor={(item) => String(item.id)}
+            inset={railInset}
             renderItem={(item) => (
               <Pressable onPress={() => setLightboxUri(item.image)}>
                 <Image
@@ -234,9 +218,10 @@ export default function GameInfoScreen() {
       {trailers.length > 0 && (
         <View style={styles.block}>
           <SectionTitle>Trailers</SectionTitle>
-          <MediaRail<Movie>
+          <Rail<Movie>
             data={trailers}
             keyExtractor={(item) => String(item.id)}
+            inset={railInset}
             renderItem={(item) => <TrailerCard trailer={item} />}
           />
         </View>
@@ -245,9 +230,10 @@ export default function GameInfoScreen() {
       {series.length > 0 && (
         <View style={styles.block}>
           <SectionTitle>Games in Series</SectionTitle>
-          <MediaRail<Game>
+          <Rail<Game>
             data={series}
             keyExtractor={(item) => String(item.id)}
+            inset={railInset}
             renderItem={(item) => <GameCard game={item} />}
           />
         </View>
@@ -428,6 +414,9 @@ const styles = StyleSheet.create({
     fontSize: 26,
     color: COLORS.white,
     textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.9)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
   },
   heroTitleLarge: { fontSize: 40 },
   heroCompact: {
@@ -515,7 +504,6 @@ const styles = StyleSheet.create({
     color: COLORS.lightGrey,
   },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.xs + 2 },
-  mediaList: { gap: SPACING.md, paddingVertical: SPACING.xs },
   screenshot: {
     width: LAYOUT.mediaWidth,
     height: LAYOUT.mediaHeight,

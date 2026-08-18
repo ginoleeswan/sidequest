@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { DynamicIcon } from './DynamicIcon';
 import { GameTile } from './GameTile';
+import { Rail } from './Rail';
 import type { Category } from '@/constants/categories';
 import type { Game } from '@/api/types';
 import { COLORS } from '@/styles/colors';
@@ -12,10 +13,12 @@ interface Props {
   category: Category;
   games: Game[];
   onViewAll: (category: Category) => void;
+  /** Horizontal page padding the rail should bleed across. */
+  inset?: number;
 }
 
 /** Horizontal storefront row: heading, tiles, "view all". */
-export function Shelf({ category, games, onViewAll }: Props) {
+export function Shelf({ category, games, onViewAll, inset = 0 }: Props) {
   const [linkHovered, setLinkHovered] = useState(false);
   if (games.length === 0) return null;
 
@@ -42,15 +45,13 @@ export function Shelf({ category, games, onViewAll }: Props) {
           </Text>
         </Pressable>
       </View>
-      <FlatList
-        horizontal
+      <Rail
         data={games}
-        showsHorizontalScrollIndicator={false}
         keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => (
+        renderItem={(item) => (
           <GameTile game={item} width={LAYOUT.shelfTileWidth} />
         )}
-        contentContainerStyle={styles.row}
+        inset={inset}
       />
     </View>
   );
