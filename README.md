@@ -52,6 +52,20 @@ Open in [Expo Go](https://expo.dev/go), an emulator, or press `w` for web.
 | `npm run format`                     | Prettier write                                  |
 | `node scripts/duration-coverage.mjs` | data-source validation (see `docs/validation/`) |
 
+## Deploy (Vercel)
+
+The web build is a static export — `vercel.json` is already configured.
+
+1. Import the repo at [vercel.com/new](https://vercel.com/new) (framework
+   preset: **Other** — `vercel.json` supplies the build command and output
+   directory).
+2. Add one environment variable in the project settings:
+   `EXPO_PUBLIC_RAWG_API_KEY` = your RAWG key.
+3. Deploy. Dynamic game pages (`/game/123`) are served via the rewrite in
+   `vercel.json`.
+
+Or from the CLI: `npx vercel --prod` (after `npx vercel env add EXPO_PUBLIC_RAWG_API_KEY`).
+
 ## Structure
 
 ```

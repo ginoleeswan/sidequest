@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { CoverImage } from './CoverImage';
 import { ScaleButton } from './ScaleButton';
 import type { Game } from '@/api/types';
 import { COLORS } from '@/styles/colors';
@@ -19,11 +19,10 @@ export function GameInfoCard({ game }: { game: Game }) {
       style={styles.card}
       activeScale={0.96}
     >
-      <Image
-        source={{ uri: game.background_image ?? undefined }}
+      <CoverImage
+        uri={game.background_image}
         style={styles.thumb}
-        contentFit="cover"
-        transition={200}
+        iconSize={26}
       />
       <View style={styles.info}>
         <Text style={styles.title} numberOfLines={2}>

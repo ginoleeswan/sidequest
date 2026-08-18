@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { CoverImage } from './CoverImage';
 import { ScaleButton } from './ScaleButton';
 import { Textured } from './Textured';
 import type { Game } from '@/api/types';
@@ -36,12 +36,7 @@ export function GameTile({ game, width }: Props) {
         hoverScale={1.03}
       >
         <View style={[styles.art, hovered && styles.artHovered]}>
-          <Image
-            source={{ uri: game.background_image ?? undefined }}
-            style={styles.image}
-            contentFit="cover"
-            transition={200}
-          />
+          <CoverImage uri={game.background_image} style={styles.image} />
           <Textured fill />
           <LinearGradient
             colors={['#00000000', '#000000cc']}

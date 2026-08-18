@@ -3,7 +3,6 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   FlatList,
   Modal,
@@ -22,6 +21,8 @@ import { queryKeys } from '@/api/queryClient';
 import { getGame, getGameSeries, getMovies, getScreenshots } from '@/api/rawg';
 import type { Game, Movie, Named, Screenshot } from '@/api/types';
 import { BackButton } from '@/components/BackButton';
+import { CoverImage } from '@/components/CoverImage';
+import { Skeleton, SkeletonShelf } from '@/components/Skeleton';
 import { Chip } from '@/components/Chip';
 import { GameCard } from '@/components/GameCard';
 import { Message } from '@/components/Message';
@@ -136,9 +137,17 @@ export default function GameInfoScreen() {
 
   if (isPending) {
     return (
-      <View style={[styles.background, styles.center]}>
-        <ActivityIndicator size="large" color={COLORS.lightGrey} />
-      </View>
+      <Textured style={styles.background}>
+        <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
+          <BackButton />
+        </View>
+        <View style={styles.skeletonShell}>
+          <Skeleton style={styles.skeletonHero} />
+          <Skeleton style={styles.skeletonLine} />
+          <Skeleton style={styles.skeletonLineShort} />
+          <SkeletonShelf tiles={4} />
+        </View>
+      </Textured>
     );
   }
 
@@ -250,10 +259,10 @@ export default function GameInfoScreen() {
 
   const heroContent = (
     <>
-      <Image
-        source={{ uri: game.background_image ?? undefined }}
+      <CoverImage
+        uri={game.background_image}
         style={styles.heroImage}
-        contentFit="cover"
+        iconSize={72}
       />
       <View style={styles.heroScrim} />
       <Animated.View style={[styles.heroCopy, { opacity }]}>
@@ -378,6 +387,18 @@ function Lightbox({
 
 const styles = StyleSheet.create({
   background: { flex: 1, backgroundColor: COLORS.darkGrey },
+  skeletonShell: {
+    flex: 1,
+    width: '100%',
+    maxWidth: LAYOUT.maxExpandedWidth,
+    alignSelf: 'center',
+    paddingHorizontal: SPACING.xl,
+    paddingTop: SPACING.xl * 2,
+    gap: SPACING.md,
+  },
+  skeletonHero: { height: 320, borderRadius: RADIUS.lg },
+  skeletonLine: { height: 16, width: '55%' },
+  skeletonLineShort: { height: 12, width: '35%', marginBottom: SPACING.lg },
   container: { flex: 1 },
   center: { justifyContent: 'center', alignItems: 'center', gap: SPACING.md },
   backButton: { position: 'absolute', left: SPACING.lg, zIndex: 30 },

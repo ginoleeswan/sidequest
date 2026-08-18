@@ -1,22 +1,40 @@
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { COLORS } from '@/styles/colors';
-import { SPACING } from '@/styles/theme';
+import { RADIUS, SPACING } from '@/styles/theme';
 
 interface Props {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
   detail?: string;
+  /** Optional call to action, e.g. "Clear search". */
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
-/** Centred empty / error state. */
-export function Message({ icon, title, detail }: Props) {
+/** Centred empty / error state with an optional action. */
+export function Message({ icon, title, detail, actionLabel, onAction }: Props) {
+  const [hovered, setHovered] = useState(false);
+
   return (
     <View style={styles.container}>
-      <Ionicons name={icon} size={48} color={COLORS.mediumGrey} />
+      <View style={styles.iconPlate}>
+        <Ionicons name={icon} size={40} color={COLORS.mediumGrey} />
+      </View>
       <Text style={styles.title}>{title}</Text>
       {detail ? <Text style={styles.detail}>{detail}</Text> : null}
+      {actionLabel && onAction ? (
+        <Pressable
+          onPress={onAction}
+          onHoverIn={() => setHovered(true)}
+          onHoverOut={() => setHovered(false)}
+          style={[styles.action, hovered && styles.actionHovered]}
+        >
+          <Text style={styles.actionText}>{actionLabel}</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -28,6 +46,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: SPACING.xl,
     gap: SPACING.sm,
+  },
+  iconPlate: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.sm,
   },
   title: {
     fontFamily: 'Noah-Bold',
@@ -41,5 +70,18 @@ const styles = StyleSheet.create({
     color: COLORS.mediumGrey,
     textAlign: 'center',
     maxWidth: 320,
+  },
+  action: {
+    marginTop: SPACING.md,
+    backgroundColor: COLORS.blue,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm + 2,
+  },
+  actionHovered: { opacity: 0.85 },
+  actionText: {
+    fontFamily: 'Noah-Bold',
+    fontSize: 13,
+    color: COLORS.white,
   },
 });

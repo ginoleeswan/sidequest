@@ -1,8 +1,8 @@
-import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { CoverImage } from './CoverImage';
 import { ScaleButton } from './ScaleButton';
 import { Textured } from './Textured';
 import type { Game } from '@/api/types';
@@ -22,11 +22,10 @@ export function GameCard({ game, wide = false }: Props) {
       style={SHADOW.card}
     >
       <View style={[styles.card, wide && styles.wide]}>
-        <Image
-          source={{ uri: game.background_image ?? undefined }}
+        <CoverImage
+          uri={game.background_image}
           style={styles.image}
-          contentFit="cover"
-          transition={200}
+          iconSize={40}
         />
         <Textured fill />
         <LinearGradient

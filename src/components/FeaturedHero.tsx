@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { CoverImage } from './CoverImage';
 import { ScaleButton } from './ScaleButton';
 import { Textured } from './Textured';
 import type { Game } from '@/api/types';
@@ -31,11 +31,10 @@ export function FeaturedHero({ games }: Props) {
         activeScale={0.99}
       >
         <View style={styles.lead}>
-          <Image
-            source={{ uri: lead.background_image ?? undefined }}
+          <CoverImage
+            uri={lead.background_image}
             style={styles.image}
-            contentFit="cover"
-            transition={250}
+            iconSize={64}
           />
           <Textured fill />
           <LinearGradient
@@ -67,11 +66,10 @@ export function FeaturedHero({ games }: Props) {
             onPress={() => router.push(`/game/${game.id}`)}
             style={styles.railItem}
           >
-            <Image
-              source={{ uri: game.background_image ?? undefined }}
+            <CoverImage
+              uri={game.background_image}
               style={styles.railImage}
-              contentFit="cover"
-              transition={200}
+              iconSize={24}
             />
             <View style={styles.railCopy}>
               <Text style={styles.railTitle} numberOfLines={2}>

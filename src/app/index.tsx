@@ -1,7 +1,6 @@
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   FlatList,
   Platform,
@@ -29,6 +28,12 @@ import { GameTile } from '@/components/GameTile';
 import { Message } from '@/components/Message';
 import { SearchInput } from '@/components/SearchInput';
 import { Shelf } from '@/components/Shelf';
+import {
+  SkeletonCompactHome,
+  SkeletonGrid,
+  SkeletonHero,
+  SkeletonShelf,
+} from '@/components/Skeleton';
 import { Sidebar } from '@/components/Sidebar';
 import { Textured } from '@/components/Textured';
 import {
@@ -136,12 +141,11 @@ export default function HomeScreen() {
   };
 
   const status = renderStatus({
-    isPending,
     error,
-    empty: games.length === 0,
+    empty: !isPending && games.length === 0,
     searching,
     debouncedQuery,
-    sectionTitle: section.title,
+    onClearSearch: () => setQuery(''),
   });
 
   const refresh = (
@@ -181,7 +185,20 @@ export default function HomeScreen() {
               </View>
 
               {status ??
-                (showShelves ? (
+                (isPending ? (
+                  showShelves ? (
+                    <ScrollView
+                      showsVerticalScrollIndicator={false}
+                      contentContainerStyle={styles.homeScroll}
+                    >
+                      <SkeletonHero />
+                      <SkeletonShelf />
+                      <SkeletonShelf />
+                    </ScrollView>
+                  ) : (
+                    <SkeletonGrid columns={columns} />
+                  )
+                ) : showShelves ? (
                   <ScrollView
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.homeScroll}
@@ -270,60 +287,63 @@ export default function HomeScreen() {
             />
           </View>
 
-          {status ?? (
-            <Animated.View
-              style={[
-                styles.body,
-                !searching && { transform: [{ translateY }] },
-              ]}
-            >
-              {featured.length > 0 && (
-                <Animated.View style={{ opacity: fadeOutOnScroll }}>
-                  <FlatList
-                    data={featured}
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    keyExtractor={(item) => String(item.id)}
-                    renderItem={({ item }) => <GameCard game={item} wide />}
-                    contentContainerStyle={styles.carousel}
-                  />
-                </Animated.View>
-              )}
-
-              <View style={styles.sectionRow}>
-                <DynamicIcon
-                  type={compactSection.iconType}
-                  name={compactSection.iconName}
-                  color={COLORS.mediumGrey}
-                />
-                <Text style={[TYPE.h3, styles.sectionTitle]}>
-                  {compactSection.title}
-                </Text>
-              </View>
-
-              <FlatList
-                data={listed}
-                onScroll={Animated.event(
-                  [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-                  { useNativeDriver: true }
-                )}
-                scrollEventThrottle={16}
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="on-drag"
-                keyExtractor={(item) => String(item.id)}
-                renderItem={({ item }) => <GameInfoCard game={item} />}
-                showsVerticalScrollIndicator={false}
-                refreshControl={refresh}
-                contentContainerStyle={[
-                  styles.list,
-                  {
-                    paddingBottom:
-                      COLLAPSE_DISTANCE + insets.bottom + SPACING.xl,
-                  },
+          {status ??
+            (isPending ? (
+              <SkeletonCompactHome />
+            ) : (
+              <Animated.View
+                style={[
+                  styles.body,
+                  !searching && { transform: [{ translateY }] },
                 ]}
-              />
-            </Animated.View>
-          )}
+              >
+                {featured.length > 0 && (
+                  <Animated.View style={{ opacity: fadeOutOnScroll }}>
+                    <FlatList
+                      data={featured}
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      keyExtractor={(item) => String(item.id)}
+                      renderItem={({ item }) => <GameCard game={item} wide />}
+                      contentContainerStyle={styles.carousel}
+                    />
+                  </Animated.View>
+                )}
+
+                <View style={styles.sectionRow}>
+                  <DynamicIcon
+                    type={compactSection.iconType}
+                    name={compactSection.iconName}
+                    color={COLORS.mediumGrey}
+                  />
+                  <Text style={[TYPE.h3, styles.sectionTitle]}>
+                    {compactSection.title}
+                  </Text>
+                </View>
+
+                <FlatList
+                  data={listed}
+                  onScroll={Animated.event(
+                    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                    { useNativeDriver: true }
+                  )}
+                  scrollEventThrottle={16}
+                  keyboardShouldPersistTaps="handled"
+                  keyboardDismissMode="on-drag"
+                  keyExtractor={(item) => String(item.id)}
+                  renderItem={({ item }) => <GameInfoCard game={item} />}
+                  showsVerticalScrollIndicator={false}
+                  refreshControl={refresh}
+                  contentContainerStyle={[
+                    styles.list,
+                    {
+                      paddingBottom:
+                        COLLAPSE_DISTANCE + insets.bottom + SPACING.xl,
+                    },
+                  ]}
+                />
+              </Animated.View>
+            ))}
         </View>
       </SafeAreaView>
     </Textured>
@@ -331,34 +351,21 @@ export default function HomeScreen() {
 }
 
 interface StatusArgs {
-  isPending: boolean;
   error: unknown;
   empty: boolean;
   searching: boolean;
   debouncedQuery: string;
-  sectionTitle: string;
+  onClearSearch: () => void;
 }
 
-/** Loading / error / empty, or null when there are results to show. */
+/** Error / empty, or null when there is content (or a skeleton) to show. */
 function renderStatus({
-  isPending,
   error,
   empty,
   searching,
   debouncedQuery,
-  sectionTitle,
+  onClearSearch,
 }: StatusArgs) {
-  if (isPending) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={COLORS.lightGrey} />
-        <Text style={[TYPE.p, styles.loadingText]}>
-          Loading {sectionTitle}…
-        </Text>
-      </View>
-    );
-  }
-
   if (error) {
     return (
       <Message
@@ -375,6 +382,8 @@ function renderStatus({
         icon="search-outline"
         title={`No games match "${debouncedQuery}"`}
         detail="Try a shorter or differently spelled title."
+        actionLabel="Clear search"
+        onAction={onClearSearch}
       />
     ) : (
       <Message icon="game-controller-outline" title="Nothing here yet" />
@@ -441,13 +450,6 @@ const styles = StyleSheet.create({
   list: { flexGrow: 1, paddingHorizontal: SPACING.md },
 
   // shared
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: SPACING.sm,
-  },
-  loadingText: { color: COLORS.mediumGrey },
   sectionRow: {
     flexDirection: 'row',
     alignItems: 'center',
