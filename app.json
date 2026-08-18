@@ -4,19 +4,11 @@
     "slug": "arcade",
     "version": "1.0.0",
     "owner": "gl-studio",
+    "scheme": "arcade",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#333D51"
-    },
-    "updates": {
-      "fallbackToCacheTimeout": 0
-    },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#333D51",
     "ios": {
       "supportsTablet": true
     },
@@ -27,9 +19,28 @@
       }
     },
     "web": {
+      "output": "static",
       "favicon": "./assets/favicon.png"
     },
-    "description": "A Video Game database search engine",
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-image",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#333D51",
+          "image": "./assets/splash.png",
+          "imageWidth": 200
+        }
+      ],
+      "expo-status-bar",
+      "expo-video"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "description": "A video game backlog you can actually finish",
     "githubUrl": "https://github.com/ginoleeswan/arcade"
   }
 }

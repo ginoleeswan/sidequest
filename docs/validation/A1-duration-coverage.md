@@ -11,12 +11,12 @@ spot-checked for accuracy.
 
 ## Source 1 — RAWG `playtime` (run 2026-08-18)
 
-| stratum | n | playtime > 0 |
-|---|---|---|
-| head | 120 | 99% |
-| mid | 120 | 97% |
-| tail | 120 | 87% |
-| **total** | **360** | **94%** |
+| stratum   | n       | playtime > 0 |
+| --------- | ------- | ------------ |
+| head      | 120     | 99%          |
+| mid       | 120     | 97%          |
+| tail      | 120     | 87%          |
+| **total** | **360** | **94%**      |
 
 Presence is excellent. Accuracy is not. Spot-check vs. well-known completion
 times: fine for linear games (Portal 4h, Firewatch 5h, DOOM Eternal 12h,
@@ -28,7 +28,7 @@ completion time.
 Also observed: RAWG slug `hades` resolves to an unrelated 2016 game —
 cross-database matching needs care (match by slug, verify by release year).
 
-**Verdict:** RAWG playtime is a *fallback ordering signal only*. It must not
+**Verdict:** RAWG playtime is a _fallback ordering signal only_. It must not
 drive feasibility promises.
 
 ## Source 2 — IGDB `game_time_to_beat` (pending credentials)

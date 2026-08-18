@@ -13,11 +13,11 @@ A game backlog is not a list. It is a **scheduling problem under scarce time** �
 
 Existing tools each hold one piece and none hold the whole:
 
-| Tool | Knows | Doesn't know |
-|---|---|---|
-| Backloggd | what you've played | how long you have |
-| HowLongToBeat | how long games take | your calendar |
-| Steam | your library and hours | what to do about it |
+| Tool          | Knows                  | Doesn't know        |
+| ------------- | ---------------------- | ------------------- |
+| Backloggd     | what you've played     | how long you have   |
+| HowLongToBeat | how long games take    | your calendar       |
+| Steam         | your library and hours | what to do about it |
 
 Respec joins them and answers the question none of them can:
 
@@ -32,11 +32,11 @@ Not "completionists" and not "subscription churners" — those are subsets. The 
 > **An adult who still loves games and has almost no time left for them.**
 > "I'm 34, I get 45 minutes after bedtime, and I own 400 games."
 
-This is r/patientgamers. It is most paying gamers over 25. The tension is real, unserved, and — critically — an identity people *already claim*.
+This is r/patientgamers. It is most paying gamers over 25. The tension is real, unserved, and — critically — an identity people _already claim_.
 
 ### 2.1 Emotional stance: relief, not discipline
 
-The guilt already exists; the app doesn't create it, it **dissolves** it. Respec never says "you failed." It says *"you were never going to get to these eleven — and that's fine. Here are the two you'll actually love finishing."* Permission to drop is the product's voice. This stance is load-bearing: it drives copy, notifications, and the share artifact.
+The guilt already exists; the app doesn't create it, it **dissolves** it. Respec never says "you failed." It says _"you were never going to get to these eleven — and that's fine. Here are the two you'll actually love finishing."_ Permission to drop is the product's voice. This stance is load-bearing: it drives copy, notifications, and the share artifact.
 
 ### 2.2 Anti-metric
 
@@ -50,7 +50,7 @@ v0.1's onboarding (declare a window, set velocity, pick candidates) was three fo
 
 Steam's Web API (`GetOwnedGames`) returns the library, `playtime_forever`, and `playtime_2weeks` — which means Respec knows the user's **measured velocity** and **actual per-game progress** with zero questions asked. Joined to duration data, the first screen can immediately say:
 
-> *"You play ~4.5 hours a week. Of your 312 games, here are 3 you can actually finish this month — and you're 60% through one already."*
+> _"You play ~4.5 hours a week. Of your 312 games, here are 3 you can actually finish this month — and you're 60% through one already."_
 
 Zero setup, instant insight, and it tells the user something about themselves they didn't know. Subscription windows (v0.1's front door) demote to a power-user feature users graduate into.
 
@@ -74,18 +74,18 @@ Schedule   ordered [Entry] + dropped [Entry]       (engine output; serialisable 
 
 ### 5.2 Window mode (deadlines) — the power feature
 
-With deadlines (subscription lapse, a release date, self-imposed), "maximise games finished in time, one game at a time" is single-machine scheduling to minimise tardy jobs: `1‖∑Uⱼ`. **Moore–Hodgson (1968)** solves it optimally in `O(n log n)`; its eviction step *names what to drop*, which is where the product's permission-giving voice comes from.
+With deadlines (subscription lapse, a release date, self-imposed), "maximise games finished in time, one game at a time" is single-machine scheduling to minimise tardy jobs: `1‖∑Uⱼ`. **Moore–Hodgson (1968)** solves it optimally in `O(n log n)`; its eviction step _names what to drop_, which is where the product's permission-giving voice comes from.
 
 Planned degradations remain deliberate portfolio narrative:
 
-| Extension | Complexity | Approach |
-|---|---|---|
-| Weighted desire | `1‖∑wⱼUⱼ` — NP-hard | pseudo-polynomial DP |
-| Staggered availability | `1|rⱼ|∑Uⱼ` — NP-hard | heuristic/approximation |
+| Extension              | Complexity          | Approach             |
+| ---------------------- | ------------------- | -------------------- |
+| Weighted desire        | `1‖∑wⱼUⱼ` — NP-hard | pseudo-polynomial DP |
+| Staggered availability | `1                  | rⱼ                   | ∑Uⱼ` — NP-hard | heuristic/approximation |
 
 ### 5.3 Shared deadlines (community feature)
 
-Every gamer has a self-imposed deadline: *"clear something before GTA 6 / Silksong."* Release dates are public and universal — a social hook with **no social graph**: "2,431 people are finishing something before Silksong." Near-zero engineering, real community feeling.
+Every gamer has a self-imposed deadline: _"clear something before GTA 6 / Silksong."_ Release dates are public and universal — a social hook with **no social graph**: "2,431 people are finishing something before Silksong." Near-zero engineering, real community feeling.
 
 ### 5.4 Engine contract
 
@@ -97,13 +97,13 @@ Every gamer has a self-imposed deadline: *"clear something before GTA 6 / Silkso
 
 ### 6.1 Widget (the soul of the product)
 
-| Size | Content |
-|---|---|
-| Small | one decision — art, title, days/hours ring |
-| Medium | next game + queue |
-| Large | the schedule timeline |
-| Lock screen | days-remaining ring; inline `Pentiment · 9d` |
-| Live Activity (v2) | in-session `2h 14m played · 6h to beat` |
+| Size               | Content                                      |
+| ------------------ | -------------------------------------------- |
+| Small              | one decision — art, title, days/hours ring   |
+| Medium             | next game + queue                            |
+| Large              | the schedule timeline                        |
+| Lock screen        | days-remaining ring; inline `Pentiment · 9d` |
+| Live Activity (v2) | in-session `2h 14m played · 6h to beat`      |
 
 Urgency gradient calm → amber → red; on infeasibility the widget says so plainly. The widget is also the marketing asset — a homescreen reading "3 games · 12 days" beats any store screenshot.
 
@@ -131,22 +131,22 @@ Rendered as a **memory card** — each finished game fills one block, stamped **
 
 The app speaks fluent gamer front to back:
 
-| Phrase | Meaning in-app |
-|---|---|
-| **respec** | replan the schedule ("your window changed — respec?") |
-| **roll credits** | finish a game; the completion moment |
-| **your Memcard** | the finished-games shelf; the share artifact |
-| **backlog amnesty** | one-tap archive of the pile, guilt-free |
-| **1CC** | a perfect month — finished everything planned (and the ARCADE lineage nod) |
+| Phrase              | Meaning in-app                                                             |
+| ------------------- | -------------------------------------------------------------------------- |
+| **respec**          | replan the schedule ("your window changed — respec?")                      |
+| **roll credits**    | finish a game; the completion moment                                       |
+| **your Memcard**    | the finished-games shelf; the share artifact                               |
+| **backlog amnesty** | one-tap archive of the pile, guilt-free                                    |
+| **1CC**             | a perfect month — finished everything planned (and the ARCADE lineage nod) |
 
 ## 8. Data sources & validation
 
-| Need | Source | Status |
-|---|---|---|
-| Metadata, art | RAWG | live key; **A1-validated: 94% playtime presence but inaccurate** (Pentiment 2h vs ~9; Disco Elysium 6h vs ~21) → fallback ordering signal only |
-| Hours to beat | IGDB `game_time_to_beat` | **pending — the go/no-go.** Script built (`scripts/duration-coverage.mjs`); awaits fresh Twitch credentials. Decision rule in `docs/validation/A1-duration-coverage.md`: ≥80% head+mid and ≥60% tail → go |
-| Velocity + progress | Steam Web API | official, free; OpenID sign-in is web-native (favours the probe) |
-| Windows | user-declared + public release dates | zero scraping; catalogue-expiry feeds stay deferred (v2+, only if an honest source exists) |
+| Need                | Source                               | Status                                                                                                                                                                                                    |
+| ------------------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Metadata, art       | RAWG                                 | live key; **A1-validated: 94% playtime presence but inaccurate** (Pentiment 2h vs ~9; Disco Elysium 6h vs ~21) → fallback ordering signal only                                                            |
+| Hours to beat       | IGDB `game_time_to_beat`             | **pending — the go/no-go.** Script built (`scripts/duration-coverage.mjs`); awaits fresh Twitch credentials. Decision rule in `docs/validation/A1-duration-coverage.md`: ≥80% head+mid and ≥60% tail → go |
+| Velocity + progress | Steam Web API                        | official, free; OpenID sign-in is web-native (favours the probe)                                                                                                                                          |
+| Windows             | user-declared + public release dates | zero scraping; catalogue-expiry feeds stay deferred (v2+, only if an honest source exists)                                                                                                                |
 
 Matching lesson from A1: cross-database slug matching lies (`hades` → an unrelated 2016 game). Match by slug, verify by release year.
 
@@ -154,15 +154,15 @@ Matching lesson from A1: cross-database slug matching lies (`hades` → an unrel
 
 Sequenced so the cheapest signal comes before the most expensive build. The native widget is still the destination; it just isn't a blind bet.
 
-| # | Step | Cost | Status |
-|---|---|---|---|
-| 0 | Rotate RAWG + IGDB keys (public in git history) | minutes | **user, outstanding** |
-| 1 | A1 duration-coverage validation | ½ day | RAWG leg done; IGDB leg awaits credentials |
-| 2 | Foundation: Expo SDK 57 / React 19 / TS / expo-router migration; secrets to env; dead deps out; card + detail UI ported | ~1 day | next up |
-| 3 | **The probe**: one web page — paste Steam ID → backlog reality check ("312 games · 4.5 hrs/week · **71 years to clear** · you'll finish 3 this year, here they are") as a shareable card. Served from the Expo web target — same codebase, not throwaway | 3–4 days | |
-| 4 | Post to r/patientgamers / r/gamepass; read the signal | — | |
-| 5 | The product: native app, Steam connect, engine both modes, Shelf/Memcard | the real build | |
-| 6 | The widget: config plugin, App Group, iOS small+medium, then Android | the centrepiece | |
+| #   | Step                                                                                                                                                                                                                                                     | Cost            | Status                                     |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | ------------------------------------------ |
+| 0   | Rotate RAWG + IGDB keys (public in git history)                                                                                                                                                                                                          | minutes         | **user, outstanding**                      |
+| 1   | A1 duration-coverage validation                                                                                                                                                                                                                          | ½ day           | RAWG leg done; IGDB leg awaits credentials |
+| 2   | Foundation: Expo SDK 57 / React 19 / TS / expo-router migration; secrets to env; dead deps out; card + detail UI ported                                                                                                                                  | ~1 day          | next up                                    |
+| 3   | **The probe**: one web page — paste Steam ID → backlog reality check ("312 games · 4.5 hrs/week · **71 years to clear** · you'll finish 3 this year, here they are") as a shareable card. Served from the Expo web target — same codebase, not throwaway | 3–4 days        |                                            |
+| 4   | Post to r/patientgamers / r/gamepass; read the signal                                                                                                                                                                                                    | —               |                                            |
+| 5   | The product: native app, Steam connect, engine both modes, Shelf/Memcard                                                                                                                                                                                 | the real build  |                                            |
+| 6   | The widget: config plugin, App Group, iOS small+medium, then Android                                                                                                                                                                                     | the centrepiece |                                            |
 
 **Probe scope discipline:** one screen and a share card. The moment it grows settings, kill the scope and move to step 5.
 
@@ -181,4 +181,4 @@ This category monetises badly (HLTB: ads; Backloggd: small supporter tier). Plan
 
 ## 12. Carried over from ARCADE
 
-`GameCard`, `GameCardWide`, `GameInfoCard`, the carousel, the scroll-collapsing animated header and the detail screen all survive into the app. RAWG demotes from *the product* to *the metadata layer*. The commented-out IGDB call in the old `GameInfoScreen` becomes load-bearing. And the name keeps the lineage honest: ARCADE ran on credits; Respec is about spending them well.
+`GameCard`, `GameCardWide`, `GameInfoCard`, the carousel, the scroll-collapsing animated header and the detail screen all survive into the app. RAWG demotes from _the product_ to _the metadata layer_. The commented-out IGDB call in the old `GameInfoScreen` becomes load-bearing. And the name keeps the lineage honest: ARCADE ran on credits; Respec is about spending them well.

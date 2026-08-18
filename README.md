@@ -1,117 +1,72 @@
-<h1 align="center">🎮 ARCADE 🎮</h1>
+<h1 align="center">🎮 ARCADE</h1>
 
-<p align="center"> A Video Game Database made in React Native, constructed with Expo CLI, utilizing the rawgAPI and IGDB. </p>
+<p align="center">A video game discovery app built with React Native and Expo, powered by the RAWG database.</p>
+
 <p align="center">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.1.0-blue.svg?cacheSeconds=2592000" />
-  
-  <a href="#" target="_blank">
-    <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg" />
-  </a>
-  <a href="#" target="_blank">
-    <img alt="Runs With Expo" src="https://img.shields.io/badge/Runs%20With%20Expo-000.svg?style=flat&logo=EXPO&labelColor=f3f3f3&logoColor=000" />
-  </a>
-  <a href="#" target="_blank">
-    <img alt="Runs With Expo" src="https://img.shields.io/badge/Platforms-Native-4630EB.svg?style=flat&logo=EXPO&labelColor=000&logoColor=fff" />
-  </a>
-  <a href="https://twitter.com/mrginolee" target="_blank">
-    <img alt="Twitter: mrginolee" src="https://img.shields.io/twitter/follow/mrginolee.svg?style=social" />
-  </a>
+  <img alt="Expo SDK 57" src="https://img.shields.io/badge/Expo%20SDK-57-000.svg?style=flat&logo=EXPO&labelColor=f3f3f3&logoColor=000" />
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-3178C6.svg?style=flat&logo=typescript&logoColor=fff" />
+  <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg" />
 </p>
 
 <p align="center">
-
-  <img src="./app/assets/screenshots/home.PNG"  alt="home" width="33%"/>
-  <img src="./app/assets/screenshots/info-screen.PNG"  alt="info screen" width="33%"  />
-  <img src="./app/assets/screenshots/info-screen-about.PNG"  alt="info screen about" width="33%"  />
-
+  <img src="./docs/screenshots/home.PNG" alt="home" width="30%"/>
+  <img src="./docs/screenshots/info-screen.PNG" alt="info screen" width="30%"/>
+  <img src="./docs/screenshots/info-screen-about.PNG" alt="info screen about" width="30%"/>
 </p>
 
-<h2 align="right">📖 &nbsp; Lessons Learned</h2>
+> **Where this project is heading:** ARCADE (2021) is being resurrected and
+> evolved into **Respec** — an app for time-poor gamers that answers _"what can
+> I actually finish?"_ The full product spec lives in
+> [`docs/PRODUCT.md`](./docs/PRODUCT.md), and validation work in
+> [`docs/validation/`](./docs/validation/). This README covers the current
+> codebase: a modernised version of the original game-discovery app.
 
-<div align="right">
+## Stack
 
-<!-- &nbsp; My second react project, after the mandatory to-do list!\
-&nbsp; The main focus here was to make **external API calls** to pull weather infomation from a third party site.
+- [Expo SDK 57](https://docs.expo.dev/) / React Native 0.86 / React 19
+- TypeScript (strict) · [expo-router](https://docs.expo.dev/router/introduction/) file-based navigation
+- ESLint + Prettier · CI via GitHub Actions
+- [RAWG API](https://rawg.io/apidocs) for game data
 
-&nbsp; I got more comfortable using **Hooks** rather than class based components.\
-&nbsp; It removes the hassle of binding to 'this' constantly. Using setState method with props makes **state management** simpler & elegant.
-
-&nbsp; I started off with a simple CSS layout then modified to a **flexbox** display with a left page and right page component.\
-&nbsp; The left page delivers the main information and the right contains the search bar & extra information.
-
-&nbsp;This application tested my skills in adapting & optimizing a responsive web page to fit on **mobile screens**.\
-&nbsp; After a bit of tweaking I settled on a simple vertical mobile view design where the right page fits under the left like a stack of cards. -->
-
-</div>
-
-## 🔮 &nbsp; Future Features
-
-<!--
-- 📅 &nbsp; 3-Day / Week view
-- 🌡️ &nbsp; Celsius to Fahrenheit converter
-- 🧭 &nbsp; Compass for wind direction
-- 🏙️ &nbsp; More dynamic backgrounds -->
-
-<h2 align="right">🚀 &nbsp; Deployment</h2>
-<div align="right">
-
-No current Deployment
-
-<!-- Deployed with [Github Pages](https://ginoleeswan.github.io/weather-app-basic/) -->
-
-</div>
-
-## 🔨 &nbsp; Get Started
-
-From your command line, first clone this repo:
+## Get started
 
 ```sh
-# Clone this repository
-$ git clone https://github.com/ginoleeswan/arcade
-
-# Go into the repository
-$ cd arcade
-
-# Remove current origin repository
-$ git remote remove origin
-```
-
-### 💻 &nbsp; Install
-
-First you need to install Nodejs and npm, this is different depending on the OS you are running so it is easier to check the node [page](https://nodejs.org/en/download/)
-
-Install [expo](https://expo.io/learn), if it fails run you might need to run this with sudo
-
-```sh
-npm install expo-cli --global
-```
-
-Install the needed packages while in the root folder of the project
-
-```sh
+git clone https://github.com/ginoleeswan/arcade
+cd arcade
 npm install
+
+# API key (free): https://rawg.io/apidocs
+cp .env.example .env   # then paste your key in
+
+npx expo start
 ```
 
-### 📱 &nbsp; Usage
+Open in [Expo Go](https://expo.dev/go), an emulator, or press `w` for web.
 
-To Start expo all you have to do is run this line
+### Scripts
 
-```sh
-expo start
+| Command                              |                                                 |
+| ------------------------------------ | ----------------------------------------------- |
+| `npm run typecheck`                  | TypeScript, no emit                             |
+| `npm run lint`                       | ESLint                                          |
+| `npm run format`                     | Prettier write                                  |
+| `node scripts/duration-coverage.mjs` | data-source validation (see `docs/validation/`) |
+
+## Structure
+
+```
+src/
+  app/          # expo-router routes (_layout, index, game/[id])
+  api/          # typed RAWG client
+  components/   # UI components
+  styles/       # colors, typography
+assets/         # fonts, icons, images
+docs/           # product spec, validation, screenshots
 ```
 
-<div align="right">
+## Author
 
-## ✍️ &nbsp; Author
-
-👤 **Gino Swanepoel**
-
-&nbsp; Twitter: [@mrginolee](https://twitter.com/mrginolee)\
- &nbsp; Github: [@ginoleeswan](https://github.com/ginoleeswan)\
- &nbsp; LinkedIn: [@ginoswanepoel](https://linkedin.com/in/ginoswanepoel)
-
-</div>
-
-## ❤️ &nbsp; Show your support
-
-Give a ⭐️ if this project helped you!
+**Gino Swanepoel** —
+[GitHub](https://github.com/ginoleeswan) ·
+[Twitter](https://twitter.com/mrginolee) ·
+[LinkedIn](https://linkedin.com/in/ginoswanepoel)

@@ -28,7 +28,7 @@ const TWITCH_ID = process.env.TWITCH_CLIENT_ID;
 const TWITCH_SECRET = process.env.TWITCH_CLIENT_SECRET;
 
 if (!RAWG_KEY) {
-  console.error("RAWG_API_KEY is required.");
+  console.error('RAWG_API_KEY is required.');
   process.exit(1);
 }
 
@@ -36,9 +36,9 @@ if (!RAWG_KEY) {
 // library staples; mid ≈ known but not universal; tail ≈ the indie long tail
 // where coverage problems would hide.
 const STRATA = [
-  { name: "head", pages: [1, 2, 3] }, //    ranks    1–120
-  { name: "mid", pages: [25, 26, 27] }, //  ranks  961–1080
-  { name: "tail", pages: [150, 175, 200] }, // ranks ~6k–8k
+  { name: 'head', pages: [1, 2, 3] }, //    ranks    1–120
+  { name: 'mid', pages: [25, 26, 27] }, //  ranks  961–1080
+  { name: 'tail', pages: [150, 175, 200] }, // ranks ~6k–8k
 ];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -76,7 +76,7 @@ async function sampleRAWG() {
 async function igdbToken() {
   const res = await getJSON(
     `https://id.twitch.tv/oauth2/token?client_id=${TWITCH_ID}&client_secret=${TWITCH_SECRET}&grant_type=client_credentials`,
-    { method: "POST" }
+    { method: 'POST' }
   );
   return res.access_token;
 }
@@ -84,8 +84,8 @@ async function igdbToken() {
 async function igdb(token, endpoint, body) {
   await sleep(300); // stay under IGDB's 4 req/s
   const res = await fetch(`https://api.igdb.com/v4/${endpoint}`, {
-    method: "POST",
-    headers: { "Client-ID": TWITCH_ID, Authorization: `Bearer ${token}` },
+    method: 'POST',
+    headers: { 'Client-ID': TWITCH_ID, Authorization: `Bearer ${token}` },
     body,
   });
   if (!res.ok) throw new Error(`IGDB ${endpoint}: ${res.status}`);
@@ -99,10 +99,10 @@ async function enrichIGDB(games) {
   const bySlug = new Map();
   for (let i = 0; i < games.length; i += 100) {
     const batch = games.slice(i, i + 100);
-    const slugs = batch.map((g) => `"${g.slug}"`).join(",");
+    const slugs = batch.map((g) => `"${g.slug}"`).join(',');
     const rows = await igdb(
       token,
-      "games",
+      'games',
       `fields id,slug; where slug = (${slugs}); limit 200;`
     );
     for (const r of rows) bySlug.set(r.slug, r.id);
@@ -111,10 +111,10 @@ async function enrichIGDB(games) {
   // Stage 1b — fuzzy-search stragglers by name (slug conventions differ).
   for (const g of games) {
     if (bySlug.has(g.slug)) continue;
-    const safe = g.name.replace(/"/g, "");
+    const safe = g.name.replace(/"/g, '');
     const rows = await igdb(
       token,
-      "games",
+      'games',
       `fields id,slug,name; search "${safe}"; limit 1;`
     );
     if (rows[0]) bySlug.set(g.slug, rows[0].id);
@@ -126,10 +126,10 @@ async function enrichIGDB(games) {
   for (let i = 0; i < ids.length; i += 100) {
     const rows = await igdb(
       token,
-      "game_time_to_beats",
+      'game_time_to_beats',
       `fields game_id,hastily,normally,completely,count; where game_id = (${ids
         .slice(i, i + 100)
-        .join(",")}); limit 200;`
+        .join(',')}); limit 200;`
     );
     for (const r of rows) ttbByGame.set(r.game_id, r);
   }
@@ -138,24 +138,30 @@ async function enrichIGDB(games) {
     const id = bySlug.get(g.slug);
     g.igdbMatched = id != null;
     const ttb = id != null ? ttbByGame.get(id) : undefined;
-    g.igdbNormallyHrs = ttb?.normally ? +(ttb.normally / 3600).toFixed(1) : null;
+    g.igdbNormallyHrs = ttb?.normally
+      ? +(ttb.normally / 3600).toFixed(1)
+      : null;
     g.igdbSubmissions = ttb?.count ?? 0;
   }
 }
 
 // ------------------------------------------------------------------ report
 function pct(part, whole) {
-  return whole === 0 ? "  n/a" : `${((100 * part) / whole).toFixed(0).padStart(4)}%`;
+  return whole === 0
+    ? '  n/a'
+    : `${((100 * part) / whole).toFixed(0).padStart(4)}%`;
 }
 
 function report(games, withIGDB) {
-  const strata = [...STRATA.map((s) => s.name), "TOTAL"];
-  console.log("\nDuration coverage by popularity stratum");
+  const strata = [...STRATA.map((s) => s.name), 'TOTAL'];
+  console.log('\nDuration coverage by popularity stratum');
   console.log(
-    "stratum  n    RAWG playtime>0" + (withIGDB ? "   IGDB matched   IGDB has TTB" : "")
+    'stratum  n    RAWG playtime>0' +
+      (withIGDB ? '   IGDB matched   IGDB has TTB' : '')
   );
   for (const name of strata) {
-    const rows = name === "TOTAL" ? games : games.filter((g) => g.stratum === name);
+    const rows =
+      name === 'TOTAL' ? games : games.filter((g) => g.stratum === name);
     const rawg = rows.filter((g) => g.rawgPlaytime > 0).length;
     let line = `${name.padEnd(8)}${String(rows.length).padEnd(5)}${pct(rawg, rows.length)}`;
     if (withIGDB) {
@@ -167,7 +173,7 @@ function report(games, withIGDB) {
   }
   if (withIGDB) {
     const misses = games.filter((g) => g.igdbNormallyHrs == null).slice(0, 15);
-    console.log("\nSample of games with no IGDB time-to-beat:");
+    console.log('\nSample of games with no IGDB time-to-beat:');
     for (const m of misses) console.log(`  [${m.stratum}] ${m.name}`);
   }
 }
@@ -175,13 +181,13 @@ function report(games, withIGDB) {
 const games = await sampleRAWG();
 const withIGDB = Boolean(TWITCH_ID && TWITCH_SECRET);
 if (withIGDB) await enrichIGDB(games);
-else console.log("(TWITCH_CLIENT_ID/SECRET not set — skipping IGDB leg)");
+else console.log('(TWITCH_CLIENT_ID/SECRET not set — skipping IGDB leg)');
 
 report(games, withIGDB);
 
-const jsonIdx = process.argv.indexOf("--json");
+const jsonIdx = process.argv.indexOf('--json');
 if (jsonIdx !== -1 && process.argv[jsonIdx + 1]) {
-  const { writeFileSync } = await import("node:fs");
+  const { writeFileSync } = await import('node:fs');
   writeFileSync(process.argv[jsonIdx + 1], JSON.stringify(games, null, 2));
   console.log(`\nRaw results written to ${process.argv[jsonIdx + 1]}`);
 }
