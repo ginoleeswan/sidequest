@@ -103,4 +103,13 @@ const css = `
   @media (prefers-reduced-motion: reduce) {
     [role="button"], [role="link"], a { transition: none; }
   }
+
+  /* One focus language: no ring on pointer/programmatic focus, a branded
+     ring for keyboard navigation. */
+  :focus { outline: none; }
+  :focus-visible {
+    outline: 2px solid #7EB1FF;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
 `;

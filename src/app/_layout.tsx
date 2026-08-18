@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { queryClient } from '@/api/queryClient';
+import { Onboarding } from '@/components/Onboarding';
 import { LibraryProvider } from '@/lib/library';
 import { COLORS } from '@/styles/colors';
 
@@ -39,6 +40,7 @@ export default function RootLayout() {
               contentStyle: { backgroundColor: COLORS.darkGrey },
             }}
           />
+          <Onboarding />
         </SafeAreaProvider>
       </LibraryProvider>
     </QueryClientProvider>

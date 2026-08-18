@@ -10,6 +10,7 @@ import { ScaleButton } from './ScaleButton';
 import { ScorePill } from './ScorePill';
 import { Textured } from './Textured';
 import type { Game } from '@/api/types';
+import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useLibrary } from '@/lib/library';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
@@ -29,6 +30,7 @@ interface Props {
 export function GameTile({ game, width }: Props) {
   const router = useRouter();
   const { statusOf, setStatus } = useLibrary();
+  const { isCompact } = useBreakpoint();
   const [hovered, setHovered] = useState(false);
   const [shot, setShot] = useState(0);
 
@@ -90,10 +92,14 @@ export function GameTile({ game, width }: Props) {
               <ScorePill score={game.metacritic} size="sm" />
             </View>
           )}
-          {(hovered || saved) && (
+          {/* Phones can't hover - the save control must simply be there. */}
+          {(isCompact || hovered || saved) && (
             <Pressable
               onPress={() => setStatus(game, saved ? null : 'wishlist')}
               hitSlop={6}
+              accessibilityLabel={
+                saved ? 'Remove from library' : 'Save to library'
+              }
               style={styles.saveCorner}
             >
               <Ionicons

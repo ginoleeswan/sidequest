@@ -430,6 +430,7 @@ export default function HomeScreen() {
               size={21}
               color={COLORS.lightGrey}
               onPress={() => router.push('/plan')}
+              accessibilityLabel="The Plan"
               style={styles.libraryButton}
             />
             <Ionicons
@@ -437,6 +438,7 @@ export default function HomeScreen() {
               size={22}
               color={COLORS.lightGrey}
               onPress={() => router.push('/library')}
+              accessibilityLabel="My Library"
               style={styles.libraryButton}
             />
           </View>
