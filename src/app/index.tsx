@@ -1,7 +1,6 @@
 import { useQueries, useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import {
-  Animated,
   FlatList,
   Platform,
   RefreshControl,
@@ -42,15 +41,12 @@ import {
   SEARCH_SECTION,
   type Category,
 } from '@/constants/categories';
-import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useDebounced } from '@/hooks/useDebounced';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
-/** How far the compact hero carousel travels before it's tucked away. */
-const COLLAPSE_DISTANCE = 240;
 const FEATURED_COUNT = 4;
 
 /** Categories rendered as storefront shelves on the desktop Home. */
@@ -82,7 +78,6 @@ export default function HomeScreen() {
 
   const { isExpanded, columns } = useBreakpoint();
   const insets = useSafeAreaInsets();
-  const scrollY = useAnimatedValue(0);
   const searchRef = useRef<TextInput | null>(null);
 
   // "/" focuses search, Escape clears it — desktop table stakes.
@@ -251,16 +246,6 @@ export default function HomeScreen() {
   }
 
   // -------------------------------------------------------------- compact
-  const translateY = scrollY.interpolate({
-    inputRange: [0, COLLAPSE_DISTANCE],
-    outputRange: [0, -COLLAPSE_DISTANCE],
-    extrapolate: 'clamp',
-  });
-  const fadeOutOnScroll = scrollY.interpolate({
-    inputRange: [0, COLLAPSE_DISTANCE * 0.6],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
   const compactSection = searching ? SEARCH_SECTION : category;
 
   return (
@@ -294,58 +279,45 @@ export default function HomeScreen() {
             (isPending ? (
               <SkeletonCompactHome />
             ) : (
-              <Animated.View
-                style={[
-                  styles.body,
-                  !searching && { transform: [{ translateY }] },
+              <FlatList
+                data={listed}
+                keyExtractor={(item) => String(item.id)}
+                renderItem={({ item }) => <GameInfoCard game={item} />}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
+                showsVerticalScrollIndicator={false}
+                refreshControl={refresh}
+                ListHeaderComponent={
+                  <View>
+                    {featured.length > 0 && (
+                      <View style={styles.carouselBleed}>
+                        <Rail
+                          data={featured}
+                          keyExtractor={(item) => String(item.id)}
+                          renderItem={(item) => <GameCard game={item} wide />}
+                          inset={SPACING.md}
+                          gap={SPACING.md}
+                          snapInterval={LAYOUT.cardWideWidth + SPACING.md}
+                        />
+                      </View>
+                    )}
+                    <View style={styles.sectionRow}>
+                      <DynamicIcon
+                        type={compactSection.iconType}
+                        name={compactSection.iconName}
+                        color={COLORS.mediumGrey}
+                      />
+                      <Text style={[TYPE.h3, styles.sectionTitle]}>
+                        {compactSection.title}
+                      </Text>
+                    </View>
+                  </View>
+                }
+                contentContainerStyle={[
+                  styles.list,
+                  { paddingBottom: insets.bottom + SPACING.xl * 2 },
                 ]}
-              >
-                {featured.length > 0 && (
-                  <Animated.View style={{ opacity: fadeOutOnScroll }}>
-                    <Rail
-                      data={featured}
-                      keyExtractor={(item) => String(item.id)}
-                      renderItem={(item) => <GameCard game={item} wide />}
-                      inset={SPACING.md}
-                      gap={SPACING.md}
-                      snapInterval={LAYOUT.cardWideWidth + SPACING.md}
-                    />
-                  </Animated.View>
-                )}
-
-                <View style={styles.sectionRow}>
-                  <DynamicIcon
-                    type={compactSection.iconType}
-                    name={compactSection.iconName}
-                    color={COLORS.mediumGrey}
-                  />
-                  <Text style={[TYPE.h3, styles.sectionTitle]}>
-                    {compactSection.title}
-                  </Text>
-                </View>
-
-                <FlatList
-                  data={listed}
-                  onScroll={Animated.event(
-                    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-                    { useNativeDriver: true }
-                  )}
-                  scrollEventThrottle={16}
-                  keyboardShouldPersistTaps="handled"
-                  keyboardDismissMode="on-drag"
-                  keyExtractor={(item) => String(item.id)}
-                  renderItem={({ item }) => <GameInfoCard game={item} />}
-                  showsVerticalScrollIndicator={false}
-                  refreshControl={refresh}
-                  contentContainerStyle={[
-                    styles.list,
-                    {
-                      paddingBottom:
-                        COLLAPSE_DISTANCE + insets.bottom + SPACING.xl,
-                    },
-                  ]}
-                />
-              </Animated.View>
+              />
             ))}
         </View>
       </SafeAreaView>
@@ -449,7 +421,6 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     height: 50,
   },
-  body: { flex: 1 },
   list: { flexGrow: 1, paddingHorizontal: SPACING.md },
 
   // shared
@@ -458,7 +429,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: SPACING.xs + 2,
     marginBottom: SPACING.md,
-    paddingHorizontal: SPACING.md,
   },
+  carouselBleed: { marginBottom: SPACING.sm },
   sectionTitle: { textTransform: 'uppercase', letterSpacing: 0.5 },
 });

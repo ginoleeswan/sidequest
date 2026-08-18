@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 import type {
   CollectionFeedItem,
   Game,
@@ -7,7 +9,24 @@ import type {
   Screenshot,
 } from './types';
 
-const BASE_URL = 'https://api.rawg.io/api';
+/**
+ * On production web the API and image CDN are proxied through our own
+ * domain (see vercel.json rewrites). Same-origin requests can't be blocked
+ * by CORS and are far less likely to be caught by content blockers or
+ * privacy relays - the cause of "Load failed" fetches on iOS Safari.
+ */
+const USE_PROXY = Platform.OS === 'web' && !__DEV__;
+
+const BASE_URL = USE_PROXY ? '/rawg' : 'https://api.rawg.io/api';
+
+/** Route a media.rawg.io asset URL through the same-origin proxy on web. */
+export function mediaUri(uri: string | null | undefined): string | undefined {
+  if (!uri) return undefined;
+  if (USE_PROXY && uri.startsWith('https://media.rawg.io/')) {
+    return uri.replace('https://media.rawg.io', '/media');
+  }
+  return uri;
+}
 
 /** Read lazily: reading at module scope couples import order to env setup. */
 function apiKey(): string {
@@ -24,11 +43,8 @@ async function rawg<T>(
   path: string,
   params: Record<string, string> = {}
 ): Promise<T> {
-  const url = new URL(`${BASE_URL}/${path}`);
-  url.searchParams.set('key', apiKey());
-  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-
-  const res = await fetch(url.toString());
+  const search = new URLSearchParams({ key: apiKey(), ...params });
+  const res = await fetch(`${BASE_URL}/${path}?${search}`);
   if (!res.ok) throw new Error(`RAWG ${path}: ${res.status}`);
   return res.json() as Promise<T>;
 }

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { Textured } from './Textured';
+import { mediaUri } from '@/api/rawg';
 import { COLORS } from '@/styles/colors';
 
 interface Props {
@@ -26,8 +27,9 @@ export function CoverImage({
   iconSize = 32,
 }: Props) {
   const [failed, setFailed] = useState(false);
+  const src = mediaUri(uri);
 
-  if (!uri || failed) {
+  if (!src || failed) {
     return (
       <View style={[styles.fallback, style]}>
         <Textured fill />
@@ -42,7 +44,7 @@ export function CoverImage({
 
   return (
     <Image
-      source={{ uri }}
+      source={{ uri: src }}
       style={style as object}
       contentFit={contentFit}
       transition={200}

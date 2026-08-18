@@ -15,8 +15,10 @@ export default function Root({ children }: PropsWithChildren) {
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta
           name="viewport"
-          content="width=device-width, initial-scale=1, shrink-to-fit=no"
+          content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover"
         />
+        <meta name="theme-color" content="#333D51" />
+        <meta name="apple-mobile-web-app-title" content="Sidequest" />
         <ScrollViewStyleReset />
         <style dangerouslySetInnerHTML={{ __html: css }} />
       </head>
@@ -30,6 +32,8 @@ const css = `
     background-color: #333D51;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Stop iOS Safari inflating text on rotation. */
+    -webkit-text-size-adjust: 100%;
   }
   ::selection { background: #1E69E1; color: #fff; }
 

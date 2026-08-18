@@ -17,7 +17,13 @@ import {
 } from 'react-native-safe-area-context';
 
 import { queryKeys } from '@/api/queryClient';
-import { getGame, getGameSeries, getMovies, getScreenshots } from '@/api/rawg';
+import {
+  getGame,
+  getGameSeries,
+  getMovies,
+  getScreenshots,
+  mediaUri,
+} from '@/api/rawg';
 import type { Game, Movie, Named, Screenshot } from '@/api/types';
 import { BackButton } from '@/components/BackButton';
 import { CoverImage } from '@/components/CoverImage';
@@ -82,7 +88,6 @@ export default function GameInfoScreen() {
 
   const { isExpanded } = useBreakpoint();
   const insets = useSafeAreaInsets();
-  const scrollY = useAnimatedValue(0);
   const opacity = useAnimatedValue(0);
 
   const { data, isPending, error } = useQuery({
@@ -204,7 +209,7 @@ export default function GameInfoScreen() {
             renderItem={(item) => (
               <Pressable onPress={() => setLightboxUri(item.image)}>
                 <Image
-                  source={{ uri: item.image }}
+                  source={{ uri: mediaUri(item.image) }}
                   style={styles.screenshot}
                   contentFit="cover"
                   transition={200}
@@ -299,12 +304,6 @@ export default function GameInfoScreen() {
 
   /* --------------------------------------------------------------- compact */
 
-  const translateY = scrollY.interpolate({
-    inputRange: [0, 270],
-    outputRange: [0, -270],
-    extrapolate: 'clamp',
-  });
-
   return (
     <Textured style={styles.background}>
       <SafeAreaView edges={['right', 'left']} style={styles.container}>
@@ -312,31 +311,18 @@ export default function GameInfoScreen() {
           <BackButton />
         </View>
 
-        <Animated.View
-          style={[styles.heroCompact, { transform: [{ translateY }] }]}
-        >
-          {heroContent}
-        </Animated.View>
-
-        <Animated.ScrollView
-          contentContainerStyle={[
-            styles.compactScroll,
-            { paddingBottom: 120 + insets.bottom },
-          ]}
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-            { useNativeDriver: true }
-          )}
-          scrollEventThrottle={16}
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 60 + insets.bottom }}
           showsVerticalScrollIndicator={false}
         >
-          <Animated.View style={{ opacity }}>
+          <View style={styles.heroCompact}>{heroContent}</View>
+          <Animated.View style={[styles.compactBody, { opacity }]}>
             {about}
             {details}
             {media}
             {tags}
           </Animated.View>
-        </Animated.ScrollView>
+        </ScrollView>
 
         <Lightbox uri={lightboxUri} onClose={() => setLightboxUri(null)} />
       </SafeAreaView>
@@ -361,7 +347,7 @@ function Lightbox({
       <Pressable style={styles.lightbox} onPress={onClose}>
         {uri && (
           <Image
-            source={{ uri }}
+            source={{ uri: mediaUri(uri) }}
             style={styles.lightboxImage}
             contentFit="contain"
           />
@@ -420,15 +406,11 @@ const styles = StyleSheet.create({
   },
   heroTitleLarge: { fontSize: 40 },
   heroCompact: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 350,
-    zIndex: 10,
+    height: 380,
     borderBottomStartRadius: RADIUS.xl,
     borderBottomEndRadius: RADIUS.xl,
     overflow: 'hidden',
+    marginBottom: SPACING.md,
     ...SHADOW.hero,
   },
   heroExpanded: {
@@ -473,9 +455,7 @@ const styles = StyleSheet.create({
   },
 
   // compact body
-  compactScroll: {
-    flexGrow: 1,
-    paddingTop: 360,
+  compactBody: {
     paddingHorizontal: SPACING.md,
     width: '100%',
     maxWidth: LAYOUT.maxContentWidth,

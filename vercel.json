@@ -9,6 +9,14 @@
     {
       "source": "/game/:id",
       "destination": "/game/[id]"
+    },
+    {
+      "source": "/rawg/:path*",
+      "destination": "https://api.rawg.io/api/:path*"
+    },
+    {
+      "source": "/media/:path*",
+      "destination": "https://media.rawg.io/:path*"
     }
   ],
   "headers": [

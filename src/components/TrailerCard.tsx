@@ -1,11 +1,12 @@
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { mediaUri } from '@/api/rawg';
 import { COLORS } from '@/styles/colors';
 import type { Movie } from '@/api/types';
 
 export function TrailerCard({ trailer }: { trailer: Movie }) {
-  const player = useVideoPlayer(trailer.data.max);
+  const player = useVideoPlayer(mediaUri(trailer.data.max) ?? '');
   return (
     <View style={styles.container}>
       <Text style={styles.name} numberOfLines={1}>
