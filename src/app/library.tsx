@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -46,6 +47,7 @@ function padToRows(items: Game[], columns: number): GridItem[] {
 }
 
 export default function LibraryScreen() {
+  const router = useRouter();
   const { byStatus, count } = useLibrary();
   const { columns } = useBreakpoint();
   const insets = useSafeAreaInsets();
@@ -70,6 +72,8 @@ export default function LibraryScreen() {
                 ? `${count} ${count === 1 ? 'game' : 'games'}`
                 : undefined
             }
+            actionLabel={count > 0 ? 'Plan my backlog →' : undefined}
+            onAction={count > 0 ? () => router.push('/plan') : undefined}
           />
           <View style={styles.tabs}>
             {TABS.map((status) => (

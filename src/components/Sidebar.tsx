@@ -103,6 +103,13 @@ export function Sidebar({ activeKey, onHome, onSelect }: Props) {
           active={false}
           onPress={() => router.push('/library')}
         />
+        <NavItem
+          label="The Plan"
+          iconName="map"
+          iconType="ionicon"
+          active={false}
+          onPress={() => router.push('/plan')}
+        />
         <NavGroup
           heading="Discover"
           sections={DISCOVER}

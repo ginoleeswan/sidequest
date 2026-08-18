@@ -426,6 +426,13 @@ export default function HomeScreen() {
               style={styles.searchCompact}
             />
             <Ionicons
+              name="map-outline"
+              size={21}
+              color={COLORS.lightGrey}
+              onPress={() => router.push('/plan')}
+              style={styles.libraryButton}
+            />
+            <Ionicons
               name="library-outline"
               size={22}
               color={COLORS.lightGrey}
