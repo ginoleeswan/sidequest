@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
@@ -16,10 +17,14 @@ interface Props {
 
 export function GameCard({ game, wide = false }: Props) {
   const router = useRouter();
+  const year = game.released?.slice(0, 4);
+
   return (
     <ScaleButton
       onPress={() => router.push(`/game/${game.id}`)}
-      style={SHADOW.card}
+      // Shadow and radius must live on the same element, or the web
+      // box-shadow renders as a square box behind the rounded card.
+      style={styles.shadowWrap}
     >
       <View style={[styles.card, wide && styles.wide]}>
         <CoverImage
@@ -29,8 +34,8 @@ export function GameCard({ game, wide = false }: Props) {
         />
         <Textured fill />
         <LinearGradient
-          colors={['#00000000', 'black']}
-          locations={[0.45, 1]}
+          colors={['#00000000', '#000000e6']}
+          locations={[0.4, 1]}
           style={styles.gradient}
           pointerEvents="none"
         />
@@ -38,6 +43,11 @@ export function GameCard({ game, wide = false }: Props) {
           <Text style={styles.title} numberOfLines={2}>
             {game.name}
           </Text>
+          <View style={styles.metaRow}>
+            <Ionicons name="star" size={12} color="#FFD300" />
+            <Text style={styles.meta}>{game.rating.toFixed(1)}</Text>
+            {year ? <Text style={styles.meta}>· {year}</Text> : null}
+          </View>
         </View>
       </View>
     </ScaleButton>
@@ -45,6 +55,10 @@ export function GameCard({ game, wide = false }: Props) {
 }
 
 const styles = StyleSheet.create({
+  shadowWrap: {
+    borderRadius: RADIUS.xl,
+    ...SHADOW.card,
+  },
   card: {
     width: LAYOUT.cardWidth,
     height: LAYOUT.cardHeight,
@@ -66,9 +80,10 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: SPACING.sm,
-    paddingBottom: SPACING.lg,
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.md,
     alignItems: 'center',
+    gap: SPACING.xs,
   },
   title: {
     fontFamily: 'Noah-Black',
@@ -76,7 +91,20 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     textAlign: 'center',
     textShadowColor: 'rgba(0, 0, 0, 1)',
-    textShadowOffset: { width: -1, height: 1 },
+    textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 5,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  meta: {
+    fontFamily: 'Noah-Regular',
+    fontSize: 12,
+    color: COLORS.lightGrey,
+    textShadowColor: 'rgba(0, 0, 0, 0.9)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
 });

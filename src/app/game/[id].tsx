@@ -152,6 +152,7 @@ export default function GameInfoScreen() {
 
   const { game, screenshots, trailers, series } = data;
   const summary = game.description.replace(HTML_TAGS, '').trim();
+  const attribution = <Text style={styles.attribution}>Game data by RAWG</Text>;
   // Compact rails bleed across the page padding; the desktop two-column
   // layout keeps rails inside the main column (bleeding would cross the
   // Details rail).
@@ -294,6 +295,7 @@ export default function GameInfoScreen() {
                   {tags}
                 </View>
               </Animated.View>
+              {attribution}
             </View>
           </ScrollView>
           <Lightbox uri={lightboxUri} onClose={() => setLightboxUri(null)} />
@@ -321,6 +323,7 @@ export default function GameInfoScreen() {
             {details}
             {media}
             {tags}
+            {attribution}
           </Animated.View>
         </ScrollView>
 
@@ -359,6 +362,14 @@ function Lightbox({
 
 const styles = StyleSheet.create({
   background: { flex: 1, backgroundColor: COLORS.darkGrey },
+  attribution: {
+    fontFamily: 'Noah-Regular',
+    fontSize: 11,
+    color: COLORS.mediumGrey,
+    opacity: 0.7,
+    textAlign: 'center',
+    paddingVertical: SPACING.lg,
+  },
   skeletonShell: {
     flex: 1,
     width: '100%',

@@ -255,7 +255,11 @@ export default function HomeScreen() {
           <View style={styles.header}>
             <View style={styles.titleRow}>
               <Text style={styles.wordmark}>SIDEQUEST</Text>
-              <SearchInput value={query} onChangeText={setQuery} />
+              <SearchInput
+                value={query}
+                onChangeText={setQuery}
+                style={styles.searchCompact}
+              />
             </View>
             <FlatList
               data={CATEGORIES}
@@ -312,6 +316,9 @@ export default function HomeScreen() {
                       </Text>
                     </View>
                   </View>
+                }
+                ListFooterComponent={
+                  <Text style={styles.attribution}>Game data by RAWG</Text>
                 }
                 contentContainerStyle={[
                   styles.list,
@@ -412,8 +419,19 @@ const styles = StyleSheet.create({
   },
   wordmark: {
     fontFamily: 'Noah-Black',
-    fontSize: 24,
+    fontSize: 22,
     color: COLORS.lightGrey,
+    letterSpacing: 0.5,
+    flexShrink: 0,
+  },
+  searchCompact: { flex: 1, width: 'auto', maxWidth: 230 },
+  attribution: {
+    fontFamily: 'Noah-Regular',
+    fontSize: 11,
+    color: COLORS.mediumGrey,
+    opacity: 0.7,
+    textAlign: 'center',
+    paddingVertical: SPACING.lg,
   },
   chips: {
     alignItems: 'center',
