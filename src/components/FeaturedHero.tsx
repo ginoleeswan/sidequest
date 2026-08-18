@@ -5,9 +5,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CoverImage } from './CoverImage';
 import { ScaleButton } from './ScaleButton';
+import { ScorePill } from './ScorePill';
 import { Textured } from './Textured';
 import type { Game } from '@/api/types';
-import { COLORS } from '@/styles/colors';
+import { BRAND_GRADIENT, COLORS } from '@/styles/colors';
 import { RADIUS, SHADOW, SPACING } from '@/styles/theme';
 
 interface Props {
@@ -44,15 +45,29 @@ export function FeaturedHero({ games }: Props) {
             pointerEvents="none"
           />
           <View style={styles.leadCopy}>
-            <Text style={styles.eyebrow}>FEATURED</Text>
+            <View style={styles.eyebrowRow}>
+              <LinearGradient
+                colors={[...BRAND_GRADIENT]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.eyebrowBar}
+              />
+              <Text style={styles.eyebrow}>FEATURED</Text>
+            </View>
             <Text style={styles.leadTitle} numberOfLines={2}>
               {lead.name}
             </Text>
             <View style={styles.metaRow}>
+              {lead.metacritic != null && (
+                <ScorePill score={lead.metacritic} size="sm" />
+              )}
               <Ionicons name="star" size={14} color="#FFD300" />
               <Text style={styles.meta}>{lead.rating.toFixed(1)}</Text>
               {lead.released ? (
                 <Text style={styles.meta}>· {lead.released.slice(0, 4)}</Text>
+              ) : null}
+              {lead.genres?.[0] ? (
+                <Text style={styles.meta}>· {lead.genres[0].name}</Text>
               ) : null}
             </View>
           </View>
@@ -111,11 +126,13 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     gap: SPACING.xs,
   },
+  eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  eyebrowBar: { width: 22, height: 3, borderRadius: 2 },
   eyebrow: {
     fontFamily: 'Noah-Bold',
     fontSize: 10,
     letterSpacing: 1.4,
-    color: '#7EB1FF',
+    color: '#9CC2FF',
     textShadowColor: 'rgba(0,0,0,0.9)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,

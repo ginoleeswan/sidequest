@@ -1,11 +1,12 @@
-import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { CoverImage } from './CoverImage';
+import { PlatformIcons } from './PlatformIcons';
 import { ScaleButton } from './ScaleButton';
+import { ScorePill } from './ScorePill';
 import { Textured } from './Textured';
 import type { Game } from '@/api/types';
 import { COLORS } from '@/styles/colors';
@@ -17,11 +18,24 @@ interface Props {
   width?: number;
 }
 
-/** Cover-art tile with pointer-hover feedback. Used in expanded layouts. */
+/**
+ * Cover-art tile. The art carries glanceable facts — Metacritic in the top
+ * corner, platform glyphs along the bottom — and the caption carries
+ * identity: title, then genre · year · rating in one quiet line.
+ */
 export function GameTile({ game, width }: Props) {
   const router = useRouter();
   const [hovered, setHovered] = useState(false);
+
   const year = game.released?.slice(0, 4);
+  const genre = game.genres?.[0]?.name;
+  const meta = [
+    genre,
+    year,
+    game.rating > 0 ? `★ ${game.rating.toFixed(1)}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <View
@@ -44,6 +58,20 @@ export function GameTile({ game, width }: Props) {
             style={styles.gradient}
             pointerEvents="none"
           />
+          {game.metacritic != null && (
+            <View style={styles.scoreCorner}>
+              <ScorePill score={game.metacritic} size="sm" />
+            </View>
+          )}
+          {game.parent_platforms && game.parent_platforms.length > 0 && (
+            <View style={styles.platforms}>
+              <PlatformIcons
+                platforms={game.parent_platforms.slice(0, 4)}
+                size={12}
+                color="rgba(255,255,255,0.85)"
+              />
+            </View>
+          )}
         </View>
         <Text
           style={[styles.title, hovered && styles.titleHovered]}
@@ -51,11 +79,11 @@ export function GameTile({ game, width }: Props) {
         >
           {game.name}
         </Text>
-        <View style={styles.metaRow}>
-          <Ionicons name="star" size={13} color="#FFD300" />
-          <Text style={styles.meta}>{game.rating.toFixed(1)}</Text>
-          {year ? <Text style={styles.meta}>· {year}</Text> : null}
-        </View>
+        {meta ? (
+          <Text style={styles.meta} numberOfLines={1}>
+            {meta}
+          </Text>
+        ) : null}
       </ScaleButton>
     </View>
   );
@@ -63,7 +91,7 @@ export function GameTile({ game, width }: Props) {
 
 const styles = StyleSheet.create({
   flexCell: { flex: 1 },
-  tile: { gap: SPACING.xs + 2 },
+  tile: { gap: SPACING.xs + 1 },
   art: {
     width: '100%',
     aspectRatio: LAYOUT.tileAspect,
@@ -71,19 +99,26 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: COLORS.navy,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.07)',
+    borderColor: COLORS.stroke,
     ...SHADOW.card,
   },
-  artHovered: { borderColor: 'rgba(255,255,255,0.35)' },
+  artHovered: { borderColor: COLORS.strokeStrong },
   image: { width: '100%', height: '100%' },
   gradient: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  scoreCorner: { position: 'absolute', top: SPACING.sm, right: SPACING.sm },
+  platforms: {
+    position: 'absolute',
+    bottom: SPACING.sm,
+    left: SPACING.sm + 2,
+  },
   title: {
     fontFamily: 'Noah-Bold',
     fontSize: 13,
+    lineHeight: 17,
     color: COLORS.lightGrey,
+    marginTop: 2,
   },
   titleHovered: { color: COLORS.white },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
   meta: {
     fontFamily: 'Noah-Regular',
     fontSize: 11,

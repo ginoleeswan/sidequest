@@ -23,6 +23,7 @@ import { searchGames } from '@/api/rawg';
 import type { Game, Paged } from '@/api/types';
 import { Chip } from '@/components/Chip';
 import { FeaturedHero } from '@/components/FeaturedHero';
+import { FooterLinks } from '@/components/FooterLinks';
 import { GameCard } from '@/components/GameCard';
 import { GameInfoCard } from '@/components/GameInfoCard';
 import { GameTile } from '@/components/GameTile';
@@ -240,7 +241,7 @@ export default function HomeScreen() {
       contentContainerStyle={[
         styles.gridContent,
         !isExpanded && { paddingTop: headerHeight },
-        { paddingBottom: insets.bottom + SPACING.xl * 4 },
+        { paddingBottom: insets.bottom + SPACING.xl * 3 },
       ]}
     />
   );
@@ -306,7 +307,7 @@ export default function HomeScreen() {
                         inset={SPACING.xl}
                       />
                     ))}
-                    <Text style={styles.attribution}>Game data by RAWG</Text>
+                    <FooterLinks />
                   </ScrollView>
                 ) : (
                   grid
@@ -335,7 +336,7 @@ export default function HomeScreen() {
                 styles.compactHome,
                 {
                   paddingTop: headerHeight,
-                  paddingBottom: insets.bottom + SPACING.xl * 4,
+                  paddingBottom: insets.bottom + SPACING.xl * 3,
                 },
               ]}
             >
@@ -366,7 +367,7 @@ export default function HomeScreen() {
                   />
                 ))}
               </View>
-              <Text style={styles.attribution}>Game data by RAWG</Text>
+              <FooterLinks />
             </ScrollView>
           ) : searching ? (
             <FlatList
@@ -384,7 +385,7 @@ export default function HomeScreen() {
                 styles.list,
                 {
                   paddingTop: headerHeight,
-                  paddingBottom: insets.bottom + SPACING.xl * 4,
+                  paddingBottom: insets.bottom + SPACING.xl * 3,
                 },
               ]}
             />

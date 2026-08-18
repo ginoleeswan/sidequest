@@ -33,7 +33,17 @@ function iconFor(slug: string) {
   return null;
 }
 
-export function PlatformIcons({ platforms }: { platforms: PlatformRef[] }) {
+interface Props {
+  platforms: PlatformRef[];
+  size?: number;
+  color?: string;
+}
+
+export function PlatformIcons({
+  platforms,
+  size = 20,
+  color = COLORS.lightGrey,
+}: Props) {
   return (
     <View style={styles.row}>
       {platforms.map(({ platform }) => {
@@ -43,7 +53,7 @@ export function PlatformIcons({ platforms }: { platforms: PlatformRef[] }) {
           <Image
             key={platform.id}
             source={icon.image}
-            style={styles.image}
+            style={{ width: size * 1.75, height: size }}
             contentFit="contain"
           />
         ) : (
@@ -51,8 +61,8 @@ export function PlatformIcons({ platforms }: { platforms: PlatformRef[] }) {
             <DynamicIcon
               type={icon.vector!.type}
               name={icon.vector!.name}
-              size={20}
-              color={COLORS.lightGrey}
+              size={size}
+              color={color}
             />
           </View>
         );
@@ -69,6 +79,5 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 4,
   },
-  image: { width: 35, height: 20 },
   vector: { padding: 2 },
 });

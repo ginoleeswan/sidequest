@@ -7,6 +7,7 @@ import type {
   Movie,
   Paged,
   Screenshot,
+  StoreLink,
 } from './types';
 
 /**
@@ -135,3 +136,5 @@ export const getMovies = (id: string | number) =>
   rawg<Paged<Movie>>(`games/${id}/movies`);
 export const getGameSeries = (id: string | number) =>
   rawg<Paged<Game>>(`games/${id}/game-series`);
+export const getStoreLinks = (id: string | number) =>
+  rawg<Paged<StoreLink>>(`games/${id}/stores`);

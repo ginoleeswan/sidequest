@@ -20,13 +20,45 @@ export interface Game {
   playtime: number;
   metacritic?: number | null;
   parent_platforms?: PlatformRef[];
+  genres?: Named[];
+}
+
+export interface RatingBucket {
+  id: number;
+  title: string; // exceptional | recommended | meh | skip
+  count: number;
+  percent: number;
+}
+
+export interface AddedByStatus {
+  yet?: number;
+  owned?: number;
+  beaten?: number;
+  toplay?: number;
+  dropped?: number;
+  playing?: number;
+}
+
+export interface StoreRef {
+  id: number;
+  store: { id: number; name: string; domain?: string };
+}
+
+export interface StoreLink {
+  id: number;
+  store_id: number;
+  url: string;
 }
 
 /** Full detail response for /games/{id}. */
 export interface GameDetail extends Game {
   description: string;
+  website?: string;
+  esrb_rating?: { id: number; name: string } | null;
+  ratings?: RatingBucket[];
+  added_by_status?: AddedByStatus | null;
+  stores?: StoreRef[];
   platforms?: PlatformRef[];
-  genres?: Named[];
   developers?: Named[];
   publishers?: Named[];
   tags?: Named[];

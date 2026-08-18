@@ -20,20 +20,24 @@ import {
   getGameSeries,
   getMovies,
   getScreenshots,
+  getStoreLinks,
   mediaUri,
 } from '@/api/rawg';
 import type { Game, GameDetail, Movie, Named, Screenshot } from '@/api/types';
 import { BackButton } from '@/components/BackButton';
 import { Chip } from '@/components/Chip';
+import { CommunityStats } from '@/components/CommunityStats';
 import { CoverImage } from '@/components/CoverImage';
 import { GameCard } from '@/components/GameCard';
 import { Message } from '@/components/Message';
 import { PlatformIcons } from '@/components/PlatformIcons';
 import { Rail } from '@/components/Rail';
+import { RatingsBreakdown } from '@/components/RatingsBreakdown';
 import { ReadMoreText } from '@/components/ReadMoreText';
 import { ScorePill } from '@/components/ScorePill';
 import { SectionHeader } from '@/components/SectionHeader';
 import { Skeleton, SkeletonShelf } from '@/components/Skeleton';
+import { StoreLinks } from '@/components/StoreLinks';
 import { Textured } from '@/components/Textured';
 import { TrailerCard } from '@/components/TrailerCard';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
@@ -77,6 +81,9 @@ function StatStrip({ game }: { game: GameDetail }) {
       )}
       {game.released && (
         <Stat value={game.released.slice(0, 4)} label="Released" />
+      )}
+      {game.esrb_rating?.name && (
+        <Stat value={game.esrb_rating.name} label="ESRB" />
       )}
     </View>
   );
@@ -136,17 +143,20 @@ export default function GameInfoScreen() {
     queryKey: queryKeys.game(id),
     // Four endpoints, one unit: the screen gets a single loading/error state.
     queryFn: async () => {
-      const [game, screenshots, trailers, series] = await Promise.all([
-        getGame(id),
-        getScreenshots(id),
-        getMovies(id),
-        getGameSeries(id),
-      ]);
+      const [game, screenshots, trailers, series, storeLinks] =
+        await Promise.all([
+          getGame(id),
+          getScreenshots(id),
+          getMovies(id),
+          getGameSeries(id),
+          getStoreLinks(id).catch(() => ({ results: [] })),
+        ]);
       return {
         game,
         screenshots: screenshots.results,
         trailers: trailers.results,
         series: series.results,
+        storeLinks: storeLinks.results,
       };
     },
   });
@@ -192,7 +202,7 @@ export default function GameInfoScreen() {
     );
   }
 
-  const { game, screenshots, trailers, series } = data;
+  const { game, screenshots, trailers, series, storeLinks } = data;
   const summary = game.description.replace(HTML_TAGS, '').trim();
   const railInset = isExpanded ? 0 : SPACING.md;
 
@@ -345,6 +355,33 @@ export default function GameInfoScreen() {
     </>
   );
 
+  const ratingsBreakdown =
+    game.ratings && game.ratings.length > 0 ? (
+      <View style={styles.block}>
+        <SectionHeader title="Player verdict" />
+        <RatingsBreakdown ratings={game.ratings} />
+      </View>
+    ) : null;
+
+  const community = game.added_by_status ? (
+    <View style={styles.block}>
+      <SectionHeader title="Community" />
+      <CommunityStats status={game.added_by_status} />
+    </View>
+  ) : null;
+
+  const links =
+    (storeLinks.length > 0 && game.stores?.length) || game.website ? (
+      <View style={styles.block}>
+        <SectionHeader title="Get it" />
+        <StoreLinks
+          stores={game.stores}
+          links={storeLinks}
+          website={game.website}
+        />
+      </View>
+    ) : null;
+
   const attribution = <Text style={styles.attribution}>Game data by RAWG</Text>;
 
   /* -------------------------------------------------------------- layout */
@@ -357,7 +394,7 @@ export default function GameInfoScreen() {
         </View>
 
         <ScrollView
-          contentContainerStyle={{ paddingBottom: insets.bottom + 140 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 84 }}
           showsVerticalScrollIndicator={false}
         >
           {isExpanded ? (
@@ -367,10 +404,13 @@ export default function GameInfoScreen() {
                 <View style={styles.columnMain}>
                   {genres}
                   {about}
+                  {ratingsBreakdown}
                   {media}
                 </View>
                 <View style={styles.columnRail}>
                   {details}
+                  {community}
+                  {links}
                   {tags}
                 </View>
               </Animated.View>
@@ -382,7 +422,10 @@ export default function GameInfoScreen() {
               <Animated.View style={[styles.compactBody, { opacity }]}>
                 {genres}
                 {about}
+                {ratingsBreakdown}
                 {media}
+                {community}
+                {links}
                 {details}
                 {tags}
                 {attribution}

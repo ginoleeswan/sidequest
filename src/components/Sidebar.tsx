@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { useRouter } from 'expo-router';
+
 import { DynamicIcon, type IconType } from './DynamicIcon';
 import { DISCOVER, GENRES, type Section } from '@/constants/categories';
 import { COLORS } from '@/styles/colors';
@@ -76,6 +78,7 @@ interface Props {
 
 /** Persistent left navigation for expanded (desktop) layouts. */
 export function Sidebar({ activeKey, onHome, onSelect }: Props) {
+  const router = useRouter();
   return (
     <View style={styles.sidebar}>
       <Text style={styles.wordmark}>SIDEQUEST</Text>
@@ -107,6 +110,17 @@ export function Sidebar({ activeKey, onHome, onSelect }: Props) {
         />
       </ScrollView>
 
+      <View style={styles.footerRow}>
+        <Text style={styles.footerLink} onPress={() => router.push('/about')}>
+          About
+        </Text>
+        <Text style={styles.footerLink} onPress={() => router.push('/terms')}>
+          Terms
+        </Text>
+        <Text style={styles.footerLink} onPress={() => router.push('/privacy')}>
+          Privacy
+        </Text>
+      </View>
       <Text style={styles.footer}>Game data by RAWG</Text>
     </View>
   );
@@ -156,6 +170,12 @@ const styles = StyleSheet.create({
   navItemActive: { backgroundColor: COLORS.blue },
   navItemHovered: { backgroundColor: 'rgba(255,255,255,0.06)' },
   navLabel: { fontFamily: 'Noah-Bold', fontSize: 13.5 },
+  footerRow: { flexDirection: 'row', gap: SPACING.md, marginBottom: 6 },
+  footerLink: {
+    fontFamily: 'Noah-Bold',
+    fontSize: 11,
+    color: COLORS.mediumGrey,
+  },
   footer: {
     fontFamily: 'Noah-Regular',
     fontSize: 10,
