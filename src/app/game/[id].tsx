@@ -8,7 +8,6 @@ import {
   Animated,
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -37,7 +36,7 @@ import { RatingsBreakdown } from '@/components/RatingsBreakdown';
 import { ReadMoreText } from '@/components/ReadMoreText';
 import { ScorePill } from '@/components/ScorePill';
 import { SectionHeader } from '@/components/SectionHeader';
-import { Skeleton, SkeletonShelf } from '@/components/Skeleton';
+import { SkeletonDetail } from '@/components/Skeleton';
 import { StatusActions } from '@/components/StatusActions';
 import { StoreLinks } from '@/components/StoreLinks';
 import { Textured } from '@/components/Textured';
@@ -180,10 +179,7 @@ export default function GameInfoScreen() {
           <BackButton />
         </View>
         <View style={styles.skeletonShell}>
-          <Skeleton style={styles.skeletonHero} />
-          <Skeleton style={styles.skeletonLine} />
-          <Skeleton style={styles.skeletonLineShort} />
-          <SkeletonShelf tiles={4} />
+          <SkeletonDetail />
         </View>
       </Textured>
     );
@@ -229,6 +225,14 @@ export default function GameInfoScreen() {
         colors={['#333D5100', '#333D5199', COLORS.darkGrey]}
         locations={[0.35, 0.78, 1]}
         style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
+      {/* And from above: the art blends out of the browser chrome instead
+          of being guillotined by it. */}
+      <LinearGradient
+        colors={[COLORS.darkGrey, '#333D5100']}
+        locations={[0, 1]}
+        style={styles.topScrim}
         pointerEvents="none"
       />
       <View style={[styles.heroCopy, isExpanded && styles.heroCopyExpanded]}>
@@ -399,10 +403,7 @@ export default function GameInfoScreen() {
           <BackButton />
         </View>
 
-        <ScrollView
-          contentContainerStyle={{ paddingBottom: insets.bottom + 84 }}
-          showsVerticalScrollIndicator={false}
-        >
+        <View style={{ paddingBottom: insets.bottom + 84 }}>
           {isExpanded ? (
             <View style={styles.expandedInner}>
               {hero}
@@ -438,7 +439,7 @@ export default function GameInfoScreen() {
               </Animated.View>
             </>
           )}
-        </ScrollView>
+        </View>
 
         <Lightbox uri={lightboxUri} onClose={() => setLightboxUri(null)} />
       </View>
@@ -453,6 +454,13 @@ const styles = StyleSheet.create({
 
   // hero
   hero: { height: 480, justifyContent: 'flex-end' },
+  topScrim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 110,
+  },
   heroExpanded: { height: 520 },
   heroImage: {
     position: 'absolute',
@@ -575,17 +583,10 @@ const styles = StyleSheet.create({
 
   // skeleton / lightbox
   skeletonShell: {
-    flex: 1,
     width: '100%',
-    maxWidth: LAYOUT.maxExpandedWidth,
+    maxWidth: LAYOUT.maxContentWidth,
     alignSelf: 'center',
-    paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.xl * 2,
-    gap: SPACING.md,
   },
-  skeletonHero: { height: 320, borderRadius: RADIUS.lg },
-  skeletonLine: { height: 16, width: '55%' },
-  skeletonLineShort: { height: 12, width: '35%', marginBottom: SPACING.lg },
   lightbox: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.95)',

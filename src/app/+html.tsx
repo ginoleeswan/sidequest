@@ -1,4 +1,3 @@
-import { ScrollViewStyleReset } from 'expo-router/html';
 import type { PropsWithChildren } from 'react';
 
 /**
@@ -55,7 +54,6 @@ export default function Root({ children }: PropsWithChildren) {
           name="twitter:image"
           content="https://sidequest-bice-nu.vercel.app/og.png"
         />
-        <ScrollViewStyleReset />
         <style dangerouslySetInnerHTML={{ __html: css }} />
       </head>
       <body>{children}</body>
@@ -83,32 +81,26 @@ const css = `
   }
   ::selection { background: #1E69E1; color: #fff; }
 
-  /* Full-bleed: the page owns the whole viewport including behind the
-     iOS status bar and floating toolbar. */
-  html, body, #root {
-    height: 100%;
-    margin: 0;
-  }
-
   /*
-   * React Native Web renders every FlatList as its own nested scroll
-   * container sized to its parent. At height:100% that parent is the
-   * *small* viewport - the area excluding iOS Safari's floating toolbar -
-   * so list content stops dead at the toolbar instead of running beneath
-   * it (which is why the skeletons, which are not inside a scroller and
-   * therefore scroll the document, looked right and the loaded lists did
-   * not). Sizing to the large viewport makes the scroller itself extend
-   * behind the browser chrome.
+   * THE DOCUMENT IS THE SCROLLER.
+   *
+   * Nested viewport-height scroll containers can never paint past iOS
+   * Safari's viewport units, which stop short of the physical screen
+   * edge - content halted at the toolbar no matter which unit sized the
+   * box (three attempts' worth of evidence). Skeletons always looked
+   * right because they were plain page content. So every page is now
+   * plain page content: the body scrolls, Safari paints it edge to edge
+   * under both toolbars, and the toolbar minimises on scroll like a
+   * native site.
    */
-  @supports (height: 100lvh) {
-    html, body, #root {
-      height: calc(100lvh + env(safe-area-inset-bottom, 0px));
-    }
+  html, body {
+    margin: 0;
+    min-height: 100%;
   }
-
-  body {
-    /* Stop the rubber-band from revealing a white void past the ends. */
-    overscroll-behavior-y: none;
+  #root {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
   }
 
   * {

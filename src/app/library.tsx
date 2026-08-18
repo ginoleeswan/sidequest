@@ -3,7 +3,6 @@ import Head from 'expo-router/head';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  FlatList,
   Modal,
   Pressable,
   StyleSheet,
@@ -55,6 +54,14 @@ function padToRows(items: Game[], columns: number): GridItem[] {
   const remainder = items.length % columns;
   if (remainder === 0) return items;
   return [...items, ...Array(columns - remainder).fill(SPACER)];
+}
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const rows: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    rows.push(items.slice(i, i + size));
+  }
+  return rows;
 }
 
 export default function LibraryScreen() {
@@ -151,35 +158,34 @@ export default function LibraryScreen() {
           </View>
 
           {games.length === 0 ? (
-            <Message
-              icon="library-outline"
-              title={EMPTY_COPY[tab].title}
-              detail={EMPTY_COPY[tab].detail}
-            />
+            <View style={styles.emptyFrame}>
+              <Message
+                icon="library-outline"
+                title={EMPTY_COPY[tab].title}
+                detail={EMPTY_COPY[tab].detail}
+              />
+            </View>
           ) : (
-            <FlatList
-              key={`lib-${columns}`}
-              data={padToRows(games, columns)}
-              numColumns={columns}
-              columnWrapperStyle={styles.gridRow}
-              keyExtractor={(item, index) =>
-                isSpacer(item) ? `spacer-${index}` : String(item.id)
-              }
-              renderItem={({ item }) =>
-                isSpacer(item) ? (
-                  <View style={styles.gridSpacer} />
-                ) : (
-                  <GameTile game={item} />
-                )
-              }
-              showsVerticalScrollIndicator={false}
-              ListFooterComponent={<FooterLinks />}
-              contentContainerStyle={[
+            <View
+              style={[
                 styles.gridContent,
-                { paddingBottom: insets.bottom + 84 },
+                { paddingBottom: insets.bottom + 40 },
               ]}
-            />
+            >
+              {chunk(padToRows(games, columns), columns).map((row, r) => (
+                <View key={r} style={styles.gridRow}>
+                  {row.map((item, i) =>
+                    isSpacer(item) ? (
+                      <View key={`s-${r}-${i}`} style={styles.gridSpacer} />
+                    ) : (
+                      <GameTile key={item.id} game={item} />
+                    )
+                  )}
+                </View>
+              ))}
+            </View>
           )}
+          <FooterLinks />
         </View>
       </FadeInView>
 
@@ -226,9 +232,8 @@ export default function LibraryScreen() {
 const styles = StyleSheet.create({
   background: { flex: 1, backgroundColor: COLORS.darkGrey },
   backButton: { position: 'absolute', left: SPACING.lg, zIndex: 30 },
-  container: { flex: 1 },
+  container: {},
   inner: {
-    flex: 1,
     width: '100%',
     maxWidth: LAYOUT.maxExpandedWidth,
     alignSelf: 'center',
@@ -236,9 +241,10 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
   },
   tabs: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  gridRow: { gap: LAYOUT.gridGap },
+  gridRow: { flexDirection: 'row', gap: LAYOUT.gridGap },
   gridContent: { gap: LAYOUT.gridGap },
   gridSpacer: { flex: 1 },
+  emptyFrame: { minHeight: 320 },
   transferRow: { flexDirection: 'row', gap: SPACING.lg },
   transferLink: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   transferText: {

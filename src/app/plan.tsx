@@ -3,7 +3,7 @@ import Head from 'expo-router/head';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { Game } from '@/api/types';
@@ -165,10 +165,7 @@ export default function PlanScreen() {
         <BackButton />
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 84 }}
-      >
+      <View style={{ paddingBottom: insets.bottom + 84 }}>
         <FadeInView>
           <View
             style={[styles.inner, { paddingTop: insets.top + SPACING.xl * 2 }]}
@@ -352,7 +349,7 @@ export default function PlanScreen() {
             <FooterLinks />
           </View>
         </FadeInView>
-      </ScrollView>
+      </View>
     </Textured>
   );
 }

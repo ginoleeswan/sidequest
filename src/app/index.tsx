@@ -11,6 +11,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import {
@@ -98,6 +99,7 @@ export default function HomeScreen() {
   const section: Section = findSection(selection) ?? DISCOVER[0];
 
   const { isExpanded, columns } = useBreakpoint();
+  const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const searchRef = useRef<TextInput | null>(null);
   const [headerHeight, setHeaderHeight] = useState(132);
@@ -246,6 +248,7 @@ export default function HomeScreen() {
         onEndReachedThreshold={1.2}
         ListHeaderComponent={gridHeader}
         ListFooterComponent={footerSpinner}
+        style={!isExpanded && { height: windowHeight }}
         contentContainerStyle={[
           styles.gridContent,
           !isExpanded && { paddingTop: headerHeight },
@@ -260,7 +263,7 @@ export default function HomeScreen() {
     return (
       <Textured style={styles.background}>
         <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-          <View style={styles.expandedShell}>
+          <View style={[styles.expandedShell, { height: windowHeight }]}>
             <Sidebar
               activeKey={searching ? null : isHome ? 'home' : selection}
               onHome={goHome}
@@ -340,10 +343,8 @@ export default function HomeScreen() {
               <SkeletonCompactHome />
             </View>
           ) : isHome ? (
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              refreshControl={refresh}
-              contentContainerStyle={[
+            <View
+              style={[
                 styles.compactHome,
                 {
                   paddingTop: headerHeight,
@@ -352,14 +353,16 @@ export default function HomeScreen() {
               ]}
             >
               {featured.length > 0 && (
-                <Rail
-                  data={featured}
-                  keyExtractor={(item) => String(item.id)}
-                  renderItem={(item) => <GameCard game={item} wide />}
-                  inset={SPACING.md}
-                  gap={SPACING.md}
-                  snapInterval={LAYOUT.cardWideWidth + SPACING.md}
-                />
+                <View style={styles.carouselFrame}>
+                  <Rail
+                    data={featured}
+                    keyExtractor={(item) => String(item.id)}
+                    renderItem={(item) => <GameCard game={item} wide />}
+                    inset={SPACING.md}
+                    gap={SPACING.md}
+                    snapInterval={LAYOUT.cardWideWidth + SPACING.md}
+                  />
+                </View>
               )}
               <View style={styles.compactShelves}>
                 <Shelf
@@ -379,7 +382,7 @@ export default function HomeScreen() {
                 ))}
               </View>
               <FooterLinks />
-            </ScrollView>
+            </View>
           ) : searching ? (
             <FlatList
               data={games}
@@ -392,6 +395,7 @@ export default function HomeScreen() {
               onEndReachedThreshold={1.2}
               ListHeaderComponent={gridHeader}
               ListFooterComponent={footerSpinner}
+              style={{ height: windowHeight }}
               contentContainerStyle={[
                 styles.list,
                 {
@@ -506,6 +510,7 @@ const styles = StyleSheet.create({
   // compact
   compactShell: { flex: 1 },
   compactHome: { gap: SPACING.xs },
+  carouselFrame: { paddingHorizontal: SPACING.md },
   compactShelves: { paddingHorizontal: SPACING.md, marginTop: SPACING.sm },
   headerFloat: {
     position: 'absolute',

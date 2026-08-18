@@ -95,7 +95,7 @@ export function SkeletonRow() {
   );
 }
 
-/** Compact home silhouette: wide carousel plus row cards. */
+/** Compact home silhouette: the hero carousel peeking, then tile shelves. */
 export function SkeletonCompactHome() {
   return (
     <View style={styles.compact}>
@@ -103,10 +103,32 @@ export function SkeletonCompactHome() {
         <Skeleton style={styles.wideCard} />
         <Skeleton style={styles.wideCard} />
       </View>
-      <View style={styles.compactList}>
-        {Array.from({ length: 5 }, (_, i) => (
-          <SkeletonRow key={i} />
-        ))}
+      <SkeletonShelf tiles={3} />
+      <SkeletonShelf tiles={3} />
+    </View>
+  );
+}
+
+/** Detail-page silhouette: full-bleed hero, title stack, stats, prose. */
+export function SkeletonDetail() {
+  return (
+    <View>
+      <Skeleton style={styles.detailHero} />
+      <View style={styles.detailBody}>
+        <Skeleton style={styles.detailTitle} />
+        <View style={styles.row}>
+          <Skeleton style={styles.detailStat} />
+          <Skeleton style={styles.detailStat} />
+          <Skeleton style={styles.detailStat} />
+        </View>
+        <View style={styles.row}>
+          <Skeleton style={styles.detailChip} />
+          <Skeleton style={styles.detailChip} />
+        </View>
+        <Skeleton style={styles.lineFull} />
+        <Skeleton style={styles.lineFull} />
+        <Skeleton style={styles.lineWide} />
+        <SkeletonShelf tiles={3} />
       </View>
     </View>
   );
@@ -151,5 +173,14 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.xl,
   },
   compact: { paddingHorizontal: SPACING.md, gap: SPACING.lg },
-  compactList: { marginTop: SPACING.sm },
+  detailHero: { height: 420, borderRadius: 0 },
+  detailBody: {
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.lg,
+    gap: SPACING.md,
+  },
+  detailTitle: { height: 26, width: '62%' },
+  detailStat: { height: 34, width: 64 },
+  detailChip: { height: 26, width: 84, borderRadius: 14 },
+  lineFull: { height: 12, width: '100%' },
 });

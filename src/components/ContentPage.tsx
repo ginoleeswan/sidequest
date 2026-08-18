@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BackButton } from './BackButton';
@@ -22,9 +22,8 @@ export function ContentPage({ title, updated, children }: Props) {
       <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
         <BackButton />
       </View>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
+      <View
+        style={[
           styles.scroll,
           {
             paddingTop: insets.top + SPACING.xl * 2.5,
@@ -45,7 +44,7 @@ export function ContentPage({ title, updated, children }: Props) {
           ) : null}
           <View style={styles.body}>{children}</View>
         </View>
-      </ScrollView>
+      </View>
     </Textured>
   );
 }
