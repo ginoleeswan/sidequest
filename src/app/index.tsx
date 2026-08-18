@@ -15,118 +15,40 @@ import {
 } from 'react-native-safe-area-context';
 
 import { queryKeys } from '@/api/queryClient';
-import { getGames, getMustPlayGames, searchGames } from '@/api/rawg';
 import type { Game } from '@/api/types';
+import { searchGames } from '@/api/rawg';
 import { Chip } from '@/components/Chip';
-import { DynamicIcon, type IconType } from '@/components/DynamicIcon';
+import { DynamicIcon } from '@/components/DynamicIcon';
+import { FeaturedHero } from '@/components/FeaturedHero';
 import { GameCard } from '@/components/GameCard';
 import { GameInfoCard } from '@/components/GameInfoCard';
+import { GameTile } from '@/components/GameTile';
 import { Message } from '@/components/Message';
 import { SearchInput } from '@/components/SearchInput';
+import { Sidebar } from '@/components/Sidebar';
 import { Textured } from '@/components/Textured';
+import { CATEGORIES, SEARCH_SECTION } from '@/constants/categories';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
+import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useDebounced } from '@/hooks/useDebounced';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
-interface Category {
-  key: string;
-  title: string;
-  fetch: () => Promise<{ results: Game[] }>;
-  iconName: string;
-  iconType: IconType;
-}
-
-const CATEGORIES: Category[] = [
-  {
-    key: 'trending',
-    title: 'Trending',
-    fetch: () => getGames(),
-    iconName: 'trending-up',
-    iconType: 'feather',
-  },
-  {
-    key: 'must-play',
-    title: 'Must Play',
-    fetch: getMustPlayGames,
-    iconName: 'star',
-    iconType: 'material-community',
-  },
-  {
-    key: 'indie',
-    title: 'Indie',
-    fetch: () => getGames('indie'),
-    iconName: 'heart',
-    iconType: 'material-community',
-  },
-  {
-    key: 'racing',
-    title: 'Racing',
-    fetch: () => getGames('racing'),
-    iconName: 'car',
-    iconType: 'font-awesome-5',
-  },
-  {
-    key: 'strategy',
-    title: 'Strategy',
-    fetch: () => getGames('strategy'),
-    iconName: 'strategy',
-    iconType: 'material-community',
-  },
-  {
-    key: 'simulation',
-    title: 'Simulation',
-    fetch: () => getGames('simulation'),
-    iconName: 'person',
-    iconType: 'ionicon',
-  },
-  {
-    key: 'casual',
-    title: 'Casual',
-    fetch: () => getGames('casual'),
-    iconName: 'checkerboard',
-    iconType: 'material-community',
-  },
-  {
-    key: 'sports',
-    title: 'Sport',
-    fetch: () => getGames('sports'),
-    iconName: 'soccer',
-    iconType: 'material-community',
-  },
-  {
-    key: 'shooter',
-    title: 'Shooter',
-    fetch: () => getGames('shooter'),
-    iconName: 'crosshairs',
-    iconType: 'font-awesome-5',
-  },
-  {
-    key: 'rpg',
-    title: 'RPG',
-    fetch: () => getGames('role-playing-games-rpg'),
-    iconName: 'shield',
-    iconType: 'material-community',
-  },
-  {
-    key: 'adventure',
-    title: 'Adventure',
-    fetch: () => getGames('adventure'),
-    iconName: 'compass',
-    iconType: 'material-community',
-  },
-];
-
-const SEARCH_SECTION = {
-  title: 'Search',
-  iconName: 'search',
-  iconType: 'material-icons' as IconType,
-};
-
-/** How far the hero carousel travels before it's fully tucked away. */
+/** How far the compact hero carousel travels before it's tucked away. */
 const COLLAPSE_DISTANCE = 240;
 const FEATURED_COUNT = 4;
+
+/** Sentinel filling an incomplete final grid row so tiles keep their width. */
+const SPACER = { spacer: true } as const;
+type GridItem = Game | typeof SPACER;
+const isSpacer = (item: GridItem): item is typeof SPACER => 'spacer' in item;
+
+function padToRows(items: Game[], columns: number): GridItem[] {
+  const remainder = items.length % columns;
+  if (remainder === 0) return items;
+  return [...items, ...Array(columns - remainder).fill(SPACER)];
+}
 
 export default function HomeScreen() {
   const [query, setQuery] = useState('');
@@ -137,19 +59,9 @@ export default function HomeScreen() {
   const category =
     CATEGORIES.find((c) => c.key === categoryKey) ?? CATEGORIES[0];
 
+  const { isExpanded, columns } = useBreakpoint();
   const insets = useSafeAreaInsets();
   const scrollY = useAnimatedValue(0);
-
-  const translateY = scrollY.interpolate({
-    inputRange: [0, COLLAPSE_DISTANCE],
-    outputRange: [0, -COLLAPSE_DISTANCE],
-    extrapolate: 'clamp',
-  });
-  const fadeOutOnScroll = scrollY.interpolate({
-    inputRange: [0, COLLAPSE_DISTANCE * 0.6],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
 
   const { data, isPending, isRefetching, error, refetch } = useQuery({
     queryKey: searching
@@ -164,101 +76,115 @@ export default function HomeScreen() {
   const featured = searching ? [] : games.slice(0, FEATURED_COUNT);
   const listed = searching ? games : games.slice(FEATURED_COUNT);
 
-  const renderBody = () => {
-    if (isPending) {
-      return (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={COLORS.lightGrey} />
-          <Text style={[TYPE.p, styles.loadingText]}>
-            Loading {section.title}…
-          </Text>
-        </View>
-      );
-    }
-
-    if (error) {
-      return (
-        <Message
-          icon="cloud-offline-outline"
-          title="Couldn't reach RAWG"
-          detail={error instanceof Error ? error.message : undefined}
-        />
-      );
-    }
-
-    if (games.length === 0) {
-      return searching ? (
-        <Message
-          icon="search-outline"
-          title={`No games match "${debouncedQuery}"`}
-          detail="Try a shorter or differently spelled title."
-        />
-      ) : (
-        <Message icon="game-controller-outline" title="Nothing here yet" />
-      );
-    }
-
-    return (
-      <Animated.View
-        style={[styles.body, !searching && { transform: [{ translateY }] }]}
-      >
-        {featured.length > 0 && (
-          <Animated.View style={{ opacity: fadeOutOnScroll }}>
-            <FlatList
-              data={featured}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(item) => String(item.id)}
-              renderItem={({ item }) => <GameCard game={item} wide />}
-              contentContainerStyle={styles.carousel}
-            />
-          </Animated.View>
-        )}
-
-        <View style={styles.sectionRow}>
-          <DynamicIcon
-            type={section.iconType}
-            name={section.iconName}
-            color={COLORS.mediumGrey}
-          />
-          <Text style={[TYPE.h3, styles.sectionTitle]}>{section.title}</Text>
-        </View>
-
-        <FlatList
-          data={listed}
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-            { useNativeDriver: true }
-          )}
-          scrollEventThrottle={16}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          keyExtractor={(item) => String(item.id)}
-          renderItem={({ item }) => <GameInfoCard game={item} />}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefetching}
-              onRefresh={refetch}
-              tintColor={COLORS.lightGrey}
-            />
-          }
-          contentContainerStyle={[
-            styles.list,
-            { paddingBottom: COLLAPSE_DISTANCE + insets.bottom + SPACING.xl },
-          ]}
-        />
-      </Animated.View>
-    );
+  const selectCategory = (key: string) => {
+    setQuery('');
+    setCategoryKey(key);
   };
+
+  const status = renderStatus({
+    isPending,
+    error,
+    empty: games.length === 0,
+    searching,
+    debouncedQuery,
+    sectionTitle: section.title,
+  });
+
+  const sectionHeading = (
+    <View style={styles.sectionRow}>
+      <DynamicIcon
+        type={section.iconType}
+        name={section.iconName}
+        color={COLORS.mediumGrey}
+      />
+      <Text style={[TYPE.h3, styles.sectionTitle]}>{section.title}</Text>
+    </View>
+  );
+
+  const refresh = (
+    <RefreshControl
+      refreshing={isRefetching}
+      onRefresh={refetch}
+      tintColor={COLORS.lightGrey}
+    />
+  );
+
+  // ------------------------------------------------------------- expanded
+  if (isExpanded) {
+    return (
+      <Textured style={styles.background}>
+        <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+          <View style={styles.expandedShell}>
+            <Sidebar
+              activeKey={searching ? null : categoryKey}
+              onSelect={(c) => selectCategory(c.key)}
+            />
+
+            <View style={styles.main}>
+              <View style={styles.mainHeader}>
+                <Text style={[TYPE.h3, styles.sectionTitle]}>
+                  {section.title}
+                </Text>
+                <SearchInput
+                  value={query}
+                  onChangeText={setQuery}
+                  style={styles.searchExpanded}
+                />
+              </View>
+
+              {status ?? (
+                <FlatList
+                  // numColumns is immutable per instance; remount on change.
+                  key={`grid-${columns}`}
+                  data={padToRows(listed, columns)}
+                  numColumns={columns}
+                  columnWrapperStyle={styles.gridRow}
+                  contentContainerStyle={styles.gridContent}
+                  keyExtractor={(item, index) =>
+                    isSpacer(item) ? `spacer-${index}` : String(item.id)
+                  }
+                  renderItem={({ item }) =>
+                    isSpacer(item) ? (
+                      <View style={styles.gridSpacer} />
+                    ) : (
+                      <GameTile game={item} />
+                    )
+                  }
+                  ListHeaderComponent={
+                    featured.length > 0 ? (
+                      <FeaturedHero games={featured} />
+                    ) : null
+                  }
+                  showsVerticalScrollIndicator={false}
+                  refreshControl={refresh}
+                />
+              )}
+            </View>
+          </View>
+        </SafeAreaView>
+      </Textured>
+    );
+  }
+
+  // -------------------------------------------------------------- compact
+  const translateY = scrollY.interpolate({
+    inputRange: [0, COLLAPSE_DISTANCE],
+    outputRange: [0, -COLLAPSE_DISTANCE],
+    extrapolate: 'clamp',
+  });
+  const fadeOutOnScroll = scrollY.interpolate({
+    inputRange: [0, COLLAPSE_DISTANCE * 0.6],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
 
   return (
     <Textured style={styles.background}>
       <SafeAreaView style={styles.container} edges={['right', 'top', 'left']}>
-        <View style={styles.content}>
+        <View style={styles.compactShell}>
           <View style={styles.header}>
             <View style={styles.titleRow}>
-              <Text style={styles.appTitle}>ARCADE</Text>
+              <Text style={styles.wordmark}>SIDEQUEST</Text>
               <SearchInput value={query} onChangeText={setQuery} />
             </View>
             <FlatList
@@ -272,26 +198,145 @@ export default function HomeScreen() {
                   selected={!searching && categoryKey === item.key}
                   iconName={item.iconName}
                   iconType={item.iconType}
-                  onPress={() => {
-                    setQuery('');
-                    setCategoryKey(item.key);
-                  }}
+                  onPress={() => selectCategory(item.key)}
                 />
               )}
               contentContainerStyle={styles.chips}
             />
           </View>
-          {renderBody()}
+
+          {status ?? (
+            <Animated.View
+              style={[
+                styles.body,
+                !searching && { transform: [{ translateY }] },
+              ]}
+            >
+              {featured.length > 0 && (
+                <Animated.View style={{ opacity: fadeOutOnScroll }}>
+                  <FlatList
+                    data={featured}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    keyExtractor={(item) => String(item.id)}
+                    renderItem={({ item }) => <GameCard game={item} wide />}
+                    contentContainerStyle={styles.carousel}
+                  />
+                </Animated.View>
+              )}
+
+              {sectionHeading}
+
+              <FlatList
+                data={listed}
+                onScroll={Animated.event(
+                  [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                  { useNativeDriver: true }
+                )}
+                scrollEventThrottle={16}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
+                keyExtractor={(item) => String(item.id)}
+                renderItem={({ item }) => <GameInfoCard game={item} />}
+                showsVerticalScrollIndicator={false}
+                refreshControl={refresh}
+                contentContainerStyle={[
+                  styles.list,
+                  {
+                    paddingBottom:
+                      COLLAPSE_DISTANCE + insets.bottom + SPACING.xl,
+                  },
+                ]}
+              />
+            </Animated.View>
+          )}
         </View>
       </SafeAreaView>
     </Textured>
   );
 }
 
+interface StatusArgs {
+  isPending: boolean;
+  error: unknown;
+  empty: boolean;
+  searching: boolean;
+  debouncedQuery: string;
+  sectionTitle: string;
+}
+
+/** Loading / error / empty, or null when there are results to show. */
+function renderStatus({
+  isPending,
+  error,
+  empty,
+  searching,
+  debouncedQuery,
+  sectionTitle,
+}: StatusArgs) {
+  if (isPending) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={COLORS.lightGrey} />
+        <Text style={[TYPE.p, styles.loadingText]}>
+          Loading {sectionTitle}…
+        </Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <Message
+        icon="cloud-offline-outline"
+        title="Couldn't reach RAWG"
+        detail={error instanceof Error ? error.message : undefined}
+      />
+    );
+  }
+
+  if (empty) {
+    return searching ? (
+      <Message
+        icon="search-outline"
+        title={`No games match "${debouncedQuery}"`}
+        detail="Try a shorter or differently spelled title."
+      />
+    ) : (
+      <Message icon="game-controller-outline" title="Nothing here yet" />
+    );
+  }
+
+  return null;
+}
+
 const styles = StyleSheet.create({
   background: { flex: 1, backgroundColor: COLORS.darkGrey },
   container: { flex: 1 },
-  content: {
+
+  // expanded
+  expandedShell: {
+    flex: 1,
+    flexDirection: 'row',
+    width: '100%',
+    maxWidth: LAYOUT.maxExpandedWidth,
+    alignSelf: 'center',
+  },
+  main: { flex: 1, paddingHorizontal: SPACING.xl },
+  mainHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: SPACING.lg,
+    paddingVertical: SPACING.lg,
+  },
+  searchExpanded: { width: 280 },
+  gridRow: { gap: LAYOUT.gridGap },
+  gridContent: { gap: LAYOUT.gridGap, paddingBottom: SPACING.xl },
+  gridSpacer: { flex: 1 },
+
+  // compact
+  compactShell: {
     flex: 1,
     width: '100%',
     maxWidth: LAYOUT.maxContentWidth,
@@ -306,9 +351,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     marginBottom: SPACING.sm + 4,
   },
-  appTitle: {
+  wordmark: {
     fontFamily: 'Noah-Black',
-    fontSize: 30,
+    fontSize: 24,
     color: COLORS.lightGrey,
   },
   chips: {
@@ -317,6 +362,10 @@ const styles = StyleSheet.create({
     height: 50,
   },
   body: { flex: 1 },
+  carousel: { paddingHorizontal: SPACING.sm, paddingTop: SPACING.xs },
+  list: { flexGrow: 1, paddingHorizontal: SPACING.md },
+
+  // shared
   center: {
     flex: 1,
     justifyContent: 'center',
@@ -324,10 +373,6 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   loadingText: { color: COLORS.mediumGrey },
-  carousel: {
-    paddingHorizontal: SPACING.sm,
-    paddingTop: SPACING.xs,
-  },
   sectionRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -336,8 +381,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
   },
   sectionTitle: { textTransform: 'uppercase', letterSpacing: 0.5 },
-  list: {
-    flexGrow: 1,
-    paddingHorizontal: SPACING.md,
-  },
 });

@@ -15,9 +15,19 @@ export const RADIUS = {
   xl: 40,
 } as const;
 
+export const BREAKPOINTS = {
+  /** At/above this width the app switches to a sidebar + grid layout. */
+  expanded: 900,
+  wide: 1400,
+} as const;
+
 export const LAYOUT = {
-  /** Desktop web would otherwise stretch a phone layout across 1400px. */
+  /** Caps the compact (phone) layout when shown on a wide screen. */
   maxContentWidth: 720,
+  /** Caps the expanded layout so a 4K monitor doesn't get a billboard. */
+  maxExpandedWidth: 1600,
+  sidebarWidth: 232,
+  gridGap: 18,
   cardWidth: 170,
   cardWideWidth: 300,
   cardHeight: 200,

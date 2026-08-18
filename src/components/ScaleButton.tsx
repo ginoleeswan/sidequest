@@ -7,6 +7,8 @@ import {
 
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 interface Props {
   onPress: () => void;
   children: React.ReactNode;
@@ -14,7 +16,12 @@ interface Props {
   activeScale?: number;
 }
 
-/** Pressable that springs down on touch — replaces react-native-touchable-scale. */
+/**
+ * Pressable that springs down on touch.
+ *
+ * Style lands on the Pressable itself (not a wrapper) so that flex values
+ * from a parent layout apply correctly.
+ */
 export function ScaleButton({
   onPress,
   children,
@@ -22,6 +29,7 @@ export function ScaleButton({
   activeScale = 0.9,
 }: Props) {
   const scale = useAnimatedValue(1);
+
   const to = (value: number) =>
     Animated.spring(scale, {
       toValue: value,
@@ -29,15 +37,15 @@ export function ScaleButton({
       friction: 4,
       useNativeDriver: true,
     }).start();
+
   return (
-    <Pressable
+    <AnimatedPressable
       onPress={onPress}
       onPressIn={() => to(activeScale)}
       onPressOut={() => to(1)}
+      style={[style, { transform: [{ scale }] }]}
     >
-      <Animated.View style={[style, { transform: [{ scale }] }]}>
-        {children}
-      </Animated.View>
-    </Pressable>
+      {children}
+    </AnimatedPressable>
   );
 }

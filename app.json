@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "arcade",
-    "slug": "arcade",
+    "name": "Sidequest",
+    "slug": "sidequest",
     "version": "1.0.0",
     "owner": "gl-studio",
-    "scheme": "arcade",
+    "scheme": "sidequest",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -41,7 +41,7 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
-    "description": "A video game backlog you can actually finish",
+    "description": "Discover games worth your limited time",
     "githubUrl": "https://github.com/ginoleeswan/arcade"
   }
 }

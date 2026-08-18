@@ -1,6 +1,6 @@
-# Respec — Product & Technical Spec
+# Sidequest — Product & Technical Spec
 
-> **Respec your time.**
+> **Your backlog, minus the guilt.**
 > The app that tells you what you can actually finish — and gives you permission to let the rest go.
 
 **Status:** v0.2 · supersedes v0.1 ("Last Call") · repo lineage: this project began as ARCADE (2021), a RAWG database browser
@@ -19,7 +19,7 @@ Existing tools each hold one piece and none hold the whole:
 | HowLongToBeat | how long games take    | your calendar       |
 | Steam         | your library and hours | what to do about it |
 
-Respec joins them and answers the question none of them can:
+Sidequest joins them and answers the question none of them can:
 
 > **"I have limited time and too many games. What do I actually play?"**
 
@@ -36,11 +36,11 @@ This is r/patientgamers. It is most paying gamers over 25. The tension is real, 
 
 ### 2.1 Emotional stance: relief, not discipline
 
-The guilt already exists; the app doesn't create it, it **dissolves** it. Respec never says "you failed." It says _"you were never going to get to these eleven — and that's fine. Here are the two you'll actually love finishing."_ Permission to drop is the product's voice. This stance is load-bearing: it drives copy, notifications, and the share artifact.
+The guilt already exists; the app doesn't create it, it **dissolves** it. Sidequest never says "you failed." It says _"you were never going to get to these eleven — and that's fine. Here are the two you'll actually love finishing."_ Permission to drop is the product's voice. This stance is load-bearing: it drives copy, notifications, and the share artifact.
 
 ### 2.2 Anti-metric
 
-Respec's success is the user **closing it and going to play**. Engagement is an anti-metric. This is why the widget is a first-class surface (§6) and why notifications are deliberately sparse.
+Sidequest's success is the user **closing it and going to play**. Engagement is an anti-metric. This is why the widget is a first-class surface (§6) and why notifications are deliberately sparse.
 
 ## 3. The wedge: Connect Steam
 
@@ -48,7 +48,7 @@ v0.1's onboarding (declare a window, set velocity, pick candidates) was three fo
 
 > **Connect Steam. That's it.**
 
-Steam's Web API (`GetOwnedGames`) returns the library, `playtime_forever`, and `playtime_2weeks` — which means Respec knows the user's **measured velocity** and **actual per-game progress** with zero questions asked. Joined to duration data, the first screen can immediately say:
+Steam's Web API (`GetOwnedGames`) returns the library, `playtime_forever`, and `playtime_2weeks` — which means Sidequest knows the user's **measured velocity** and **actual per-game progress** with zero questions asked. Joined to duration data, the first screen can immediately say:
 
 > _"You play ~4.5 hours a week. Of your 312 games, here are 3 you can actually finish this month — and you're 60% through one already."_
 
@@ -121,7 +121,7 @@ Sunday planning nudge · actionable deadline alerts only · the honest one ("You
 
 ## 7. The share artifact: your Memcard
 
-The community-love mechanism. Steam Replay celebrates volume — a flex only if you have time. Respec's year-end (and month-end) artifact celebrates **completion and taste**:
+The community-love mechanism. Steam Replay celebrates volume — a flex only if you have time. Sidequest's year-end (and month-end) artifact celebrates **completion and taste**:
 
 > **2026 · 7 games finished · 94 hours · zero evenings wasted**
 
@@ -133,7 +133,7 @@ The app speaks fluent gamer front to back:
 
 | Phrase              | Meaning in-app                                                             |
 | ------------------- | -------------------------------------------------------------------------- |
-| **respec**          | replan the schedule ("your window changed — respec?")                      |
+| **sidequest**       | a game you can realistically finish in the time you have                   |
 | **roll credits**    | finish a game; the completion moment                                       |
 | **your Memcard**    | the finished-games shelf; the share artifact                               |
 | **backlog amnesty** | one-tap archive of the pile, guilt-free                                    |
@@ -177,8 +177,8 @@ This category monetises badly (HLTB: ads; Backloggd: small supporter tier). Plan
 3. **Guilt reading** — "drop it" can land as nagging if the copy slips. The relief stance (§2.1) is a hard requirement on all copy.
 4. **Two native widget stacks** (SwiftUI + Glance/Kotlin). Real cost, accepted deliberately — it is the differentiating engineering work.
 5. **`react-native-web` polish** — the probe must look sharp on desktop; RN-web layouts default to mobile-shaped. Budget real styling time in step 3.
-6. **Name collisions unverified** — "Respec" needs a trademark / App Store / domain pass before it enters any bundle ID (step 5 deadline; steps 1–4 are name-agnostic in code).
+6. **Name collision, known** — SideQuest is an established VR app store in the Meta Quest ecosystem. "Sidequest" is a working name; it needs a trademark / App Store pass before step 5 bakes it into a bundle identifier.
 
 ## 12. Carried over from ARCADE
 
-`GameCard`, `GameCardWide`, `GameInfoCard`, the carousel, the scroll-collapsing animated header and the detail screen all survive into the app. RAWG demotes from _the product_ to _the metadata layer_. The commented-out IGDB call in the old `GameInfoScreen` becomes load-bearing. And the name keeps the lineage honest: ARCADE ran on credits; Respec is about spending them well.
+`GameCard`, `GameCardWide`, `GameInfoCard`, the carousel, the scroll-collapsing animated header and the detail screen all survive into the app. RAWG demotes from _the product_ to _the metadata layer_. The commented-out IGDB call in the old `GameInfoScreen` becomes load-bearing. And the name carries the thesis: for an adult with a job, gaming _is_ the side quest — and side quests were always the best part.

@@ -1,6 +1,6 @@
-<h1 align="center">🎮 ARCADE</h1>
+<h1 align="center">🎮 SIDEQUEST</h1>
 
-<p align="center">A video game discovery app built with React Native and Expo, powered by the RAWG database.</p>
+<p align="center">A video game discovery app built with React Native and Expo, powered by the RAWG database.<br/><em>Responsive from phone to desktop.</em></p>
 
 <p align="center">
   <img alt="Expo SDK 57" src="https://img.shields.io/badge/Expo%20SDK-57-000.svg?style=flat&logo=EXPO&labelColor=f3f3f3&logoColor=000" />
