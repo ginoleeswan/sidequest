@@ -31,8 +31,8 @@
 ## Get started
 
 ```sh
-git clone https://github.com/ginoleeswan/arcade
-cd arcade
+git clone https://github.com/ginoleeswan/sidequest
+cd sidequest
 npm install
 
 # API key (free): https://rawg.io/apidocs
