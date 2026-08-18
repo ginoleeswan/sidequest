@@ -9,12 +9,16 @@ import {
 import type { Game, Paged } from '@/api/types';
 import type { IconType } from '@/components/DynamicIcon';
 
+export type ShelfVariant = 'default' | 'ranked' | 'dated' | 'large';
+
 export interface Section {
   key: string;
   title: string;
   fetch: (page?: number) => Promise<Paged<Game>>;
   iconName: string;
   iconType: IconType;
+  /** How this section's home shelf is presented. */
+  variant?: ShelfVariant;
 }
 
 /** Editorial discovery sections — the storefront shelves. */
@@ -25,6 +29,7 @@ export const DISCOVER: Section[] = [
     fetch: getTrendingGames,
     iconName: 'trending-up',
     iconType: 'feather',
+    variant: 'ranked',
   },
   {
     key: 'new-releases',
@@ -39,6 +44,7 @@ export const DISCOVER: Section[] = [
     fetch: getComingSoon,
     iconName: 'calendar',
     iconType: 'feather',
+    variant: 'dated',
   },
   {
     key: 'top-rated',
@@ -46,6 +52,7 @@ export const DISCOVER: Section[] = [
     fetch: getTopRated,
     iconName: 'trophy',
     iconType: 'ionicon',
+    variant: 'large',
   },
   {
     key: 'must-play',

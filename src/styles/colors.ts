@@ -13,9 +13,6 @@ export const COLORS = {
   strokeStrong: 'rgba(255,255,255,0.16)',
 } as const;
 
-/** The brand gradient — blue into plum. Used sparingly, on brand moments. */
-export const BRAND_GRADIENT = ['#1E69E1', '#CB2664'] as const;
-
 /** RAWG community-rating buckets. */
 export const RATING_COLORS: Record<string, string> = {
   exceptional: '#6DC849',

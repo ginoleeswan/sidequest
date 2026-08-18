@@ -1,12 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { FadeInView } from './FadeInView';
 import { Textured } from './Textured';
 import { usePersistedState } from '@/hooks/usePersistedState';
-import { BRAND_GRADIENT, COLORS } from '@/styles/colors';
+import { COLORS } from '@/styles/colors';
 import { RADIUS, SPACING } from '@/styles/theme';
 
 const STEPS: {
@@ -33,16 +32,9 @@ const STEPS: {
 
 function StepIcon({ icon }: { icon: keyof typeof Ionicons.glyphMap }) {
   return (
-    <LinearGradient
-      colors={[...BRAND_GRADIENT]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.iconRing}
-    >
-      <View style={styles.iconInner}>
-        <Ionicons name={icon} size={17} color={COLORS.white} />
-      </View>
-    </LinearGradient>
+    <View style={styles.iconRing}>
+      <Ionicons name={icon} size={17} color={COLORS.white} />
+    </View>
   );
 }
 
@@ -71,12 +63,7 @@ export function Onboarding() {
         <FadeInView style={styles.cardShadow}>
           <View style={styles.card}>
             <Textured fill />
-            <LinearGradient
-              colors={[...BRAND_GRADIENT]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.crown}
-            />
+            <View style={styles.crown} />
             <View style={styles.content}>
               <Text style={styles.hello}>WELCOME TO</Text>
               <Text style={styles.wordmark}>SIDEQUEST</Text>
@@ -98,15 +85,12 @@ export function Onboarding() {
               </View>
 
               <Pressable onPress={() => setDone(true)} style={styles.cta}>
-                <LinearGradient
-                  colors={[...BRAND_GRADIENT]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={StyleSheet.absoluteFill}
-                  pointerEvents="none"
-                />
                 <Text style={styles.ctaText}>Start exploring</Text>
-                <Ionicons name="arrow-forward" size={16} color={COLORS.white} />
+                <Ionicons
+                  name="arrow-forward"
+                  size={16}
+                  color={COLORS.darkGrey}
+                />
               </Pressable>
 
               <Text style={styles.privacy}>
@@ -145,7 +129,14 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     overflow: 'hidden',
   },
-  crown: { position: 'absolute', top: 0, left: 0, right: 0, height: 3 },
+  crown: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: COLORS.plum,
+  },
   content: { padding: SPACING.xl, gap: SPACING.md },
   hello: {
     fontFamily: 'Noah-Bold',
@@ -189,14 +180,9 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconInner: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
     backgroundColor: '#242C3B',
+    borderWidth: 1,
+    borderColor: COLORS.strokeStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -224,13 +210,13 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     borderRadius: RADIUS.lg,
     paddingVertical: SPACING.md + 1,
-    overflow: 'hidden',
+    backgroundColor: COLORS.white,
     marginTop: SPACING.xs,
   },
   ctaText: {
     fontFamily: 'Noah-Black',
     fontSize: 15,
-    color: COLORS.white,
+    color: COLORS.darkGrey,
   },
   privacy: {
     fontFamily: 'Noah-Regular',

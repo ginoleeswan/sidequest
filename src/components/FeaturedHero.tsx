@@ -8,7 +8,7 @@ import { ScaleButton } from './ScaleButton';
 import { ScorePill } from './ScorePill';
 import { Textured } from './Textured';
 import type { Game } from '@/api/types';
-import { BRAND_GRADIENT, COLORS } from '@/styles/colors';
+import { COLORS } from '@/styles/colors';
 import { RADIUS, SHADOW, SPACING } from '@/styles/theme';
 
 interface Props {
@@ -46,12 +46,7 @@ export function FeaturedHero({ games }: Props) {
           />
           <View style={styles.leadCopy}>
             <View style={styles.eyebrowRow}>
-              <LinearGradient
-                colors={[...BRAND_GRADIENT]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.eyebrowBar}
-              />
+              <View style={styles.eyebrowBar} />
               <Text style={styles.eyebrow}>FEATURED</Text>
             </View>
             <Text style={styles.leadTitle} numberOfLines={2}>
@@ -127,12 +122,17 @@ const styles = StyleSheet.create({
     gap: SPACING.xs,
   },
   eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  eyebrowBar: { width: 22, height: 3, borderRadius: 2 },
+  eyebrowBar: {
+    width: 22,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: COLORS.plum,
+  },
   eyebrow: {
     fontFamily: 'Noah-Bold',
     fontSize: 10,
     letterSpacing: 1.4,
-    color: '#9CC2FF',
+    color: COLORS.lightGrey,
     textShadowColor: 'rgba(0,0,0,0.9)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,

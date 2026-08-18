@@ -1,11 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useToast } from './Toast';
 import type { Game } from '@/api/types';
 import { STATUS_META, useLibrary, type LibraryStatus } from '@/lib/library';
-import { BRAND_GRADIENT, COLORS } from '@/styles/colors';
+import { COLORS } from '@/styles/colors';
 import { RADIUS, SPACING } from '@/styles/theme';
 
 const ORDER: LibraryStatus[] = ['wishlist', 'playing', 'finished'];
@@ -39,15 +38,6 @@ export function StatusActions({ game }: { game: Game }) {
             }}
             style={[styles.button, active && styles.buttonActive]}
           >
-            {active && (
-              <LinearGradient
-                colors={[...BRAND_GRADIENT]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFill}
-                pointerEvents="none"
-              />
-            )}
             <Ionicons
               name={
                 (active
@@ -55,7 +45,7 @@ export function StatusActions({ game }: { game: Game }) {
                   : `${meta.icon}-outline`) as keyof typeof Ionicons.glyphMap
               }
               size={15}
-              color={active ? COLORS.white : COLORS.lightGrey}
+              color={active ? COLORS.darkGrey : COLORS.lightGrey}
             />
             <Text style={[styles.label, active && styles.labelActive]}>
               {meta.label}
@@ -81,11 +71,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: 'rgba(0,0,0,0.25)',
   },
-  buttonActive: { borderColor: 'transparent' },
+  buttonActive: {
+    backgroundColor: COLORS.white,
+    borderColor: 'transparent',
+  },
   label: {
     fontFamily: 'Noah-Bold',
     fontSize: 12.5,
     color: COLORS.lightGrey,
   },
-  labelActive: { color: COLORS.white },
+  labelActive: { color: COLORS.darkGrey },
 });

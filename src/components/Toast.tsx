@@ -76,7 +76,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             },
           ]}
         >
-          <Ionicons name={toast.icon} size={15} color="#9CC2FF" />
+          <Ionicons name={toast.icon} size={15} color={COLORS.white} />
           <Text style={styles.text}>{toast.message}</Text>
         </Animated.View>
       )}

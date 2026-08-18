@@ -1,8 +1,7 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { DynamicIcon, type IconType } from './DynamicIcon';
-import { BRAND_GRADIENT, COLORS } from '@/styles/colors';
+import { COLORS } from '@/styles/colors';
 import { RADIUS, SPACING } from '@/styles/theme';
 
 interface Props {
@@ -32,21 +31,12 @@ export function Chip({
         quiet ? styles.quiet : selected ? styles.solid : styles.outline,
       ]}
     >
-      {selected && !quiet ? (
-        <LinearGradient
-          colors={[...BRAND_GRADIENT]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.gradient}
-          pointerEvents="none"
-        />
-      ) : null}
       {iconName && iconType ? (
         <DynamicIcon
           type={iconType}
           name={iconName}
           size={16}
-          color={selected ? COLORS.white : COLORS.lightGrey}
+          color={selected ? COLORS.darkGrey : COLORS.lightGrey}
         />
       ) : null}
       <Text
@@ -72,7 +62,7 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm,
     overflow: 'hidden',
   },
-  solid: { borderWidth: 0 },
+  solid: { backgroundColor: COLORS.white },
   outline: {
     backgroundColor: 'transparent',
     borderWidth: 1,
@@ -85,12 +75,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
-  gradient: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   title: {
     fontFamily: 'Noah-Bold',
     color: COLORS.lightGrey,
     fontSize: 13,
   },
-  selectedTitle: { color: COLORS.white },
+  selectedTitle: { color: COLORS.darkGrey },
   quietTitle: { fontSize: 11, color: COLORS.mediumGrey },
 });

@@ -38,6 +38,7 @@ export const LAYOUT = {
   sidebarWidth: 232,
   gridGap: 18,
   shelfTileWidth: 236,
+  shelfTileLarge: 320,
   /** RAWG artwork is landscape; portrait tiles were force-cropping it. */
   tileAspect: 16 / 10,
   cardWidth: 170,

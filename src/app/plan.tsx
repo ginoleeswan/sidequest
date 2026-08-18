@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import Head from 'expo-router/head';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -14,6 +13,7 @@ import { FadeInView } from '@/components/FadeInView';
 import { FooterLinks } from '@/components/FooterLinks';
 import { Message } from '@/components/Message';
 import { SectionHeader } from '@/components/SectionHeader';
+import { SteamConnect } from '@/components/SteamConnect';
 import { Textured } from '@/components/Textured';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { useLibrary } from '@/lib/library';
@@ -23,7 +23,7 @@ import {
   type PlanItem,
   type ScheduledItem,
 } from '@/lib/scheduler';
-import { BRAND_GRADIENT, COLORS } from '@/styles/colors';
+import { COLORS } from '@/styles/colors';
 import { LAYOUT, RADIUS, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
@@ -175,6 +175,8 @@ export default function PlanScreen() {
               eyebrow={empty ? undefined : `${entries.length} in your queue`}
             />
 
+            <SteamConnect onUsePace={setPace} />
+
             {empty ? (
               <Message
                 icon="map-outline"
@@ -190,6 +192,9 @@ export default function PlanScreen() {
                   <View style={styles.controlGroup}>
                     <Text style={TYPE.micro}>Hours you play per week</Text>
                     <View style={styles.chipRow}>
+                      {!PACE_OPTIONS.includes(pace) && (
+                        <Chip title={`${pace}h · Steam`} selected />
+                      )}
                       {PACE_OPTIONS.map((option) => (
                         <Chip
                           key={option}
@@ -217,12 +222,7 @@ export default function PlanScreen() {
 
                 {/* verdict */}
                 <View style={styles.verdict}>
-                  <LinearGradient
-                    colors={[...BRAND_GRADIENT]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.verdictBar}
-                  />
+                  <View style={styles.verdictBar} />
                   <Text style={styles.verdictTitle}>
                     {schedule.scheduled.length === 0
                       ? 'Nothing fits this window'
@@ -383,6 +383,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 3,
+    backgroundColor: COLORS.plum,
   },
   verdictTitle: {
     fontFamily: 'Noah-Black',

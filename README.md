@@ -59,8 +59,13 @@ The web build is a static export — `vercel.json` is already configured.
 1. Import the repo at [vercel.com/new](https://vercel.com/new) (framework
    preset: **Other** — `vercel.json` supplies the build command and output
    directory).
-2. Add one environment variable in the project settings:
-   `EXPO_PUBLIC_RAWG_API_KEY` = your RAWG key.
+2. Add environment variables in the project settings:
+   - `EXPO_PUBLIC_RAWG_API_KEY` = your RAWG key.
+   - `STEAM_API_KEY` = your Steam Web API key
+     ([steamcommunity.com/dev/apikey](https://steamcommunity.com/dev/apikey)) —
+     powers Steam connect on The Plan. Server-side only (used by
+     `api/steam.ts`), never shipped to the browser. Optional: without it,
+     Steam connect shows a friendly "not configured" message.
 3. Deploy. Dynamic game pages (`/game/123`) are served via the rewrite in
    `vercel.json`.
 

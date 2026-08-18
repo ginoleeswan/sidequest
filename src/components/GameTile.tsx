@@ -20,6 +20,8 @@ interface Props {
   game: Game;
   /** Fixed width for horizontal shelves; omit to flex into a grid cell. */
   width?: number;
+  /** Small emphasis pill on the art, e.g. a release date. */
+  badge?: string;
 }
 
 /**
@@ -28,7 +30,7 @@ interface Props {
  * identity. On pointer hover the art cycles through the game's actual
  * screenshots, and a quick-save control appears.
  */
-export function GameTile({ game, width }: Props) {
+export function GameTile({ game, width, badge }: Props) {
   const router = useRouter();
   const { statusOf, setStatus } = useLibrary();
   const { isCompact } = useBreakpoint();
@@ -89,10 +91,16 @@ export function GameTile({ game, width }: Props) {
             style={styles.gradient}
             pointerEvents="none"
           />
-          {game.metacritic != null && (
-            <View style={styles.scoreCorner}>
-              <ScorePill score={game.metacritic} size="sm" />
+          {badge ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{badge}</Text>
             </View>
+          ) : (
+            game.metacritic != null && (
+              <View style={styles.scoreCorner}>
+                <ScorePill score={game.metacritic} size="sm" />
+              </View>
+            )
           )}
           {/* Phones can't hover - the save control must simply be there. */}
           {(isCompact || hovered || saved) && (
@@ -113,7 +121,7 @@ export function GameTile({ game, width }: Props) {
               <Ionicons
                 name={saved ? 'bookmark' : 'bookmark-outline'}
                 size={15}
-                color={saved ? '#9CC2FF' : COLORS.white}
+                color={saved ? COLORS.plum : COLORS.white}
               />
             </Pressable>
           )}
@@ -160,6 +168,22 @@ const styles = StyleSheet.create({
   image: { width: '100%', height: '100%' },
   gradient: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   scoreCorner: { position: 'absolute', top: SPACING.sm, right: SPACING.sm },
+  badge: {
+    position: 'absolute',
+    top: SPACING.sm,
+    right: SPACING.sm,
+    backgroundColor: COLORS.white,
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  badgeText: {
+    fontFamily: 'Noah-Black',
+    fontSize: 10.5,
+    letterSpacing: 0.4,
+    color: COLORS.darkGrey,
+    textTransform: 'uppercase',
+  },
   saveCorner: {
     position: 'absolute',
     top: SPACING.sm,

@@ -1,10 +1,9 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BackButton } from './BackButton';
 import { Textured } from './Textured';
-import { BRAND_GRADIENT, COLORS } from '@/styles/colors';
+import { COLORS } from '@/styles/colors';
 import { SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
@@ -32,12 +31,7 @@ export function ContentPage({ title, updated, children }: Props) {
         ]}
       >
         <View style={styles.inner}>
-          <LinearGradient
-            colors={[...BRAND_GRADIENT]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.accent}
-          />
+          <View style={styles.accent} />
           <Text style={TYPE.display}>{title}</Text>
           {updated ? (
             <Text style={styles.updated}>Last updated {updated}</Text>
@@ -71,6 +65,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 4,
     borderRadius: 2,
+    backgroundColor: COLORS.plum,
     marginBottom: SPACING.md,
   },
   updated: {
