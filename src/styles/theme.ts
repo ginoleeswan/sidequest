@@ -15,6 +15,15 @@ export const RADIUS = {
   xl: 40,
 } as const;
 
+/**
+ * Vertical room a shadow needs to render without being clipped by a
+ * scroller's overflow: offset + blur radius. Keep in sync with SHADOW.
+ */
+export const SHADOW_ROOM = {
+  card: 28,
+  hero: 48,
+} as const;
+
 export const BREAKPOINTS = {
   /** At/above this width the app switches to a sidebar + grid layout. */
   expanded: 900,
