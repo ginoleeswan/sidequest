@@ -38,8 +38,8 @@ export function FeaturedHero({ games }: Props) {
           />
           <Textured fill />
           <LinearGradient
-            colors={['#00000000', '#000000b0', '#000000f2']}
-            locations={[0.3, 0.72, 1]}
+            colors={['#00000000', '#00000080', '#000000d9']}
+            locations={[0.3, 0.68, 1]}
             style={styles.gradient}
             pointerEvents="none"
           />

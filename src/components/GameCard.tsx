@@ -34,11 +34,15 @@ export function GameCard({ game, wide = false }: Props) {
         />
         <Textured fill />
         <LinearGradient
-          colors={['#00000000', '#000000e6']}
-          locations={[0.4, 1]}
+          // Three gentle stops: enough to hold the text, but the artwork
+          // stays visible at the bottom - a hard black slab reads as a
+          // separate plate with its own corners against the page.
+          colors={['#00000000', '#00000066', '#000000cf']}
+          locations={[0.4, 0.7, 1]}
           style={styles.gradient}
           pointerEvents="none"
         />
+        <View style={styles.ring} pointerEvents="none" />
         <View style={styles.titleBox}>
           <Text style={styles.title} numberOfLines={2}>
             {game.name}
@@ -74,6 +78,16 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+  },
+  ring: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: RADIUS.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   titleBox: {
     position: 'absolute',

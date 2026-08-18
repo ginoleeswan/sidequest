@@ -39,8 +39,8 @@ export function GameTile({ game, width }: Props) {
           <CoverImage uri={game.background_image} style={styles.image} />
           <Textured fill />
           <LinearGradient
-            colors={['#00000000', '#000000cc']}
-            locations={[0.55, 1]}
+            colors={['#00000000', '#00000059', '#000000a6']}
+            locations={[0.55, 0.8, 1]}
             style={styles.gradient}
             pointerEvents="none"
           />
@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: COLORS.navy,
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: 'rgba(255,255,255,0.07)',
     ...SHADOW.card,
   },
   artHovered: { borderColor: 'rgba(255,255,255,0.35)' },

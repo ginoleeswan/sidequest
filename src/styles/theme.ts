@@ -39,19 +39,24 @@ export const LAYOUT = {
   mediaWidth: 300,
 } as const;
 
+/**
+ * Shadows are diffuse by design: blur must comfortably exceed offset or the
+ * shadow renders as a crisp shifted copy of the card (visible corners below
+ * the real ones) instead of soft depth.
+ */
 export const SHADOW = {
   card: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.32,
+    shadowRadius: 20,
     elevation: 8,
   },
   hero: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.55,
-    shadowRadius: 3.84,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.4,
+    shadowRadius: 34,
+    elevation: 12,
   },
 } as const;
