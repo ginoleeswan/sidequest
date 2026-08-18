@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useToast } from './Toast';
 import type { Game } from '@/api/types';
 import { STATUS_META, useLibrary, type LibraryStatus } from '@/lib/library';
 import { BRAND_GRADIENT, COLORS } from '@/styles/colors';
@@ -10,8 +11,15 @@ import { RADIUS, SPACING } from '@/styles/theme';
 const ORDER: LibraryStatus[] = ['wishlist', 'playing', 'finished'];
 
 /** Want to play / Playing / Finished — the backlog, one tap deep. */
+const CONFIRM: Record<LibraryStatus, string> = {
+  wishlist: 'Saved — Want to play',
+  playing: 'Marked as Playing',
+  finished: 'Finished — credits rolled',
+};
+
 export function StatusActions({ game }: { game: Game }) {
   const { statusOf, setStatus } = useLibrary();
+  const toast = useToast();
   const current = statusOf(game.id);
 
   return (
@@ -22,7 +30,13 @@ export function StatusActions({ game }: { game: Game }) {
         return (
           <Pressable
             key={status}
-            onPress={() => setStatus(game, active ? null : status)}
+            onPress={() => {
+              setStatus(game, active ? null : status);
+              toast(
+                active ? 'Removed from library' : CONFIRM[status],
+                active ? 'close-circle' : (meta.icon as never)
+              );
+            }}
             style={[styles.button, active && styles.buttonActive]}
           >
             {active && (

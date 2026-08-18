@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import Head from 'expo-router/head';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -157,6 +158,9 @@ export default function PlanScreen() {
 
   return (
     <Textured style={styles.background}>
+      <Head>
+        <title>The Plan — Sidequest</title>
+      </Head>
       <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
         <BackButton />
       </View>

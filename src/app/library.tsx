@@ -1,6 +1,16 @@
+import { Ionicons } from '@expo/vector-icons';
+import Head from 'expo-router/head';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import {
+  FlatList,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { Game } from '@/api/types';
@@ -12,6 +22,7 @@ import { GameTile } from '@/components/GameTile';
 import { Message } from '@/components/Message';
 import { SectionHeader } from '@/components/SectionHeader';
 import { Textured } from '@/components/Textured';
+import { useToast } from '@/components/Toast';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { STATUS_META, useLibrary, type LibraryStatus } from '@/lib/library';
 import { COLORS } from '@/styles/colors';
@@ -48,15 +59,44 @@ function padToRows(items: Game[], columns: number): GridItem[] {
 
 export default function LibraryScreen() {
   const router = useRouter();
-  const { byStatus, count } = useLibrary();
+  const { byStatus, count, exportJson, importJson } = useLibrary();
   const { columns } = useBreakpoint();
   const insets = useSafeAreaInsets();
+  const toast = useToast();
   const [tab, setTab] = useState<LibraryStatus>('wishlist');
+  const [importOpen, setImportOpen] = useState(false);
+  const [importText, setImportText] = useState('');
+
+  const copyLibrary = async () => {
+    try {
+      await navigator.clipboard?.writeText(exportJson());
+      toast('Library copied — paste it on another device', 'copy');
+    } catch {
+      toast(
+        'Copy failed — your browser blocked clipboard access',
+        'alert-circle'
+      );
+    }
+  };
+
+  const runImport = () => {
+    try {
+      const total = importJson(importText.trim());
+      setImportOpen(false);
+      setImportText('');
+      toast(`Imported ${total} ${total === 1 ? 'game' : 'games'}`, 'download');
+    } catch {
+      toast('That doesn\u2019t look like a library export', 'alert-circle');
+    }
+  };
 
   const games = byStatus(tab).map((entry) => entry.game);
 
   return (
     <Textured style={styles.background}>
+      <Head>
+        <title>My Library — Sidequest</title>
+      </Head>
       <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
         <BackButton />
       </View>
@@ -84,6 +124,30 @@ export default function LibraryScreen() {
                 onPress={() => setTab(status)}
               />
             ))}
+          </View>
+
+          <View style={styles.transferRow}>
+            {count > 0 && (
+              <Pressable onPress={copyLibrary} style={styles.transferLink}>
+                <Ionicons
+                  name="copy-outline"
+                  size={13}
+                  color={COLORS.mediumGrey}
+                />
+                <Text style={styles.transferText}>Copy library</Text>
+              </Pressable>
+            )}
+            <Pressable
+              onPress={() => setImportOpen(true)}
+              style={styles.transferLink}
+            >
+              <Ionicons
+                name="download-outline"
+                size={13}
+                color={COLORS.mediumGrey}
+              />
+              <Text style={styles.transferText}>Import</Text>
+            </Pressable>
           </View>
 
           {games.length === 0 ? (
@@ -118,6 +182,43 @@ export default function LibraryScreen() {
           )}
         </View>
       </FadeInView>
+
+      <Modal
+        visible={importOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setImportOpen(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setImportOpen(false)}
+        >
+          <Pressable style={styles.modalCard} onPress={() => {}}>
+            <Text style={styles.modalTitle}>Import a library</Text>
+            <Text style={styles.modalHint}>
+              On your other device: Library → Copy library. Then paste it here.
+            </Text>
+            <TextInput
+              value={importText}
+              onChangeText={setImportText}
+              multiline
+              placeholder="Paste your library export…"
+              placeholderTextColor={COLORS.mediumGrey}
+              style={styles.modalInput}
+            />
+            <Pressable
+              onPress={runImport}
+              disabled={importText.trim() === ''}
+              style={[
+                styles.modalButton,
+                importText.trim() === '' && styles.modalButtonDisabled,
+              ]}
+            >
+              <Text style={styles.modalButtonText}>Merge into my library</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </Textured>
   );
 }
@@ -138,4 +239,62 @@ const styles = StyleSheet.create({
   gridRow: { gap: LAYOUT.gridGap },
   gridContent: { gap: LAYOUT.gridGap },
   gridSpacer: { flex: 1 },
+  transferRow: { flexDirection: 'row', gap: SPACING.lg },
+  transferLink: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  transferText: {
+    fontFamily: 'Noah-Bold',
+    fontSize: 12,
+    color: COLORS.mediumGrey,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 19, 28, 0.82)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: SPACING.lg,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.stroke,
+    borderRadius: SPACING.md,
+    padding: SPACING.lg,
+    gap: SPACING.md,
+  },
+  modalTitle: {
+    fontFamily: 'Noah-Black',
+    fontSize: 18,
+    color: COLORS.lightGrey,
+  },
+  modalHint: {
+    fontFamily: 'Noah-Regular',
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: COLORS.mediumGrey,
+  },
+  modalInput: {
+    minHeight: 96,
+    borderWidth: 1,
+    borderColor: COLORS.strokeStrong,
+    borderRadius: SPACING.sm,
+    padding: SPACING.sm + 2,
+    fontFamily: 'Noah-Regular',
+    fontSize: 12,
+    color: COLORS.lightGrey,
+    textAlignVertical: 'top',
+  },
+  modalButton: {
+    backgroundColor: COLORS.blue,
+    borderRadius: SPACING.md,
+    paddingVertical: SPACING.sm + 3,
+    alignItems: 'center',
+  },
+  modalButtonDisabled: { opacity: 0.45 },
+  modalButtonText: {
+    fontFamily: 'Noah-Bold',
+    fontSize: 13.5,
+    color: COLORS.white,
+  },
 });

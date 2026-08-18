@@ -52,6 +52,10 @@ interface LibraryContextValue {
   setStatus: (game: Game, status: LibraryStatus | null) => void;
   byStatus: (status: LibraryStatus) => LibraryEntry[];
   count: number;
+  /** The whole library as a transferable string. */
+  exportJson: () => string;
+  /** Merge a transfer string in; returns how many entries were added. */
+  importJson: (raw: string) => number;
 }
 
 const LibraryContext = createContext<LibraryContextValue | null>(null);
@@ -89,6 +93,27 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const importJson = useCallback((raw: string): number => {
+    const parsed = JSON.parse(raw) as Entries;
+    const incoming = Object.entries(parsed).filter(
+      ([, entry]) =>
+        entry &&
+        typeof entry.game?.id === 'number' &&
+        typeof entry.game?.name === 'string' &&
+        ['wishlist', 'playing', 'finished'].includes(entry.status)
+    );
+    if (incoming.length === 0) throw new Error('No library entries found');
+    setEntries((prev) => {
+      const next = { ...prev };
+      for (const [key, entry] of incoming) {
+        next[key] = entry;
+      }
+      persist(next);
+      return next;
+    });
+    return incoming.length;
+  }, []);
+
   const value = useMemo<LibraryContextValue>(
     () => ({
       entries,
@@ -99,8 +124,10 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
           .filter((e) => e.status === status)
           .sort((a, b) => b.addedAt - a.addedAt),
       count: Object.keys(entries).length,
+      exportJson: () => JSON.stringify(entries),
+      importJson,
     }),
-    [entries, setStatus]
+    [entries, setStatus, importJson]
   );
 
   return (

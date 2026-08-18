@@ -19,6 +19,42 @@ export default function Root({ children }: PropsWithChildren) {
         />
         <meta name="theme-color" content="#333D51" />
         <meta name="apple-mobile-web-app-title" content="Sidequest" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+        <title>Sidequest — Discover your next game</title>
+        <meta
+          name="description"
+          content="What's trending, brand new, coming soon, and acclaimed — and a plan for what you can actually finish. No account, no tracking."
+        />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Sidequest" />
+        <meta
+          property="og:title"
+          content="Sidequest — Discover your next game"
+        />
+        <meta
+          property="og:description"
+          content="Your next game, found — and a plan you'll actually finish."
+        />
+        <meta
+          property="og:image"
+          content="https://sidequest-bice-nu.vercel.app/og.png"
+        />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta
+          name="twitter:title"
+          content="Sidequest — Discover your next game"
+        />
+        <meta
+          name="twitter:description"
+          content="Your next game, found — and a plan you'll actually finish."
+        />
+        <meta
+          name="twitter:image"
+          content="https://sidequest-bice-nu.vercel.app/og.png"
+        />
         <ScrollViewStyleReset />
         <style dangerouslySetInnerHTML={{ __html: css }} />
       </head>

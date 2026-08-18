@@ -9,6 +9,7 @@ import { PlatformIcons } from './PlatformIcons';
 import { ScaleButton } from './ScaleButton';
 import { ScorePill } from './ScorePill';
 import { Textured } from './Textured';
+import { useToast } from './Toast';
 import type { Game } from '@/api/types';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useLibrary } from '@/lib/library';
@@ -31,6 +32,7 @@ export function GameTile({ game, width }: Props) {
   const router = useRouter();
   const { statusOf, setStatus } = useLibrary();
   const { isCompact } = useBreakpoint();
+  const toast = useToast();
   const [hovered, setHovered] = useState(false);
   const [shot, setShot] = useState(0);
 
@@ -95,7 +97,13 @@ export function GameTile({ game, width }: Props) {
           {/* Phones can't hover - the save control must simply be there. */}
           {(isCompact || hovered || saved) && (
             <Pressable
-              onPress={() => setStatus(game, saved ? null : 'wishlist')}
+              onPress={() => {
+                setStatus(game, saved ? null : 'wishlist');
+                toast(
+                  saved ? 'Removed from library' : 'Saved — Want to play',
+                  saved ? 'bookmark-outline' : 'bookmark'
+                );
+              }}
               hitSlop={6}
               accessibilityLabel={
                 saved ? 'Remove from library' : 'Save to library'

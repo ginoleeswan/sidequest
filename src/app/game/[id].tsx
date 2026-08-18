@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import Head from 'expo-router/head';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -390,6 +391,9 @@ export default function GameInfoScreen() {
 
   return (
     <Textured style={styles.background}>
+      <Head>
+        <title>{`${game.name} — Sidequest`}</title>
+      </Head>
       <View style={styles.container}>
         <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
           <BackButton />
