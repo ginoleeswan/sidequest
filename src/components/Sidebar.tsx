@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { DynamicIcon, type IconType } from './DynamicIcon';
-import { CATEGORIES, type Category } from '@/constants/categories';
+import { DISCOVER, GENRES, type Section } from '@/constants/categories';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, RADIUS, SPACING } from '@/styles/theme';
 
@@ -39,11 +39,39 @@ function NavItem({ label, iconName, iconType, active, onPress }: NavItemProps) {
   );
 }
 
+function NavGroup({
+  heading,
+  sections,
+  activeKey,
+  onSelect,
+}: {
+  heading: string;
+  sections: Section[];
+  activeKey: string | null;
+  onSelect: (section: Section) => void;
+}) {
+  return (
+    <>
+      <Text style={styles.navHeading}>{heading}</Text>
+      {sections.map((section) => (
+        <NavItem
+          key={section.key}
+          label={section.title}
+          iconName={section.iconName}
+          iconType={section.iconType}
+          active={section.key === activeKey}
+          onPress={() => onSelect(section)}
+        />
+      ))}
+    </>
+  );
+}
+
 interface Props {
-  /** 'home' for the storefront view, a category key, or null while searching. */
+  /** 'home' for the storefront view, a section key, or null while searching. */
   activeKey: string | null;
   onHome: () => void;
-  onSelect: (category: Category) => void;
+  onSelect: (section: Section) => void;
 }
 
 /** Persistent left navigation for expanded (desktop) layouts. */
@@ -65,18 +93,18 @@ export function Sidebar({ activeKey, onHome, onSelect }: Props) {
           active={activeKey === 'home'}
           onPress={onHome}
         />
-
-        <Text style={styles.navHeading}>Browse</Text>
-        {CATEGORIES.map((category) => (
-          <NavItem
-            key={category.key}
-            label={category.title}
-            iconName={category.iconName}
-            iconType={category.iconType}
-            active={category.key === activeKey}
-            onPress={() => onSelect(category)}
-          />
-        ))}
+        <NavGroup
+          heading="Discover"
+          sections={DISCOVER}
+          activeKey={activeKey}
+          onSelect={onSelect}
+        />
+        <NavGroup
+          heading="Genres"
+          sections={GENRES}
+          activeKey={activeKey}
+          onSelect={onSelect}
+        />
       </ScrollView>
 
       <Text style={styles.footer}>Game data by RAWG</Text>
@@ -103,7 +131,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: COLORS.mediumGrey,
     marginTop: SPACING.xs,
-    marginBottom: SPACING.xl,
+    marginBottom: SPACING.lg,
   },
   nav: { flex: 1 },
   navContent: { gap: 2, paddingBottom: SPACING.lg },
@@ -121,13 +149,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.sm + 2,
-    paddingVertical: SPACING.sm + 2,
+    paddingVertical: SPACING.sm + 1,
     paddingHorizontal: SPACING.sm + 2,
     borderRadius: RADIUS.sm,
   },
   navItemActive: { backgroundColor: COLORS.blue },
   navItemHovered: { backgroundColor: 'rgba(255,255,255,0.06)' },
-  navLabel: { fontFamily: 'Noah-Bold', fontSize: 14 },
+  navLabel: { fontFamily: 'Noah-Bold', fontSize: 13.5 },
   footer: {
     fontFamily: 'Noah-Regular',
     fontSize: 10,

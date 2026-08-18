@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import { useLocalSearchParams } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   Animated,
@@ -11,10 +12,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { queryKeys } from '@/api/queryClient';
 import {
@@ -24,66 +22,110 @@ import {
   getScreenshots,
   mediaUri,
 } from '@/api/rawg';
-import type { Game, Movie, Named, Screenshot } from '@/api/types';
+import type { Game, GameDetail, Movie, Named, Screenshot } from '@/api/types';
 import { BackButton } from '@/components/BackButton';
-import { CoverImage } from '@/components/CoverImage';
-import { Skeleton, SkeletonShelf } from '@/components/Skeleton';
 import { Chip } from '@/components/Chip';
+import { CoverImage } from '@/components/CoverImage';
 import { GameCard } from '@/components/GameCard';
 import { Message } from '@/components/Message';
 import { PlatformIcons } from '@/components/PlatformIcons';
 import { Rail } from '@/components/Rail';
 import { ReadMoreText } from '@/components/ReadMoreText';
-import { Stars } from '@/components/Stars';
+import { ScorePill } from '@/components/ScorePill';
+import { SectionHeader } from '@/components/SectionHeader';
+import { Skeleton, SkeletonShelf } from '@/components/Skeleton';
 import { Textured } from '@/components/Textured';
 import { TrailerCard } from '@/components/TrailerCard';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { findSection } from '@/constants/categories';
 import { COLORS } from '@/styles/colors';
-import { LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
+import { LAYOUT, RADIUS, SHADOW_ROOM, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 const HTML_TAGS = /(<([^>]+)>)/gi;
 
-const formatDate = (iso: string | null) =>
-  iso
-    ? new Date(iso)
-        .toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-        })
-        .toUpperCase()
-    : 'TBA';
-
 /* ------------------------------------------------------------------ atoms */
 
-function NameList({ items }: { items?: Named[] }) {
-  if (!items?.length) return <Text style={styles.metaValue}>—</Text>;
+function Stat({ value, label }: { value: React.ReactNode; label: string }) {
   return (
-    <Text style={styles.metaValue}>
-      {items.map((item) => item.name).join(', ')}
-    </Text>
-  );
-}
-
-function MetaRow({ label, items }: { label: string; items?: Named[] }) {
-  return (
-    <View style={styles.metaRow}>
-      <Text style={styles.metaLabel}>{label}</Text>
-      <NameList items={items} />
+    <View style={styles.stat}>
+      {typeof value === 'string' ? (
+        <Text style={styles.statValue}>{value}</Text>
+      ) : (
+        value
+      )}
+      <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
 }
 
-function SectionTitle({ children }: { children: string }) {
-  return <Text style={styles.sectionTitle}>{children}</Text>;
+function StatStrip({ game }: { game: GameDetail }) {
+  return (
+    <View style={styles.statStrip}>
+      {game.rating > 0 && (
+        <Stat value={`★ ${game.rating.toFixed(1)}`} label="Players" />
+      )}
+      {game.metacritic != null && (
+        <Stat
+          value={<ScorePill score={game.metacritic} />}
+          label="Metacritic"
+        />
+      )}
+      {game.playtime > 0 && (
+        <Stat value={`${game.playtime}h`} label="Avg. play" />
+      )}
+      {game.released && (
+        <Stat value={game.released.slice(0, 4)} label="Released" />
+      )}
+    </View>
+  );
+}
+
+function MetaRow({ label, items }: { label: string; items?: Named[] }) {
+  if (!items?.length) return null;
+  return (
+    <View style={styles.metaRow}>
+      <Text style={styles.metaLabel}>{label}</Text>
+      <Text style={styles.metaValue}>
+        {items.map((item) => item.name).join(', ')}
+      </Text>
+    </View>
+  );
+}
+
+function Lightbox({
+  uri,
+  onClose,
+}: {
+  uri: string | null;
+  onClose: () => void;
+}) {
+  return (
+    <Modal
+      visible={uri != null}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <Pressable style={styles.lightbox} onPress={onClose}>
+        {uri && (
+          <Image
+            source={{ uri: mediaUri(uri) }}
+            style={styles.lightboxImage}
+            contentFit="contain"
+          />
+        )}
+      </Pressable>
+    </Modal>
+  );
 }
 
 /* ------------------------------------------------------------------ screen */
 
 export default function GameInfoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
 
   const { isExpanded } = useBreakpoint();
@@ -152,46 +194,101 @@ export default function GameInfoScreen() {
 
   const { game, screenshots, trailers, series } = data;
   const summary = game.description.replace(HTML_TAGS, '').trim();
-  const attribution = <Text style={styles.attribution}>Game data by RAWG</Text>;
-  // Compact rails bleed across the page padding; the desktop two-column
-  // layout keeps rails inside the main column (bleeding would cross the
-  // Details rail).
   const railInset = isExpanded ? 0 : SPACING.md;
 
-  /* ---------------------------------------------------------- sub-sections */
+  const openGenre = (genre: Named) => {
+    if (genre.slug && findSection(genre.slug)) {
+      router.push({ pathname: '/', params: { category: genre.slug } });
+    }
+  };
 
-  const about = (
-    <View style={styles.block}>
-      <SectionTitle>About</SectionTitle>
-      {summary ? (
-        <ReadMoreText style={TYPE.p} numberOfLines={isExpanded ? 6 : 3}>
-          {summary}
-        </ReadMoreText>
-      ) : (
-        <Text style={TYPE.p}>No description available.</Text>
-      )}
+  /* -------------------------------------------------------------- pieces */
+
+  const hero = (
+    <View style={[styles.hero, isExpanded && styles.heroExpanded]}>
+      <CoverImage
+        uri={game.background_image}
+        style={styles.heroImage}
+        iconSize={72}
+      />
+      {/* Art dissolves into the page colour — the hero belongs to the page,
+          not to a box sitting on it. */}
+      <LinearGradient
+        colors={['#333D5100', '#333D5199', COLORS.darkGrey]}
+        locations={[0.35, 0.78, 1]}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
+      <View style={[styles.heroCopy, isExpanded && styles.heroCopyExpanded]}>
+        <PlatformIcons platforms={game.parent_platforms ?? []} />
+        <Text style={[styles.heroTitle, isExpanded && styles.heroTitleLarge]}>
+          {game.name}
+        </Text>
+        <StatStrip game={game} />
+      </View>
     </View>
   );
 
+  const about = summary ? (
+    <View style={styles.block}>
+      <SectionHeader title="About" />
+      <ReadMoreText
+        style={[TYPE.p, styles.aboutText]}
+        numberOfLines={isExpanded ? 6 : 4}
+      >
+        {summary}
+      </ReadMoreText>
+    </View>
+  ) : null;
+
+  const genres =
+    game.genres && game.genres.length > 0 ? (
+      <View style={styles.genreRow}>
+        {game.genres.map((genre) => (
+          <Chip
+            key={genre.id}
+            title={genre.name}
+            quiet
+            onPress={
+              genre.slug && findSection(genre.slug)
+                ? () => openGenre(genre)
+                : undefined
+            }
+          />
+        ))}
+      </View>
+    ) : null;
+
   const details = (
     <View style={[styles.block, isExpanded && styles.railCard]}>
-      <SectionTitle>Details</SectionTitle>
+      <SectionHeader title="Details" />
       <MetaRow
         label="Platforms"
         items={game.platforms?.map(({ platform }) => platform)}
       />
-      <MetaRow label="Genre" items={game.genres} />
       <MetaRow label="Developers" items={game.developers} />
       <MetaRow label="Publishers" items={game.publishers} />
+      {game.released ? (
+        <View style={styles.metaRow}>
+          <Text style={styles.metaLabel}>Release date</Text>
+          <Text style={styles.metaValue}>
+            {new Date(game.released).toLocaleDateString('en-US', {
+              month: 'long',
+              day: 'numeric',
+              year: 'numeric',
+            })}
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 
   const tags =
     game.tags && game.tags.length > 0 ? (
       <View style={[styles.block, isExpanded && styles.railCard]}>
-        <SectionTitle>Tags</SectionTitle>
+        <SectionHeader title="Tags" />
         <View style={styles.tags}>
-          {game.tags.slice(0, isExpanded ? 24 : 14).map((tag) => (
+          {game.tags.slice(0, isExpanded ? 24 : 12).map((tag) => (
             <Chip key={tag.id} title={tag.name} quiet />
           ))}
         </View>
@@ -202,11 +299,12 @@ export default function GameInfoScreen() {
     <>
       {screenshots.length > 0 && (
         <View style={styles.block}>
-          <SectionTitle>Screenshots</SectionTitle>
+          <SectionHeader title="Screenshots" />
           <Rail<Screenshot>
             data={screenshots}
             keyExtractor={(item) => String(item.id)}
             inset={railInset}
+            shadowRoom={SHADOW_ROOM.card}
             renderItem={(item) => (
               <Pressable onPress={() => setLightboxUri(item.image)}>
                 <Image
@@ -223,7 +321,7 @@ export default function GameInfoScreen() {
 
       {trailers.length > 0 && (
         <View style={styles.block}>
-          <SectionTitle>Trailers</SectionTitle>
+          <SectionHeader title="Trailers" />
           <Rail<Movie>
             data={trailers}
             keyExtractor={(item) => String(item.id)}
@@ -235,7 +333,7 @@ export default function GameInfoScreen() {
 
       {series.length > 0 && (
         <View style={styles.block}>
-          <SectionTitle>Games in Series</SectionTitle>
+          <SectionHeader title="More in this series" />
           <Rail<Game>
             data={series}
             keyExtractor={(item) => String(item.id)}
@@ -247,46 +345,27 @@ export default function GameInfoScreen() {
     </>
   );
 
-  /* ------------------------------------------------------------------ hero */
+  const attribution = <Text style={styles.attribution}>Game data by RAWG</Text>;
 
-  const heroContent = (
-    <>
-      <CoverImage
-        uri={game.background_image}
-        style={styles.heroImage}
-        iconSize={72}
-      />
-      <View style={styles.heroScrim} />
-      <Animated.View style={[styles.heroCopy, { opacity }]}>
-        <View style={styles.releasePill}>
-          <Text style={styles.releaseText}>{formatDate(game.released)}</Text>
+  /* -------------------------------------------------------------- layout */
+
+  return (
+    <Textured style={styles.background}>
+      <View style={styles.container}>
+        <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
+          <BackButton />
         </View>
-        <PlatformIcons platforms={game.parent_platforms ?? []} />
-        <Text style={[styles.heroTitle, isExpanded && styles.heroTitleLarge]}>
-          {game.name}
-        </Text>
-        <Stars rating={game.rating} ratingTop={game.rating_top} />
-      </Animated.View>
-    </>
-  );
 
-  /* -------------------------------------------------------------- expanded */
-
-  if (isExpanded) {
-    return (
-      <Textured style={styles.background}>
-        <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-          <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
-            <BackButton />
-          </View>
-          <ScrollView
-            contentContainerStyle={styles.expandedScroll}
-            showsVerticalScrollIndicator={false}
-          >
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: insets.bottom + 140 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {isExpanded ? (
             <View style={styles.expandedInner}>
-              <View style={styles.heroExpanded}>{heroContent}</View>
+              {hero}
               <Animated.View style={[styles.twoColumn, { opacity }]}>
                 <View style={styles.columnMain}>
+                  {genres}
                   {about}
                   {media}
                 </View>
@@ -297,36 +376,19 @@ export default function GameInfoScreen() {
               </Animated.View>
               {attribution}
             </View>
-          </ScrollView>
-          <Lightbox uri={lightboxUri} onClose={() => setLightboxUri(null)} />
-        </SafeAreaView>
-      </Textured>
-    );
-  }
-
-  /* --------------------------------------------------------------- compact */
-
-  return (
-    <Textured style={styles.background}>
-      <View style={styles.container}>
-        <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
-          <BackButton />
-        </View>
-
-        <ScrollView
-          // Generous tail: the last content clears iOS Safari's floating
-          // toolbar, and the page scrolls beneath it rather than stopping.
-          contentContainerStyle={{ paddingBottom: insets.bottom + 140 }}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.heroCompact}>{heroContent}</View>
-          <Animated.View style={[styles.compactBody, { opacity }]}>
-            {about}
-            {details}
-            {media}
-            {tags}
-            {attribution}
-          </Animated.View>
+          ) : (
+            <>
+              {hero}
+              <Animated.View style={[styles.compactBody, { opacity }]}>
+                {genres}
+                {about}
+                {media}
+                {details}
+                {tags}
+                {attribution}
+              </Animated.View>
+            </>
+          )}
         </ScrollView>
 
         <Lightbox uri={lightboxUri} onClose={() => setLightboxUri(null)} />
@@ -335,154 +397,105 @@ export default function GameInfoScreen() {
   );
 }
 
-function Lightbox({
-  uri,
-  onClose,
-}: {
-  uri: string | null;
-  onClose: () => void;
-}) {
-  return (
-    <Modal
-      visible={uri != null}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <Pressable style={styles.lightbox} onPress={onClose}>
-        {uri && (
-          <Image
-            source={{ uri: mediaUri(uri) }}
-            style={styles.lightboxImage}
-            contentFit="contain"
-          />
-        )}
-      </Pressable>
-    </Modal>
-  );
-}
-
 const styles = StyleSheet.create({
   background: { flex: 1, backgroundColor: COLORS.darkGrey },
-  attribution: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 11,
-    color: COLORS.mediumGrey,
-    opacity: 0.7,
-    textAlign: 'center',
-    paddingVertical: SPACING.lg,
-  },
-  skeletonShell: {
-    flex: 1,
-    width: '100%',
-    maxWidth: LAYOUT.maxExpandedWidth,
-    alignSelf: 'center',
-    paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.xl * 2,
-    gap: SPACING.md,
-  },
-  skeletonHero: { height: 320, borderRadius: RADIUS.lg },
-  skeletonLine: { height: 16, width: '55%' },
-  skeletonLineShort: { height: 12, width: '35%', marginBottom: SPACING.lg },
   container: { flex: 1 },
-  center: { justifyContent: 'center', alignItems: 'center', gap: SPACING.md },
   backButton: { position: 'absolute', left: SPACING.lg, zIndex: 30 },
 
   // hero
-  heroImage: { width: '100%', height: '100%' },
-  heroScrim: {
+  hero: { height: 440, justifyContent: 'flex-end' },
+  heroExpanded: { height: 480 },
+  heroImage: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'black',
-    opacity: 0.45,
   },
   heroCopy: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: SPACING.xl,
-    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.sm,
     gap: SPACING.sm,
-    paddingHorizontal: SPACING.lg,
+    alignItems: 'flex-start',
+    width: '100%',
+    maxWidth: LAYOUT.maxContentWidth,
+    alignSelf: 'center',
+  },
+  heroCopyExpanded: {
+    maxWidth: LAYOUT.maxExpandedWidth,
+    paddingHorizontal: SPACING.xl * 2,
   },
   heroTitle: {
     fontFamily: 'Noah-Black',
-    fontSize: 26,
+    fontSize: 32,
+    lineHeight: 36,
     color: COLORS.white,
-    textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.9)',
+    textShadowColor: 'rgba(0,0,0,0.7)',
     textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 8,
+    textShadowRadius: 10,
   },
-  heroTitleLarge: { fontSize: 40 },
-  heroCompact: {
-    height: 380,
-    borderBottomStartRadius: RADIUS.xl,
-    borderBottomEndRadius: RADIUS.xl,
-    overflow: 'hidden',
-    marginBottom: SPACING.md,
-    ...SHADOW.hero,
+  heroTitleLarge: { fontSize: 48, lineHeight: 52 },
+
+  // stats
+  statStrip: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.xl,
+    marginTop: SPACING.xs,
   },
-  heroExpanded: {
-    height: 420,
-    borderRadius: RADIUS.lg,
-    overflow: 'hidden',
-    marginBottom: SPACING.xl,
-    ...SHADOW.hero,
+  stat: { gap: 3, alignItems: 'flex-start' },
+  statValue: {
+    fontFamily: 'Noah-Black',
+    fontSize: 16,
+    color: COLORS.white,
   },
-  releasePill: {
-    backgroundColor: COLORS.lightGrey,
-    borderRadius: RADIUS.sm / 2,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 2,
-  },
-  releaseText: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 11,
-    color: COLORS.darkGrey,
-    letterSpacing: 0.5,
+  statLabel: {
+    fontFamily: 'Noah-Bold',
+    fontSize: 10,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: COLORS.mediumGrey,
   },
 
-  // expanded body
-  expandedScroll: { paddingVertical: SPACING.lg },
+  // body
   expandedInner: {
     width: '100%',
     maxWidth: LAYOUT.maxExpandedWidth,
     alignSelf: 'center',
-    paddingHorizontal: SPACING.xl * 2,
   },
   twoColumn: {
     flexDirection: 'row',
     gap: SPACING.xl,
     alignItems: 'flex-start',
+    paddingHorizontal: SPACING.xl * 2,
+    paddingTop: SPACING.lg,
   },
-  columnMain: { flex: 2, gap: SPACING.lg },
+  columnMain: { flex: 2, gap: SPACING.sm },
   columnRail: { flex: 1, gap: SPACING.md, maxWidth: 360 },
   railCard: {
     backgroundColor: COLORS.navy,
     borderRadius: RADIUS.md,
     padding: SPACING.md,
   },
-
-  // compact body
   compactBody: {
     paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.md,
     width: '100%',
     maxWidth: LAYOUT.maxContentWidth,
     alignSelf: 'center',
+    gap: SPACING.sm,
   },
 
   // blocks
-  block: { gap: SPACING.sm, marginBottom: SPACING.lg },
-  sectionTitle: {
-    fontFamily: 'Noah-Black',
-    fontSize: 20,
-    color: COLORS.lightGrey,
+  block: { gap: SPACING.sm + 2, marginBottom: SPACING.lg },
+  aboutText: { fontSize: 13, lineHeight: 20 },
+  genreRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.xs + 2,
+    marginBottom: SPACING.md,
   },
-  metaRow: { gap: 2 },
+  metaRow: { gap: 2, marginBottom: SPACING.sm },
   metaLabel: {
     fontFamily: 'Noah-Bold',
     fontSize: 11,
@@ -502,8 +515,28 @@ const styles = StyleSheet.create({
     height: LAYOUT.mediaHeight,
     borderRadius: RADIUS.sm,
   },
+  attribution: {
+    fontFamily: 'Noah-Regular',
+    fontSize: 11,
+    color: COLORS.mediumGrey,
+    opacity: 0.7,
+    textAlign: 'center',
+    paddingVertical: SPACING.lg,
+  },
 
-  // lightbox
+  // skeleton / lightbox
+  skeletonShell: {
+    flex: 1,
+    width: '100%',
+    maxWidth: LAYOUT.maxExpandedWidth,
+    alignSelf: 'center',
+    paddingHorizontal: SPACING.xl,
+    paddingTop: SPACING.xl * 2,
+    gap: SPACING.md,
+  },
+  skeletonHero: { height: 320, borderRadius: RADIUS.lg },
+  skeletonLine: { height: 16, width: '55%' },
+  skeletonLineShort: { height: 12, width: '35%', marginBottom: SPACING.lg },
   lightbox: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.95)',

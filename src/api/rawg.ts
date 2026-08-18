@@ -19,6 +19,8 @@ const USE_PROXY = Platform.OS === 'web' && !__DEV__;
 
 const BASE_URL = USE_PROXY ? '/rawg' : 'https://api.rawg.io/api';
 
+const PAGE_SIZE = '40';
+
 /** Route a media.rawg.io asset URL through the same-origin proxy on web. */
 export function mediaUri(uri: string | null | undefined): string | undefined {
   if (!uri) return undefined;
@@ -51,50 +53,80 @@ async function rawg<T>(
   return res.json() as Promise<T>;
 }
 
-/** YYYY-MM-DD, `days` before today. */
-function daysAgo(days: number): string {
+/** YYYY-MM-DD, `offset` days from today (negative = past). */
+function fromToday(offset: number): string {
   const d = new Date();
-  d.setDate(d.getDate() - days);
+  d.setDate(d.getDate() + offset);
   return d.toISOString().slice(0, 10);
 }
 
 const YEAR = 365;
 
-/** RAWG's default /games ordering is all-time popularity, which surfaces
- *  2007-2015 classics. Every browse view uses an explicit recent window
- *  ordered by how many players are adding the game right now. */
-function recentWindow(days: number) {
-  return { dates: `${daysAgo(days)},${daysAgo(0)}`, ordering: '-added' };
-}
+/**
+ * RAWG's default /games ordering is all-time popularity, which surfaces
+ * 2007-2015 classics forever. Every browse view uses an explicit date
+ * window with a deliberate ordering instead.
+ */
+type WindowParams = { dates: string; ordering: string };
 
-/** Genuinely current: what people are adding this year. */
-export function getTrendingGames(): Promise<Paged<Game>> {
-  return rawg('games', recentWindow(YEAR));
-}
+const windowed = (
+  from: number,
+  to: number,
+  ordering: string
+): WindowParams => ({
+  dates: `${fromToday(from)},${fromToday(to)}`,
+  ordering,
+});
+
+const page = (n: number) => ({ page: String(n), page_size: PAGE_SIZE });
+
+/** What players are adding right now. */
+export const getTrendingGames = (pageNum = 1): Promise<Paged<Game>> =>
+  rawg('games', { ...windowed(-YEAR, 0, '-added'), ...page(pageNum) });
+
+/** Out in the last three months. */
+export const getNewReleases = (pageNum = 1): Promise<Paged<Game>> =>
+  rawg('games', { ...windowed(-90, 0, '-added'), ...page(pageNum) });
+
+/** Announced and anticipated, next nine months. */
+export const getComingSoon = (pageNum = 1): Promise<Paged<Game>> =>
+  rawg('games', { ...windowed(1, 270, '-added'), ...page(pageNum) });
+
+/** Recent years, ranked by Metacritic. */
+export const getTopRated = (pageNum = 1): Promise<Paged<Game>> =>
+  rawg('games', {
+    ...windowed(-5 * YEAR, 0, '-metacritic'),
+    metacritic: '80,100',
+    ...page(pageNum),
+  });
 
 /** Genre browsing: a wider window so there's depth, still modern. */
-export function getGames(genre?: string): Promise<Paged<Game>> {
-  return rawg('games', {
-    ...recentWindow(YEAR * 3),
+export const getGames = (genre?: string, pageNum = 1): Promise<Paged<Game>> =>
+  rawg('games', {
+    ...windowed(-3 * YEAR, 0, '-added'),
     ...(genre ? { genres: genre } : {}),
+    ...page(pageNum),
   });
-}
 
-export async function getMustPlayGames(): Promise<Paged<Game>> {
+export async function getMustPlayGames(pageNum = 1): Promise<Paged<Game>> {
   const feed = await rawg<Paged<CollectionFeedItem>>(
-    'collections/must-play/feed'
+    'collections/must-play/feed',
+    page(pageNum)
   );
-  return { count: feed.count, results: feed.results.map((item) => item.game) };
+  return {
+    count: feed.count,
+    next: feed.next,
+    results: feed.results.map((item) => item.game),
+  };
 }
 
-export function searchGames(query: string): Promise<Paged<Game>> {
-  return rawg('games', {
+export const searchGames = (query: string, pageNum = 1): Promise<Paged<Game>> =>
+  rawg('games', {
     search: query.toLowerCase(),
     ordering: '-rating',
-    page_size: '50',
     search_precise: 'true',
+    ...page(pageNum),
   });
-}
 
 export const getGame = (id: string | number) => rawg<GameDetail>(`games/${id}`);
 export const getScreenshots = (id: string | number) =>

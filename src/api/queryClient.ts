@@ -13,7 +13,10 @@ export const queryClient = new QueryClient({
 });
 
 export const queryKeys = {
-  games: (category: string) => ['games', category] as const,
+  /** Infinite browse lists. Distinct from shelves: the cached shapes differ. */
+  browse: (section: string) => ['browse', section] as const,
+  /** Single-page storefront shelves. */
+  shelf: (section: string) => ['shelf', section] as const,
   search: (query: string) => ['search', query] as const,
   game: (id: string) => ['game', id] as const,
 };

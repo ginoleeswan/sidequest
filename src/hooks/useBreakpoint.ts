@@ -31,7 +31,13 @@ export function useBreakpoint(): Breakpoint {
   const width = hydrated ? measured : SSR_WIDTH;
   const isExpanded = width >= BREAKPOINTS.expanded;
   const columns =
-    width >= BREAKPOINTS.wide ? 5 : width >= BREAKPOINTS.expanded ? 4 : 3;
+    width >= BREAKPOINTS.wide
+      ? 5
+      : width >= BREAKPOINTS.expanded
+        ? 4
+        : width >= 520
+          ? 3
+          : 2;
 
   return { width, isCompact: !isExpanded, isExpanded, columns };
 }

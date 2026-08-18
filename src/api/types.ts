@@ -18,6 +18,7 @@ export interface Game {
   rating_top: number;
   released: string | null;
   playtime: number;
+  metacritic?: number | null;
   parent_platforms?: PlatformRef[];
 }
 
@@ -45,6 +46,7 @@ export interface Movie {
 
 export interface Paged<T> {
   count: number;
+  next?: string | null;
   results: T[];
 }
 
