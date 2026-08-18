@@ -1,12 +1,15 @@
-import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useQueries, useQuery } from '@tanstack/react-query';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
   FlatList,
+  Platform,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import {
@@ -15,8 +18,8 @@ import {
 } from 'react-native-safe-area-context';
 
 import { queryKeys } from '@/api/queryClient';
-import type { Game } from '@/api/types';
 import { searchGames } from '@/api/rawg';
+import type { Game } from '@/api/types';
 import { Chip } from '@/components/Chip';
 import { DynamicIcon } from '@/components/DynamicIcon';
 import { FeaturedHero } from '@/components/FeaturedHero';
@@ -25,9 +28,14 @@ import { GameInfoCard } from '@/components/GameInfoCard';
 import { GameTile } from '@/components/GameTile';
 import { Message } from '@/components/Message';
 import { SearchInput } from '@/components/SearchInput';
+import { Shelf } from '@/components/Shelf';
 import { Sidebar } from '@/components/Sidebar';
 import { Textured } from '@/components/Textured';
-import { CATEGORIES, SEARCH_SECTION } from '@/constants/categories';
+import {
+  CATEGORIES,
+  SEARCH_SECTION,
+  type Category,
+} from '@/constants/categories';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useDebounced } from '@/hooks/useDebounced';
@@ -38,6 +46,12 @@ import { TYPE } from '@/styles/typography';
 /** How far the compact hero carousel travels before it's tucked away. */
 const COLLAPSE_DISTANCE = 240;
 const FEATURED_COUNT = 4;
+
+/** Categories rendered as storefront shelves on the desktop Home. */
+const SHELF_KEYS = ['must-play', 'indie', 'rpg', 'adventure', 'strategy'];
+const SHELF_CATEGORIES = SHELF_KEYS.map((key) =>
+  CATEGORIES.find((c) => c.key === key)!
+);
 
 /** Sentinel filling an incomplete final grid row so tiles keep their width. */
 const SPACER = { spacer: true } as const;
@@ -52,16 +66,38 @@ function padToRows(items: Game[], columns: number): GridItem[] {
 
 export default function HomeScreen() {
   const [query, setQuery] = useState('');
-  const [categoryKey, setCategoryKey] = useState(CATEGORIES[0].key);
+  // 'home' = desktop storefront; otherwise a category key.
+  const [selection, setSelection] = useState<'home' | string>('home');
 
   const debouncedQuery = useDebounced(query);
   const searching = debouncedQuery.trim() !== '';
-  const category =
-    CATEGORIES.find((c) => c.key === categoryKey) ?? CATEGORIES[0];
+  const isHome = selection === 'home';
+  const category = CATEGORIES.find((c) => c.key === selection) ?? CATEGORIES[0];
 
   const { isExpanded, columns } = useBreakpoint();
   const insets = useSafeAreaInsets();
   const scrollY = useAnimatedValue(0);
+  const searchRef = useRef<TextInput | null>(null);
+
+  // "/" focuses search, Escape clears it — desktop table stakes.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const typing =
+        target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA';
+      if (event.key === '/' && !typing) {
+        event.preventDefault();
+        searchRef.current?.focus();
+      } else if (event.key === 'Escape' && typing) {
+        setQuery('');
+        searchRef.current?.blur();
+      }
+    };
+    // Capture phase: RN-web's TextInput stops Escape from bubbling.
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, []);
 
   const { data, isPending, isRefetching, error, refetch } = useQuery({
     queryKey: searching
@@ -71,14 +107,32 @@ export default function HomeScreen() {
     select: (result) => result.results,
   });
 
+  // Desktop Home shelves. Cached queries, only live while the shelves show.
+  const shelfResults = useQueries({
+    queries: SHELF_CATEGORIES.map((shelf) => ({
+      queryKey: queryKeys.games(shelf.key),
+      queryFn: () => shelf.fetch(),
+      select: (result: { results: Game[] }) => result.results,
+      enabled: isExpanded && isHome && !searching,
+    })),
+  });
+
   const games = data ?? [];
-  const section = searching ? SEARCH_SECTION : category;
+  const section = searching
+    ? SEARCH_SECTION
+    : isHome && isExpanded
+      ? { ...CATEGORIES[0], title: 'Home' }
+      : category;
   const featured = searching ? [] : games.slice(0, FEATURED_COUNT);
   const listed = searching ? games : games.slice(FEATURED_COUNT);
 
-  const selectCategory = (key: string) => {
+  const selectCategory = (c: Category) => {
     setQuery('');
-    setCategoryKey(key);
+    setSelection(c.key);
+  };
+  const goHome = () => {
+    setQuery('');
+    setSelection('home');
   };
 
   const status = renderStatus({
@@ -90,17 +144,6 @@ export default function HomeScreen() {
     sectionTitle: section.title,
   });
 
-  const sectionHeading = (
-    <View style={styles.sectionRow}>
-      <DynamicIcon
-        type={section.iconType}
-        name={section.iconName}
-        color={COLORS.mediumGrey}
-      />
-      <Text style={[TYPE.h3, styles.sectionTitle]}>{section.title}</Text>
-    </View>
-  );
-
   const refresh = (
     <RefreshControl
       refreshing={isRefetching}
@@ -111,13 +154,16 @@ export default function HomeScreen() {
 
   // ------------------------------------------------------------- expanded
   if (isExpanded) {
+    const showShelves = isHome && !searching;
+
     return (
       <Textured style={styles.background}>
         <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
           <View style={styles.expandedShell}>
             <Sidebar
-              activeKey={searching ? null : categoryKey}
-              onSelect={(c) => selectCategory(c.key)}
+              activeKey={searching ? null : isHome ? 'home' : selection}
+              onHome={goHome}
+              onSelect={selectCategory}
             />
 
             <View style={styles.main}>
@@ -129,36 +175,54 @@ export default function HomeScreen() {
                   value={query}
                   onChangeText={setQuery}
                   style={styles.searchExpanded}
+                  inputRef={searchRef}
+                  showShortcutHint
                 />
               </View>
 
-              {status ?? (
-                <FlatList
-                  // numColumns is immutable per instance; remount on change.
-                  key={`grid-${columns}`}
-                  data={padToRows(listed, columns)}
-                  numColumns={columns}
-                  columnWrapperStyle={styles.gridRow}
-                  contentContainerStyle={styles.gridContent}
-                  keyExtractor={(item, index) =>
-                    isSpacer(item) ? `spacer-${index}` : String(item.id)
-                  }
-                  renderItem={({ item }) =>
-                    isSpacer(item) ? (
-                      <View style={styles.gridSpacer} />
-                    ) : (
-                      <GameTile game={item} />
-                    )
-                  }
-                  ListHeaderComponent={
-                    featured.length > 0 ? (
-                      <FeaturedHero games={featured} />
-                    ) : null
-                  }
-                  showsVerticalScrollIndicator={false}
-                  refreshControl={refresh}
-                />
-              )}
+              {status ??
+                (showShelves ? (
+                  <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={styles.homeScroll}
+                  >
+                    <FeaturedHero games={featured} />
+                    <Shelf
+                      category={CATEGORIES[0]}
+                      games={listed}
+                      onViewAll={selectCategory}
+                    />
+                    {SHELF_CATEGORIES.map((shelf, index) => (
+                      <Shelf
+                        key={shelf.key}
+                        category={shelf}
+                        games={shelfResults[index].data ?? []}
+                        onViewAll={selectCategory}
+                      />
+                    ))}
+                  </ScrollView>
+                ) : (
+                  <FlatList
+                    // numColumns is immutable per instance; remount on change.
+                    key={`grid-${columns}`}
+                    data={padToRows(games, columns)}
+                    numColumns={columns}
+                    columnWrapperStyle={styles.gridRow}
+                    contentContainerStyle={styles.gridContent}
+                    keyExtractor={(item, index) =>
+                      isSpacer(item) ? `spacer-${index}` : String(item.id)
+                    }
+                    renderItem={({ item }) =>
+                      isSpacer(item) ? (
+                        <View style={styles.gridSpacer} />
+                      ) : (
+                        <GameTile game={item} />
+                      )
+                    }
+                    showsVerticalScrollIndicator={false}
+                    refreshControl={refresh}
+                  />
+                ))}
             </View>
           </View>
         </SafeAreaView>
@@ -177,6 +241,7 @@ export default function HomeScreen() {
     outputRange: [1, 0],
     extrapolate: 'clamp',
   });
+  const compactSection = searching ? SEARCH_SECTION : category;
 
   return (
     <Textured style={styles.background}>
@@ -195,10 +260,10 @@ export default function HomeScreen() {
               renderItem={({ item }) => (
                 <Chip
                   title={item.title}
-                  selected={!searching && categoryKey === item.key}
+                  selected={!searching && category.key === item.key}
                   iconName={item.iconName}
                   iconType={item.iconType}
-                  onPress={() => selectCategory(item.key)}
+                  onPress={() => selectCategory(item)}
                 />
               )}
               contentContainerStyle={styles.chips}
@@ -225,7 +290,16 @@ export default function HomeScreen() {
                 </Animated.View>
               )}
 
-              {sectionHeading}
+              <View style={styles.sectionRow}>
+                <DynamicIcon
+                  type={compactSection.iconType}
+                  name={compactSection.iconName}
+                  color={COLORS.mediumGrey}
+                />
+                <Text style={[TYPE.h3, styles.sectionTitle]}>
+                  {compactSection.title}
+                </Text>
+              </View>
 
               <FlatList
                 data={listed}
@@ -331,6 +405,7 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.lg,
   },
   searchExpanded: { width: 280 },
+  homeScroll: { paddingBottom: SPACING.xl },
   gridRow: { gap: LAYOUT.gridGap },
   gridContent: { gap: LAYOUT.gridGap, paddingBottom: SPACING.xl },
   gridSpacer: { flex: 1 },

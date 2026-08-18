@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import {
+  Platform,
   Pressable,
   StyleSheet,
+  Text,
   TextInput,
   View,
   type StyleProp,
@@ -15,13 +17,23 @@ interface Props {
   value: string;
   onChangeText: (text: string) => void;
   style?: StyleProp<ViewStyle>;
+  inputRef?: React.RefObject<TextInput | null>;
+  /** Show the "/" keyboard-shortcut hint (expanded/desktop layouts). */
+  showShortcutHint?: boolean;
 }
 
-export function SearchInput({ value, onChangeText, style }: Props) {
+export function SearchInput({
+  value,
+  onChangeText,
+  style,
+  inputRef,
+  showShortcutHint = false,
+}: Props) {
   return (
     <View style={[styles.container, style]}>
       <Ionicons name="search" size={18} color={COLORS.mediumGrey} />
       <TextInput
+        ref={inputRef}
         value={value}
         onChangeText={onChangeText}
         placeholder="Search games…"
@@ -35,6 +47,10 @@ export function SearchInput({ value, onChangeText, style }: Props) {
         <Pressable onPress={() => onChangeText('')} hitSlop={8}>
           <Ionicons name="close-circle" size={18} color={COLORS.mediumGrey} />
         </Pressable>
+      ) : showShortcutHint && Platform.OS === 'web' ? (
+        <View style={styles.kbd}>
+          <Text style={styles.kbdText}>/</Text>
+        </View>
       ) : null}
     </View>
   );
@@ -62,5 +78,17 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     // Suppress the browser focus ring; the container border carries focus.
     outlineWidth: 0,
+  },
+  kbd: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 5,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  kbdText: {
+    fontFamily: 'Noah-Bold',
+    fontSize: 11,
+    color: COLORS.mediumGrey,
   },
 });

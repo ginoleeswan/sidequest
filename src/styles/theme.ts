@@ -28,6 +28,9 @@ export const LAYOUT = {
   maxExpandedWidth: 1600,
   sidebarWidth: 232,
   gridGap: 18,
+  shelfTileWidth: 168,
+  /** Cover-art tiles: portrait, like a storefront. */
+  tileAspect: 3 / 4,
   cardWidth: 170,
   cardWideWidth: 300,
   cardHeight: 200,
