@@ -49,7 +49,12 @@ export function SearchInput({
         autoFocus={autoFocus}
       />
       {value.length > 0 ? (
-        <Pressable onPress={() => onChangeText('')} hitSlop={8}>
+        <Pressable
+          onPress={() => onChangeText('')}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Clear search"
+        >
           <Ionicons name="close-circle" size={18} color={COLORS.mediumGrey} />
         </Pressable>
       ) : showShortcutHint && Platform.OS === 'web' ? (

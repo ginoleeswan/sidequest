@@ -76,7 +76,14 @@ export default function Root({ children }: PropsWithChildren) {
         <style dangerouslySetInnerHTML={{ __html: css }} />
         <script dangerouslySetInnerHTML={{ __html: registerServiceWorker }} />
       </head>
-      <body>{children}</body>
+      <body>
+        {/* First tab stop on every page. Without it, reaching the content
+            means tabbing past the whole header and sidebar, every time. */}
+        <a href="#main" className="skip-link">
+          Skip to content
+        </a>
+        <div id="main">{children}</div>
+      </body>
     </html>
   );
 }
@@ -163,6 +170,24 @@ const css = `
   @media (prefers-reduced-motion: reduce) {
     [role="button"], [role="link"], a { transition: none; }
   }
+
+  /* Off-screen until focused, then a real, visible target. Hiding it with
+     display:none would take it out of the tab order entirely, which is
+     the one thing it must not do. */
+  .skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 999;
+    padding: 12px 18px;
+    background: #F2A93B;
+    color: #272F3F;
+    font-family: Noah-Bold, system-ui, sans-serif;
+    font-size: 15px;
+    border-radius: 0 0 8px 0;
+    text-decoration: none;
+  }
+  .skip-link:focus { left: 0; }
 
   /* One focus language: no ring on pointer/programmatic focus, a branded
      ring for keyboard navigation. */

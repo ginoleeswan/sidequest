@@ -30,6 +30,13 @@ interface Props {
   iconSize?: number;
   /** Which slot this fills, so the right derivative is requested. */
   size?: keyof typeof SLOT_WIDTH;
+  /**
+   * What this artwork is, for a screen reader. Pass the game's name where
+   * the image is the only thing identifying it. Leave unset where a title
+   * sits next to it: the cover then adds nothing but noise, and is hidden
+   * from assistive tech rather than announced as "image".
+   */
+  label?: string;
 }
 
 /**
@@ -43,13 +50,19 @@ export function CoverImage({
   contentFit = 'cover',
   iconSize = 32,
   size = 'tile',
+  label,
 }: Props) {
   const [failed, setFailed] = useState(false);
   const src = mediaUri(uri, SLOT_WIDTH[size]);
 
   if (!src || failed) {
     return (
-      <View style={[styles.fallback, style]}>
+      <View
+        style={[styles.fallback, style]}
+        accessible={!!label}
+        accessibilityRole={label ? 'image' : undefined}
+        accessibilityLabel={label}
+      >
         <Textured fill />
         <Ionicons
           name="game-controller-outline"
@@ -67,6 +80,12 @@ export function CoverImage({
       contentFit={contentFit}
       transition={DURATION.base}
       onError={() => setFailed(true)}
+      accessible={!!label}
+      accessibilityRole={label ? 'image' : undefined}
+      accessibilityLabel={label}
+      // Decorative by default: a cover beside its own title is noise.
+      importantForAccessibility={label ? 'yes' : 'no-hide-descendants'}
+      alt={label ?? ''}
     />
   );
 }

@@ -270,6 +270,7 @@ export default function GameInfoScreen() {
         style={styles.heroImage}
         iconSize={72}
         size="hero"
+        label={`${game.name} cover art`}
       />
       {/* Art dissolves into the page colour — the hero belongs to the page,
           not to a box sitting on it. */}

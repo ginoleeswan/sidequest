@@ -45,6 +45,11 @@ export function StatusActions({ game }: { game: Game }) {
                 active ? 'close-circle' : (meta.icon as never)
               );
             }}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
+            accessibilityLabel={
+              active ? `Remove from ${meta.label}` : `Mark as ${meta.label}`
+            }
             style={[styles.button, active && styles.buttonActive]}
           >
             <Ionicons
