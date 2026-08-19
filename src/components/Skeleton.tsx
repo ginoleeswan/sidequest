@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Animated, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
+import { HOME_SHELVES } from '@/constants/categories';
 import { LAYOUT, RADIUS, SHADOW_ROOM, SPACING } from '@/styles/theme';
 
 /*
@@ -178,8 +179,15 @@ export function SkeletonCompactHome() {
         <Skeleton style={styles.wideCard} />
       </View>
       <View style={styles.compactShelves}>
+        {/* One row per shelf the home page actually renders: the ranked
+            trending row, then HOME_SHELVES. Two stand-ins for six left the
+            loading document barely taller than the viewport, which on iOS
+            means Safari's translucent toolbar blurs over bare canvas
+            instead of over content. */}
         <SkeletonShelf tiles={3} inset={SPACING.md} eyebrow ranked />
-        <SkeletonShelf tiles={3} inset={SPACING.md} />
+        {HOME_SHELVES.map((shelf) => (
+          <SkeletonShelf key={shelf.key} tiles={3} inset={SPACING.md} />
+        ))}
       </View>
     </View>
   );
