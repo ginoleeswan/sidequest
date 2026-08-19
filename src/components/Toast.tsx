@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   createContext,
   useCallback,
+  useEffect,
   useContext,
   useRef,
   useState,
@@ -33,6 +34,16 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   } | null>(null);
   const progress = useAnimatedValue(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // The dismiss timer outlives the provider otherwise, and fires against
+  // a tree that is no longer mounted — which throws rather than doing
+  // nothing, because the animation it drives has been torn down with it.
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    []
+  );
 
   const show = useCallback(
     (message: string, icon: IconName = 'checkmark-circle') => {

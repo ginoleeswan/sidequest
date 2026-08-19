@@ -37,3 +37,6 @@ yarn-error.*
 # macOS
 .DS_Store
 *.pem
+
+# Coverage output is generated, never reviewed, and changes on every run.
+coverage/
