@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
-    "build": "expo export --platform web",
+    "build": "node scripts/build-sitemap.mjs && expo export --platform web",
     "test:hydration": "node e2e/hydration.mjs"
   },
   "engines": {
@@ -66,6 +66,12 @@
     ],
     "transformIgnorePatterns": [
       "node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg))"
+    ],
+    "collectCoverageFrom": [
+      "src/**/*.{ts,tsx}",
+      "!src/**/__tests__/**",
+      "!src/app/+html.tsx",
+      "!src/**/*.d.ts"
     ]
   }
 }
