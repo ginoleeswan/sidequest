@@ -205,7 +205,7 @@ export default function HomeScreen() {
   // Infinite browse in document flow: the FlatList's own onEndReached
   // never fires when the window is the scroller, so watch the window.
   useEffect(() => {
-    if (!isExpanded || Platform.OS !== 'web') return;
+    if (Platform.OS !== 'web') return;
     const onScroll = () => {
       if (
         window.innerHeight + window.scrollY >=
@@ -216,7 +216,7 @@ export default function HomeScreen() {
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, [isExpanded]);
+  }, []);
 
   const refresh = (
     <RefreshControl
@@ -226,12 +226,17 @@ export default function HomeScreen() {
     />
   );
 
-  const footerSpinner = list.isFetchingNextPage ? (
-    <View style={styles.moreSpinner}>
-      <ActivityIndicator color={COLORS.mediumGrey} />
-    </View>
-  ) : (
-    <Text style={styles.attribution}>Game data by RAWG</Text>
+  // Every list ends on the footer band, so the document's last pixels are
+  // the colour Safari paints its toolbar with.
+  const listEnd = (
+    <>
+      {list.isFetchingNextPage && (
+        <View style={styles.moreSpinner}>
+          <ActivityIndicator color={COLORS.mediumGrey} />
+        </View>
+      )}
+      <SiteFooter inset={isExpanded ? SPACING.xl : SPACING.md} />
+    </>
   );
 
   const status = list.error ? (
@@ -313,12 +318,13 @@ export default function HomeScreen() {
         onEndReached={loadMore}
         onEndReachedThreshold={1.2}
         ListHeaderComponent={gridHeader}
-        ListFooterComponent={footerSpinner}
-        style={!isExpanded && { height: windowHeight }}
+        ListFooterComponent={listEnd}
+        // No height of its own: the document scrolls, so rows run past the
+        // bottom of the viewport and under iOS Safari's toolbar exactly
+        // the way the home page does.
         contentContainerStyle={[
           styles.gridContent,
           !isExpanded && { paddingTop: headerHeight },
-          { paddingBottom: insets.bottom + SPACING.xl * 3 },
         ]}
       />
     </FadeInView>
@@ -460,14 +466,10 @@ export default function HomeScreen() {
                 onEndReached={loadMore}
                 onEndReachedThreshold={1.2}
                 ListHeaderComponent={gridHeader}
-                ListFooterComponent={footerSpinner}
-                style={{ height: windowHeight }}
+                ListFooterComponent={listEnd}
                 contentContainerStyle={[
                   styles.list,
-                  {
-                    paddingTop: headerHeight,
-                    paddingBottom: insets.bottom + SPACING.xl * 3,
-                  },
+                  { paddingTop: headerHeight },
                 ]}
               />
             ) : (
@@ -644,14 +646,6 @@ const styles = StyleSheet.create({
     height: 46,
   },
   list: { flexGrow: 1, paddingHorizontal: SPACING.md },
-  attribution: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 11,
-    color: COLORS.mediumGrey,
-    opacity: 0.7,
-    textAlign: 'center',
-    paddingVertical: SPACING.lg,
-  },
 });
 
 /**
