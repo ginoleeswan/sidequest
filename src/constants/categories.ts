@@ -22,6 +22,8 @@ export interface Section {
   variant?: ShelfVariant;
   /** One editorial line for the section's own page. */
   description?: string;
+  /** Overrides the shelf's small line above the title. */
+  eyebrow?: string;
 }
 
 /** Editorial discovery sections — the storefront shelves. */
@@ -176,3 +178,22 @@ export const SEARCH_SECTION = {
   iconName: 'search',
   iconType: 'material-icons' as IconType,
 };
+
+/**
+ * Derived on the client from games already loaded, so it costs no extra
+ * request: the short ones. RAWG cannot filter on playtime, and no other
+ * storefront row answers "what could I finish this weekend" — which is
+ * the whole question Sidequest exists for.
+ */
+export const QUICK_WINS: Section = {
+  key: 'quick-wins',
+  title: 'Finish it this weekend',
+  eyebrow: 'Under 8 hours',
+  fetch: getTrendingGames,
+  iconName: 'flash',
+  iconType: 'ionicon',
+  description: 'Short enough to actually see the credits.',
+};
+
+/** Longest a game can be and still count as a weekend. */
+export const QUICK_WIN_HOURS = 8;

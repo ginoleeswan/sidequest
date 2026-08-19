@@ -5,7 +5,7 @@ import {
 } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -50,6 +50,8 @@ import {
   SkeletonShelf,
 } from '@/components/Skeleton';
 import { CategoryHero } from '@/components/CategoryHero';
+import { SurpriseButton } from '@/components/SurpriseButton';
+import { TonightCard } from '@/components/TonightCard';
 import { ProgressLine } from '@/components/ProgressLine';
 import { Reveal } from '@/components/Reveal';
 import {
@@ -64,6 +66,8 @@ import {
   findSection,
   GENRES,
   HOME_SHELVES,
+  QUICK_WIN_HOURS,
+  QUICK_WINS,
   type Section,
 } from '@/constants/categories';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
@@ -181,6 +185,16 @@ export default function HomeScreen() {
   const games = dedupeById(list.data?.pages.flatMap((p) => p.results) ?? []);
   const totalCount = list.data?.pages[0]?.count ?? 0;
   const featured = isHome ? games.slice(0, FEATURED_COUNT) : [];
+  // No extra request: the short games out of everything already fetched.
+  const quickWins = useMemo(
+    () =>
+      isHome
+        ? games
+            .filter((g) => g.playtime > 0 && g.playtime <= QUICK_WIN_HOURS)
+            .slice(0, 12)
+        : [],
+    [games, isHome]
+  );
   const trendingShelf = isHome ? games.slice(FEATURED_COUNT) : [];
 
   const selectSection = (s: Section) => {
@@ -367,6 +381,15 @@ export default function HomeScreen() {
                     <FadeInView>
                       <FeaturedHero games={featured} />
                     </FadeInView>
+                    <View style={styles.homeModulesWide}>
+                      <TonightCard />
+                      <SurpriseButton games={games} />
+                    </View>
+                    <Shelf
+                      section={QUICK_WINS}
+                      games={quickWins}
+                      inset={SPACING.xl}
+                    />
                     <Shelf
                       section={DISCOVER[0]}
                       games={trendingShelf}
@@ -437,6 +460,15 @@ export default function HomeScreen() {
                   </View>
                 )}
                 <View style={styles.compactShelves}>
+                  <View style={styles.homeModules}>
+                    <TonightCard />
+                    <SurpriseButton games={games} />
+                  </View>
+                  <Shelf
+                    section={QUICK_WINS}
+                    games={quickWins}
+                    inset={SPACING.md}
+                  />
                   <Shelf
                     section={DISCOVER[0]}
                     games={trendingShelf.slice(0, 12)}
@@ -602,6 +634,13 @@ const styles = StyleSheet.create({
   compactShell: { flexGrow: 1 },
   compactHome: { gap: SPACING.xs },
   carouselFrame: { paddingHorizontal: SPACING.md },
+  homeModules: { gap: SPACING.sm, marginBottom: SPACING.lg },
+  homeModulesWide: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    marginBottom: SPACING.xl,
+  },
   compactShelves: {
     paddingHorizontal: SPACING.md,
     marginTop: SPACING.sm,

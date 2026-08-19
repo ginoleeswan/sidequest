@@ -18,7 +18,8 @@ const shortDate = (iso: string | null | undefined) =>
 interface Props {
   section: Section;
   games: Game[];
-  onViewAll: (section: Section) => void;
+  /** Omitted for rows derived on the client, which have no page to open. */
+  onViewAll?: (section: Section) => void;
   /** Horizontal page padding the rail should bleed across. */
   inset?: number;
 }
@@ -63,9 +64,11 @@ export function Shelf({ section, games, onViewAll, inset = 0 }: Props) {
     <View style={styles.shelf}>
       <SectionHeader
         title={section.title}
-        eyebrow={variant === 'ranked' ? 'Top 10' : undefined}
-        actionLabel="View all →"
-        onAction={() => onViewAll(section)}
+        eyebrow={
+          section.eyebrow ?? (variant === 'ranked' ? 'Top 10' : undefined)
+        }
+        actionLabel={onViewAll ? 'View all →' : undefined}
+        onAction={onViewAll ? () => onViewAll(section) : undefined}
       />
       <Rail
         data={data}
