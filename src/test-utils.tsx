@@ -21,8 +21,16 @@ const METRICS = {
 
 export function renderApp(ui: React.ReactElement) {
   // A fresh client per render: cached data must never leak between tests.
+  //
+  // gcTime is zeroed because the default five minutes is a real timer:
+  // every query a test makes leaves one behind, node keeps the event loop
+  // alive until it fires, and the jest run appears to hang long after the
+  // assertions have passed.
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    defaultOptions: {
+      queries: { retry: false, gcTime: 0 },
+      mutations: { retry: false, gcTime: 0 },
+    },
   });
   return render(
     <QueryClientProvider client={queryClient}>
