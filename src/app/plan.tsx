@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import Head from 'expo-router/head';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
