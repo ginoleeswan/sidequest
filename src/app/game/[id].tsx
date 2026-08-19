@@ -161,7 +161,7 @@ function Lightbox({
       <Pressable style={styles.lightbox} onPress={onClose}>
         {uri && (
           <Image
-            source={{ uri: mediaUri(uri) }}
+            source={{ uri: mediaUri(uri, 640) }}
             style={styles.lightboxImage}
             contentFit="contain"
           />
@@ -269,6 +269,7 @@ export default function GameInfoScreen() {
         uri={game.background_image}
         style={styles.heroImage}
         iconSize={72}
+        size="hero"
       />
       {/* Art dissolves into the page colour — the hero belongs to the page,
           not to a box sitting on it. */}
@@ -297,7 +298,7 @@ export default function GameInfoScreen() {
       <View style={styles.deskBackdrop} pointerEvents="none">
         {game.background_image ? (
           <Image
-            source={{ uri: mediaUri(game.background_image) ?? undefined }}
+            source={{ uri: mediaUri(game.background_image, 210) ?? undefined }}
             style={styles.deskBackdropImage}
             contentFit="cover"
             blurRadius={60}
@@ -326,6 +327,7 @@ export default function GameInfoScreen() {
             uri={game.background_image}
             style={styles.deskArt}
             iconSize={64}
+            size="hero"
           />
         </View>
       </View>
@@ -411,7 +413,7 @@ export default function GameInfoScreen() {
             renderItem={(item) => (
               <Pressable onPress={() => setLightboxUri(item.image)}>
                 <Image
-                  source={{ uri: mediaUri(item.image) }}
+                  source={{ uri: mediaUri(item.image, 300) }}
                   style={styles.screenshot}
                   contentFit="cover"
                   transition={DURATION.base}

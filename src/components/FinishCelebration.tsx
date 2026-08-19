@@ -106,7 +106,11 @@ export function FinishCelebration({
             </Text>
 
             <View style={styles.artRow}>
-              <CoverImage uri={game.background_image} style={styles.art} />
+              <CoverImage
+                uri={game.background_image}
+                style={styles.art}
+                size="tile"
+              />
             </View>
 
             <Text style={styles.line}>

@@ -128,6 +128,7 @@ function QuestRow({
       <CoverImage
         uri={game?.background_image}
         style={styles.questThumb}
+        size="thumb"
         iconSize={16}
       />
       <View style={styles.questBody}>
@@ -443,6 +444,7 @@ export default function PlanScreen() {
                       <CoverImage
                         uri={gamesById.get(tonightPick.id)?.background_image}
                         style={styles.tonightThumb}
+                        size="thumb"
                         iconSize={20}
                       />
                     </Pressable>
@@ -506,6 +508,7 @@ export default function PlanScreen() {
                             <CoverImage
                               uri={gamesById.get(item.id)?.background_image}
                               style={styles.rowThumb}
+                              size="thumb"
                               iconSize={16}
                             />
                             <View style={styles.rowBody}>
@@ -544,6 +547,7 @@ export default function PlanScreen() {
                             <CoverImage
                               uri={entry.game.background_image}
                               style={styles.rowThumb}
+                              size="thumb"
                               iconSize={16}
                             />
                             <View style={styles.rowBody}>

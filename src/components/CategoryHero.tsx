@@ -29,6 +29,7 @@ export function CategoryHero({ section, lead, count, kind }: Props) {
         <CoverImage
           uri={lead.background_image}
           style={StyleSheet.absoluteFill}
+          size="hero"
         />
       ) : null}
       <LinearGradient

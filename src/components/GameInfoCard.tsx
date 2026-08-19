@@ -26,6 +26,7 @@ export function GameInfoCard({ game }: { game: Game }) {
       <CoverImage
         uri={game.background_image}
         style={styles.thumb}
+        size="thumb"
         iconSize={26}
       />
       <View style={styles.info}>
