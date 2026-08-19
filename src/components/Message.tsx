@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { COLORS } from '@/styles/colors';
 import { RADIUS, SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 interface Props {
   icon: keyof typeof Ionicons.glyphMap;
@@ -59,14 +60,12 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   title: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 18,
+    ...TYPE.label,
     color: COLORS.lightGrey,
     textAlign: 'center',
   },
   detail: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 13,
+    ...TYPE.p,
     color: COLORS.mediumGrey,
     textAlign: 'center',
     maxWidth: 320,
@@ -80,8 +79,7 @@ const styles = StyleSheet.create({
   },
   actionHovered: { opacity: 0.85 },
   actionText: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 13,
+    ...TYPE.labelSmall,
     color: COLORS.white,
   },
 });

@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Message } from '@/components/Message';
 import { COLORS } from '@/styles/colors';
 import { SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 export default function NotFoundScreen() {
   return (
@@ -30,8 +31,7 @@ const styles = StyleSheet.create({
   },
   link: { alignSelf: 'center', paddingVertical: SPACING.md },
   linkText: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 14,
+    ...TYPE.label,
     color: COLORS.blue,
   },
 });

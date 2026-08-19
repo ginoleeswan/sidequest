@@ -80,22 +80,18 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   updated: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 12,
+    ...TYPE.caption,
     color: COLORS.mediumGrey,
     marginTop: SPACING.sm,
   },
   body: { marginTop: SPACING.xl, gap: SPACING.md },
   h: {
-    fontFamily: 'Noah-Black',
-    fontSize: 18,
+    ...TYPE.h2,
     color: COLORS.lightGrey,
     marginTop: SPACING.md,
   },
   p: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 14,
-    lineHeight: 22,
+    ...TYPE.body,
     color: COLORS.lightGrey,
   },
 });

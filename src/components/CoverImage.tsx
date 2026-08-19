@@ -6,6 +6,7 @@ import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Textured } from './Textured';
 import { mediaUri } from '@/api/rawg';
 import { COLORS } from '@/styles/colors';
+import { DURATION } from '@/styles/motion';
 
 interface Props {
   uri?: string | null;
@@ -47,7 +48,7 @@ export function CoverImage({
       source={{ uri: src }}
       style={style as object}
       contentFit={contentFit}
-      transition={200}
+      transition={DURATION.base}
       onError={() => setFailed(true)}
     />
   );

@@ -8,6 +8,7 @@ import type { Game } from '@/api/types';
 import { STATUS_META, useLibrary, type LibraryStatus } from '@/lib/library';
 import { COLORS } from '@/styles/colors';
 import { RADIUS, SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 const ORDER: LibraryStatus[] = ['wishlist', 'playing', 'finished'];
 
@@ -88,8 +89,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   label: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 12.5,
+    ...TYPE.labelSmall,
     color: COLORS.lightGrey,
   },
   labelActive: { color: COLORS.darkGrey },

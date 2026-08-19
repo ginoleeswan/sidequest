@@ -141,9 +141,9 @@ const css = `
      a CSS transition would fight it. */
   [role="button"], [role="link"], a {
     transition:
-      background-color 0.18s ease,
-      border-color 0.18s ease,
-      color 0.18s ease;
+      background-color 0.12s cubic-bezier(0.2, 0, 0, 1),
+      border-color 0.12s cubic-bezier(0.2, 0, 0, 1),
+      color 0.12s cubic-bezier(0.2, 0, 0, 1);
   }
   @media (prefers-reduced-motion: reduce) {
     [role="button"], [role="link"], a { transition: none; }

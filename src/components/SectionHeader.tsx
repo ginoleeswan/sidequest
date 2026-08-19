@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { COLORS } from '@/styles/colors';
 import { SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 interface Props {
   title: string;
@@ -52,20 +53,15 @@ const styles = StyleSheet.create({
   },
   titles: { gap: 2, flexShrink: 1 },
   eyebrow: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 11,
-    letterSpacing: 1.1,
-    textTransform: 'uppercase',
+    ...TYPE.micro,
     color: COLORS.mediumGrey,
   },
   title: {
-    fontFamily: 'Noah-Black',
-    fontSize: 20,
+    ...TYPE.h2,
     color: COLORS.lightGrey,
   },
   action: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 12,
+    ...TYPE.labelTiny,
     color: COLORS.mediumGrey,
     paddingBottom: 3,
   },

@@ -14,12 +14,15 @@ import { CoverImage } from './CoverImage';
 import { Mark } from './Mark';
 import type { Game } from '@/api/types';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { formatHours } from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
 import { useLibrary } from '@/lib/library';
 import { libraryStats } from '@/lib/libraryStats';
 import { COLORS } from '@/styles/colors';
+import { SPRING } from '@/styles/motion';
 import { RADIUS, SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 /**
  * The moment a game is finished.
@@ -43,21 +46,26 @@ export function FinishCelebration({
   const { entries } = useLibrary();
   const { durationOf } = useDurations();
   const rise = useAnimatedValue(0);
+  const reduced = useReducedMotion();
 
   useEffect(() => {
     if (!game) {
       rise.setValue(0);
       return;
     }
+    if (reduced) {
+      // The moment still lands; it just doesn't travel to get here.
+      rise.setValue(1);
+      return;
+    }
     const animation = Animated.spring(rise, {
       toValue: 1,
-      tension: 55,
-      friction: 9,
+      ...SPRING.surface,
       useNativeDriver: true,
     });
     animation.start();
     return () => animation.stop();
-  }, [game, rise]);
+  }, [game, rise, reduced]);
 
   if (!game) return null;
 
@@ -174,16 +182,12 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   eyebrow: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 10.5,
-    letterSpacing: 2,
+    ...TYPE.tag,
     color: COLORS.accent,
     textAlign: 'center',
   },
   title: {
-    fontFamily: 'Noah-Black',
-    fontSize: 25,
-    lineHeight: 30,
+    ...TYPE.title,
     color: COLORS.white,
     textAlign: 'center',
   },
@@ -196,9 +200,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.navy,
   },
   line: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 13.5,
-    lineHeight: 20,
+    ...TYPE.body,
     color: COLORS.mediumGrey,
     textAlign: 'center',
   },
@@ -212,20 +214,15 @@ const styles = StyleSheet.create({
   },
   stat: { alignItems: 'center', gap: 2, flex: 1 },
   statValue: {
-    fontFamily: 'Noah-Black',
-    fontSize: 19,
+    ...TYPE.h2,
     color: COLORS.accent,
   },
   statValueQuiet: {
-    fontFamily: 'Noah-Black',
-    fontSize: 19,
+    ...TYPE.h2,
     color: COLORS.lightGrey,
   },
   statLabel: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 9,
-    letterSpacing: 0.7,
-    textTransform: 'uppercase',
+    ...TYPE.micro,
     color: COLORS.mediumGrey,
   },
   primary: {
@@ -238,14 +235,12 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.md,
   },
   primaryText: {
-    fontFamily: 'Noah-Black',
-    fontSize: 14.5,
+    ...TYPE.h4,
     color: COLORS.darkGrey,
   },
   ghost: { alignItems: 'center', paddingVertical: SPACING.sm },
   ghostText: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 12.5,
+    ...TYPE.labelSmall,
     color: COLORS.mediumGrey,
   },
 });

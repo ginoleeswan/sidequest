@@ -12,6 +12,7 @@ import {
 
 import { COLORS } from '@/styles/colors';
 import { RADIUS, SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 interface Props {
   value: string;
@@ -75,12 +76,11 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.08)',
   },
   input: {
+    ...TYPE.body,
     flex: 1,
-    fontFamily: 'Noah-Regular',
     // 16px or larger, always: iOS Safari zooms the page when a smaller
     // input takes focus, and there is no way to opt out of that without
     // also disabling pinch-zoom for everyone.
-    fontSize: 16,
     color: COLORS.lightGrey,
     paddingVertical: 0,
     // Suppress the browser focus ring; the container border carries focus.
@@ -94,8 +94,7 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
   },
   kbdText: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 11,
+    ...TYPE.labelTiny,
     color: COLORS.mediumGrey,
   },
 });

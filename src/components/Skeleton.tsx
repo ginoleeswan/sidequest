@@ -2,22 +2,29 @@ import { useEffect } from 'react';
 import { Animated, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { HOME_SHELVES } from '@/constants/categories';
+import { DURATION, EASING } from '@/styles/motion';
 import { LAYOUT, RADIUS, SHADOW_ROOM, SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 /*
- * Measured line boxes of the real components, so the bones occupy exactly
- * the space the content will. Changing a font size in GameTile or
- * SectionHeader means changing the matching constant here.
+ * Line boxes of the real components, so the bones occupy exactly the
+ * space the content will.
+ *
+ * Read from the type scale rather than measured by hand: these were
+ * transcribed numbers once, and they silently went stale the moment the
+ * scale changed. Taken from the same token the component uses, a bone
+ * cannot drift from the text it stands in for.
  */
-/** GameTile title: Noah-Bold 13 / lineHeight 17. */
-const TILE_TITLE_H = 17;
-/** GameTile meta: Noah-Regular 11, normal line height. */
-const TILE_META_H = 13;
-/** SectionHeader title: Noah-Black 20. */
-const HEADING_H = 25;
-/** SectionHeader eyebrow: Noah-Bold 11, uppercase. */
-const EYEBROW_H = 13;
+/** GameTile title. */
+const TILE_TITLE_H = TYPE.h4.lineHeight;
+/** GameTile meta. */
+const TILE_META_H = TYPE.fine.lineHeight;
+/** SectionHeader title. */
+const HEADING_H = TYPE.h2.lineHeight;
+/** SectionHeader eyebrow. */
+const EYEBROW_H = TYPE.micro.lineHeight;
 /**
  * A Rail reserves shadow room below its items and pulls most of it back
  * with a negative margin; what's left is real space the bones must leave
@@ -30,25 +37,30 @@ const RANKED_OFFSET = 22;
 /** Pulsing placeholder block — the atom every skeleton is built from. */
 export function Skeleton({ style }: { style?: ViewStyle | ViewStyle[] }) {
   const opacity = useAnimatedValue(0.45);
+  const reduced = useReducedMotion();
 
   useEffect(() => {
+    // A pulse is decorative: without it the bones still say "loading".
+    if (reduced) return;
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(opacity, {
           toValue: 1,
-          duration: 700,
+          duration: DURATION.pulse,
+          easing: EASING.standard,
           useNativeDriver: true,
         }),
         Animated.timing(opacity, {
           toValue: 0.45,
-          duration: 700,
+          duration: DURATION.pulse,
+          easing: EASING.standard,
           useNativeDriver: true,
         }),
       ])
     );
     loop.start();
     return () => loop.stop();
-  }, [opacity]);
+  }, [opacity, reduced]);
 
   return <Animated.View style={[styles.block, style, { opacity }]} />;
 }

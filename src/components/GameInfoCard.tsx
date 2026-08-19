@@ -9,6 +9,7 @@ import { ScorePill } from './ScorePill';
 import type { Game } from '@/api/types';
 import { COLORS } from '@/styles/colors';
 import { RADIUS, SHADOW, SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 /** Row-style result card: thumbnail, identity, facts. */
 export function GameInfoCard({ game }: { game: Game }) {
@@ -78,15 +79,12 @@ const styles = StyleSheet.create({
   },
   info: { flex: 1, paddingRight: SPACING.sm, gap: SPACING.xs + 1 },
   title: {
-    fontFamily: 'Noah-Black',
-    fontSize: 15,
-    lineHeight: 19,
+    ...TYPE.h3,
     color: COLORS.lightGrey,
   },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
   meta: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 12,
+    ...TYPE.caption,
     color: COLORS.mediumGrey,
   },
   score: { paddingRight: SPACING.md },

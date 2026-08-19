@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { mediaUri } from '@/api/rawg';
 import { COLORS } from '@/styles/colors';
 import type { Movie } from '@/api/types';
+import { TYPE } from '@/styles/typography';
 
 export function TrailerCard({ trailer }: { trailer: Movie }) {
   const player = useVideoPlayer(mediaUri(trailer.data.max) ?? '');
@@ -20,8 +21,7 @@ export function TrailerCard({ trailer }: { trailer: Movie }) {
 const styles = StyleSheet.create({
   container: { width: 320, gap: 8 },
   name: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 12,
+    ...TYPE.labelTiny,
     color: COLORS.lightGrey,
   },
   video: {

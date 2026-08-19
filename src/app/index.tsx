@@ -76,6 +76,7 @@ import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useDebounced } from '@/hooks/useDebounced';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 const FEATURED_COUNT = 5;
 
@@ -672,17 +673,14 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm + 4,
   },
   wordmark: {
-    fontFamily: 'Noah-Black',
-    fontSize: 22,
+    ...TYPE.h1,
     color: COLORS.lightGrey,
-    letterSpacing: 0.5,
     flexShrink: 0,
   },
   searchFull: { flex: 1, width: 'auto', maxWidth: undefined },
   headerIcons: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   cancel: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 13,
+    ...TYPE.labelSmall,
     color: COLORS.lightGrey,
     paddingHorizontal: SPACING.xs,
   },

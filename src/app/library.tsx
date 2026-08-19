@@ -36,6 +36,7 @@ import {
 } from '@/lib/libraryStats';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 const TABS: LibraryStatus[] = ['wishlist', 'playing', 'finished'];
 
@@ -352,16 +353,12 @@ const styles = StyleSheet.create({
   },
   stat: { gap: 1 },
   statValue: {
-    fontFamily: 'Noah-Black',
-    fontSize: 19,
+    ...TYPE.h2,
     color: COLORS.white,
   },
   statValueAccent: { color: COLORS.accent },
   statLabel: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 9.5,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
+    ...TYPE.micro,
     color: COLORS.mediumGrey,
   },
   sortRow: {
@@ -371,15 +368,11 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
   },
   sortLabel: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 9.5,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
+    ...TYPE.micro,
     color: COLORS.mediumGrey,
   },
   sortOption: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 12.5,
+    ...TYPE.labelSmall,
     color: COLORS.mediumGrey,
   },
   sortOptionOn: { color: COLORS.white },
@@ -390,8 +383,7 @@ const styles = StyleSheet.create({
   transferRow: { flexDirection: 'row', gap: SPACING.lg },
   transferLink: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   transferText: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 12,
+    ...TYPE.labelTiny,
     color: COLORS.mediumGrey,
   },
   modalOverlay: {
@@ -412,25 +404,21 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
   },
   modalTitle: {
-    fontFamily: 'Noah-Black',
-    fontSize: 18,
+    ...TYPE.h2,
     color: COLORS.lightGrey,
   },
   modalHint: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 12.5,
-    lineHeight: 18,
+    ...TYPE.p,
     color: COLORS.mediumGrey,
   },
   modalInput: {
+    ...TYPE.body,
     minHeight: 96,
     borderWidth: 1,
     borderColor: COLORS.strokeStrong,
     borderRadius: SPACING.sm,
     padding: SPACING.sm + 2,
-    fontFamily: 'Noah-Regular',
     // See SearchInput: under 16px iOS zooms on focus.
-    fontSize: 16,
     color: COLORS.lightGrey,
     textAlignVertical: 'top',
   },
@@ -442,8 +430,7 @@ const styles = StyleSheet.create({
   },
   modalButtonDisabled: { opacity: 0.45 },
   modalButtonText: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 13.5,
+    ...TYPE.label,
     color: COLORS.white,
   },
 });

@@ -2,6 +2,8 @@ import { useEffect } from 'react';
 import { Animated, type StyleProp, type ViewStyle } from 'react-native';
 
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { DURATION, EASING } from '@/styles/motion';
 
 interface Props {
   children: React.ReactNode;
@@ -16,16 +18,24 @@ interface Props {
  * exact final position.
  */
 export function FadeInView({ children, style, delay = 0 }: Props) {
+  const reduced = useReducedMotion();
   const progress = useAnimatedValue(0);
 
   useEffect(() => {
-    Animated.timing(progress, {
+    if (reduced) {
+      progress.setValue(1);
+      return;
+    }
+    const animation = Animated.timing(progress, {
       toValue: 1,
-      duration: 170,
+      duration: DURATION.fast,
       delay,
+      easing: EASING.standard,
       useNativeDriver: true,
-    }).start();
-  }, [progress, delay]);
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [progress, delay, reduced]);
 
   return (
     <Animated.View style={[style, { opacity: progress }]}>
