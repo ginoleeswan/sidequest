@@ -15,8 +15,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { gameDetailQuery } from '@/api/gameDetail';
-import { mediaUri } from '@/api/rawg';
+import { friendlyError, mediaUri } from '@/api/rawg';
 import type { Game, GameDetail, Movie, Named, Screenshot } from '@/api/types';
+import { RouteError } from '@/components/RouteError';
 import { AppHeader } from '@/components/AppHeader';
 import { BackButton } from '@/components/BackButton';
 import { Chip } from '@/components/Chip';
@@ -30,10 +31,7 @@ import { RatingsBreakdown } from '@/components/RatingsBreakdown';
 import { ReadMoreText } from '@/components/ReadMoreText';
 import { ScorePill } from '@/components/ScorePill';
 import { SectionHeader } from '@/components/SectionHeader';
-import {
-  SkeletonDetail,
-  SkeletonDetailExpanded,
-} from '@/components/Skeleton';
+import { SkeletonDetail, SkeletonDetailExpanded } from '@/components/Skeleton';
 import { StatusActions } from '@/components/StatusActions';
 import { LinkPill, StoreLinks } from '@/components/StoreLinks';
 import { SiteFooter } from '@/components/SiteFooter';
@@ -200,7 +198,7 @@ export default function GameInfoScreen() {
         <Message
           icon="cloud-offline-outline"
           title="Couldn't load this game"
-          detail={error instanceof Error ? error.message : undefined}
+          detail={friendlyError(error)}
         />
       </View>
     );
@@ -290,7 +288,11 @@ export default function GameInfoScreen() {
           />
         ) : null}
         <LinearGradient
-          colors={['rgba(51,61,81,0.55)', 'rgba(51,61,81,0.82)', COLORS.darkGrey]}
+          colors={[
+            'rgba(51,61,81,0.55)',
+            'rgba(51,61,81,0.82)',
+            COLORS.darkGrey,
+          ]}
           locations={[0, 0.62, 1]}
           style={StyleSheet.absoluteFill}
         />
@@ -470,7 +472,6 @@ export default function GameInfoScreen() {
         />
       </View>
     ) : null;
-
 
   /* -------------------------------------------------------------- layout */
 
@@ -750,3 +751,14 @@ const styles = StyleSheet.create({
   },
   lightboxImage: { width: '100%', height: '80%' },
 });
+
+/**
+ * expo-router renders this instead of the route when its render throws,
+ * so one bad screen degrades locally rather than blanking the app.
+ */
+export function ErrorBoundary(props: {
+  error: Error;
+  retry: () => Promise<void>;
+}) {
+  return <RouteError {...props} />;
+}

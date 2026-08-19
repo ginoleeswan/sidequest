@@ -28,7 +28,8 @@ export interface Section {
 export const DISCOVER: Section[] = [
   {
     key: 'trending',
-    description: 'What everyone’s actually playing this week — the games eating the group chat.',
+    description:
+      'What everyone’s actually playing this week — the games eating the group chat.',
     title: 'Trending now',
     fetch: getTrendingGames,
     iconName: 'trending-up',
@@ -37,7 +38,8 @@ export const DISCOVER: Section[] = [
   },
   {
     key: 'new-releases',
-    description: 'Fresh off the press. New this window, sorted by who’s picking them up.',
+    description:
+      'Fresh off the press. New this window, sorted by who’s picking them up.',
     title: 'New releases',
     fetch: getNewReleases,
     iconName: 'sparkles',
@@ -45,7 +47,8 @@ export const DISCOVER: Section[] = [
   },
   {
     key: 'coming-soon',
-    description: 'Wishlist fuel. What’s landing next — bookmark now, thank yourself later.',
+    description:
+      'Wishlist fuel. What’s landing next — bookmark now, thank yourself later.',
     title: 'Coming soon',
     fetch: getComingSoon,
     iconName: 'calendar',
@@ -54,7 +57,8 @@ export const DISCOVER: Section[] = [
   },
   {
     key: 'top-rated',
-    description: 'The canon. Metacritic’s finest from the last few years, no filler.',
+    description:
+      'The canon. Metacritic’s finest from the last few years, no filler.',
     title: 'Critically acclaimed',
     fetch: getTopRated,
     iconName: 'trophy',
@@ -75,7 +79,8 @@ export const DISCOVER: Section[] = [
 export const GENRES: Section[] = [
   {
     key: 'indie',
-    description: 'Small teams, enormous swings. Where the weird, brilliant stuff lives.',
+    description:
+      'Small teams, enormous swings. Where the weird, brilliant stuff lives.',
     title: 'Indie',
     fetch: (p, f) => getGames('indie', p, f),
     iconName: 'heart',
@@ -83,7 +88,8 @@ export const GENRES: Section[] = [
   },
   {
     key: 'role-playing-games-rpg',
-    description: 'Builds, quests, and hundred-hour spreadsheets you’ll call a hobby.',
+    description:
+      'Builds, quests, and hundred-hour spreadsheets you’ll call a hobby.',
     title: 'RPG',
     fetch: (p, f) => getGames('role-playing-games-rpg', p, f),
     iconName: 'shield',
@@ -91,7 +97,8 @@ export const GENRES: Section[] = [
   },
   {
     key: 'adventure',
-    description: 'Stories first. Worlds worth getting lost in, one chapter a night.',
+    description:
+      'Stories first. Worlds worth getting lost in, one chapter a night.',
     title: 'Adventure',
     fetch: (p, f) => getGames('adventure', p, f),
     iconName: 'compass',
@@ -107,7 +114,8 @@ export const GENRES: Section[] = [
   },
   {
     key: 'shooter',
-    description: 'Twitch reflexes and tactical brains, from arena to extraction.',
+    description:
+      'Twitch reflexes and tactical brains, from arena to extraction.',
     title: 'Shooter',
     fetch: (p, f) => getGames('shooter', p, f),
     iconName: 'crosshairs',
@@ -123,7 +131,8 @@ export const GENRES: Section[] = [
   },
   {
     key: 'simulation',
-    description: 'Build, farm, fly, manage. Peaceful obsession, systems all the way down.',
+    description:
+      'Build, farm, fly, manage. Peaceful obsession, systems all the way down.',
     title: 'Simulation',
     fetch: (p, f) => getGames('simulation', p, f),
     iconName: 'person',
@@ -139,7 +148,8 @@ export const GENRES: Section[] = [
   },
   {
     key: 'casual',
-    description: 'Low stakes, high comfort. Games that respect a twenty-minute window.',
+    description:
+      'Low stakes, high comfort. Games that respect a twenty-minute window.',
     title: 'Casual',
     fetch: (p, f) => getGames('casual', p, f),
     iconName: 'checkerboard',

@@ -1,17 +1,27 @@
 import { QueryClient } from '@tanstack/react-query';
 
+import { RawgError } from './rawg';
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       // RAWG data is near-static; avoid refetching on every mount.
       staleTime: 5 * 60 * 1000,
       gcTime: 30 * 60 * 1000,
-      // A 4xx is an answer, not a blip - retrying it just delays the
-      // error state. Network and 5xx failures still get two more tries.
+      // The API layer already decided what is worth retrying - a 404 or a
+      // bad key is an answer, not a blip. Honour that instead of guessing
+      // from the message.
       retry: (failureCount: number, error: unknown) => {
-        const status = Number(/\b(\d{3})$/.exec(String(error))?.[1]);
-        if (status >= 400 && status < 500) return false;
+        if (error instanceof RawgError && !error.retryable) return false;
         return failureCount < 2;
+      },
+      // Back off, and wait at least as long as a rate limiter asked us to.
+      retryDelay: (attempt: number, error: unknown) => {
+        const askedFor =
+          error instanceof RawgError && error.retryAfter
+            ? error.retryAfter * 1000
+            : 0;
+        return Math.max(askedFor, Math.min(1000 * 2 ** attempt, 15_000));
       },
       refetchOnWindowFocus: false,
     },

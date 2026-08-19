@@ -18,10 +18,25 @@ const SORTS: {
 
 const PLATFORMS: { label: string; id: number; icon: string; type: IconType }[] =
   [
-    { label: 'PC', id: 1, icon: 'microsoft-windows', type: 'material-community' },
+    {
+      label: 'PC',
+      id: 1,
+      icon: 'microsoft-windows',
+      type: 'material-community',
+    },
     { label: 'PlayStation', id: 2, icon: 'logo-playstation', type: 'ionicon' },
-    { label: 'Xbox', id: 3, icon: 'microsoft-xbox', type: 'material-community' },
-    { label: 'Switch', id: 7, icon: 'nintendo-switch', type: 'material-community' },
+    {
+      label: 'Xbox',
+      id: 3,
+      icon: 'microsoft-xbox',
+      type: 'material-community',
+    },
+    {
+      label: 'Switch',
+      id: 7,
+      icon: 'nintendo-switch',
+      type: 'material-community',
+    },
   ];
 
 export interface BrowseRefinements {

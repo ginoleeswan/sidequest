@@ -140,7 +140,6 @@ export function Sidebar({ activeKey, onHome, onSelect, search }: Props) {
           onSelect={onSelect}
         />
       </ScrollView>
-
     </View>
   );
 }

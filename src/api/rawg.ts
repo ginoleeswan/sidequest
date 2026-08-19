@@ -44,13 +44,110 @@ function apiKey(): string {
   return key;
 }
 
+/** How long a single RAWG request may take before we give up on it. */
+const TIMEOUT_MS = 12_000;
+
+/**
+ * A failed RAWG call, carrying enough for callers to decide what to do:
+ * the HTTP status (0 for network/timeout), whether retrying could help,
+ * and a sentence safe to show a person.
+ */
+export class RawgError extends Error {
+  readonly status: number;
+  readonly retryable: boolean;
+  readonly userMessage: string;
+  /** Seconds RAWG asked us to wait, when it said so. */
+  readonly retryAfter?: number;
+
+  constructor(init: {
+    status: number;
+    message: string;
+    userMessage: string;
+    retryable: boolean;
+    retryAfter?: number;
+  }) {
+    super(init.message);
+    this.name = 'RawgError';
+    this.status = init.status;
+    this.userMessage = init.userMessage;
+    this.retryable = init.retryable;
+    this.retryAfter = init.retryAfter;
+  }
+}
+
+function describe(status: number): { userMessage: string; retryable: boolean } {
+  if (status === 0)
+    return {
+      userMessage: "Couldn't reach the game database — check your connection.",
+      retryable: true,
+    };
+  if (status === 401 || status === 403)
+    return {
+      userMessage: 'This copy of Sidequest is missing a valid API key.',
+      retryable: false,
+    };
+  if (status === 404)
+    return { userMessage: "That doesn't exist any more.", retryable: false };
+  if (status === 429)
+    return {
+      userMessage: 'The game database is rate-limiting us — one moment.',
+      retryable: true,
+    };
+  if (status >= 500)
+    return {
+      userMessage: 'The game database is having a moment. Try again shortly.',
+      retryable: true,
+    };
+  return {
+    userMessage: 'Something went wrong loading games.',
+    retryable: false,
+  };
+}
+
+/** A sentence safe to show a person, whatever went wrong. */
+export function friendlyError(error: unknown): string {
+  if (error instanceof RawgError) return error.userMessage;
+  return 'Something went wrong. Try again in a moment.';
+}
+
 async function rawg<T>(
   path: string,
   params: Record<string, string> = {}
 ): Promise<T> {
   const search = new URLSearchParams({ key: apiKey(), ...params });
-  const res = await fetch(`${BASE_URL}/${path}?${search}`);
-  if (!res.ok) throw new Error(`RAWG ${path}: ${res.status}`);
+
+  // A request that never settles is worse than one that fails: without a
+  // deadline a stalled connection leaves the UI in a loading state for
+  // ever, and React Query never gets to retry.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}/${path}?${search}`, {
+      signal: controller.signal,
+    });
+  } catch (cause) {
+    const timedOut = controller.signal.aborted;
+    throw new RawgError({
+      status: 0,
+      message: `RAWG ${path}: ${timedOut ? 'timed out' : String(cause)}`,
+      ...describe(0),
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (!res.ok) {
+    const retryAfter = Number(res.headers?.get?.('retry-after')) || undefined;
+    throw new RawgError({
+      status: res.status,
+      message: `RAWG ${path}: ${res.status}`,
+      retryAfter,
+      ...describe(res.status),
+    });
+  }
+
   return res.json() as Promise<T>;
 }
 

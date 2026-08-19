@@ -133,12 +133,10 @@ export function Onboarding() {
     <View key="hook" style={styles.act}>
       <Text style={styles.eyebrow}>WELCOME TO</Text>
       <Text style={styles.wordmark}>SIDEQUEST</Text>
-      <Text style={styles.display}>
-        Your backlog isn’t{'\n'}a to-do list.
-      </Text>
+      <Text style={styles.display}>Your backlog isn’t{'\n'}a to-do list.</Text>
       <Text style={styles.lede}>
-        Sidequest finds your next game, works out what you can actually
-        finish — and gives you permission to skip the rest.
+        Sidequest finds your next game, works out what you can actually finish —
+        and gives you permission to skip the rest.
       </Text>
       <Pressable onPress={() => setStep(1)} style={styles.cta}>
         <Text style={styles.ctaText}>Set me up — 20 seconds</Text>
@@ -184,19 +182,13 @@ export function Onboarding() {
                   {option.title}
                 </Text>
                 <Text
-                  style={[
-                    styles.paceLine,
-                    selected && styles.paceLineSelected,
-                  ]}
+                  style={[styles.paceLine, selected && styles.paceLineSelected]}
                 >
                   {option.line}
                 </Text>
               </View>
               <Text
-                style={[
-                  styles.paceHours,
-                  selected && styles.paceTitleSelected,
-                ]}
+                style={[styles.paceHours, selected && styles.paceTitleSelected]}
               >
                 ~{option.hours}h
               </Text>
@@ -248,18 +240,17 @@ export function Onboarding() {
   ];
 
   return (
-    <Modal transparent animationType="fade" onRequestClose={() => finish(false)}>
+    <Modal
+      transparent
+      animationType="fade"
+      onRequestClose={() => finish(false)}
+    >
       <Textured style={styles.screen}>
         <Text style={styles.watermark} numberOfLines={1}>
           SIDEQUEST
         </Text>
 
-        <View
-          style={[
-            styles.chrome,
-            { top: insets.top + SPACING.md },
-          ]}
-        >
+        <View style={[styles.chrome, { top: insets.top + SPACING.md }]}>
           {step > 0 ? (
             <Pressable
               onPress={() => setStep(step - 1)}

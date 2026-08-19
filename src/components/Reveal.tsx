@@ -60,10 +60,12 @@ export function Reveal({ pending, skeleton, children }: Props) {
         <Animated.View
           style={[
             StyleSheet.absoluteFill,
-            { opacity: progress.interpolate({
+            {
+              opacity: progress.interpolate({
                 inputRange: [0, 1],
                 outputRange: [1, 0],
-              }) },
+              }),
+            },
           ]}
           pointerEvents="none"
         >

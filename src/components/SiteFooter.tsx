@@ -84,8 +84,8 @@ export function SiteFooter({ inset = 0 }: Props) {
               Know what you can actually finish.
             </Text>
             <Text style={styles.pitch}>
-              Backlog triage for people with more games than time. No
-              account, no tracking — your library lives on this device.
+              Backlog triage for people with more games than time. No account,
+              no tracking — your library lives on this device.
             </Text>
           </View>
           <View style={styles.cols}>

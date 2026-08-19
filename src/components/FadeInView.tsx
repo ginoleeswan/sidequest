@@ -28,9 +28,7 @@ export function FadeInView({ children, style, delay = 0 }: Props) {
   }, [progress, delay]);
 
   return (
-    <Animated.View
-      style={[style, { opacity: progress }]}
-    >
+    <Animated.View style={[style, { opacity: progress }]}>
       {children}
     </Animated.View>
   );

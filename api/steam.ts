@@ -7,9 +7,48 @@
  *
  *   /api/steam?op=resolve&vanity=<name>   -> { steamid }
  *   /api/steam?op=owned&steamid=<id64>    -> { player, games[] }
+ *
+ * The function is a proxy to a keyed upstream, so it is also a way to
+ * spend our Steam quota: every call is rate limited per IP and every
+ * upstream request has a deadline.
  */
+
+/** Upstream calls that never settle would hold a function open. */
+const TIMEOUT_MS = 8_000;
+
+/** Requests accepted per IP per window. */
+const LIMIT = 30;
+const WINDOW_MS = 60_000;
+
+const hits = new Map<string, { count: number; resetAt: number }>();
+
+function overLimit(ip: string, now: number): boolean {
+  const entry = hits.get(ip);
+  if (!entry || now > entry.resetAt) {
+    hits.set(ip, { count: 1, resetAt: now + WINDOW_MS });
+    if (hits.size > 5_000) hits.clear();
+    return false;
+  }
+  entry.count += 1;
+  return entry.count > LIMIT;
+}
+
+/** fetch with a deadline — an unbounded upstream call is a stuck user. */
+async function fetchWithTimeout(url: string): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  try {
+    return await fetch(url, { signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 export default async function handler(
-  req: { query: Record<string, string | string[] | undefined> },
+  req: {
+    method?: string;
+    query: Record<string, string | string[] | undefined>;
+    headers?: Record<string, string | string[] | undefined>;
+  },
   res: {
     status: (code: number) => {
       json: (body: unknown) => void;
@@ -17,6 +56,24 @@ export default async function handler(
     setHeader: (name: string, value: string) => void;
   }
 ) {
+  if (req.method && req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+
+  const forwarded = req.headers?.['x-forwarded-for'];
+  const ip = (
+    Array.isArray(forwarded) ? forwarded[0] : (forwarded ?? 'unknown')
+  )
+    .split(',')[0]
+    .trim();
+  if (overLimit(ip, Date.now())) {
+    res.setHeader('Retry-After', '60');
+    res.status(429).json({ error: 'Too many requests — give it a minute.' });
+    return;
+  }
+
   const key = process.env.STEAM_API_KEY;
   if (!key) {
     res.status(503).json({
@@ -37,7 +94,7 @@ export default async function handler(
         res.status(400).json({ error: 'Invalid vanity name' });
         return;
       }
-      const r = await fetch(
+      const r = await fetchWithTimeout(
         `https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/?key=${key}&vanityurl=${encodeURIComponent(vanity)}`
       );
       const data = (await r.json()) as {
@@ -59,10 +116,10 @@ export default async function handler(
         return;
       }
       const [ownedRes, summaryRes] = await Promise.all([
-        fetch(
+        fetchWithTimeout(
           `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${key}&steamid=${steamid}&include_appinfo=1&include_played_free_games=1&format=json`
         ),
-        fetch(
+        fetchWithTimeout(
           `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${key}&steamids=${steamid}`
         ),
       ]);
@@ -109,6 +166,8 @@ export default async function handler(
 
     res.status(400).json({ error: 'Unknown op' });
   } catch {
-    res.status(502).json({ error: 'Steam did not answer — try again shortly.' });
+    res
+      .status(502)
+      .json({ error: 'Steam did not answer — try again shortly.' });
   }
 }

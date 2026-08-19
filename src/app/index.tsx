@@ -25,8 +25,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 import { queryKeys } from '@/api/queryClient';
-import { searchGames } from '@/api/rawg';
+import { friendlyError, searchGames } from '@/api/rawg';
 import type { Game, Paged } from '@/api/types';
+import { RouteError } from '@/components/RouteError';
 import { Chip } from '@/components/Chip';
 import { FadeInView } from '@/components/FadeInView';
 import { FeaturedHero } from '@/components/FeaturedHero';
@@ -145,9 +146,7 @@ export default function HomeScreen() {
     setSearchOpen(false);
   };
 
-  const [refine, setRefine] = useState<BrowseRefinements>(
-    DEFAULT_REFINEMENTS
-  );
+  const [refine, setRefine] = useState<BrowseRefinements>(DEFAULT_REFINEMENTS);
   const refineKey = [
     refine.ordering ?? 'default',
     refine.platformIds.join(','),
@@ -239,7 +238,7 @@ export default function HomeScreen() {
     <Message
       icon="cloud-offline-outline"
       title="Couldn't reach RAWG"
-      detail={list.error instanceof Error ? list.error.message : undefined}
+      detail={friendlyError(list.error)}
     />
   ) : !list.isPending && !list.isPlaceholderData && games.length === 0 ? (
     searching ? (
@@ -346,7 +345,6 @@ export default function HomeScreen() {
             />
 
             <View style={styles.main}>
-
               {status ??
                 (list.isPending ? (
                   isHome ? (
@@ -417,69 +415,64 @@ export default function HomeScreen() {
             </View>
           }
         >
-        {status ??
-          (isHome ? (
-            <View
-              style={[
-                styles.compactHome,
-                { paddingTop: headerHeight },
-              ]}
-            >
-              {featured.length > 0 && (
-                <View style={styles.carouselFrame}>
-                  <Rail
-                    data={featured}
-                    keyExtractor={(item) => String(item.id)}
-                    renderItem={(item) => <GameCard game={item} wide />}
-                    inset={SPACING.md}
-                    gap={SPACING.md}
-                    snapInterval={LAYOUT.cardWideWidth + SPACING.md}
-                  />
-                </View>
-              )}
-              <View style={styles.compactShelves}>
-                <Shelf
-                  section={DISCOVER[0]}
-                  games={trendingShelf.slice(0, 12)}
-                  onViewAll={selectSection}
-                  inset={SPACING.md}
-                />
-                {HOME_SHELVES.map((shelf, index) => (
+          {status ??
+            (isHome ? (
+              <View style={[styles.compactHome, { paddingTop: headerHeight }]}>
+                {featured.length > 0 && (
+                  <View style={styles.carouselFrame}>
+                    <Rail
+                      data={featured}
+                      keyExtractor={(item) => String(item.id)}
+                      renderItem={(item) => <GameCard game={item} wide />}
+                      inset={SPACING.md}
+                      gap={SPACING.md}
+                      snapInterval={LAYOUT.cardWideWidth + SPACING.md}
+                    />
+                  </View>
+                )}
+                <View style={styles.compactShelves}>
                   <Shelf
-                    key={shelf.key}
-                    section={shelf}
-                    games={(shelves[index].data ?? []).slice(0, 12)}
+                    section={DISCOVER[0]}
+                    games={trendingShelf.slice(0, 12)}
                     onViewAll={selectSection}
                     inset={SPACING.md}
                   />
-                ))}
+                  {HOME_SHELVES.map((shelf, index) => (
+                    <Shelf
+                      key={shelf.key}
+                      section={shelf}
+                      games={(shelves[index].data ?? []).slice(0, 12)}
+                      onViewAll={selectSection}
+                      inset={SPACING.md}
+                    />
+                  ))}
+                </View>
+                <SiteFooter />
               </View>
-              <SiteFooter />
-            </View>
-          ) : searching ? (
-            <FlatList
-              data={games}
-              keyExtractor={(item) => String(item.id)}
-              renderItem={({ item }) => <GameInfoCard game={item} />}
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode="on-drag"
-              showsVerticalScrollIndicator={false}
-              onEndReached={loadMore}
-              onEndReachedThreshold={1.2}
-              ListHeaderComponent={gridHeader}
-              ListFooterComponent={footerSpinner}
-              style={{ height: windowHeight }}
-              contentContainerStyle={[
-                styles.list,
-                {
-                  paddingTop: headerHeight,
-                  paddingBottom: insets.bottom + SPACING.xl * 3,
-                },
-              ]}
-            />
-          ) : (
-            grid
-          ))}
+            ) : searching ? (
+              <FlatList
+                data={games}
+                keyExtractor={(item) => String(item.id)}
+                renderItem={({ item }) => <GameInfoCard game={item} />}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
+                showsVerticalScrollIndicator={false}
+                onEndReached={loadMore}
+                onEndReachedThreshold={1.2}
+                ListHeaderComponent={gridHeader}
+                ListFooterComponent={footerSpinner}
+                style={{ height: windowHeight }}
+                contentContainerStyle={[
+                  styles.list,
+                  {
+                    paddingTop: headerHeight,
+                    paddingBottom: insets.bottom + SPACING.xl * 3,
+                  },
+                ]}
+              />
+            ) : (
+              grid
+            ))}
         </Reveal>
 
         <View
@@ -552,22 +545,22 @@ export default function HomeScreen() {
             </View>
           )}
           {!searchOpen && (
-          <FlatList
-            data={CHIP_SECTIONS}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item) => item.key}
-            renderItem={({ item }) => (
-              <Chip
-                title={item.title}
-                selected={!searching && !isHome && section.key === item.key}
-                iconName={item.iconName}
-                iconType={item.iconType}
-                onPress={() => selectSection(item)}
-              />
-            )}
-            contentContainerStyle={styles.chips}
-          />
+            <FlatList
+              data={CHIP_SECTIONS}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => item.key}
+              renderItem={({ item }) => (
+                <Chip
+                  title={item.title}
+                  selected={!searching && !isHome && section.key === item.key}
+                  iconName={item.iconName}
+                  iconType={item.iconType}
+                  onPress={() => selectSection(item)}
+                />
+              )}
+              contentContainerStyle={styles.chips}
+            />
           )}
         </View>
       </View>
@@ -659,3 +652,14 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.lg,
   },
 });
+
+/**
+ * expo-router renders this instead of the route when its render throws,
+ * so one bad screen degrades locally rather than blanking the app.
+ */
+export function ErrorBoundary(props: {
+  error: Error;
+  retry: () => Promise<void>;
+}) {
+  return <RouteError {...props} />;
+}

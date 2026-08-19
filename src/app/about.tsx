@@ -1,4 +1,5 @@
 import { ContentPage, H, P } from '@/components/ContentPage';
+import { RouteError } from '@/components/RouteError';
 
 export default function AboutScreen() {
   return (
@@ -28,4 +29,15 @@ export default function AboutScreen() {
       </P>
     </ContentPage>
   );
+}
+
+/**
+ * expo-router renders this instead of the route when its render throws,
+ * so one bad screen degrades locally rather than blanking the app.
+ */
+export function ErrorBoundary(props: {
+  error: Error;
+  retry: () => Promise<void>;
+}) {
+  return <RouteError {...props} />;
 }

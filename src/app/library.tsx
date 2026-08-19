@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { Game } from '@/api/types';
+import { RouteError } from '@/components/RouteError';
 import { BackButton } from '@/components/BackButton';
 import { Chip } from '@/components/Chip';
 import { FadeInView } from '@/components/FadeInView';
@@ -317,3 +318,14 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
 });
+
+/**
+ * expo-router renders this instead of the route when its render throws,
+ * so one bad screen degrades locally rather than blanking the app.
+ */
+export function ErrorBoundary(props: {
+  error: Error;
+  retry: () => Promise<void>;
+}) {
+  return <RouteError {...props} />;
+}
