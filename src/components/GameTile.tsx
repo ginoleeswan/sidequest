@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -9,6 +10,7 @@ import { PlatformIcons } from './PlatformIcons';
 import { ScaleButton } from './ScaleButton';
 import { ScorePill } from './ScorePill';
 import { Textured } from './Textured';
+import { gameDetailQuery } from '@/api/gameDetail';
 import { useToast } from './Toast';
 import type { Game } from '@/api/types';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
@@ -36,6 +38,15 @@ export function GameTile({ game, width, badge }: Props) {
   const { isCompact } = useBreakpoint();
   const toast = useToast();
   const [hovered, setHovered] = useState(false);
+  const queryClient = useQueryClient();
+  // Warm the page you are about to open. By the time the tap lands the
+  // detail query is usually already resolved, so the screen arrives with
+  // content instead of bones.
+  const prefetch = () =>
+    queryClient.prefetchQuery({
+      ...gameDetailQuery(game.id),
+      staleTime: 5 * 60 * 1000,
+    });
   const [shot, setShot] = useState(0);
 
   const saved = statusOf(game.id) != null;
@@ -70,7 +81,10 @@ export function GameTile({ game, width, badge }: Props) {
   return (
     <View
       style={width != null ? { width } : styles.flexCell}
-      onPointerEnter={() => setHovered(true)}
+      onPointerEnter={() => {
+        setHovered(true);
+        prefetch();
+      }}
       onPointerLeave={() => {
         setHovered(false);
         setShot(0);

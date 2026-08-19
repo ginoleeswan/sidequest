@@ -1,4 +1,8 @@
-import { useInfiniteQuery, useQueries } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useQueries,
+} from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -45,6 +49,8 @@ import {
   SkeletonShelf,
 } from '@/components/Skeleton';
 import { CategoryHero } from '@/components/CategoryHero';
+import { ProgressLine } from '@/components/ProgressLine';
+import { Reveal } from '@/components/Reveal';
 import {
   DEFAULT_REFINEMENTS,
   FilterBar,
@@ -133,6 +139,12 @@ export default function HomeScreen() {
   }, []);
 
   // ------------------------------------------------------------------ data
+  const [searchOpen, setSearchOpen] = useState(false);
+  const closeSearch = () => {
+    setQuery('');
+    setSearchOpen(false);
+  };
+
   const [refine, setRefine] = useState<BrowseRefinements>(
     DEFAULT_REFINEMENTS
   );
@@ -143,6 +155,9 @@ export default function HomeScreen() {
   ] as const;
 
   const list = useInfiniteQuery({
+    // Refining is a change of answer, not a fresh page: hold the results
+    // already on screen while the new ones arrive.
+    placeholderData: keepPreviousData,
     queryKey: searching
       ? [...queryKeys.search(debouncedQuery), ...refineKey]
       : [...queryKeys.browse(section.key), ...refineKey],
@@ -226,7 +241,7 @@ export default function HomeScreen() {
       title="Couldn't reach RAWG"
       detail={list.error instanceof Error ? list.error.message : undefined}
     />
-  ) : !list.isPending && games.length === 0 ? (
+  ) : !list.isPending && !list.isPlaceholderData && games.length === 0 ? (
     searching ? (
       <Message
         icon="search-outline"
@@ -240,6 +255,9 @@ export default function HomeScreen() {
     )
   ) : null;
 
+  // Previous results are on screen while the new key resolves.
+  const refining = list.isPlaceholderData;
+
   const gridHeader = searching ? (
     <View style={styles.gridHeader}>
       <SectionHeader
@@ -249,6 +267,7 @@ export default function HomeScreen() {
         }
       />
       <FilterBar value={refine} onChange={setRefine} />
+      {refining && <ProgressLine />}
     </View>
   ) : !isHome ? (
     <View style={styles.gridHeader}>
@@ -263,6 +282,7 @@ export default function HomeScreen() {
         onChange={setRefine}
         disabled={section.key === 'must-play'}
       />
+      {refining && <ProgressLine />}
     </View>
   ) : null;
 
@@ -284,7 +304,9 @@ export default function HomeScreen() {
           isSpacer(item) ? (
             <View style={styles.gridSpacer} />
           ) : (
-            <GameTile game={item} />
+            <View style={[styles.gridCell, refining && styles.refining]}>
+              <GameTile game={item} />
+            </View>
           )
         }
         showsVerticalScrollIndicator={false}
@@ -313,21 +335,17 @@ export default function HomeScreen() {
               activeKey={searching ? null : isHome ? 'home' : selection}
               onHome={goHome}
               onSelect={selectSection}
-            />
-
-            <View style={styles.main}>
-              <View style={styles.mainHeader}>
-                <Text style={styles.mainTitle}>
-                  {searching ? 'Search' : isHome ? 'Home' : section.title}
-                </Text>
+              search={
                 <SearchInput
                   value={query}
                   onChangeText={setQuery}
-                  style={styles.searchExpanded}
                   inputRef={searchRef}
-                  showShortcutHint
+                  style={styles.searchSidebar}
                 />
-              </View>
+              }
+            />
+
+            <View style={styles.main}>
 
               {status ??
                 (list.isPending ? (
@@ -376,8 +394,9 @@ export default function HomeScreen() {
   return (
     <Textured style={styles.background}>
       <View style={styles.compactShell}>
-        {status ??
-          (list.isPending ? (
+        <Reveal
+          pending={list.isPending}
+          skeleton={
             <View style={{ paddingTop: headerHeight }}>
               {isHome ? (
                 <SkeletonCompactHome />
@@ -396,7 +415,10 @@ export default function HomeScreen() {
                 </View>
               )}
             </View>
-          ) : isHome ? (
+          }
+        >
+        {status ??
+          (isHome ? (
             <View
               style={[
                 styles.compactHome,
@@ -458,6 +480,7 @@ export default function HomeScreen() {
           ) : (
             grid
           ))}
+        </Reveal>
 
         <View
           style={[styles.headerFloat, { paddingTop: insets.top + SPACING.sm }]}
@@ -479,32 +502,56 @@ export default function HomeScreen() {
             pointerEvents="none"
           />
           <GrainScrim style={StyleSheet.absoluteFill} solidAt="top" />
-          <View style={styles.titleRow}>
-            <Text style={styles.wordmark} onPress={goHome}>
-              SIDEQUEST
-            </Text>
-            <SearchInput
-              value={query}
-              onChangeText={setQuery}
-              style={styles.searchCompact}
-            />
-            <Ionicons
-              name="map-outline"
-              size={21}
-              color={COLORS.lightGrey}
-              onPress={() => router.push('/plan')}
-              accessibilityLabel="The Plan"
-              style={styles.libraryButton}
-            />
-            <Ionicons
-              name="library-outline"
-              size={22}
-              color={COLORS.lightGrey}
-              onPress={() => router.push('/library')}
-              accessibilityLabel="My Library"
-              style={styles.libraryButton}
-            />
-          </View>
+          {/* Search is a mode, not a field wedged between the wordmark
+              and the icons: tapping the glass hands the whole row over to
+              the query, and dismissing gives the row back. */}
+          {searchOpen ? (
+            <View style={styles.titleRow}>
+              <SearchInput
+                value={query}
+                onChangeText={setQuery}
+                style={styles.searchFull}
+                inputRef={searchRef}
+                autoFocus
+              />
+              <Text style={styles.cancel} onPress={closeSearch}>
+                Cancel
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.titleRow}>
+              <Text style={styles.wordmark} onPress={goHome}>
+                SIDEQUEST
+              </Text>
+              <View style={styles.headerIcons}>
+                <Ionicons
+                  name="search"
+                  size={21}
+                  color={COLORS.lightGrey}
+                  onPress={() => setSearchOpen(true)}
+                  accessibilityLabel="Search games"
+                  style={styles.libraryButton}
+                />
+                <Ionicons
+                  name="map-outline"
+                  size={21}
+                  color={COLORS.lightGrey}
+                  onPress={() => router.push('/plan')}
+                  accessibilityLabel="The Plan"
+                  style={styles.libraryButton}
+                />
+                <Ionicons
+                  name="library-outline"
+                  size={22}
+                  color={COLORS.lightGrey}
+                  onPress={() => router.push('/library')}
+                  accessibilityLabel="My Library"
+                  style={styles.libraryButton}
+                />
+              </View>
+            </View>
+          )}
+          {!searchOpen && (
           <FlatList
             data={CHIP_SECTIONS}
             horizontal
@@ -521,6 +568,7 @@ export default function HomeScreen() {
             )}
             contentContainerStyle={styles.chips}
           />
+          )}
         </View>
       </View>
     </Textured>
@@ -537,20 +585,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     width: '100%',
   },
-  main: { flex: 1, paddingHorizontal: SPACING.xl },
-  mainHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: SPACING.lg,
-    paddingVertical: SPACING.lg,
-  },
-  mainTitle: {
-    fontFamily: 'Noah-Black',
-    fontSize: 22,
-    color: COLORS.lightGrey,
-  },
-  searchExpanded: { width: 280 },
+  main: { flex: 1, paddingHorizontal: SPACING.xl, paddingTop: SPACING.lg },
+  searchSidebar: { width: '100%' },
   homeScroll: { flexGrow: 1 },
 
   // grid
@@ -561,6 +597,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
   },
   gridSpacer: { flex: 1 },
+  gridCell: { flex: 1 },
+  refining: { opacity: 0.45 },
   gridFade: { flex: 1 },
   moreSpinner: { paddingVertical: SPACING.lg },
 
@@ -596,7 +634,14 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     flexShrink: 0,
   },
-  searchCompact: { flex: 1, width: 'auto', maxWidth: 230 },
+  searchFull: { flex: 1, width: 'auto', maxWidth: undefined },
+  headerIcons: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  cancel: {
+    fontFamily: 'Noah-Bold',
+    fontSize: 13,
+    color: COLORS.lightGrey,
+    paddingHorizontal: SPACING.xs,
+  },
   libraryButton: { padding: 4 },
   chips: {
     alignItems: 'center',

@@ -9,14 +9,19 @@ interface Props {
   delay?: number;
 }
 
-/** Content rises and fades in on mount — the app feels placed, not popped. */
+/**
+ * A short cross-fade on mount. Deliberately opacity only: content sliding
+ * into place on every load reads as busy once you use the app for more
+ * than a minute, and it fights the skeletons, which already hold the
+ * exact final position.
+ */
 export function FadeInView({ children, style, delay = 0 }: Props) {
   const progress = useAnimatedValue(0);
 
   useEffect(() => {
     Animated.timing(progress, {
       toValue: 1,
-      duration: 340,
+      duration: 170,
       delay,
       useNativeDriver: true,
     }).start();
@@ -24,20 +29,7 @@ export function FadeInView({ children, style, delay = 0 }: Props) {
 
   return (
     <Animated.View
-      style={[
-        style,
-        {
-          opacity: progress,
-          transform: [
-            {
-              translateY: progress.interpolate({
-                inputRange: [0, 1],
-                outputRange: [10, 0],
-              }),
-            },
-          ],
-        },
-      ]}
+      style={[style, { opacity: progress }]}
     >
       {children}
     </Animated.View>

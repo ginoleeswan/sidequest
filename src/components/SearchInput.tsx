@@ -20,6 +20,8 @@ interface Props {
   inputRef?: React.RefObject<TextInput | null>;
   /** Show the "/" keyboard-shortcut hint (expanded/desktop layouts). */
   showShortcutHint?: boolean;
+  /** Focus on mount — the compact header's search mode opens ready to type. */
+  autoFocus?: boolean;
 }
 
 export function SearchInput({
@@ -28,6 +30,7 @@ export function SearchInput({
   style,
   inputRef,
   showShortcutHint = false,
+  autoFocus = false,
 }: Props) {
   return (
     <View style={[styles.container, style]}>
@@ -42,6 +45,7 @@ export function SearchInput({
         returnKeyType="search"
         autoCorrect={false}
         autoCapitalize="none"
+        autoFocus={autoFocus}
       />
       {value.length > 0 ? (
         <Pressable onPress={() => onChangeText('')} hitSlop={8}>

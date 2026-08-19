@@ -14,15 +14,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { queryKeys } from '@/api/queryClient';
-import {
-  getGame,
-  getGameSeries,
-  getMovies,
-  getScreenshots,
-  getStoreLinks,
-  mediaUri,
-} from '@/api/rawg';
+import { gameDetailQuery } from '@/api/gameDetail';
+import { mediaUri } from '@/api/rawg';
 import type { Game, GameDetail, Movie, Named, Screenshot } from '@/api/types';
 import { AppHeader } from '@/components/AppHeader';
 import { BackButton } from '@/components/BackButton';
@@ -162,27 +155,9 @@ export default function GameInfoScreen() {
   const insets = useSafeAreaInsets();
   const opacity = useAnimatedValue(0);
 
-  const { data, isPending, error } = useQuery({
-    queryKey: queryKeys.game(id),
-    // Four endpoints, one unit: the screen gets a single loading/error state.
-    queryFn: async () => {
-      const [game, screenshots, trailers, series, storeLinks] =
-        await Promise.all([
-          getGame(id),
-          getScreenshots(id),
-          getMovies(id),
-          getGameSeries(id),
-          getStoreLinks(id).catch(() => ({ results: [] })),
-        ]);
-      return {
-        game,
-        screenshots: screenshots.results,
-        trailers: trailers.results,
-        series: series.results,
-        storeLinks: storeLinks.results,
-      };
-    },
-  });
+  // Four endpoints, one unit: the screen gets a single loading/error
+  // state, and a hovered tile can prefetch exactly this.
+  const { data, isPending, error } = useQuery(gameDetailQuery(id));
 
   useEffect(() => {
     if (data) {

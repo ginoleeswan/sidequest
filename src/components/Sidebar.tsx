@@ -82,10 +82,16 @@ interface Props {
   activeKey: string | null;
   onHome: () => void;
   onSelect: (section: Section) => void;
+  /**
+   * Search lives here rather than in a bar above the content: desktop
+   * users look top-left for it, and the content column gets its full
+   * height back for the thing they came to see.
+   */
+  search?: React.ReactNode;
 }
 
 /** Persistent left navigation for expanded (desktop) layouts. */
-export function Sidebar({ activeKey, onHome, onSelect }: Props) {
+export function Sidebar({ activeKey, onHome, onSelect, search }: Props) {
   const router = useRouter();
   return (
     <View style={[styles.sidebar, STICKY]}>
@@ -93,6 +99,7 @@ export function Sidebar({ activeKey, onHome, onSelect }: Props) {
         <Text style={styles.wordmark}>SIDEQUEST</Text>
       </Pressable>
       <Text style={styles.tagline}>Discover your next game</Text>
+      {search ? <View style={styles.search}>{search}</View> : null}
 
       <ScrollView
         style={styles.nav}
@@ -168,8 +175,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: COLORS.mediumGrey,
     marginTop: SPACING.xs,
-    marginBottom: SPACING.lg,
   },
+  search: { marginTop: SPACING.md, marginBottom: SPACING.md },
   nav: { flex: 1 },
   navContent: { gap: 2, paddingBottom: SPACING.sm },
   navHeading: {
