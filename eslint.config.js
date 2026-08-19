@@ -28,6 +28,12 @@ module.exports = defineConfig([
     languageOptions: { globals: JEST_GLOBALS },
   },
   {
+    // Playwright is a tool the brand-asset script borrows when it is run by
+    // hand; it is deliberately not a dependency of the app.
+    files: ['scripts/**/*.mjs'],
+    rules: { 'import/no-unresolved': ['error', { ignore: ['^playwright$'] }] },
+  },
+  {
     ignores: ['dist/*', '.expo/*', 'node_modules/*', 'coverage/*'],
   },
 ]);
