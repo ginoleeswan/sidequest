@@ -89,6 +89,116 @@ for (const viewport of VIEWPORTS) {
   await context.close();
 }
 
+/**
+ * The offline pass.
+ *
+ * The service worker answers navigations from cache, and serving the
+ * wrong route's document is invisible — the page renders correctly and
+ * only the console shows the mismatch. That is exactly how the first bug
+ * hid, so the guard has to cover the cached path too, not just the
+ * network one.
+ */
+const offlineContext = await browser.newContext({
+  viewport: { width: 390, height: 844 },
+});
+await offlineContext.route(`**/localhost:${PORT}/rawg/**`, (route) =>
+  route.abort()
+);
+await offlineContext.route(`**/localhost:${PORT}/media/**`, (route) =>
+  route.abort()
+);
+await offlineContext.addInitScript((seed) => {
+  for (const [key, value] of Object.entries(seed))
+    localStorage.setItem(key, value);
+}, SEED);
+
+const primer = await offlineContext.newPage();
+await primer.goto(`http://localhost:${PORT}/`, {
+  waitUntil: 'domcontentloaded',
+});
+await primer.waitForTimeout(4000);
+// Reload so the worker is controlling the page before the network goes.
+await primer.reload({ waitUntil: 'domcontentloaded' });
+await primer.waitForTimeout(2500);
+const controlled = await primer.evaluate(
+  () => !!navigator.serviceWorker.controller
+);
+if (!controlled) {
+  failures.push(
+    'service worker never took control — the offline pass proved nothing'
+  );
+  console.error('FAIL  service worker did not take control');
+} else {
+  console.log('ok   service worker controlling');
+}
+
+/**
+ * Assert the precache directly, before going offline.
+ *
+ * This is the invariant that matters, and asserting it beats watching
+ * for errors. When a route is missing from the cache the worker serves
+ * some other route's document, and React hydrates markup belonging to a
+ * different page — but whether that surfaces as an uncaught error turns
+ * out to depend on navigation order and timing. It reproduced reliably
+ * by hand and not at all inside this harness, so an error-watching
+ * assertion here would be a check that passes whether or not the bug is
+ * present. The cache contents are not ambiguous.
+ */
+const cached = await primer.evaluate(async () => {
+  const cache = await caches.open('sidequest-shell-v1');
+  return (await cache.keys()).map((request) => new URL(request.url).pathname);
+});
+// Game pages are dynamic: the export writes one shell for all of them,
+// which the worker keeps under a synthetic key rather than per id.
+const staticRoutes = ROUTES.filter((route) => !route.startsWith('/game/'));
+const needsGameShell = ROUTES.some((route) => route.startsWith('/game/'));
+const missing = [
+  ...staticRoutes.filter((route) => !cached.includes(route)),
+  ...(needsGameShell && !cached.includes('/game/__shell')
+    ? ['/game/__shell']
+    : []),
+];
+if (missing.length) {
+  failures.push(
+    `service worker did not precache: ${missing.join(', ')}\n` +
+      `    cached instead: ${cached.join(', ')}\n` +
+      "    An uncached route is served another route's document offline, " +
+      'which hydrates the wrong markup.'
+  );
+  console.error(`FAIL precache missing ${missing.length} route(s)`);
+} else {
+  console.log(`ok   precached every route (${cached.length} entries)`);
+}
+
+await offlineContext.setOffline(true);
+
+/** Secondary: the routes should also actually load and stay quiet. */
+for (const route of ROUTES) {
+  const page = await offlineContext.newPage();
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await page
+    .goto(`http://localhost:${PORT}${route}`, { waitUntil: 'domcontentloaded' })
+    .catch(() => {});
+  await page.waitForTimeout(4000);
+  const rendered = await page.evaluate(
+    () => document.body.innerText.trim().length > 0
+  );
+  await page.close();
+
+  const label = `${route} (offline)`;
+  if (errors.length || !rendered) {
+    failures.push(
+      `${label}\n    ${errors.join('\n    ') || 'rendered nothing'}`
+    );
+    console.error(`FAIL ${label}`);
+  } else {
+    console.log(`ok   ${label}`);
+  }
+}
+
+await offlineContext.close();
+
 await browser.close();
 server.close();
 
@@ -99,5 +209,5 @@ if (failures.length) {
   process.exit(1);
 }
 console.log(
-  `\nNo errors across ${ROUTES.length * VIEWPORTS.length} page loads.`
+  `\nNo errors across ${ROUTES.length * VIEWPORTS.length} online and ${ROUTES.length} offline page loads.`
 );
