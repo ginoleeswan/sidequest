@@ -23,7 +23,7 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { queryKeys } from '@/api/queryClient';
 import { friendlyError, searchGames } from '@/api/rawg';
