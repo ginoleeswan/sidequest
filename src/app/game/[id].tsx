@@ -244,19 +244,19 @@ export default function GameInfoScreen() {
         pointerEvents="none"
       />
       <GrainScrim style={styles.heroGrain} />
-      {/* The weld. iOS Safari paints its chrome with theme-color, which
-          is the page colour - so the art's first pixels are that exact
-          colour too, then ease away over a long fall. The toolbar and the
-          page read as one surface instead of meeting on a hard line. */}
+      {/* The weld. Safari paints its chrome with the html canvas colour
+          (navy), so the art's first pixels are exactly that, easing into
+          the page colour and then away entirely. The toolbar and the page
+          read as one surface instead of meeting on a hard line. */}
       <LinearGradient
         colors={[
-          COLORS.darkGrey,
+          COLORS.navy,
           COLORS.darkGrey,
           'rgba(51,61,81,0.52)',
           'rgba(16,21,31,0.22)',
           'rgba(9,12,19,0)',
         ]}
-        locations={[0, 0.08, 0.3, 0.62, 1]}
+        locations={[0, 0.14, 0.32, 0.62, 1]}
         style={[styles.topScrim, { height: insets.top + 190 }]}
         pointerEvents="none"
       />

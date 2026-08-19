@@ -16,7 +16,10 @@ export default function Root({ children }: PropsWithChildren) {
           name="viewport"
           content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover"
         />
-        <meta name="theme-color" content="#333D51" />
+        {/* Must equal the html/body canvas below: iOS Safari paints the
+            status bar and toolbar with it, and any disagreement shows up
+            as a band above the page. COLORS.navy. */}
+        <meta name="theme-color" content="#272F3F" />
         <meta name="apple-mobile-web-app-title" content="Sidequest" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 

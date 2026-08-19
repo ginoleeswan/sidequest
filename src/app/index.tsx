@@ -484,13 +484,14 @@ export default function HomeScreen() {
               page instead of ending on a visible seam. */}
           <LinearGradient
             colors={[
+              COLORS.navy,
               COLORS.darkGrey,
               COLORS.darkGrey,
               'rgba(51,61,81,0.86)',
               'rgba(51,61,81,0.45)',
               'rgba(51,61,81,0)',
             ]}
-            locations={[0, 0.52, 0.72, 0.88, 1]}
+            locations={[0, 0.34, 0.56, 0.74, 0.89, 1]}
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
           />

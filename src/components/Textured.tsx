@@ -26,6 +26,16 @@ const GRAIN_TILE = '150px 150px';
 /** Grain, ramped in from the top of the page. */
 const TOP_FADE = `linear-gradient(to bottom, rgba(0,0,0,0) 0px, rgba(0,0,0,1) ${CHROME_FADE})`;
 
+/**
+ * The colour iOS Safari paints its chrome with — the html canvas, which
+ * is the footer's navy so the document's bottom edge welds too. The top
+ * of every page eases out of it into the page colour over the same
+ * distance the grain takes to arrive, so the status bar and the page read
+ * as one surface rather than meeting on a line.
+ */
+const CHROME_BRIDGE =
+  'linear-gradient(to bottom, #272F3F 0px, rgba(39,47,63,0.55) 38%, rgba(39,47,63,0) 100%)';
+
 const styles = StyleSheet.create({
   noInteraction: { pointerEvents: 'none' },
 });
@@ -86,6 +96,19 @@ export function Textured({ children, style, fill = false }: Props) {
               WebkitMaskImage: TOP_FADE,
             } as unknown as ViewStyle,
           ]}
+          pointerEvents="none"
+        />
+        <View
+          style={
+            {
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: CHROME_FADE,
+              backgroundImage: CHROME_BRIDGE,
+            } as unknown as ViewStyle
+          }
           pointerEvents="none"
         />
         {children}
