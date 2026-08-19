@@ -22,6 +22,22 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="theme-color" content="#272F3F" />
         <meta name="apple-mobile-web-app-title" content="Sidequest" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link
+          rel="icon"
+          href="/icon-192.png"
+          type="image/png"
+          sizes="192x192"
+        />
+        {/* Installable: added to a home screen it opens without browser
+            chrome, which is both the point of a backlog companion you
+            check nightly and the end of every toolbar seam at once. */}
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta
+          name="apple-mobile-web-app-status-bar-style"
+          content="black-translucent"
+        />
 
         <title>Sidequest — Discover your next game</title>
         <meta

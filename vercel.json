@@ -36,7 +36,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://media.rawg.io https://avatars.steamstatic.com https://avatars.akamai.steamstatic.com; media-src 'self' blob: https://media.rawg.io; font-src 'self' data:; connect-src 'self' https://api.rawg.io https://media.rawg.io; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://media.rawg.io https://avatars.steamstatic.com https://avatars.akamai.steamstatic.com; media-src 'self' blob: https://media.rawg.io; font-src 'self' data:; connect-src 'self' https://api.rawg.io https://media.rawg.io; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; manifest-src 'self'"
         },
         {
           "key": "X-Content-Type-Options",

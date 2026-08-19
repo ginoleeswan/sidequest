@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import Head from 'expo-router/head';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -25,7 +25,15 @@ import { SectionHeader } from '@/components/SectionHeader';
 import { Textured } from '@/components/Textured';
 import { useToast } from '@/components/Toast';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { formatHours } from '@/lib/duration';
+import { useDurations } from '@/lib/durations';
 import { STATUS_META, useLibrary, type LibraryStatus } from '@/lib/library';
+import {
+  libraryStats,
+  SORT_LABELS,
+  sortLibrary,
+  type LibrarySort,
+} from '@/lib/libraryStats';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, SPACING } from '@/styles/theme';
 
@@ -66,9 +74,39 @@ function chunk<T>(items: T[], size: number): T[][] {
   return rows;
 }
 
+function Stat({
+  value,
+  label,
+  accent = false,
+}: {
+  value: string;
+  label: string;
+  accent?: boolean;
+}) {
+  return (
+    <View style={styles.stat}>
+      <Text style={[styles.statValue, accent && styles.statValueAccent]}>
+        {value}
+      </Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
 export default function LibraryScreen() {
   const router = useRouter();
-  const { byStatus, count, exportJson, importJson } = useLibrary();
+  const { byStatus, entries, count, exportJson, importJson } = useLibrary();
+  const { durationOf } = useDurations();
+  const [sort, setSort] = useState<LibrarySort>('added');
+
+  const hoursOf = useCallback(
+    (game: Parameters<typeof durationOf>[0]) => durationOf(game).hours,
+    [durationOf]
+  );
+  const stats = useMemo(
+    () => libraryStats(Object.values(entries), hoursOf),
+    [entries, hoursOf]
+  );
   const { columns, isExpanded } = useBreakpoint();
   const insets = useSafeAreaInsets();
   const toast = useToast();
@@ -99,7 +137,9 @@ export default function LibraryScreen() {
     }
   };
 
-  const games = byStatus(tab).map((entry) => entry.game);
+  const games = sortLibrary(byStatus(tab), sort, hoursOf).map(
+    (entry) => entry.game
+  );
 
   return (
     <Textured style={styles.background}>
@@ -135,6 +175,31 @@ export default function LibraryScreen() {
             actionLabel={count > 0 ? 'Plan my backlog →' : undefined}
             onAction={count > 0 ? () => router.push('/plan') : undefined}
           />
+          {count > 0 && (
+            <View style={styles.stats}>
+              <Stat
+                value={String(stats.waiting + stats.playing)}
+                label="still to play"
+              />
+              <Stat
+                value={formatHours(stats.hoursAhead)}
+                label="ahead of you"
+              />
+              <Stat
+                value={String(stats.finished)}
+                label="finished"
+                accent={stats.finished > 0}
+              />
+              {stats.hoursFinished > 0 && (
+                <Stat
+                  value={formatHours(stats.hoursFinished)}
+                  label="credits rolled"
+                  accent
+                />
+              )}
+            </View>
+          )}
+
           <View style={styles.tabs}>
             {TABS.map((status) => (
               <Chip
@@ -145,6 +210,29 @@ export default function LibraryScreen() {
               />
             ))}
           </View>
+
+          {games.length > 1 && (
+            <View style={styles.sortRow}>
+              <Text style={styles.sortLabel}>Sort</Text>
+              {(Object.keys(SORT_LABELS) as LibrarySort[]).map((option) => (
+                <Pressable
+                  key={option}
+                  onPress={() => setSort(option)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: sort === option }}
+                >
+                  <Text
+                    style={[
+                      styles.sortOption,
+                      sort === option && styles.sortOptionOn,
+                    ]}
+                  >
+                    {SORT_LABELS[option]}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
 
           <View style={styles.transferRow}>
             {count > 0 && (
@@ -255,6 +343,46 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.xl * 1.5,
   },
   tabs: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
+  stats: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: SPACING.xl,
+    rowGap: SPACING.sm,
+    paddingVertical: SPACING.sm,
+  },
+  stat: { gap: 1 },
+  statValue: {
+    fontFamily: 'Noah-Black',
+    fontSize: 19,
+    color: COLORS.white,
+  },
+  statValueAccent: { color: COLORS.plum },
+  statLabel: {
+    fontFamily: 'Noah-Bold',
+    fontSize: 9.5,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: COLORS.mediumGrey,
+  },
+  sortRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: SPACING.md,
+  },
+  sortLabel: {
+    fontFamily: 'Noah-Bold',
+    fontSize: 9.5,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: COLORS.mediumGrey,
+  },
+  sortOption: {
+    fontFamily: 'Noah-Bold',
+    fontSize: 12.5,
+    color: COLORS.mediumGrey,
+  },
+  sortOptionOn: { color: COLORS.white },
   gridRow: { flexDirection: 'row', gap: LAYOUT.gridGap },
   gridContent: { gap: LAYOUT.gridGap },
   gridSpacer: { flex: 1 },
