@@ -1,21 +1,28 @@
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { Chip } from './Chip';
+import { DynamicIcon, type IconType } from './DynamicIcon';
 import type { BrowseFilters } from '@/api/rawg';
-import { SPACING } from '@/styles/theme';
+import { COLORS } from '@/styles/colors';
+import { RADIUS, SPACING } from '@/styles/theme';
 
-const SORTS = [
-  { label: 'Popular', ordering: undefined },
-  { label: 'Newest', ordering: '-released' },
-  { label: 'Top rated', ordering: '-metacritic' },
-] as const;
+const SORTS: {
+  label: string;
+  ordering?: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}[] = [
+  { label: 'Popular', ordering: undefined, icon: 'flame' },
+  { label: 'Newest', ordering: '-released', icon: 'sparkles' },
+  { label: 'Top rated', ordering: '-metacritic', icon: 'trophy' },
+];
 
-const PLATFORMS = [
-  { label: 'PC', id: 1 },
-  { label: 'PlayStation', id: 2 },
-  { label: 'Xbox', id: 3 },
-  { label: 'Switch', id: 7 },
-] as const;
+const PLATFORMS: { label: string; id: number; icon: string; type: IconType }[] =
+  [
+    { label: 'PC', id: 1, icon: 'microsoft-windows', type: 'material-community' },
+    { label: 'PlayStation', id: 2, icon: 'logo-playstation', type: 'ionicon' },
+    { label: 'Xbox', id: 3, icon: 'microsoft-xbox', type: 'material-community' },
+    { label: 'Switch', id: 7, icon: 'nintendo-switch', type: 'material-community' },
+  ];
 
 export interface BrowseRefinements {
   ordering?: string;
@@ -39,6 +46,80 @@ export function toBrowseFilters(r: BrowseRefinements): BrowseFilters {
   };
 }
 
+/** How many refinements are away from their default. */
+function activeCount(r: BrowseRefinements) {
+  return (
+    (r.ordering ? 1 : 0) + r.platformIds.length + (r.minMetacritic ? 1 : 0)
+  );
+}
+
+/** One segment of the sort control — single-select, so it reads as a dial. */
+function Segment({
+  label,
+  icon,
+  selected,
+  onPress,
+}: {
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      style={[styles.segment, selected && styles.segmentOn]}
+    >
+      <Ionicons
+        name={icon}
+        size={14}
+        color={selected ? COLORS.darkGrey : COLORS.mediumGrey}
+      />
+      <Text style={[styles.segmentText, selected && styles.segmentTextOn]}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+/** A toggle — multi-select, so it reads as a switch you can stack. */
+function Toggle({
+  label,
+  icon,
+  iconType,
+  ionicon,
+  selected,
+  onPress,
+}: {
+  label: string;
+  icon?: string;
+  iconType?: IconType;
+  ionicon?: keyof typeof Ionicons.glyphMap;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const tint = selected ? COLORS.darkGrey : COLORS.lightGrey;
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      style={[styles.toggle, selected && styles.toggleOn]}
+    >
+      {ionicon ? (
+        <Ionicons name={ionicon} size={14} color={tint} />
+      ) : icon && iconType ? (
+        <DynamicIcon type={iconType} name={icon} size={15} color={tint} />
+      ) : null}
+      <Text style={[styles.toggleText, selected && styles.toggleTextOn]}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 interface Props {
   value: BrowseRefinements;
   onChange: (next: BrowseRefinements) => void;
@@ -47,13 +128,15 @@ interface Props {
 }
 
 /**
- * One calm row of refinements: sort on the left, platform + quality
- * filters after a gap. Chips are the app's selection language (white pill,
- * dark ink), and the row scrolls sideways on narrow screens instead of
- * wrapping into a wall.
+ * Refinements as two distinct instruments: a segmented dial for sort
+ * (pick exactly one) and stackable toggles for filters (pick any). The
+ * shapes teach the behaviour before you tap anything, and a Clear appears
+ * only once something is actually on.
  */
 export function FilterBar({ value, onChange, disabled = false }: Props) {
   if (disabled) return null;
+
+  const active = activeCount(value);
 
   const togglePlatform = (id: number) => {
     const has = value.platformIds.includes(id);
@@ -72,30 +155,50 @@ export function FilterBar({ value, onChange, disabled = false }: Props) {
       style={styles.scroller}
       contentContainerStyle={styles.row}
     >
-      {SORTS.map((sort) => (
-        <Chip
-          key={sort.label}
-          title={sort.label}
-          selected={value.ordering === sort.ordering}
-          onPress={() => onChange({ ...value, ordering: sort.ordering })}
-        />
-      ))}
-      <View style={styles.gap} />
+      <View style={styles.segmented}>
+        {SORTS.map((sort) => (
+          <Segment
+            key={sort.label}
+            label={sort.label}
+            icon={sort.icon}
+            selected={value.ordering === sort.ordering}
+            onPress={() => onChange({ ...value, ordering: sort.ordering })}
+          />
+        ))}
+      </View>
+
+      <View style={styles.divider} />
+
       {PLATFORMS.map((platform) => (
-        <Chip
+        <Toggle
           key={platform.id}
-          title={platform.label}
+          label={platform.label}
+          icon={platform.icon}
+          iconType={platform.type}
           selected={value.platformIds.includes(platform.id)}
           onPress={() => togglePlatform(platform.id)}
         />
       ))}
-      <Chip
-        title="80+ rated"
+      <Toggle
+        label="80+ rated"
+        ionicon="ribbon"
         selected={value.minMetacritic}
         onPress={() =>
           onChange({ ...value, minMetacritic: !value.minMetacritic })
         }
       />
+
+      {active > 0 && (
+        <Pressable
+          onPress={() => onChange(DEFAULT_REFINEMENTS)}
+          accessibilityRole="button"
+          accessibilityLabel={`Clear ${active} filters`}
+          style={styles.clear}
+        >
+          <Ionicons name="close" size={14} color={COLORS.plum} />
+          <Text style={styles.clearText}>Clear {active}</Text>
+        </Pressable>
+      )}
     </ScrollView>
   );
 }
@@ -108,5 +211,70 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     paddingVertical: 2,
   },
-  gap: { width: SPACING.md },
+
+  // sort: one recessed track, the choice lifted out of it
+  segmented: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    padding: 3,
+    borderRadius: RADIUS.lg,
+    backgroundColor: 'rgba(0,0,0,0.22)',
+    borderWidth: 1,
+    borderColor: COLORS.stroke,
+  },
+  segment: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: SPACING.md - 2,
+    paddingVertical: SPACING.sm - 1,
+    borderRadius: RADIUS.lg,
+  },
+  segmentOn: { backgroundColor: COLORS.white },
+  segmentText: {
+    fontFamily: 'Noah-Bold',
+    fontSize: 12.5,
+    color: COLORS.mediumGrey,
+  },
+  segmentTextOn: { color: COLORS.darkGrey },
+
+  divider: {
+    width: 1,
+    height: 20,
+    backgroundColor: COLORS.stroke,
+    marginHorizontal: SPACING.xs,
+  },
+
+  // filters: independent switches
+  toggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.strokeStrong,
+  },
+  toggleOn: { backgroundColor: COLORS.white, borderColor: COLORS.white },
+  toggleText: {
+    fontFamily: 'Noah-Bold',
+    fontSize: 12.5,
+    color: COLORS.lightGrey,
+  },
+  toggleTextOn: { color: COLORS.darkGrey },
+
+  clear: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: SPACING.md - 2,
+    paddingVertical: SPACING.sm,
+  },
+  clearText: {
+    fontFamily: 'Noah-Bold',
+    fontSize: 12.5,
+    color: COLORS.plum,
+  },
 });

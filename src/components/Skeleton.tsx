@@ -2,7 +2,29 @@ import { useEffect } from 'react';
 import { Animated, StyleSheet, View, type ViewStyle } from 'react-native';
 
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
-import { LAYOUT, RADIUS, SPACING } from '@/styles/theme';
+import { LAYOUT, RADIUS, SHADOW_ROOM, SPACING } from '@/styles/theme';
+
+/*
+ * Measured line boxes of the real components, so the bones occupy exactly
+ * the space the content will. Changing a font size in GameTile or
+ * SectionHeader means changing the matching constant here.
+ */
+/** GameTile title: Noah-Bold 13 / lineHeight 17. */
+const TILE_TITLE_H = 17;
+/** GameTile meta: Noah-Regular 11, normal line height. */
+const TILE_META_H = 13;
+/** SectionHeader title: Noah-Black 20. */
+const HEADING_H = 25;
+/** SectionHeader eyebrow: Noah-Bold 11, uppercase. */
+const EYEBROW_H = 13;
+/**
+ * A Rail reserves shadow room below its items and pulls most of it back
+ * with a negative margin; what's left is real space the bones must leave
+ * too, or every shelf below lands high.
+ */
+const RAIL_NET = Math.round(SHADOW_ROOM.card * 0.4);
+/** RankedTile shoulders its watermark numeral, pushing the art right. */
+const RANKED_OFFSET = 22;
 
 /** Pulsing placeholder block — the atom every skeleton is built from. */
 export function Skeleton({ style }: { style?: ViewStyle | ViewStyle[] }) {
@@ -35,8 +57,8 @@ export function SkeletonTile({ width }: { width?: number }) {
   return (
     <View style={[styles.tile, width != null ? { width } : styles.flexCell]}>
       <Skeleton style={styles.tileArt} />
-      <Skeleton style={styles.lineWide} />
-      <Skeleton style={styles.lineNarrow} />
+      <Skeleton style={styles.tileTitle} />
+      <Skeleton style={styles.tileMeta} />
     </View>
   );
 }
@@ -45,6 +67,9 @@ export function SkeletonTile({ width }: { width?: number }) {
 export function SkeletonShelf({
   tiles = 6,
   inset = 0,
+  eyebrow = false,
+  ranked = false,
+  tileWidth = LAYOUT.shelfTileWidth,
 }: {
   tiles?: number;
   /**
@@ -53,21 +78,31 @@ export function SkeletonShelf({
    * edge-to-edge scroller will land.
    */
   inset?: number;
+  /** Ranked shelves carry a "Top 10" line above the title. */
+  eyebrow?: boolean;
+  /** Ranked shelves inset their art to make room for the numeral. */
+  ranked?: boolean;
+  tileWidth?: number;
 }) {
   return (
     <View style={styles.shelf}>
-      <Skeleton style={styles.heading} />
+      <View style={styles.headingGroup}>
+        {eyebrow && <Skeleton style={styles.eyebrow} />}
+        <Skeleton style={styles.heading} />
+      </View>
       <View
         style={[
           styles.row,
+          styles.railRoom,
           inset > 0 && {
             marginHorizontal: -inset,
             paddingHorizontal: inset,
           },
+          ranked && { paddingLeft: inset + RANKED_OFFSET },
         ]}
       >
         {Array.from({ length: tiles }, (_, i) => (
-          <SkeletonTile key={i} width={LAYOUT.shelfTileWidth} />
+          <SkeletonTile key={i} width={tileWidth} />
         ))}
       </View>
     </View>
@@ -84,6 +119,25 @@ export function SkeletonHero() {
         <Skeleton style={styles.heroRailItem} />
         <Skeleton style={styles.heroRailItem} />
       </View>
+    </View>
+  );
+}
+
+/**
+ * Category / discover page bones: the editorial masthead, the refinement
+ * chip row, then the grid — the same three beats the loaded page opens
+ * with, so nothing jumps when the data lands.
+ */
+export function SkeletonCategory({ columns }: { columns: number }) {
+  return (
+    <View style={styles.category}>
+      <Skeleton style={styles.masthead} />
+      <View style={styles.chipRow}>
+        {[74, 66, 82, 52, 96].map((width) => (
+          <Skeleton key={width} style={[styles.chip, { width }]} />
+        ))}
+      </View>
+      <SkeletonGrid columns={columns} />
     </View>
   );
 }
@@ -118,12 +172,15 @@ export function SkeletonRow() {
 export function SkeletonCompactHome() {
   return (
     <View style={styles.compact}>
-      <View style={[styles.row, styles.bleed]}>
+      {/* the hero carousel: Rail gap is SPACING.md here, not gridGap */}
+      <View style={[styles.row, styles.bleed, styles.heroRow]}>
         <Skeleton style={styles.wideCard} />
         <Skeleton style={styles.wideCard} />
       </View>
-      <SkeletonShelf tiles={3} inset={SPACING.md} />
-      <SkeletonShelf tiles={3} inset={SPACING.md} />
+      <View style={styles.compactShelves}>
+        <SkeletonShelf tiles={3} inset={SPACING.md} eyebrow ranked />
+        <SkeletonShelf tiles={3} inset={SPACING.md} />
+      </View>
     </View>
   );
 }
@@ -201,11 +258,16 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.sm,
   },
   flexCell: { flex: 1 },
-  tile: { gap: SPACING.xs + 2 },
+  tile: { gap: SPACING.xs + 1 },
   tileArt: { width: '100%', aspectRatio: LAYOUT.tileAspect },
   lineWide: { height: 12, width: '80%' },
   lineNarrow: { height: 10, width: '45%' },
-  heading: { height: 18, width: 140 },
+  tileTitle: { height: TILE_TITLE_H, width: '82%', marginTop: 2 },
+  tileMeta: { height: TILE_META_H, width: '52%' },
+  headingGroup: { gap: 2 },
+  heading: { height: HEADING_H, width: 118 },
+  eyebrow: { height: EYEBROW_H, width: 52 },
+  railRoom: { marginBottom: RAIL_NET },
   shelf: { marginBottom: SPACING.xl, gap: SPACING.sm + 2 },
   row: { flexDirection: 'row', gap: LAYOUT.gridGap, overflow: 'hidden' },
   hero: {
@@ -217,6 +279,10 @@ const styles = StyleSheet.create({
   heroRail: { flex: 1, gap: SPACING.md },
   heroRailItem: { flex: 1, borderRadius: RADIUS.md },
   grid: { flexDirection: 'row', flexWrap: 'wrap', margin: -9 },
+  category: { gap: SPACING.md },
+  masthead: { minHeight: 168, borderRadius: RADIUS.lg },
+  chipRow: { flexDirection: 'row', gap: SPACING.sm, overflow: 'hidden' },
+  chip: { height: 36, borderRadius: 18 },
   rowCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -233,7 +299,9 @@ const styles = StyleSheet.create({
     height: LAYOUT.cardHeight,
     borderRadius: RADIUS.xl,
   },
-  compact: { paddingHorizontal: SPACING.md, gap: SPACING.lg },
+  compact: { paddingHorizontal: SPACING.md, gap: SPACING.xs },
+  compactShelves: { marginTop: SPACING.sm },
+  heroRow: { gap: SPACING.md, marginBottom: RAIL_NET },
   bleed: {
     marginHorizontal: -SPACING.md,
     paddingHorizontal: SPACING.md,

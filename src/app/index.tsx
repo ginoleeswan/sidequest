@@ -37,9 +37,11 @@ import { SectionHeader } from '@/components/SectionHeader';
 import { Shelf } from '@/components/Shelf';
 import { Sidebar } from '@/components/Sidebar';
 import {
+  SkeletonCategory,
   SkeletonCompactHome,
   SkeletonGrid,
   SkeletonHero,
+  SkeletonRow,
   SkeletonShelf,
 } from '@/components/Skeleton';
 import { CategoryHero } from '@/components/CategoryHero';
@@ -377,7 +379,22 @@ export default function HomeScreen() {
         {status ??
           (list.isPending ? (
             <View style={{ paddingTop: headerHeight }}>
-              <SkeletonCompactHome />
+              {isHome ? (
+                <SkeletonCompactHome />
+              ) : (
+                <View style={styles.compactShelves}>
+                  {searching ? (
+                    <>
+                      <SkeletonRow />
+                      <SkeletonRow />
+                      <SkeletonRow />
+                      <SkeletonRow />
+                    </>
+                  ) : (
+                    <SkeletonCategory columns={columns} />
+                  )}
+                </View>
+              )}
             </View>
           ) : isHome ? (
             <View
