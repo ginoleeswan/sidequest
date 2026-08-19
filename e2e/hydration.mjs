@@ -148,16 +148,12 @@ const cached = await primer.evaluate(async () => {
   const cache = await caches.open('sidequest-shell-v1');
   return (await cache.keys()).map((request) => new URL(request.url).pathname);
 });
-// Game pages are dynamic: the export writes one shell for all of them,
-// which the worker keeps under a synthetic key rather than per id.
+// Game pages are deliberately not precached: there is one pre-rendered
+// shell for every id, and serving it for a game that was never opened
+// breaks hydration. Offline covers the static routes plus whichever
+// games were actually visited, and nothing else.
 const staticRoutes = ROUTES.filter((route) => !route.startsWith('/game/'));
-const needsGameShell = ROUTES.some((route) => route.startsWith('/game/'));
-const missing = [
-  ...staticRoutes.filter((route) => !cached.includes(route)),
-  ...(needsGameShell && !cached.includes('/game/__shell')
-    ? ['/game/__shell']
-    : []),
-];
+const missing = staticRoutes.filter((route) => !cached.includes(route));
 if (missing.length) {
   failures.push(
     `service worker did not precache: ${missing.join(', ')}\n` +
