@@ -9,6 +9,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { queryClient } from '@/api/queryClient';
 import { Onboarding } from '@/components/Onboarding';
+import { SaveErrorNotice } from '@/components/SaveErrorNotice';
 import { ToastProvider } from '@/components/Toast';
 import { DurationsProvider } from '@/lib/durations';
 import { LibraryProvider } from '@/lib/library';
@@ -60,6 +61,7 @@ export default function RootLayout() {
                 }}
               />
               <Onboarding />
+              <SaveErrorNotice />
             </ToastProvider>
           </SafeAreaProvider>
         </DurationsProvider>

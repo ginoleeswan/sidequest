@@ -2,13 +2,16 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 
 import { resolveDuration, type Duration } from './duration';
 import type { Game } from '@/api/types';
 import { useHydrated } from '@/hooks/useHydrated';
+import { readVersioned, writeFailureMessage, writeJson } from '@/lib/storage';
 
 const STORAGE_KEY = 'sidequest.durations.v1';
 
@@ -19,26 +22,12 @@ const EMPTY: Overrides = {};
 type Overrides = Record<string, number>;
 
 function load(): Overrides {
-  try {
-    const raw = globalThis.localStorage?.getItem(STORAGE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as Overrides;
-    return Object.fromEntries(
-      Object.entries(parsed).filter(
-        ([, hours]) => typeof hours === 'number' && hours > 0
-      )
-    );
-  } catch {
-    return {};
-  }
-}
-
-function persist(overrides: Overrides) {
-  try {
-    globalThis.localStorage?.setItem(STORAGE_KEY, JSON.stringify(overrides));
-  } catch {
-    // A full or blocked store must not break planning.
-  }
+  const parsed = readVersioned<Overrides>(STORAGE_KEY, {}, []);
+  return Object.fromEntries(
+    Object.entries(parsed).filter(
+      ([, hours]) => typeof hours === 'number' && hours > 0
+    )
+  );
 }
 
 interface DurationsValue {
@@ -50,6 +39,8 @@ interface DurationsValue {
   clearDuration: (id: number) => void;
   /** How many lengths this person has corrected. */
   count: number;
+  /** Set when the last write to the device failed; null when it landed. */
+  saveError: string | null;
 }
 
 const DurationsContext = createContext<DurationsValue | null>(null);
@@ -64,14 +55,26 @@ const DurationsContext = createContext<DurationsValue | null>(null);
  */
 export function DurationsProvider({ children }: { children: React.ReactNode }) {
   const [stored, setOverrides] = useState<Overrides>(load);
+  const [saveError, setSaveError] = useState<string | null>(null);
   // The pre-rendered HTML had no stored durations, so the hydration
   // render must not either. Writes still go to `stored`.
   const overrides = useHydrated() ? stored : EMPTY;
 
+  // Persisted in an effect so the state updaters stay pure, and so a
+  // write that fails is noticed rather than swallowed. See lib/storage.
+  const firstRender = useRef(true);
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    const result = writeJson(STORAGE_KEY, stored);
+    setSaveError(result.ok ? null : writeFailureMessage(result));
+  }, [stored]);
+
   const setDuration = useCallback((id: number, hours: number) => {
     setOverrides((prev) => {
       const next = { ...prev, [String(id)]: hours };
-      persist(next);
       return next;
     });
   }, []);
@@ -80,7 +83,6 @@ export function DurationsProvider({ children }: { children: React.ReactNode }) {
     setOverrides((prev) => {
       const next = { ...prev };
       delete next[String(id)];
-      persist(next);
       return next;
     });
   }, []);
@@ -91,8 +93,9 @@ export function DurationsProvider({ children }: { children: React.ReactNode }) {
       setDuration,
       clearDuration,
       count: Object.keys(overrides).length,
+      saveError,
     }),
-    [overrides, setDuration, clearDuration]
+    [overrides, setDuration, clearDuration, saveError]
   );
 
   return (
