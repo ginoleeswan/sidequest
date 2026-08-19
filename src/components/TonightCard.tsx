@@ -78,6 +78,7 @@ export function TonightCard() {
       <CoverImage
         uri={pick.game.background_image}
         style={styles.art}
+        size="thumb"
         iconSize={22}
       />
       <View style={styles.body}>

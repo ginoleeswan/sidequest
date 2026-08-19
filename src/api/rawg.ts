@@ -22,13 +22,60 @@ const BASE_URL = USE_PROXY ? '/rawg' : 'https://api.rawg.io/api';
 
 const PAGE_SIZE = '40';
 
-/** Route a media.rawg.io asset URL through the same-origin proxy on web. */
-export function mediaUri(uri: string | null | undefined): string | undefined {
+/**
+ * The widths RAWG will actually render a derivative at.
+ *
+ * This is an allow-list, not a preference. Asking for a width that is
+ * not on it — 320, say — does not fall back to the original: RAWG
+ * answers 307 to an api.rawg.io URL that then 404s, so the image is
+ * broken rather than merely oversized. Verified against the live CDN;
+ * 160, 260 and 320 all fail this way while these five succeed.
+ *
+ * Keeping to a short ladder also means a given image is requested at the
+ * same size everywhere, so it is fetched and cached once per size rather
+ * than once per slot.
+ */
+const WIDTH_LADDER = [200, 420, 640, 1280, 1920] as const;
+
+/**
+ * Ask RAWG for an image sized for the slot it lands in.
+ *
+ * The originals are print-sized: a single cover measured 3.7 MB at
+ * 1920px, and the home page pulled 11 MB of them into slots 300px wide.
+ * The same cover at `resize/640` is 54 KB, and at `resize/200` — the
+ * right size for a row thumbnail — it is 7 KB.
+ *
+ * Opt-in rather than automatic, because the same helper carries trailer
+ * video URLs, which have no derivative and must pass through untouched.
+ */
+function sized(uri: string, slotWidth: number): string {
+  // Already a derivative, or not an asset RAWG renders: leave it alone.
+  if (!uri.includes('/media/') || /\/media\/(resize|crop)\//.test(uri))
+    return uri;
+
+  // Slots are in CSS pixels and screens are commonly 2x, so ask for
+  // double and round up to a width the CDN will serve.
+  const wanted = slotWidth * 2;
+  const width =
+    WIDTH_LADDER.find((rung) => rung >= wanted) ??
+    WIDTH_LADDER[WIDTH_LADDER.length - 1];
+  return uri.replace('/media/', `/media/resize/${width}/-/`);
+}
+
+/**
+ * Route a media.rawg.io asset URL through the same-origin proxy on web,
+ * optionally asking for a derivative sized to the slot it will fill.
+ */
+export function mediaUri(
+  uri: string | null | undefined,
+  slotWidth?: number
+): string | undefined {
   if (!uri) return undefined;
-  if (USE_PROXY && uri.startsWith('https://media.rawg.io/')) {
-    return uri.replace('https://media.rawg.io', '/media');
+  const source = slotWidth ? sized(uri, slotWidth) : uri;
+  if (USE_PROXY && source.startsWith('https://media.rawg.io/')) {
+    return source.replace('https://media.rawg.io', '/media');
   }
-  return uri;
+  return source;
 }
 
 /** Read lazily: reading at module scope couples import order to env setup. */
