@@ -120,6 +120,23 @@ await primer.waitForTimeout(4000);
 // Reload so the worker is controlling the page before the network goes.
 await primer.reload({ waitUntil: 'domcontentloaded' });
 await primer.waitForTimeout(2500);
+
+/*
+ * Visit a game page while still online.
+ *
+ * Offline support is deliberately scoped: the static routes, plus games
+ * that have actually been opened. There is one pre-rendered shell for
+ * every game id, so serving it for a game nobody visited would hand
+ * React markup written for a different URL. That case is left to the
+ * browser's offline page on purpose, and asserting on it here proved
+ * environment-dependent — it passed locally and failed on CI, which is
+ * a test measuring the harness rather than the app.
+ */
+await primer.goto(`http://localhost:${PORT}/game/3498`, {
+  waitUntil: 'domcontentloaded',
+});
+await primer.waitForTimeout(2500);
+
 const controlled = await primer.evaluate(
   () => !!navigator.serviceWorker.controller
 );
