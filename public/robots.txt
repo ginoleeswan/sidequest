@@ -1,0 +1,10 @@
+# Sidequest — https://sidequest-bice-nu.vercel.app
+User-agent: *
+Allow: /
+
+# Nothing here is private, but these are per-device views with no shared
+# content behind them, so there is nothing to index.
+Disallow: /library
+Disallow: /plan
+
+Sitemap: https://sidequest-bice-nu.vercel.app/sitemap.xml
