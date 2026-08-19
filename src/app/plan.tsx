@@ -19,6 +19,9 @@ import { SectionHeader } from '@/components/SectionHeader';
 import { SteamConnect } from '@/components/SteamConnect';
 import { Textured } from '@/components/Textured';
 import { usePersistedState } from '@/hooks/usePersistedState';
+import { DurationSheet } from '@/components/DurationSheet';
+import { formatHours } from '@/lib/duration';
+import { useDurations } from '@/lib/durations';
 import { useLibrary } from '@/lib/library';
 import {
   pickTonight,
@@ -87,6 +90,9 @@ interface Entry {
   game: Game;
   hours: number;
   playing: boolean;
+  /** The length is an estimate we don't fully trust. */
+  rough: boolean;
+  source: 'yours' | 'estimate' | 'unknown';
 }
 
 function QuestRow({
@@ -95,14 +101,18 @@ function QuestRow({
   isLast,
   maxHours,
   game,
+  entry,
   onPress,
+  onEditLength,
 }: {
   item: ScheduledItem;
   index: number;
   isLast: boolean;
   maxHours: number;
   game?: Game;
+  entry?: Entry;
   onPress: () => void;
+  onEditLength: () => void;
 }) {
   const barPct = Math.max(6, Math.round((item.hours / maxHours) * 100));
   return (
@@ -128,7 +138,24 @@ function QuestRow({
           <View style={styles.questBarTrack}>
             <View style={[styles.questBarFill, { width: `${barPct}%` }]} />
           </View>
-          <Text style={styles.questMeta}>~{Math.round(item.hours)}h</Text>
+          <Text
+            style={[
+              styles.questMeta,
+              entry?.source === 'yours' && styles.questMetaYours,
+            ]}
+            onPress={(event) => {
+              event.stopPropagation();
+              onEditLength();
+            }}
+            suppressHighlighting
+            accessibilityRole="button"
+            accessibilityLabel={`Change how long ${item.name} takes`}
+          >
+            {entry?.source === 'yours' ? '' : '~'}
+            {formatHours(item.hours)}
+            {entry?.rough ? ' ?' : ''}
+            <Text style={styles.questPencil}> ✎</Text>
+          </Text>
         </View>
       </View>
       <View style={styles.questWhen}>
@@ -144,6 +171,8 @@ export default function PlanScreen() {
   const insets = useSafeAreaInsets();
   const { isExpanded } = useBreakpoint();
   const { byStatus } = useLibrary();
+  const { durationOf, count: correctionCount } = useDurations();
+  const [editing, setEditing] = useState<Game | null>(null);
 
   const [pace, setPace] = usePersistedState('sidequest.plan.pace', 6);
   const [windowWeeks, setWindowWeeks] = usePersistedState<number | null>(
@@ -153,25 +182,39 @@ export default function PlanScreen() {
   const [session, setSession] = useState(60);
   const [steamOpen, setSteamOpen] = useState(false);
 
-  // Playing games count at half their estimate - you're partway in.
+  // Playing games count at half their length - you're partway in.
   const entries: Entry[] = useMemo(
     () => [
-      ...byStatus('playing').map((e) => ({
-        game: e.game,
-        hours: (e.game.playtime ?? 0) * 0.5,
-        playing: true,
-      })),
-      ...byStatus('wishlist').map((e) => ({
-        game: e.game,
-        hours: e.game.playtime ?? 0,
-        playing: false,
-      })),
+      ...byStatus('playing').map((e) => {
+        const duration = durationOf(e.game);
+        return {
+          game: e.game,
+          hours: duration.hours * 0.5,
+          playing: true,
+          rough: duration.rough,
+          source: duration.source,
+        };
+      }),
+      ...byStatus('wishlist').map((e) => {
+        const duration = durationOf(e.game);
+        return {
+          game: e.game,
+          hours: duration.hours,
+          playing: false,
+          rough: duration.rough,
+          source: duration.source,
+        };
+      }),
     ],
-    [byStatus]
+    [byStatus, durationOf]
   );
 
   const gamesById = useMemo(
     () => new Map(entries.map((e) => [e.game.id, e.game])),
+    [entries]
+  );
+  const entriesById = useMemo(
+    () => new Map(entries.map((e) => [e.game.id, e])),
     [entries]
   );
 
@@ -413,6 +456,13 @@ export default function PlanScreen() {
                       <SectionHeader title="Your route" />
                       <Text style={styles.routeNote}>
                         Quick wins first — momentum is the strategy.
+                        {correctionCount > 0
+                          ? `  ${correctionCount} ${
+                              correctionCount === 1
+                                ? 'length is'
+                                : 'lengths are'
+                            } yours, and the plan trusts those over the estimates.`
+                          : '  Tap any length to correct it.'}
                       </Text>
                       <View>
                         {schedule.scheduled.map((item, index) => (
@@ -423,7 +473,12 @@ export default function PlanScreen() {
                             isLast={index === schedule.scheduled.length - 1}
                             maxHours={maxRouteHours}
                             game={gamesById.get(item.id)}
+                            entry={entriesById.get(item.id)}
                             onPress={() => router.push(`/game/${item.id}`)}
+                            onEditLength={() => {
+                              const target = gamesById.get(item.id);
+                              if (target) setEditing(target);
+                            }}
                           />
                         ))}
                       </View>
@@ -476,9 +531,32 @@ export default function PlanScreen() {
                         eyebrow={`${unknown.length} games`}
                       />
                       <Text style={styles.droppedNote}>
-                        RAWG has no playtime estimate for these yet, so the plan
-                        can’t place them.
+                        Nobody has reported how long these take. Tell the plan
+                        and it can place them.
                       </Text>
+                      <View style={styles.rows}>
+                        {unknown.map((entry) => (
+                          <Pressable
+                            key={entry.game.id}
+                            style={styles.row}
+                            onPress={() => setEditing(entry.game)}
+                          >
+                            <CoverImage
+                              uri={entry.game.background_image}
+                              style={styles.rowThumb}
+                              iconSize={16}
+                            />
+                            <View style={styles.rowBody}>
+                              <Text style={styles.rowTitle} numberOfLines={1}>
+                                {entry.game.name}
+                              </Text>
+                              <Text style={styles.rowAction}>
+                                Set how long it takes →
+                              </Text>
+                            </View>
+                          </Pressable>
+                        ))}
+                      </View>
                     </View>
                   )}
                 </View>
@@ -487,6 +565,11 @@ export default function PlanScreen() {
           </View>
         </FadeInView>
       </View>
+      <DurationSheet
+        game={editing}
+        duration={editing ? durationOf(editing) : null}
+        onClose={() => setEditing(null)}
+      />
       <SiteFooter />
     </Textured>
   );
@@ -708,6 +791,13 @@ const styles = StyleSheet.create({
     fontFamily: 'Noah-Regular',
     fontSize: 11.5,
     color: COLORS.mediumGrey,
+  },
+  questMetaYours: { color: COLORS.lightGrey, fontFamily: 'Noah-Bold' },
+  questPencil: { fontSize: 10, color: COLORS.mediumGrey },
+  rowAction: {
+    fontFamily: 'Noah-Bold',
+    fontSize: 11.5,
+    color: COLORS.plum,
   },
   questWhen: { alignItems: 'flex-end', gap: 1 },
   questDate: {

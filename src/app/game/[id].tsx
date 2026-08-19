@@ -34,11 +34,14 @@ import { SectionHeader } from '@/components/SectionHeader';
 import { SkeletonDetail, SkeletonDetailExpanded } from '@/components/Skeleton';
 import { StatusActions } from '@/components/StatusActions';
 import { LinkPill, StoreLinks } from '@/components/StoreLinks';
+import { DurationSheet } from '@/components/DurationSheet';
 import { SiteFooter } from '@/components/SiteFooter';
 import { GrainScrim, Textured } from '@/components/Textured';
 import { TrailerCard } from '@/components/TrailerCard';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { formatHours } from '@/lib/duration';
+import { useDurations } from '@/lib/durations';
 import { findSection } from '@/constants/categories';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, RADIUS, SHADOW, SHADOW_ROOM, SPACING } from '@/styles/theme';
@@ -78,7 +81,15 @@ function Stat({ value, label }: { value: React.ReactNode; label: string }) {
   );
 }
 
-function StatStrip({ game }: { game: GameDetail }) {
+function StatStrip({
+  game,
+  onEditLength,
+}: {
+  game: GameDetail;
+  onEditLength: () => void;
+}) {
+  const { durationOf } = useDurations();
+  const duration = durationOf(game);
   return (
     <View style={styles.statStrip}>
       {game.rating > 0 && (
@@ -90,9 +101,22 @@ function StatStrip({ game }: { game: GameDetail }) {
           label="Metacritic"
         />
       )}
-      {game.playtime > 0 && (
-        <Stat value={`${game.playtime}h`} label="Avg. play" />
-      )}
+      {/* The length is the one stat a person can out-know the data on,
+          so it is the one stat they can change. */}
+      <Pressable onPress={onEditLength} accessibilityRole="button">
+        <Stat
+          value={
+            <Text style={styles.statValue}>
+              {duration.hours > 0 ? formatHours(duration.hours) : 'Set'}
+              {duration.rough && duration.hours > 0 ? (
+                <Text style={styles.statFlag}> ?</Text>
+              ) : null}
+              <Text style={styles.statPencil}> ✎</Text>
+            </Text>
+          }
+          label={duration.source === 'yours' ? 'Your length' : 'To finish'}
+        />
+      </Pressable>
       {game.released && (
         <Stat value={game.released.slice(0, 4)} label="Released" />
       )}
@@ -148,6 +172,8 @@ export default function GameInfoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
+  const [editingLength, setEditingLength] = useState(false);
+  const { durationOf } = useDurations();
 
   const { isExpanded, width } = useBreakpoint();
   const insets = useSafeAreaInsets();
@@ -267,7 +293,7 @@ export default function GameInfoScreen() {
       <View style={styles.heroCopy}>
         <PlatformIcons platforms={game.parent_platforms ?? []} />
         <Text style={styles.heroTitle}>{game.name}</Text>
-        <StatStrip game={game} />
+        <StatStrip game={game} onEditLength={() => setEditingLength(true)} />
         <StatusActions game={game} />
       </View>
     </View>
@@ -302,7 +328,7 @@ export default function GameInfoScreen() {
         <View style={styles.deskHeroCopy}>
           <PlatformIcons platforms={game.parent_platforms ?? []} />
           <Text style={styles.deskTitle}>{game.name}</Text>
-          <StatStrip game={game} />
+          <StatStrip game={game} onEditLength={() => setEditingLength(true)} />
           <StatusActions game={game} />
         </View>
         <View style={styles.deskArtFrame}>
@@ -527,6 +553,11 @@ export default function GameInfoScreen() {
         </View>
 
         <SiteFooter />
+        <DurationSheet
+          game={editingLength ? game : null}
+          duration={editingLength ? durationOf(game) : null}
+          onClose={() => setEditingLength(false)}
+        />
         <Lightbox uri={lightboxUri} onClose={() => setLightboxUri(null)} />
       </View>
     </Textured>
@@ -606,6 +637,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: COLORS.white,
   },
+  statFlag: { color: COLORS.plum },
+  statPencil: { fontSize: 11, color: COLORS.mediumGrey },
   statLabel: {
     fontFamily: 'Noah-Bold',
     fontSize: 10,

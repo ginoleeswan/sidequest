@@ -1,0 +1,90 @@
+import type { Game } from '@/api/types';
+
+export type DurationSource = 'yours' | 'estimate' | 'unknown';
+
+export interface Duration {
+  /** Hours to finish. 0 when nothing is known. */
+  hours: number;
+  source: DurationSource;
+  /**
+   * True when an estimate exists but shouldn't be trusted to the hour.
+   * The Plan says so out loud rather than quietly scheduling around it.
+   */
+  rough: boolean;
+}
+
+/**
+ * Above this, RAWG's average is almost always inflated by people leaving
+ * a game running rather than playing it, or by endless-loop games that
+ * have no "finish" at all.
+ */
+const IMPLAUSIBLY_LONG = 100;
+
+/** Below this there is nothing to plan around. */
+const IMPLAUSIBLY_SHORT = 2;
+
+function isUnreleased(game: Pick<Game, 'released'>, now: number): boolean {
+  if (!game.released) return true;
+  const released = Date.parse(game.released);
+  return Number.isNaN(released) ? true : released > now;
+}
+
+/**
+ * What a game will take, and how much to trust it.
+ *
+ * RAWG's `playtime` is the average of what players reported, which is the
+ * only broad source there is — but it is an average over everyone,
+ * including the people who left the game running overnight, and for
+ * anything unreleased it describes a game nobody has finished. So the
+ * number a person typed in always wins, and an estimate we doubt is
+ * labelled instead of being quietly presented as fact.
+ */
+export function resolveDuration(
+  game: Pick<Game, 'playtime' | 'released'>,
+  override: number | undefined,
+  now: number = Date.now()
+): Duration {
+  if (override != null && override > 0) {
+    return { hours: override, source: 'yours', rough: false };
+  }
+
+  const estimate = game.playtime ?? 0;
+  if (estimate <= 0) {
+    return { hours: 0, source: 'unknown', rough: true };
+  }
+
+  const rough =
+    isUnreleased(game, now) ||
+    estimate > IMPLAUSIBLY_LONG ||
+    estimate < IMPLAUSIBLY_SHORT;
+
+  return { hours: estimate, source: 'estimate', rough };
+}
+
+/** Hours as a person would write them: "2h", "2.5h", "40h". */
+export function formatHours(hours: number): string {
+  if (hours <= 0) return '—';
+  if (hours >= 10) return `${Math.round(hours)}h`;
+  const rounded = Math.round(hours * 2) / 2;
+  return `${rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1)}h`;
+}
+
+/**
+ * Accepts what someone actually types — "12", "12h", "2.5", "90m" — and
+ * returns hours, or null when it isn't a length at all.
+ */
+export function parseHours(input: string): number | null {
+  const text = input.trim().toLowerCase();
+  if (!text) return null;
+
+  const minutes = /^(\d+(?:\.\d+)?)\s*m(?:in(?:utes?)?)?$/.exec(text);
+  if (minutes) {
+    const value = Number(minutes[1]) / 60;
+    return value > 0 && value <= 1000 ? value : null;
+  }
+
+  const hours = /^(\d+(?:\.\d+)?)\s*(?:h(?:ours?|rs?)?)?$/.exec(text);
+  if (!hours) return null;
+  const value = Number(hours[1]);
+  return value > 0 && value <= 1000 ? value : null;
+}

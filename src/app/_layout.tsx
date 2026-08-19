@@ -10,6 +10,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { queryClient } from '@/api/queryClient';
 import { Onboarding } from '@/components/Onboarding';
 import { ToastProvider } from '@/components/Toast';
+import { DurationsProvider } from '@/lib/durations';
 import { LibraryProvider } from '@/lib/library';
 import { COLORS } from '@/styles/colors';
 
@@ -47,19 +48,21 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <LibraryProvider>
-        <SafeAreaProvider>
-          <ToastProvider>
-            <StatusBar style="light" />
-            <ScrollToTop />
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: COLORS.darkGrey },
-              }}
-            />
-            <Onboarding />
-          </ToastProvider>
-        </SafeAreaProvider>
+        <DurationsProvider>
+          <SafeAreaProvider>
+            <ToastProvider>
+              <StatusBar style="light" />
+              <ScrollToTop />
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: COLORS.darkGrey },
+                }}
+              />
+              <Onboarding />
+            </ToastProvider>
+          </SafeAreaProvider>
+        </DurationsProvider>
       </LibraryProvider>
     </QueryClientProvider>
   );
