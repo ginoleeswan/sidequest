@@ -58,6 +58,6 @@ const styles = StyleSheet.create({
     width: '25%',
     height: '100%',
     borderRadius: 1,
-    backgroundColor: COLORS.plum,
+    backgroundColor: COLORS.accent,
   },
 });

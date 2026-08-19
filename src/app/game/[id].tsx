@@ -613,7 +613,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: COLORS.white,
   },
-  statFlag: { color: COLORS.plum },
+  statFlag: { color: COLORS.accent },
   statPencil: { fontSize: 11, color: COLORS.mediumGrey },
   statLabel: {
     fontFamily: 'Noah-Bold',

@@ -135,7 +135,7 @@ export function GameTile({ game, width, badge }: Props) {
               <Ionicons
                 name={saved ? 'bookmark' : 'bookmark-outline'}
                 size={15}
-                color={saved ? COLORS.plum : COLORS.white}
+                color={saved ? COLORS.accent : COLORS.white}
               />
             </Pressable>
           )}

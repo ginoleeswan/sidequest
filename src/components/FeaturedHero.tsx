@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 3,
     borderRadius: 2,
-    backgroundColor: COLORS.plum,
+    backgroundColor: COLORS.accent,
   },
   eyebrow: {
     fontFamily: 'Noah-Bold',

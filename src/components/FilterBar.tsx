@@ -210,7 +210,7 @@ export function FilterBar({ value, onChange, disabled = false }: Props) {
           accessibilityLabel={`Clear ${active} filters`}
           style={styles.clear}
         >
-          <Ionicons name="close" size={14} color={COLORS.plum} />
+          <Ionicons name="close" size={14} color={COLORS.accent} />
           <Text style={styles.clearText}>Clear {active}</Text>
         </Pressable>
       )}
@@ -290,6 +290,6 @@ const styles = StyleSheet.create({
   clearText: {
     fontFamily: 'Noah-Bold',
     fontSize: 12.5,
-    color: COLORS.plum,
+    color: COLORS.accent,
   },
 });

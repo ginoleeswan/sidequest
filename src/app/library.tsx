@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
     fontSize: 19,
     color: COLORS.white,
   },
-  statValueAccent: { color: COLORS.plum },
+  statValueAccent: { color: COLORS.accent },
   statLabel: {
     fontFamily: 'Noah-Bold',
     fontSize: 9.5,

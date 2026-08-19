@@ -12,6 +12,7 @@ import {
 import { useRouter } from 'expo-router';
 
 import { DynamicIcon, type IconType } from './DynamicIcon';
+import { Mark } from './Mark';
 import { DISCOVER, GENRES, type Section } from '@/constants/categories';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, RADIUS, SPACING } from '@/styles/theme';
@@ -95,7 +96,8 @@ export function Sidebar({ activeKey, onHome, onSelect, search }: Props) {
   const router = useRouter();
   return (
     <View style={[styles.sidebar, STICKY]}>
-      <Pressable onPress={onHome} accessibilityRole="link">
+      <Pressable onPress={onHome} accessibilityRole="link" style={styles.brand}>
+        <Mark size={22} />
         <Text style={styles.wordmark}>SIDEQUEST</Text>
       </Pressable>
       <Text style={styles.tagline}>Discover your next game</Text>
@@ -163,6 +165,7 @@ const styles = StyleSheet.create({
     borderRightWidth: StyleSheet.hairlineWidth,
     borderRightColor: 'rgba(255,255,255,0.08)',
   },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   wordmark: {
     fontFamily: 'Noah-Black',
     fontSize: 22,

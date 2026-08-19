@@ -609,7 +609,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 3,
-    backgroundColor: COLORS.plum,
+    backgroundColor: COLORS.accent,
   },
   verdictTitle: {
     fontFamily: 'Noah-Black',
@@ -664,7 +664,7 @@ const styles = StyleSheet.create({
   inlineCaret: {
     fontFamily: 'Noah-Bold',
     fontSize: 11,
-    color: COLORS.plum,
+    color: COLORS.accent,
   },
   steamLink: {
     fontFamily: 'Noah-Bold',
@@ -785,7 +785,7 @@ const styles = StyleSheet.create({
   questBarFill: {
     height: '100%',
     borderRadius: 2,
-    backgroundColor: COLORS.plum,
+    backgroundColor: COLORS.accent,
   },
   questMeta: {
     fontFamily: 'Noah-Regular',
@@ -797,7 +797,7 @@ const styles = StyleSheet.create({
   rowAction: {
     fontFamily: 'Noah-Bold',
     fontSize: 11.5,
-    color: COLORS.plum,
+    color: COLORS.accent,
   },
   questWhen: { alignItems: 'flex-end', gap: 1 },
   questDate: {

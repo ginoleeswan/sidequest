@@ -28,7 +28,11 @@ export function RouteError({ error, retry }: Props) {
     <Textured style={styles.screen}>
       <View style={styles.card}>
         <View style={styles.iconRing}>
-          <Ionicons name="alert-circle-outline" size={26} color={COLORS.plum} />
+          <Ionicons
+            name="alert-circle-outline"
+            size={26}
+            color={COLORS.accent}
+          />
         </View>
         <Text style={styles.title}>This screen hit a snag</Text>
         <Text style={styles.detail}>

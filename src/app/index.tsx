@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   FlatList,
   Platform,
+  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
@@ -50,6 +51,7 @@ import {
   SkeletonShelf,
 } from '@/components/Skeleton';
 import { CategoryHero } from '@/components/CategoryHero';
+import { Mark } from '@/components/Mark';
 import { SurpriseButton } from '@/components/SurpriseButton';
 import { TonightCard } from '@/components/TonightCard';
 import { ProgressLine } from '@/components/ProgressLine';
@@ -548,9 +550,15 @@ export default function HomeScreen() {
             </View>
           ) : (
             <View style={styles.titleRow}>
-              <Text style={styles.wordmark} onPress={goHome}>
-                SIDEQUEST
-              </Text>
+              <Pressable
+                onPress={goHome}
+                style={styles.brand}
+                accessibilityRole="link"
+                accessibilityLabel="Sidequest home"
+              >
+                <Mark size={20} />
+                <Text style={styles.wordmark}>SIDEQUEST</Text>
+              </Pressable>
               <View style={styles.headerIcons}>
                 <Ionicons
                   name="search"
@@ -654,6 +662,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
     paddingBottom: SPACING.xl,
   },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',

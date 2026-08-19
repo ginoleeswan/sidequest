@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Noah-Bold',
     fontSize: 10.5,
     letterSpacing: 1.4,
-    color: COLORS.plum,
+    color: COLORS.accent,
   },
   title: {
     fontFamily: 'Noah-Black',

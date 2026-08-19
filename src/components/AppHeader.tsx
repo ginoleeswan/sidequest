@@ -10,6 +10,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
+import { Mark } from './Mark';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, SPACING } from '@/styles/theme';
 
@@ -74,7 +75,10 @@ export function AppHeader({ immersive = false }: Props) {
           accessibilityRole="link"
           accessibilityLabel="Sidequest home"
         >
-          <Text style={styles.wordmark}>SIDEQUEST</Text>
+          <View style={styles.brand}>
+            <Mark size={18} />
+            <Text style={styles.wordmark}>SIDEQUEST</Text>
+          </View>
         </Pressable>
         <View style={styles.nav}>
           {NAV.map((link) => {
@@ -145,6 +149,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xl,
     height: 58,
   },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   wordmark: {
     fontFamily: 'Noah-Black',
     fontSize: 16,

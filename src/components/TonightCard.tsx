@@ -81,7 +81,7 @@ export function TonightCard() {
       />
       <View style={styles.body}>
         <View style={styles.eyebrowRow}>
-          <Ionicons name="moon" size={12} color={COLORS.plum} />
+          <Ionicons name="moon" size={12} color={COLORS.accent} />
           <Text style={styles.eyebrow}>TONIGHT</Text>
         </View>
         <Text style={styles.title} numberOfLines={2}>
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Noah-Bold',
     fontSize: 10,
     letterSpacing: 1.4,
-    color: COLORS.plum,
+    color: COLORS.accent,
   },
   title: {
     fontFamily: 'Noah-Black',

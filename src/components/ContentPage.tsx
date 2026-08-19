@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 4,
     borderRadius: 2,
-    backgroundColor: COLORS.plum,
+    backgroundColor: COLORS.accent,
     marginBottom: SPACING.md,
   },
   updated: {

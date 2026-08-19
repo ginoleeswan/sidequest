@@ -1,6 +1,11 @@
 export const COLORS = {
   white: '#FFFFFF',
-  plum: '#CB2664',
+  /**
+   * The accent. Amber reads as credits rolling and lamp-lit evenings —
+   * the warm note in a cool UI, and thematically exact for an app about
+   * finishing things rather than starting them.
+   */
+  accent: '#F2A93B',
   blue: '#1E69E1',
   lightGrey: '#D8DAE4',
   // 4.6:1 on darkGrey, AA for body text on every surface.

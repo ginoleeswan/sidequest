@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Noah-Bold',
     fontSize: 11,
     letterSpacing: 2.4,
-    color: COLORS.plum,
+    color: COLORS.accent,
   },
   display: {
     fontFamily: 'Noah-Black',
