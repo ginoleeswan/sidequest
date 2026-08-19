@@ -2,12 +2,15 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 
 import type { Game } from '@/api/types';
 import { useHydrated } from '@/hooks/useHydrated';
+import { readVersioned, writeFailureMessage, writeJson } from '@/lib/storage';
 
 export type LibraryStatus = 'wishlist' | 'playing' | 'finished';
 
@@ -39,22 +42,12 @@ const STORAGE_KEY = 'sidequest.library.v1';
 /** A stable identity, so gating cannot itself churn memoised consumers. */
 const EMPTY: Entries = {};
 
-function load(): Entries {
-  try {
-    const raw = globalThis.localStorage?.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Entries) : {};
-  } catch {
-    return {};
-  }
-}
-
-function persist(entries: Entries) {
-  try {
-    globalThis.localStorage?.setItem(STORAGE_KEY, JSON.stringify(entries));
-  } catch {
-    // Storage full or unavailable — the in-memory copy still works.
-  }
-}
+/**
+ * No earlier shape exists yet, so the chain is empty — but it is wired,
+ * which is the point. Bumping to a v2 key without one would abandon
+ * every existing library on the next deploy.
+ */
+const load = (): Entries => readVersioned<Entries>(STORAGE_KEY, {}, []);
 
 interface LibraryContextValue {
   entries: Entries;
@@ -66,16 +59,36 @@ interface LibraryContextValue {
   exportJson: () => string;
   /** Merge a transfer string in; returns how many entries were added. */
   importJson: (raw: string) => number;
+  /** Set when the last write to the device failed; null when it landed. */
+  saveError: string | null;
 }
 
 const LibraryContext = createContext<LibraryContextValue | null>(null);
 
 export function LibraryProvider({ children }: { children: React.ReactNode }) {
   const [stored, setEntries] = useState<Entries>(load);
+  const [saveError, setSaveError] = useState<string | null>(null);
   // The pre-rendered HTML was generated with an empty library, so the
   // hydration render must show one too. Writes still go to `stored`.
   const hydrated = useHydrated();
   const entries = hydrated ? stored : EMPTY;
+
+  /**
+   * Persisting in an effect rather than inside the state updaters keeps
+   * those updaters pure — React may call them more than once — and gives
+   * one place for a failed write to be noticed. The library is the only
+   * copy of this data, so a write that fails has to be said out loud
+   * rather than swallowed.
+   */
+  const firstRender = useRef(true);
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    const result = writeJson(STORAGE_KEY, stored);
+    setSaveError(result.ok ? null : writeFailureMessage(result));
+  }, [stored]);
 
   const setStatus = useCallback((game: Game, status: LibraryStatus | null) => {
     setEntries((prev) => {
@@ -106,7 +119,6 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
               : undefined,
         };
       }
-      persist(next);
       return next;
     });
   }, []);
@@ -126,7 +138,6 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       for (const [key, entry] of incoming) {
         next[key] = entry;
       }
-      persist(next);
       return next;
     });
     return incoming.length;
@@ -144,8 +155,9 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       count: Object.keys(entries).length,
       exportJson: () => JSON.stringify(entries),
       importJson,
+      saveError,
     }),
-    [entries, setStatus, importJson]
+    [entries, setStatus, importJson, saveError]
   );
 
   return (
