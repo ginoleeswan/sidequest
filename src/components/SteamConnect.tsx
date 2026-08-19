@@ -157,22 +157,19 @@ const styles = StyleSheet.create({
   },
   head: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   lede: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 12.5,
-    lineHeight: 18,
+    ...TYPE.p,
     color: COLORS.mediumGrey,
   },
   inputRow: { flexDirection: 'row', gap: SPACING.sm },
   input: {
+    ...TYPE.body,
     flex: 1,
     borderWidth: 1,
     borderColor: COLORS.strokeStrong,
     borderRadius: RADIUS.sm,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm + 1,
-    fontFamily: 'Noah-Regular',
     // See SearchInput: under 16px iOS zooms on focus.
-    fontSize: 16,
     color: COLORS.lightGrey,
   },
   button: {
@@ -185,13 +182,11 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.45 },
   buttonText: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 13,
+    ...TYPE.labelSmall,
     color: COLORS.darkGrey,
   },
   error: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 12,
+    ...TYPE.caption,
     color: '#FC8B7E',
   },
   profileRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
@@ -203,19 +198,15 @@ const styles = StyleSheet.create({
   },
   profileBody: { flex: 1, gap: 1 },
   profileName: {
-    fontFamily: 'Noah-Black',
-    fontSize: 15,
+    ...TYPE.h3,
     color: COLORS.lightGrey,
   },
   profileMeta: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 12,
+    ...TYPE.caption,
     color: COLORS.mediumGrey,
   },
   recent: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 12,
-    lineHeight: 17,
+    ...TYPE.caption,
     color: COLORS.mediumGrey,
   },
 });

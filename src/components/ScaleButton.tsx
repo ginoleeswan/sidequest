@@ -6,6 +6,8 @@ import {
 } from 'react-native';
 
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { SPRING } from '@/styles/motion';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -34,14 +36,16 @@ export function ScaleButton({
   accessibilityLabel,
 }: Props) {
   const scale = useAnimatedValue(1);
+  const reduced = useReducedMotion();
 
-  const to = (value: number) =>
+  const to = (value: number) => {
+    if (reduced) return;
     Animated.spring(scale, {
       toValue: value,
-      tension: 60,
-      friction: 6,
+      ...SPRING.press,
       useNativeDriver: true,
     }).start();
+  };
 
   return (
     <AnimatedPressable

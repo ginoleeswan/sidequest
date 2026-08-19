@@ -5,6 +5,7 @@ import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { StoreLink as StoreLinkT, StoreRef } from '@/api/types';
 import { COLORS } from '@/styles/colors';
 import { RADIUS, SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 interface Props {
   stores?: StoreRef[];
@@ -66,8 +67,7 @@ const styles = StyleSheet.create({
   },
   pillHovered: { backgroundColor: 'rgba(255,255,255,0.08)' },
   label: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 12,
+    ...TYPE.labelTiny,
     color: COLORS.lightGrey,
   },
   labelHovered: { color: COLORS.white },

@@ -7,6 +7,7 @@ import type { Game } from '@/api/types';
 import type { Section } from '@/constants/categories';
 import { COLORS } from '@/styles/colors';
 import { RADIUS, SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 interface Props {
   section: Section;
@@ -74,9 +75,7 @@ const styles = StyleSheet.create({
     maxWidth: 560,
   },
   eyebrow: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 10.5,
-    letterSpacing: 1.6,
+    ...TYPE.tag,
     color: COLORS.lightGrey,
     opacity: 0.85,
   },
@@ -90,9 +89,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 8,
   },
   description: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 13,
-    lineHeight: 19,
+    ...TYPE.p,
     color: COLORS.lightGrey,
   },
 });

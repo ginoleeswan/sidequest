@@ -4,6 +4,7 @@ import type { RatingBucket } from '@/api/types';
 import { compact } from '@/lib/format';
 import { COLORS, RATING_COLORS } from '@/styles/colors';
 import { SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 const LABELS: Record<string, string> = {
   exceptional: 'Exceptional',
@@ -47,8 +48,7 @@ const styles = StyleSheet.create({
   container: { gap: SPACING.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm + 2 },
   label: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 12,
+    ...TYPE.labelTiny,
     color: COLORS.lightGrey,
     width: 96,
   },
@@ -61,15 +61,13 @@ const styles = StyleSheet.create({
   },
   fill: { height: '100%', borderRadius: 3 },
   count: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 11,
+    ...TYPE.fine,
     color: COLORS.mediumGrey,
     width: 44,
     textAlign: 'right',
   },
   total: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 11,
+    ...TYPE.fine,
     color: COLORS.mediumGrey,
     marginTop: SPACING.xs,
   },

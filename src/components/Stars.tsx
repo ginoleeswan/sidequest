@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { COLORS } from '@/styles/colors';
+import { TYPE } from '@/styles/typography';
 
 const LABELS = ['', 'Terrible', 'Bad', 'Okay', 'Good', 'Great'];
 
@@ -36,8 +37,7 @@ const styles = StyleSheet.create({
   container: { alignItems: 'center', gap: 4 },
   row: { flexDirection: 'row', gap: 4 },
   label: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 12,
+    ...TYPE.caption,
     color: COLORS.lightGrey,
   },
 });

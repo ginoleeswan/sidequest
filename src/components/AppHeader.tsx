@@ -13,6 +13,7 @@ import {
 import { Mark } from './Mark';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 const NAV = [
   { label: 'Home', href: '/' },
@@ -151,15 +152,12 @@ const styles = StyleSheet.create({
   },
   brand: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   wordmark: {
-    fontFamily: 'Noah-Black',
-    fontSize: 16,
-    letterSpacing: 2.5,
+    ...TYPE.h3,
     color: COLORS.white,
   },
   nav: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xl },
   link: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 13,
+    ...TYPE.labelSmall,
     color: COLORS.mediumGrey,
   },
   linkActive: { color: COLORS.white },

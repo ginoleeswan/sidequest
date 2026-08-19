@@ -11,7 +11,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { COLORS } from '@/styles/colors';
+import { DURATION, EASING, SPRING } from '@/styles/motion';
 import { RADIUS, SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -38,14 +40,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       setToast({ message, icon, key: Date.now() });
       Animated.spring(progress, {
         toValue: 1,
-        tension: 90,
-        friction: 12,
+        ...SPRING.surface,
         useNativeDriver: true,
       }).start();
       timer.current = setTimeout(() => {
         Animated.timing(progress, {
           toValue: 0,
-          duration: 220,
+          duration: DURATION.base,
+          easing: EASING.exit,
           useNativeDriver: true,
         }).start(({ finished }) => finished && setToast(null));
       }, 2200);
@@ -105,8 +107,7 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   text: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 13,
+    ...TYPE.labelSmall,
     color: COLORS.lightGrey,
   },
 });

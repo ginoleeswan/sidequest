@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
-
-const DURATION = 220;
+import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { DURATION, EASING } from '@/styles/motion';
 
 type Phase = 'bones' | 'crossfade' | 'content';
 
@@ -33,6 +33,7 @@ export function Reveal({ pending, skeleton, children }: Props) {
   const progress = useAnimatedValue(pending ? 0 : 1);
   const [phase, setPhase] = useState<Phase>(pending ? 'bones' : 'content');
   const wasPending = useRef(pending);
+  const reduced = useReducedMotion();
 
   useEffect(() => {
     if (pending) {
@@ -52,15 +53,22 @@ export function Reveal({ pending, skeleton, children }: Props) {
       return;
     }
     wasPending.current = false;
+    if (reduced) {
+      // The swap still happens; it just doesn't travel.
+      progress.setValue(1);
+      setPhase('content');
+      return;
+    }
     setPhase('crossfade');
     const animation = Animated.timing(progress, {
       toValue: 1,
-      duration: DURATION,
+      duration: DURATION.base,
+      easing: EASING.standard,
       useNativeDriver: true,
     });
     animation.start(({ finished }) => finished && setPhase('content'));
     return () => animation.stop();
-  }, [pending, progress]);
+  }, [pending, progress, reduced]);
 
   // Loading: the bones hold the page open on their own.
   if (phase === 'bones') return <View>{skeleton}</View>;

@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { GameTile } from './GameTile';
 import type { Game } from '@/api/types';
+import { TYPE } from '@/styles/typography';
 
 interface Props {
   game: Game;
@@ -28,10 +29,7 @@ export function RankedTile({ game, rank, width }: Props) {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'flex-end' },
   rank: {
-    fontFamily: 'Noah-Black',
-    fontSize: 96,
-    lineHeight: 96,
-    letterSpacing: -6,
+    ...TYPE.numeral,
     color: 'rgba(255,255,255,0.13)',
     marginBottom: 22,
   },

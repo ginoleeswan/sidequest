@@ -2,7 +2,9 @@ import { useEffect } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { COLORS } from '@/styles/colors';
+import { DURATION, EASING } from '@/styles/motion';
 
 /**
  * A hairline that sweeps while new results are on the way.
@@ -13,18 +15,21 @@ import { COLORS } from '@/styles/colors';
  */
 export function ProgressLine() {
   const progress = useAnimatedValue(0);
+  const reduced = useReducedMotion();
 
   useEffect(() => {
+    if (reduced) return;
     const loop = Animated.loop(
       Animated.timing(progress, {
         toValue: 1,
-        duration: 1100,
+        duration: DURATION.sweep,
+        easing: EASING.linear,
         useNativeDriver: true,
       })
     );
     loop.start();
     return () => loop.stop();
-  }, [progress]);
+  }, [progress, reduced]);
 
   return (
     <View style={styles.track}>

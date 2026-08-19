@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 import { DynamicIcon, type IconType } from './DynamicIcon';
 import { COLORS } from '@/styles/colors';
 import { RADIUS, SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 interface Props {
   title: string;
@@ -76,9 +77,8 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   title: {
-    fontFamily: 'Noah-Bold',
+    ...TYPE.labelSmall,
     color: COLORS.lightGrey,
-    fontSize: 13,
   },
   selectedTitle: { color: COLORS.darkGrey },
   quietTitle: { fontSize: 11, color: COLORS.mediumGrey },

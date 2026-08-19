@@ -22,6 +22,7 @@ import { usePersistedState } from '@/hooks/usePersistedState';
 import { useLibrary } from '@/lib/library';
 import { COLORS } from '@/styles/colors';
 import { RADIUS, SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 const PACES: {
   icon: keyof typeof Ionicons.glyphMap;
@@ -316,42 +317,31 @@ const styles = StyleSheet.create({
   },
   chromeButton: { width: 36, height: 36, justifyContent: 'center' },
   skip: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 13,
+    ...TYPE.labelSmall,
     color: COLORS.mediumGrey,
     padding: SPACING.sm,
   },
   stage: { maxWidth: 460 },
   act: { gap: SPACING.md, alignItems: 'flex-start' },
   eyebrow: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 11,
-    letterSpacing: 2.4,
+    ...TYPE.tag,
     color: COLORS.mediumGrey,
   },
   wordmark: {
-    fontFamily: 'Noah-Black',
-    fontSize: 26,
-    letterSpacing: 1.5,
+    ...TYPE.title,
     color: COLORS.white,
     marginBottom: SPACING.lg,
   },
   actLabel: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 11,
-    letterSpacing: 2.4,
+    ...TYPE.tag,
     color: COLORS.accent,
   },
   display: {
-    fontFamily: 'Noah-Black',
-    fontSize: 34,
-    lineHeight: 40,
+    ...TYPE.display,
     color: COLORS.white,
   },
   lede: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 14.5,
-    lineHeight: 22,
+    ...TYPE.body,
     color: COLORS.mediumGrey,
     marginBottom: SPACING.sm,
   },
@@ -368,13 +358,11 @@ const styles = StyleSheet.create({
     marginTop: SPACING.sm,
   },
   ctaText: {
-    fontFamily: 'Noah-Black',
-    fontSize: 15,
+    ...TYPE.h3,
     color: COLORS.darkGrey,
   },
   quiet: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 12.5,
+    ...TYPE.p,
     color: COLORS.mediumGrey,
     alignSelf: 'center',
     padding: SPACING.xs,
@@ -398,20 +386,17 @@ const styles = StyleSheet.create({
   },
   paceBody: { flex: 1, gap: 1 },
   paceTitle: {
-    fontFamily: 'Noah-Black',
-    fontSize: 14.5,
+    ...TYPE.h4,
     color: COLORS.lightGrey,
   },
   paceTitleSelected: { color: COLORS.darkGrey },
   paceLine: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 12,
+    ...TYPE.caption,
     color: COLORS.mediumGrey,
   },
   paceLineSelected: { color: 'rgba(30,36,50,0.7)' },
   paceHours: {
-    fontFamily: 'Noah-Black',
-    fontSize: 13,
+    ...TYPE.h4,
     color: COLORS.mediumGrey,
   },
 
@@ -451,8 +436,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.white,
   },
   pickName: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 11,
+    ...TYPE.labelTiny,
     color: COLORS.lightGrey,
   },
 

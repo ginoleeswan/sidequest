@@ -17,6 +17,7 @@ import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useLibrary } from '@/lib/library';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 interface Props {
   game: Game;
@@ -192,11 +193,8 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   badgeText: {
-    fontFamily: 'Noah-Black',
-    fontSize: 10.5,
-    letterSpacing: 0.4,
+    ...TYPE.h4,
     color: COLORS.darkGrey,
-    textTransform: 'uppercase',
   },
   saveCorner: {
     position: 'absolute',
@@ -215,16 +213,13 @@ const styles = StyleSheet.create({
     left: SPACING.sm + 2,
   },
   title: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 13,
-    lineHeight: 17,
+    ...TYPE.labelSmall,
     color: COLORS.lightGrey,
     marginTop: 2,
   },
   titleHovered: { color: COLORS.white },
   meta: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 11,
+    ...TYPE.fine,
     color: COLORS.mediumGrey,
   },
 });

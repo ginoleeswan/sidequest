@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 import type { Game } from '@/api/types';
 import { COLORS } from '@/styles/colors';
 import { RADIUS, SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 /**
  * For the mood the whole app exists to serve: too many options, no
@@ -46,8 +47,7 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
   },
   label: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 13.5,
+    ...TYPE.label,
     color: COLORS.lightGrey,
   },
 });

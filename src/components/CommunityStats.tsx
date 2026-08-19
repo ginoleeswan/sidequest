@@ -5,6 +5,7 @@ import type { AddedByStatus } from '@/api/types';
 import { compact } from '@/lib/format';
 import { COLORS } from '@/styles/colors';
 import { RADIUS, SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 const ROWS: {
   key: keyof AddedByStatus;
@@ -57,13 +58,11 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   value: {
-    fontFamily: 'Noah-Black',
-    fontSize: 15,
+    ...TYPE.h3,
     color: COLORS.lightGrey,
   },
   label: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 10,
+    ...TYPE.fine,
     color: COLORS.mediumGrey,
   },
 });

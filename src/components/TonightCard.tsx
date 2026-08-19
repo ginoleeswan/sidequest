@@ -10,6 +10,7 @@ import { useLibrary } from '@/lib/library';
 import { pickTonight } from '@/lib/scheduler';
 import { COLORS } from '@/styles/colors';
 import { RADIUS, SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 /** An evening most people actually have. */
 const SESSION_MINUTES = 90;
@@ -125,21 +126,15 @@ const styles = StyleSheet.create({
   body: { flex: 1, gap: 2 },
   eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   eyebrow: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 10,
-    letterSpacing: 1.4,
+    ...TYPE.tag,
     color: COLORS.accent,
   },
   title: {
-    fontFamily: 'Noah-Black',
-    fontSize: 16,
-    lineHeight: 20,
+    ...TYPE.h3,
     color: COLORS.white,
   },
   reason: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 12,
-    lineHeight: 17,
+    ...TYPE.caption,
     color: COLORS.mediumGrey,
   },
   planLink: {
@@ -149,8 +144,7 @@ const styles = StyleSheet.create({
     paddingLeft: SPACING.sm,
   },
   planText: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 12,
+    ...TYPE.labelTiny,
     color: COLORS.mediumGrey,
   },
 });

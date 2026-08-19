@@ -13,6 +13,7 @@ import { COLORS } from '@/styles/colors';
 import { formatHours, parseHours, type Duration } from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
 import { RADIUS, SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 /** Lengths people actually reach for, so most corrections are one tap. */
 const PRESETS = [2, 5, 10, 20, 40, 80];
@@ -153,21 +154,15 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   eyebrow: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 10.5,
-    letterSpacing: 1.4,
+    ...TYPE.tag,
     color: COLORS.accent,
   },
   title: {
-    fontFamily: 'Noah-Black',
-    fontSize: 20,
-    lineHeight: 25,
+    ...TYPE.h2,
     color: COLORS.white,
   },
   detail: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 13,
-    lineHeight: 19,
+    ...TYPE.p,
     color: COLORS.mediumGrey,
   },
   presets: {
@@ -185,8 +180,7 @@ const styles = StyleSheet.create({
   },
   presetOn: { backgroundColor: COLORS.white, borderColor: COLORS.white },
   presetText: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 13,
+    ...TYPE.labelSmall,
     color: COLORS.lightGrey,
   },
   presetTextOn: { color: COLORS.darkGrey },
@@ -197,15 +191,14 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
   },
   input: {
+    ...TYPE.body,
     flex: 1,
     borderWidth: 1,
     borderColor: COLORS.strokeStrong,
     borderRadius: RADIUS.sm,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm + 1,
-    fontFamily: 'Noah-Regular',
     // 16px or larger: iOS zooms the page for anything smaller.
-    fontSize: 16,
     color: COLORS.lightGrey,
     outlineWidth: 0,
   },
@@ -217,8 +210,7 @@ const styles = StyleSheet.create({
   },
   saveOff: { opacity: 0.4 },
   saveText: {
-    fontFamily: 'Noah-Black',
-    fontSize: 13.5,
+    ...TYPE.h4,
     color: COLORS.darkGrey,
   },
   reset: {
@@ -229,8 +221,7 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xs,
   },
   resetText: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 12.5,
+    ...TYPE.labelSmall,
     color: COLORS.mediumGrey,
   },
 });

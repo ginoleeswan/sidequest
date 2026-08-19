@@ -10,6 +10,7 @@ import { Textured } from './Textured';
 import type { Game } from '@/api/types';
 import { COLORS } from '@/styles/colors';
 import { RADIUS, SHADOW, SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 interface Props {
   games: Game[];
@@ -159,14 +160,12 @@ const styles = StyleSheet.create({
   railImage: { width: 96, height: '100%' },
   railCopy: { flex: 1, paddingRight: SPACING.sm + 2, gap: SPACING.xs },
   railTitle: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 14,
+    ...TYPE.label,
     color: COLORS.lightGrey,
   },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
   meta: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 12,
+    ...TYPE.caption,
     color: COLORS.mediumGrey,
   },
 });

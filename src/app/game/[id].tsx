@@ -45,6 +45,7 @@ import { formatHours } from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
 import { findSection } from '@/constants/categories';
 import { COLORS } from '@/styles/colors';
+import { DURATION, EASING } from '@/styles/motion';
 import { LAYOUT, RADIUS, SHADOW, SHADOW_ROOM, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
@@ -191,7 +192,8 @@ export default function GameInfoScreen() {
     if (data) {
       Animated.timing(opacity, {
         toValue: 1,
-        duration: 250,
+        duration: DURATION.base,
+        easing: EASING.standard,
         useNativeDriver: true,
       }).start();
     }
@@ -412,7 +414,7 @@ export default function GameInfoScreen() {
                   source={{ uri: mediaUri(item.image) }}
                   style={styles.screenshot}
                   contentFit="cover"
-                  transition={200}
+                  transition={DURATION.base}
                 />
               </Pressable>
             )}
@@ -609,17 +611,13 @@ const styles = StyleSheet.create({
   },
   stat: { gap: 3, alignItems: 'flex-start' },
   statValue: {
-    fontFamily: 'Noah-Black',
-    fontSize: 16,
+    ...TYPE.h3,
     color: COLORS.white,
   },
   statFlag: { color: COLORS.accent },
   statPencil: { fontSize: 11, color: COLORS.mediumGrey },
   statLabel: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 10,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
+    ...TYPE.micro,
     color: COLORS.mediumGrey,
   },
 
@@ -722,16 +720,11 @@ const styles = StyleSheet.create({
   },
   metaRow: { gap: 2, marginBottom: SPACING.sm },
   metaLabel: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 11,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
+    ...TYPE.micro,
     color: COLORS.mediumGrey,
   },
   metaValue: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 13,
-    lineHeight: 19,
+    ...TYPE.p,
     color: COLORS.lightGrey,
   },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.xs + 2 },

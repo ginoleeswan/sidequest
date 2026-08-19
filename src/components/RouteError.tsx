@@ -6,6 +6,7 @@ import { Textured } from './Textured';
 import { reportCrash } from '@/lib/reportCrash';
 import { COLORS } from '@/styles/colors';
 import { RADIUS, SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 interface Props {
   error: Error;
@@ -80,15 +81,12 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xs,
   },
   title: {
-    fontFamily: 'Noah-Black',
-    fontSize: 20,
+    ...TYPE.h2,
     color: COLORS.white,
     textAlign: 'center',
   },
   detail: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 13.5,
-    lineHeight: 20,
+    ...TYPE.body,
     color: COLORS.mediumGrey,
     textAlign: 'center',
   },
@@ -104,8 +102,7 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.md,
   },
   primaryText: {
-    fontFamily: 'Noah-Black',
-    fontSize: 14,
+    ...TYPE.h4,
     color: COLORS.darkGrey,
   },
   ghost: {
@@ -116,13 +113,11 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.md,
   },
   ghostText: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 14,
+    ...TYPE.label,
     color: COLORS.lightGrey,
   },
   dev: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 11,
+    ...TYPE.fine,
     color: COLORS.mediumGrey,
     marginTop: SPACING.md,
     textAlign: 'center',

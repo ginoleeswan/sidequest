@@ -16,6 +16,7 @@ import { Mark } from './Mark';
 import { DISCOVER, GENRES, type Section } from '@/constants/categories';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, RADIUS, SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 interface NavItemProps {
   label: string;
@@ -167,14 +168,11 @@ const styles = StyleSheet.create({
   },
   brand: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   wordmark: {
-    fontFamily: 'Noah-Black',
-    fontSize: 22,
+    ...TYPE.h1,
     color: COLORS.white,
-    letterSpacing: 1.5,
   },
   tagline: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 11,
+    ...TYPE.fine,
     color: COLORS.mediumGrey,
     marginTop: SPACING.xs,
   },
@@ -182,10 +180,7 @@ const styles = StyleSheet.create({
   nav: { flex: 1 },
   navContent: { gap: 2, paddingBottom: SPACING.sm },
   navHeading: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 10.5,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
+    ...TYPE.micro,
     color: COLORS.mediumGrey,
     marginTop: SPACING.lg,
     marginBottom: SPACING.sm,
@@ -204,5 +199,5 @@ const styles = StyleSheet.create({
   },
   navItemActive: { backgroundColor: COLORS.white },
   navItemHovered: { backgroundColor: 'rgba(255,255,255,0.06)' },
-  navLabel: { fontFamily: 'Noah-Bold', fontSize: 13.5 },
+  navLabel: { ...TYPE.labelSmall },
 });

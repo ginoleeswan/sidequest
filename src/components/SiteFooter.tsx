@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 const EXPLORE = [
   { label: 'Home', href: '/' },
@@ -141,20 +142,15 @@ const styles = StyleSheet.create({
   },
   brand: { gap: SPACING.xs + 2, maxWidth: 360 },
   wordmark: {
-    fontFamily: 'Noah-Black',
-    fontSize: 19,
+    ...TYPE.h2,
     color: COLORS.white,
-    letterSpacing: 0.2,
   },
   tagline: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 13,
+    ...TYPE.labelSmall,
     color: COLORS.lightGrey,
   },
   pitch: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 12,
-    lineHeight: 18,
+    ...TYPE.caption,
     color: COLORS.mediumGrey,
     marginTop: 2,
   },
@@ -166,16 +162,12 @@ const styles = StyleSheet.create({
   },
   col: { gap: SPACING.sm + 2, minWidth: 96 },
   colHeading: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 10,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
+    ...TYPE.micro,
     color: COLORS.mediumGrey,
     marginBottom: 2,
   },
   link: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 12.5,
+    ...TYPE.labelSmall,
     color: COLORS.lightGrey,
   },
   rule: { height: 1, backgroundColor: COLORS.stroke },
@@ -186,8 +178,7 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   fineprint: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 11,
+    ...TYPE.fine,
     color: COLORS.mediumGrey,
     opacity: 0.85,
   },

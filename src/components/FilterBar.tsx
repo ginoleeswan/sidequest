@@ -5,6 +5,7 @@ import { DynamicIcon, type IconType } from './DynamicIcon';
 import type { BrowseFilters } from '@/api/rawg';
 import { COLORS } from '@/styles/colors';
 import { RADIUS, SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 const SORTS: {
   label: string;
@@ -248,8 +249,7 @@ const styles = StyleSheet.create({
   },
   segmentOn: { backgroundColor: COLORS.white },
   segmentText: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 12.5,
+    ...TYPE.labelSmall,
     color: COLORS.mediumGrey,
   },
   segmentTextOn: { color: COLORS.darkGrey },
@@ -274,8 +274,7 @@ const styles = StyleSheet.create({
   },
   toggleOn: { backgroundColor: COLORS.white, borderColor: COLORS.white },
   toggleText: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 12.5,
+    ...TYPE.labelSmall,
     color: COLORS.lightGrey,
   },
   toggleTextOn: { color: COLORS.darkGrey },
@@ -288,8 +287,7 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm,
   },
   clearText: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 12.5,
+    ...TYPE.labelSmall,
     color: COLORS.accent,
   },
 });

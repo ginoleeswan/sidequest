@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
+import { TYPE } from '@/styles/typography';
 
 interface Props {
   score: number;
@@ -27,6 +28,6 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   pillSm: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: 5 },
-  score: { fontFamily: 'Noah-Black', fontSize: 14 },
+  score: { ...TYPE.h4 },
   scoreSm: { fontSize: 11 },
 });
