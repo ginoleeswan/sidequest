@@ -35,14 +35,6 @@ const MEDIA_MAX_ENTRIES = 180;
  */
 const ROUTES = ['/', '/plan', '/library', '/about', '/terms', '/privacy'];
 
-/**
- * Game pages are dynamic, but their pre-rendered HTML is not: the export
- * writes one shell for /game/[id] and the id only matters once the app is
- * running. So any cached game document is the correct offline answer for
- * every game, and is kept under a synthetic key to be found by path.
- */
-const GAME_SHELL = '/game/__shell';
-
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
@@ -55,8 +47,6 @@ self.addEventListener('install', (event) => {
             cache.add(path).catch(() => {})
           )
         );
-        const shell = await fetch('/game/0').catch(() => null);
-        if (shell?.ok) await cache.put(GAME_SHELL, shell);
       })
       .finally(() => self.skipWaiting())
   );
