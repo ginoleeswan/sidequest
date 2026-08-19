@@ -25,3 +25,7 @@ jobs:
         run: npm test
       - name: Bundle (web export)
         run: npx expo export --platform web
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Hydration check
+        run: npm run test:hydration

@@ -7,6 +7,7 @@ import {
 } from 'react';
 
 import type { Game } from '@/api/types';
+import { useHydrated } from '@/hooks/useHydrated';
 
 export type LibraryStatus = 'wishlist' | 'playing' | 'finished';
 
@@ -34,6 +35,9 @@ export const STATUS_META: Record<
 type Entries = Record<string, LibraryEntry>;
 
 const STORAGE_KEY = 'sidequest.library.v1';
+
+/** A stable identity, so gating cannot itself churn memoised consumers. */
+const EMPTY: Entries = {};
 
 function load(): Entries {
   try {
@@ -67,7 +71,11 @@ interface LibraryContextValue {
 const LibraryContext = createContext<LibraryContextValue | null>(null);
 
 export function LibraryProvider({ children }: { children: React.ReactNode }) {
-  const [entries, setEntries] = useState<Entries>(load);
+  const [stored, setEntries] = useState<Entries>(load);
+  // The pre-rendered HTML was generated with an empty library, so the
+  // hydration render must show one too. Writes still go to `stored`.
+  const hydrated = useHydrated();
+  const entries = hydrated ? stored : EMPTY;
 
   const setStatus = useCallback((game: Game, status: LibraryStatus | null) => {
     setEntries((prev) => {
