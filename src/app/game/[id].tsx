@@ -22,6 +22,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { BackButton } from '@/components/BackButton';
 import { Chip } from '@/components/Chip';
 import { CommunityStats } from '@/components/CommunityStats';
+import { ChromeWeld } from '@/components/ChromeWeld';
 import { CoverImage } from '@/components/CoverImage';
 import { GameCard } from '@/components/GameCard';
 import { Message } from '@/components/Message';
@@ -48,6 +49,9 @@ import { LAYOUT, RADIUS, SHADOW, SHADOW_ROOM, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 const HTML_TAGS = /(<([^>]+)>)/gi;
+
+/** How far the chrome join reaches below the safe area. */
+const WELD_HEIGHT = 190;
 
 /** RAWG descriptions arrive as HTML: after stripping tags, unescape the
     handful of entities that actually occur in them. */
@@ -196,13 +200,6 @@ export default function GameInfoScreen() {
   if (isPending) {
     return (
       <Textured style={styles.background}>
-        {isExpanded ? (
-          <AppHeader immersive />
-        ) : (
-          <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
-            <BackButton />
-          </View>
-        )}
         <View
           style={[
             isExpanded ? styles.skeletonShellWide : styles.skeletonShell,
@@ -211,6 +208,16 @@ export default function GameInfoScreen() {
         >
           {isExpanded ? <SkeletonDetailExpanded /> : <SkeletonDetail />}
         </View>
+        {/* Same join as the loaded hero: the bones run to the top of the
+            document too, so they need it just as much. */}
+        {!isExpanded && <ChromeWeld height={insets.top + WELD_HEIGHT} />}
+        {isExpanded ? (
+          <AppHeader immersive />
+        ) : (
+          <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
+            <BackButton />
+          </View>
+        )}
       </Textured>
     );
   }
@@ -270,26 +277,7 @@ export default function GameInfoScreen() {
         pointerEvents="none"
       />
       <GrainScrim style={styles.heroGrain} />
-      {/* The weld. Safari paints its chrome with the html canvas colour
-          (navy), so the art's first pixels are exactly that, easing into
-          the page colour and then away entirely. The toolbar and the page
-          read as one surface instead of meeting on a hard line. */}
-      <LinearGradient
-        colors={[
-          COLORS.navy,
-          COLORS.darkGrey,
-          'rgba(51,61,81,0.52)',
-          'rgba(16,21,31,0.22)',
-          'rgba(9,12,19,0)',
-        ]}
-        locations={[0, 0.14, 0.32, 0.62, 1]}
-        style={[styles.topScrim, { height: insets.top + 190 }]}
-        pointerEvents="none"
-      />
-      <GrainScrim
-        style={[styles.topGrain, { height: insets.top + 190 }]}
-        solidAt="band"
-      />
+      <ChromeWeld height={insets.top + WELD_HEIGHT} />
       <View style={styles.heroCopy}>
         <PlatformIcons platforms={game.parent_platforms ?? []} />
         <Text style={styles.heroTitle}>{game.name}</Text>
@@ -585,18 +573,6 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     height: '70%',
-  },
-  topScrim: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-  },
-  topGrain: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
   },
   heroImage: {
     position: 'absolute',
