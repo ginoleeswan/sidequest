@@ -37,3 +37,12 @@ jest.mock('expo-router', () => {
     SplashScreen: { preventAutoHideAsync: jest.fn(), hideAsync: jest.fn() },
   };
 });
+
+/**
+ * React Query batches its subscriber notifications through a timer, which
+ * lands outside the test's act() scope and prints an update-not-wrapped
+ * warning for any query that settles. Running the scheduler synchronously
+ * is the documented testing setup, and makes the warnings real again.
+ */
+const { notifyManager } = require('@tanstack/react-query');
+notifyManager.setScheduler((callback) => callback());
