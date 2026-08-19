@@ -10,6 +10,22 @@ import {
 
 const NOISE = require('../../assets/images/noise.png');
 
+/**
+ * How far the grain takes to reach full strength at the top of a page.
+ *
+ * iOS Safari paints its chrome with theme-color: flat, untextured grey.
+ * Our page colour matches it exactly, but the texture does not — full
+ * grain starting on the first pixel draws a visible line under the status
+ * bar. Ramping the grain in over this distance means the chrome dissolves
+ * into the page instead of butting against it.
+ */
+const CHROME_FADE = '120px';
+
+const GRAIN_TILE = '150px 150px';
+
+/** Grain, ramped in from the top of the page. */
+const TOP_FADE = `linear-gradient(to bottom, rgba(0,0,0,0) 0px, rgba(0,0,0,1) ${CHROME_FADE})`;
+
 const styles = StyleSheet.create({
   noInteraction: { pointerEvents: 'none' },
 });
@@ -33,18 +49,45 @@ export function Textured({ children, style, fill = false }: Props) {
 
   if (Platform.OS === 'web') {
     const uri = Asset.fromModule(NOISE).uri;
+
+    // Inside a card the texture is uniform: there is no browser chrome to
+    // meet, and a card's own top edge is a border, not a seam.
+    if (fill) {
+      return (
+        <View
+          style={[
+            base,
+            {
+              backgroundImage: `url(${uri})`,
+              backgroundRepeat: 'repeat',
+              backgroundSize: GRAIN_TILE,
+            } as unknown as ViewStyle,
+          ]}
+          pointerEvents="none"
+        >
+          {children}
+        </View>
+      );
+    }
+
+    // As a page background the grain is a separate, masked layer so it can
+    // fade in from the document top while the page colour stays solid all
+    // the way up to the chrome.
     return (
-      <View
-        style={[
-          base,
-          {
-            backgroundImage: `url(${uri})`,
-            backgroundRepeat: 'repeat',
-            backgroundSize: '150px 150px',
-          } as unknown as ViewStyle,
-        ]}
-        pointerEvents={fill ? 'none' : 'auto'}
-      >
+      <View style={base}>
+        <View
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              backgroundImage: `url(${uri})`,
+              backgroundRepeat: 'repeat',
+              backgroundSize: GRAIN_TILE,
+              maskImage: TOP_FADE,
+              WebkitMaskImage: TOP_FADE,
+            } as unknown as ViewStyle,
+          ]}
+          pointerEvents="none"
+        />
         {children}
       </View>
     );
@@ -73,15 +116,21 @@ export function GrainScrim({
   solidAt = 'bottom',
 }: {
   style?: StyleProp<ViewStyle>;
-  /** Which edge the scrim is opaque at — the grain matches its weight. */
-  solidAt?: 'top' | 'bottom';
+  /**
+   * Which edge the scrim is opaque at — the grain matches its weight.
+   * 'band' additionally ramps in from the top, for chrome that sits at
+   * the very top of the document.
+   */
+  solidAt?: 'top' | 'bottom' | 'band';
 }) {
   if (Platform.OS !== 'web') return null;
   const uri = Asset.fromModule(NOISE).uri;
   const fade =
     solidAt === 'bottom'
       ? 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 85%)'
-      : 'linear-gradient(to bottom, rgba(0,0,0,1) 25%, rgba(0,0,0,0) 100%)';
+      : solidAt === 'band'
+        ? `linear-gradient(to bottom, rgba(0,0,0,0) 0px, rgba(0,0,0,1) ${CHROME_FADE}, rgba(0,0,0,1) 62%, rgba(0,0,0,0) 100%)`
+        : 'linear-gradient(to bottom, rgba(0,0,0,1) 25%, rgba(0,0,0,0) 100%)';
   return (
     <View
       style={[
@@ -89,7 +138,7 @@ export function GrainScrim({
         {
           backgroundImage: `url(${uri})`,
           backgroundRepeat: 'repeat',
-          backgroundSize: '150px 150px',
+          backgroundSize: GRAIN_TILE,
           maskImage: fade,
           WebkitMaskImage: fade,
         } as unknown as ViewStyle,

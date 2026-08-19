@@ -262,7 +262,7 @@ export default function GameInfoScreen() {
       />
       <GrainScrim
         style={[styles.topGrain, { height: insets.top + 190 }]}
-        solidAt="top"
+        solidAt="band"
       />
       <View style={styles.heroCopy}>
         <PlatformIcons platforms={game.parent_platforms ?? []} />

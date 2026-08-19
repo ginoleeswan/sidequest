@@ -77,7 +77,10 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontFamily: 'Noah-Regular',
-    fontSize: 15,
+    // 16px or larger, always: iOS Safari zooms the page when a smaller
+    // input takes focus, and there is no way to opt out of that without
+    // also disabling pinch-zoom for everyone.
+    fontSize: 16,
     color: COLORS.lightGrey,
     paddingVertical: 0,
     // Suppress the browser focus ring; the container border carries focus.

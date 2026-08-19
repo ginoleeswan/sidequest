@@ -494,7 +494,7 @@ export default function HomeScreen() {
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
           />
-          <GrainScrim style={StyleSheet.absoluteFill} solidAt="top" />
+          <GrainScrim style={StyleSheet.absoluteFill} solidAt="band" />
           {/* Search is a mode, not a field wedged between the wordmark
               and the icons: tapping the glass hands the whole row over to
               the query, and dismissing gives the row back. */}

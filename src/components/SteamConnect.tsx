@@ -171,7 +171,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm + 1,
     fontFamily: 'Noah-Regular',
-    fontSize: 13,
+    // See SearchInput: under 16px iOS zooms on focus.
+    fontSize: 16,
     color: COLORS.lightGrey,
   },
   button: {
