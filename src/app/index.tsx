@@ -41,6 +41,7 @@ import { Rail } from '@/components/Rail';
 import { SearchInput } from '@/components/SearchInput';
 import { SectionHeader } from '@/components/SectionHeader';
 import { Shelf } from '@/components/Shelf';
+import { WhenNear } from '@/components/WhenNear';
 import { Sidebar } from '@/components/Sidebar';
 import {
   SkeletonCategory,
@@ -400,13 +401,23 @@ export default function HomeScreen() {
                       inset={SPACING.xl}
                     />
                     {HOME_SHELVES.map((shelf, index) => (
-                      <Shelf
+                      <WhenNear
                         key={shelf.key}
-                        section={shelf}
-                        games={shelves[index].data ?? []}
-                        onViewAll={selectSection}
-                        inset={SPACING.xl}
-                      />
+                        placeholder={
+                          <SkeletonShelf
+                            inset={SPACING.xl}
+                            eyebrow={shelf.variant === 'ranked'}
+                            ranked={shelf.variant === 'ranked'}
+                          />
+                        }
+                      >
+                        <Shelf
+                          section={shelf}
+                          games={shelves[index].data ?? []}
+                          onViewAll={selectSection}
+                          inset={SPACING.xl}
+                        />
+                      </WhenNear>
                     ))}
                     <SiteFooter inset={SPACING.xl} />
                   </View>
@@ -479,13 +490,23 @@ export default function HomeScreen() {
                     inset={SPACING.md}
                   />
                   {HOME_SHELVES.map((shelf, index) => (
-                    <Shelf
+                    <WhenNear
                       key={shelf.key}
-                      section={shelf}
-                      games={(shelves[index].data ?? []).slice(0, 12)}
-                      onViewAll={selectSection}
-                      inset={SPACING.md}
-                    />
+                      placeholder={
+                        <SkeletonShelf
+                          inset={SPACING.md}
+                          eyebrow={shelf.variant === 'ranked'}
+                          ranked={shelf.variant === 'ranked'}
+                        />
+                      }
+                    >
+                      <Shelf
+                        section={shelf}
+                        games={(shelves[index].data ?? []).slice(0, 12)}
+                        onViewAll={selectSection}
+                        inset={SPACING.md}
+                      />
+                    </WhenNear>
                   ))}
                 </View>
                 <SiteFooter />
