@@ -74,11 +74,26 @@ export default function Root({ children }: PropsWithChildren) {
           content="https://sidequest-bice-nu.vercel.app/og.png"
         />
         <style dangerouslySetInnerHTML={{ __html: css }} />
+        <script dangerouslySetInnerHTML={{ __html: registerServiceWorker }} />
       </head>
       <body>{children}</body>
     </html>
   );
 }
+
+/**
+ * Registers the worker after load, so it never competes with the first
+ * paint for bandwidth. Guarded on support and wrapped in a catch: an
+ * environment that refuses workers (private mode, an unusual browser)
+ * should lose offline support, not the page.
+ */
+const registerServiceWorker = `
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('/sw.js').catch(function () {});
+    });
+  }
+`;
 
 const css = `
   html, body {
