@@ -93,6 +93,7 @@ export function GameTile({ game, width, badge }: Props) {
     >
       <ScaleButton
         onPress={() => router.push(`/game/${game.id}`)}
+        onPressIn={prefetch}
         style={styles.tile}
         activeScale={0.97}
         hoverScale={1.03}

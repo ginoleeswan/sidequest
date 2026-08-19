@@ -19,6 +19,16 @@ interface Props {
   /** Scale while the pointer hovers (web/desktop). 1 disables. */
   hoverScale?: number;
   accessibilityLabel?: string;
+  /**
+   * Fired the moment a finger lands, before the press completes.
+   *
+   * The point is prefetching. Hover is the usual trigger for warming the
+   * next screen, and hover does not exist on a touch device — so phones,
+   * which need the head start most, were the only ones not getting it.
+   * Press-in to press-out is a couple of hundred milliseconds of free
+   * network time, and by then the user has committed.
+   */
+  onPressIn?: () => void;
 }
 
 /**
@@ -34,6 +44,7 @@ export function ScaleButton({
   activeScale = 0.9,
   hoverScale = 1,
   accessibilityLabel,
+  onPressIn,
 }: Props) {
   const scale = useAnimatedValue(1);
   const reduced = useReducedMotion();
@@ -52,7 +63,10 @@ export function ScaleButton({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       onPress={onPress}
-      onPressIn={() => to(activeScale)}
+      onPressIn={() => {
+        onPressIn?.();
+        to(activeScale);
+      }}
       onPressOut={() => to(hoverScale > 1 ? hoverScale : 1)}
       onHoverIn={() => hoverScale !== 1 && to(hoverScale)}
       onHoverOut={() => to(1)}
