@@ -9,6 +9,7 @@
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join } from 'node:path';
+import { brotliCompressSync, gzipSync } from 'node:zlib';
 
 const MIME = {
   '.html': 'text/html',
@@ -41,10 +42,32 @@ export function serve(root, port) {
       join(root, path, 'index.html'),
     ]) {
       if (await isFile(file)) {
-        res.writeHead(200, {
-          'content-type': MIME[extname(file)] ?? 'application/octet-stream',
-        });
-        return res.end(await readFile(file));
+        const type = MIME[extname(file)] ?? 'application/octet-stream';
+        const body = await readFile(file);
+
+        // Vercel compresses text assets, so a local server that does not
+        // makes every measurement taken against it a lie: the JS bundle
+        // reads as 1.5 MB here and transfers as about a third of that in
+        // production.
+        const compressible =
+          /^(text|application\/(javascript|json|manifest))/.test(type);
+        const accepts = req.headers['accept-encoding'] ?? '';
+        if (compressible && accepts.includes('br')) {
+          res.writeHead(200, {
+            'content-type': type,
+            'content-encoding': 'br',
+          });
+          return res.end(brotliCompressSync(body));
+        }
+        if (compressible && accepts.includes('gzip')) {
+          res.writeHead(200, {
+            'content-type': type,
+            'content-encoding': 'gzip',
+          });
+          return res.end(gzipSync(body));
+        }
+        res.writeHead(200, { 'content-type': type });
+        return res.end(body);
       }
     }
     res.writeHead(404, { 'content-type': 'text/html' });
