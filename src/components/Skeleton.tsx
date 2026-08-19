@@ -42,11 +42,30 @@ export function SkeletonTile({ width }: { width?: number }) {
 }
 
 /** Storefront shelf silhouette: heading plus a row of tiles. */
-export function SkeletonShelf({ tiles = 6 }: { tiles?: number }) {
+export function SkeletonShelf({
+  tiles = 6,
+  inset = 0,
+}: {
+  tiles?: number;
+  /**
+   * The parent's horizontal padding. The tile row bleeds across it the
+   * same way Rail does, so the bones sit exactly where the real
+   * edge-to-edge scroller will land.
+   */
+  inset?: number;
+}) {
   return (
     <View style={styles.shelf}>
       <Skeleton style={styles.heading} />
-      <View style={styles.row}>
+      <View
+        style={[
+          styles.row,
+          inset > 0 && {
+            marginHorizontal: -inset,
+            paddingHorizontal: inset,
+          },
+        ]}
+      >
         {Array.from({ length: tiles }, (_, i) => (
           <SkeletonTile key={i} width={LAYOUT.shelfTileWidth} />
         ))}
@@ -99,12 +118,12 @@ export function SkeletonRow() {
 export function SkeletonCompactHome() {
   return (
     <View style={styles.compact}>
-      <View style={styles.row}>
+      <View style={[styles.row, styles.bleed]}>
         <Skeleton style={styles.wideCard} />
         <Skeleton style={styles.wideCard} />
       </View>
-      <SkeletonShelf tiles={3} />
-      <SkeletonShelf tiles={3} />
+      <SkeletonShelf tiles={3} inset={SPACING.md} />
+      <SkeletonShelf tiles={3} inset={SPACING.md} />
     </View>
   );
 }
@@ -215,6 +234,10 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.xl,
   },
   compact: { paddingHorizontal: SPACING.md, gap: SPACING.lg },
+  bleed: {
+    marginHorizontal: -SPACING.md,
+    paddingHorizontal: SPACING.md,
+  },
   detailHero: { height: 420, borderRadius: 0 },
   detailBody: {
     paddingHorizontal: SPACING.md,

@@ -49,7 +49,7 @@ import {
   toBrowseFilters,
   type BrowseRefinements,
 } from '@/components/FilterBar';
-import { Textured } from '@/components/Textured';
+import { GrainScrim, Textured } from '@/components/Textured';
 import {
   DISCOVER,
   findSection,
@@ -332,8 +332,8 @@ export default function HomeScreen() {
                   isHome ? (
                     <View style={styles.homeScroll}>
                       <SkeletonHero />
-                      <SkeletonShelf />
-                      <SkeletonShelf />
+                      <SkeletonShelf inset={SPACING.xl} />
+                      <SkeletonShelf inset={SPACING.xl} />
                     </View>
                   ) : (
                     <SkeletonGrid columns={columns} />
@@ -446,14 +446,22 @@ export default function HomeScreen() {
           style={[styles.headerFloat, { paddingTop: insets.top + SPACING.sm }]}
           onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
         >
-          {/* Opaque behind the controls, dissolving to nothing below, so
-              content melts away as it scrolls under rather than clipping. */}
+          {/* Opaque behind the controls, then a long dissolve. The grain
+              rides the same curve, so the chrome melts into the textured
+              page instead of ending on a visible seam. */}
           <LinearGradient
-            colors={[COLORS.darkGrey, COLORS.darkGrey, 'rgba(51,61,81,0)']}
-            locations={[0, 0.68, 1]}
+            colors={[
+              COLORS.darkGrey,
+              COLORS.darkGrey,
+              'rgba(51,61,81,0.86)',
+              'rgba(51,61,81,0.45)',
+              'rgba(51,61,81,0)',
+            ]}
+            locations={[0, 0.52, 0.72, 0.88, 1]}
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
           />
+          <GrainScrim style={StyleSheet.absoluteFill} solidAt="top" />
           <View style={styles.titleRow}>
             <Text style={styles.wordmark} onPress={goHome}>
               SIDEQUEST
@@ -554,7 +562,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 10,
-    paddingBottom: SPACING.lg,
+    paddingBottom: SPACING.xl,
   },
   titleRow: {
     flexDirection: 'row',

@@ -68,11 +68,20 @@ export function Textured({ children, style, fill = false }: Props) {
  * with a fade dithers the blend so the texture arrives with the colour.
  * Web-only: the mask is CSS; native heroes keep their plain gradient.
  */
-export function GrainScrim({ style }: { style?: StyleProp<ViewStyle> }) {
+export function GrainScrim({
+  style,
+  solidAt = 'bottom',
+}: {
+  style?: StyleProp<ViewStyle>;
+  /** Which edge the scrim is opaque at — the grain matches its weight. */
+  solidAt?: 'top' | 'bottom';
+}) {
   if (Platform.OS !== 'web') return null;
   const uri = Asset.fromModule(NOISE).uri;
   const fade =
-    'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 85%)';
+    solidAt === 'bottom'
+      ? 'linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 85%)'
+      : 'linear-gradient(to bottom, rgba(0,0,0,1) 25%, rgba(0,0,0,0) 100%)';
   return (
     <View
       style={[
