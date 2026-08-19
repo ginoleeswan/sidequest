@@ -53,7 +53,8 @@ export function libraryStats(
     if (entry.status === 'finished') {
       stats.finished += 1;
       stats.hoursFinished += hours;
-      if (now - entry.addedAt <= YEAR_MS) stats.finishedThisYear += 1;
+      const at = entry.finishedAt ?? entry.addedAt;
+      if (now - at <= YEAR_MS) stats.finishedThisYear += 1;
       continue;
     }
 

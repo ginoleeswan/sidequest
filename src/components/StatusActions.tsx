@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { FinishCelebration } from './FinishCelebration';
 import { useToast } from './Toast';
 import type { Game } from '@/api/types';
 import { STATUS_META, useLibrary, type LibraryStatus } from '@/lib/library';
@@ -20,6 +22,7 @@ export function StatusActions({ game }: { game: Game }) {
   const { statusOf, setStatus } = useLibrary();
   const toast = useToast();
   const current = statusOf(game.id);
+  const [celebrating, setCelebrating] = useState(false);
 
   return (
     <View style={styles.row}>
@@ -31,6 +34,11 @@ export function StatusActions({ game }: { game: Game }) {
             key={status}
             onPress={() => {
               setStatus(game, active ? null : status);
+              // Finishing gets a moment; everything else gets a toast.
+              if (!active && status === 'finished') {
+                setCelebrating(true);
+                return;
+              }
               toast(
                 active ? 'Removed from library' : CONFIRM[status],
                 active ? 'close-circle' : (meta.icon as never)
@@ -53,6 +61,10 @@ export function StatusActions({ game }: { game: Game }) {
           </Pressable>
         );
       })}
+      <FinishCelebration
+        game={celebrating ? game : null}
+        onClose={() => setCelebrating(false)}
+      />
     </View>
   );
 }

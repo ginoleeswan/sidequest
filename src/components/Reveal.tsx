@@ -38,9 +38,9 @@ export function Reveal({ pending, skeleton, children }: Props) {
     if (pending) {
       wasPending.current = true;
       progress.setValue(0);
-      // Deliberate: these three are an animation lifecycle being synced to
-      // a prop, not state derived from one. React's rule targets cascading
-      // renders; here each branch settles in a single pass.
+      // Deliberate: this effect syncs an animation's lifecycle to a prop
+      // rather than deriving state from one. The rule guards against
+      // cascading renders; each branch here settles in a single pass.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setPhase('bones');
       return;
@@ -48,12 +48,10 @@ export function Reveal({ pending, skeleton, children }: Props) {
     if (!wasPending.current) {
       // Content was ready immediately (warm cache): no theatre.
       progress.setValue(1);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPhase('content');
       return;
     }
     wasPending.current = false;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPhase('crossfade');
     const animation = Animated.timing(progress, {
       toValue: 1,

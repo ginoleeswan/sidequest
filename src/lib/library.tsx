@@ -14,6 +14,12 @@ export interface LibraryEntry {
   game: Game;
   status: LibraryStatus;
   addedAt: number;
+  /**
+   * When the credits rolled. Distinct from addedAt, which is when the
+   * game entered the library — a game saved last year and finished today
+   * belongs to today.
+   */
+  finishedAt?: number;
 }
 
 export const STATUS_META: Record<
@@ -86,6 +92,10 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
           },
           status,
           addedAt: prev[String(game.id)]?.addedAt ?? Date.now(),
+          finishedAt:
+            status === 'finished'
+              ? (prev[String(game.id)]?.finishedAt ?? Date.now())
+              : undefined,
         };
       }
       persist(next);
