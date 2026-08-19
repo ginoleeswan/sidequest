@@ -1,4 +1,6 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { usePathname, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
   Platform,
   Pressable,
@@ -22,12 +24,50 @@ const NAV = [
  * sidebar workspace; every other page mounts this slim sticky bar so
  * navigation is always one click away instead of a lone floating chevron.
  */
-export function AppHeader() {
+interface Props {
+  /**
+   * Float over the page's hero: transparent with a gradient scrim while at
+   * the top, turning solid navy once the page scrolls - so edge-to-edge
+   * art runs underneath the chrome instead of stopping at it.
+   */
+  immersive?: boolean;
+}
+
+export function AppHeader({ immersive = false }: Props) {
   const router = useRouter();
   const pathname = usePathname();
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    if (!immersive || Platform.OS !== 'web') return;
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [immersive]);
+
+  const floating = immersive && !scrolled;
 
   return (
-    <View style={[styles.bar, STICKY]}>
+    <View
+      style={[
+        styles.bar,
+        immersive ? FIXED : STICKY,
+        floating && styles.barFloating,
+      ]}
+    >
+      {floating && (
+        <LinearGradient
+          colors={[
+            'rgba(9,12,19,0.62)',
+            'rgba(9,12,19,0.28)',
+            'rgba(9,12,19,0)',
+          ]}
+          locations={[0, 0.62, 1]}
+          style={styles.scrim}
+          pointerEvents="none"
+        />
+      )}
       <View style={styles.inner}>
         <Pressable
           onPress={() => router.push('/')}
@@ -67,12 +107,33 @@ const STICKY =
     ? ({ position: 'sticky', top: 0 } as unknown as ViewStyle)
     : null;
 
+const FIXED =
+  Platform.OS === 'web'
+    ? ({
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+      } as unknown as ViewStyle)
+    : null;
+
 const styles = StyleSheet.create({
   bar: {
     zIndex: 50,
     backgroundColor: 'rgba(39,47,63,0.96)',
     borderBottomWidth: 1,
     borderBottomColor: COLORS.stroke,
+  },
+  barFloating: {
+    backgroundColor: 'transparent',
+    borderBottomColor: 'transparent',
+  },
+  scrim: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 96,
   },
   inner: {
     width: '100%',

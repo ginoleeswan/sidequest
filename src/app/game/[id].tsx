@@ -158,7 +158,7 @@ export default function GameInfoScreen() {
   const router = useRouter();
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
 
-  const { isExpanded } = useBreakpoint();
+  const { isExpanded, width } = useBreakpoint();
   const insets = useSafeAreaInsets();
   const opacity = useAnimatedValue(0);
 
@@ -198,13 +198,18 @@ export default function GameInfoScreen() {
     return (
       <Textured style={styles.background}>
         {isExpanded ? (
-          <AppHeader />
+          <AppHeader immersive />
         ) : (
           <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
             <BackButton />
           </View>
         )}
-        <View style={isExpanded ? styles.skeletonShellWide : styles.skeletonShell}>
+        <View
+          style={[
+            isExpanded ? styles.skeletonShellWide : styles.skeletonShell,
+            isExpanded && { paddingTop: 58 },
+          ]}
+        >
           {isExpanded ? <SkeletonDetailExpanded /> : <SkeletonDetail />}
         </View>
       </Textured>
@@ -230,7 +235,17 @@ export default function GameInfoScreen() {
   const summary = decodeEntities(
     game.description.replace(HTML_TAGS, '')
   ).trim();
-  const railInset = isExpanded ? 0 : SPACING.md;
+  const gutter = isExpanded
+    ? Math.max(
+        SPACING.xl * 2,
+        (width - LAYOUT.maxExpandedWidth) / 2 + SPACING.xl * 2
+      )
+    : SPACING.md;
+  const railInset = gutter;
+  const mediaBlock = [
+    styles.block,
+    isExpanded && { paddingHorizontal: gutter },
+  ];
 
   const openGenre = (genre: Named) => {
     if (genre.slug && findSection(genre.slug)) {
@@ -387,7 +402,7 @@ export default function GameInfoScreen() {
   const media = (
     <>
       {screenshots.length > 0 && (
-        <View style={styles.block}>
+        <View style={mediaBlock}>
           <SectionHeader title="Screenshots" />
           <Rail<Screenshot>
             data={screenshots}
@@ -409,7 +424,7 @@ export default function GameInfoScreen() {
       )}
 
       {trailers.length > 0 ? (
-        <View style={styles.block}>
+        <View style={mediaBlock}>
           <SectionHeader title="Trailers" />
           <Rail<Movie>
             data={trailers}
@@ -419,7 +434,12 @@ export default function GameInfoScreen() {
           />
         </View>
       ) : (
-        <View style={styles.trailerFallback}>
+        <View
+          style={[
+            styles.trailerFallback,
+            isExpanded && { paddingHorizontal: gutter },
+          ]}
+        >
           <LinkPill
             label="Watch trailer on YouTube"
             url={`https://www.youtube.com/results?search_query=${encodeURIComponent(
@@ -430,7 +450,7 @@ export default function GameInfoScreen() {
       )}
 
       {series.length > 0 && (
-        <View style={styles.block}>
+        <View style={mediaBlock}>
           <SectionHeader title="More in this series" />
           <Rail<Game>
             data={series}
@@ -480,7 +500,7 @@ export default function GameInfoScreen() {
       </Head>
       <View style={styles.container}>
         {isExpanded ? (
-          <AppHeader />
+          <AppHeader immersive />
         ) : (
           <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
             <BackButton />
@@ -496,7 +516,6 @@ export default function GameInfoScreen() {
                   {genres}
                   {about}
                   {ratingsBreakdown}
-                  {media}
                 </View>
                 <View style={styles.columnRail}>
                   {details}
@@ -505,6 +524,8 @@ export default function GameInfoScreen() {
                   {tags}
                 </View>
               </Animated.View>
+              {/* media escapes the column: full-bleed rails, gutter-aligned */}
+              <Animated.View style={{ opacity }}>{media}</Animated.View>
             </View>
           ) : (
             <>
@@ -645,7 +666,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: SPACING.xl * 1.5,
     paddingHorizontal: SPACING.xl * 2,
-    paddingVertical: SPACING.xl * 1.6,
+    // clears the fixed immersive header, then the usual breathing room
+    paddingTop: 58 + SPACING.xl,
+    paddingBottom: SPACING.xl * 1.6,
   },
   deskHeroCopy: {
     flex: 1,

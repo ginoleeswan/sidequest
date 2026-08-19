@@ -6,6 +6,7 @@ import {
   getTopRated,
   getTrendingGames,
 } from '@/api/rawg';
+import type { BrowseFilters } from '@/api/rawg';
 import type { Game, Paged } from '@/api/types';
 import type { IconType } from '@/components/DynamicIcon';
 
@@ -14,17 +15,20 @@ export type ShelfVariant = 'default' | 'ranked' | 'dated' | 'large';
 export interface Section {
   key: string;
   title: string;
-  fetch: (page?: number) => Promise<Paged<Game>>;
+  fetch: (page?: number, filters?: BrowseFilters) => Promise<Paged<Game>>;
   iconName: string;
   iconType: IconType;
   /** How this section's home shelf is presented. */
   variant?: ShelfVariant;
+  /** One editorial line for the section's own page. */
+  description?: string;
 }
 
 /** Editorial discovery sections — the storefront shelves. */
 export const DISCOVER: Section[] = [
   {
     key: 'trending',
+    description: 'What everyone’s actually playing this week — the games eating the group chat.',
     title: 'Trending now',
     fetch: getTrendingGames,
     iconName: 'trending-up',
@@ -33,6 +37,7 @@ export const DISCOVER: Section[] = [
   },
   {
     key: 'new-releases',
+    description: 'Fresh off the press. New this window, sorted by who’s picking them up.',
     title: 'New releases',
     fetch: getNewReleases,
     iconName: 'sparkles',
@@ -40,6 +45,7 @@ export const DISCOVER: Section[] = [
   },
   {
     key: 'coming-soon',
+    description: 'Wishlist fuel. What’s landing next — bookmark now, thank yourself later.',
     title: 'Coming soon',
     fetch: getComingSoon,
     iconName: 'calendar',
@@ -48,6 +54,7 @@ export const DISCOVER: Section[] = [
   },
   {
     key: 'top-rated',
+    description: 'The canon. Metacritic’s finest from the last few years, no filler.',
     title: 'Critically acclaimed',
     fetch: getTopRated,
     iconName: 'trophy',
@@ -56,6 +63,7 @@ export const DISCOVER: Section[] = [
   },
   {
     key: 'must-play',
+    description: 'The all-timers. If it’s here, it earned it.',
     title: 'Must play',
     fetch: getMustPlayGames,
     iconName: 'star',
@@ -67,64 +75,73 @@ export const DISCOVER: Section[] = [
 export const GENRES: Section[] = [
   {
     key: 'indie',
+    description: 'Small teams, enormous swings. Where the weird, brilliant stuff lives.',
     title: 'Indie',
-    fetch: (p) => getGames('indie', p),
+    fetch: (p, f) => getGames('indie', p, f),
     iconName: 'heart',
     iconType: 'material-community',
   },
   {
     key: 'role-playing-games-rpg',
+    description: 'Builds, quests, and hundred-hour spreadsheets you’ll call a hobby.',
     title: 'RPG',
-    fetch: (p) => getGames('role-playing-games-rpg', p),
+    fetch: (p, f) => getGames('role-playing-games-rpg', p, f),
     iconName: 'shield',
     iconType: 'material-community',
   },
   {
     key: 'adventure',
+    description: 'Stories first. Worlds worth getting lost in, one chapter a night.',
     title: 'Adventure',
-    fetch: (p) => getGames('adventure', p),
+    fetch: (p, f) => getGames('adventure', p, f),
     iconName: 'compass',
     iconType: 'material-community',
   },
   {
     key: 'strategy',
+    description: 'One more turn. You already know how this ends — at 2am.',
     title: 'Strategy',
-    fetch: (p) => getGames('strategy', p),
+    fetch: (p, f) => getGames('strategy', p, f),
     iconName: 'strategy',
     iconType: 'material-community',
   },
   {
     key: 'shooter',
+    description: 'Twitch reflexes and tactical brains, from arena to extraction.',
     title: 'Shooter',
-    fetch: (p) => getGames('shooter', p),
+    fetch: (p, f) => getGames('shooter', p, f),
     iconName: 'crosshairs',
     iconType: 'font-awesome-5',
   },
   {
     key: 'racing',
+    description: 'Apex hunting. Arcade drifts to millimetre-perfect sims.',
     title: 'Racing',
-    fetch: (p) => getGames('racing', p),
+    fetch: (p, f) => getGames('racing', p, f),
     iconName: 'car',
     iconType: 'font-awesome-5',
   },
   {
     key: 'simulation',
+    description: 'Build, farm, fly, manage. Peaceful obsession, systems all the way down.',
     title: 'Simulation',
-    fetch: (p) => getGames('simulation', p),
+    fetch: (p, f) => getGames('simulation', p, f),
     iconName: 'person',
     iconType: 'ionicon',
   },
   {
     key: 'sports',
+    description: 'The beautiful games. Season modes and last-minute winners.',
     title: 'Sport',
-    fetch: (p) => getGames('sports', p),
+    fetch: (p, f) => getGames('sports', p, f),
     iconName: 'soccer',
     iconType: 'material-community',
   },
   {
     key: 'casual',
+    description: 'Low stakes, high comfort. Games that respect a twenty-minute window.',
     title: 'Casual',
-    fetch: (p) => getGames('casual', p),
+    fetch: (p, f) => getGames('casual', p, f),
     iconName: 'checkerboard',
     iconType: 'material-community',
   },

@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, SPACING } from '@/styles/theme';
 
-const NAV = [
+const EXPLORE = [
   { label: 'Home', href: '/' },
   { label: 'My Library', href: '/library' },
   { label: 'The Plan', href: '/plan' },
@@ -16,6 +16,30 @@ const LEGAL = [
   { label: 'Terms', href: '/terms' },
   { label: 'Privacy', href: '/privacy' },
 ] as const;
+
+function LinkColumn({
+  heading,
+  links,
+}: {
+  heading: string;
+  links: readonly { label: string; href: string }[];
+}) {
+  const router = useRouter();
+  return (
+    <View style={styles.col}>
+      <Text style={styles.colHeading}>{heading}</Text>
+      {links.map((link) => (
+        <Pressable
+          key={link.href}
+          onPress={() => router.push(link.href)}
+          accessibilityRole="link"
+        >
+          <Text style={styles.link}>{link.label}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
 
 interface Props {
   /**
@@ -34,7 +58,6 @@ interface Props {
  * on purpose, at the hairline.
  */
 export function SiteFooter({ inset = 0 }: Props) {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
 
   return (
@@ -45,40 +68,38 @@ export function SiteFooter({ inset = 0 }: Props) {
         { paddingBottom: insets.bottom + SPACING.lg },
       ]}
     >
+      <Text
+        style={styles.watermark}
+        numberOfLines={1}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      >
+        SIDEQUEST
+      </Text>
       <View style={styles.inner}>
-        <View style={styles.masthead}>
-          <Text style={styles.wordmark}>Sidequest</Text>
-          <Text style={styles.tagline}>
-            Know what you can actually finish.
-          </Text>
+        <View style={styles.topRow}>
+          <View style={styles.brand}>
+            <Text style={styles.wordmark}>Sidequest</Text>
+            <Text style={styles.tagline}>
+              Know what you can actually finish.
+            </Text>
+            <Text style={styles.pitch}>
+              Backlog triage for people with more games than time. No
+              account, no tracking — your library lives on this device.
+            </Text>
+          </View>
+          <View style={styles.cols}>
+            <LinkColumn heading="Explore" links={EXPLORE} />
+            <LinkColumn heading="Legal" links={LEGAL} />
+          </View>
         </View>
 
-        <View style={styles.links}>
-          {NAV.map((link) => (
-            <Pressable
-              key={link.href}
-              onPress={() => router.push(link.href)}
-              accessibilityRole="link"
-            >
-              <Text style={styles.link}>{link.label}</Text>
-            </Pressable>
-          ))}
-          <View style={styles.divider} />
-          {LEGAL.map((link) => (
-            <Pressable
-              key={link.href}
-              onPress={() => router.push(link.href)}
-              accessibilityRole="link"
-            >
-              <Text style={styles.linkQuiet}>{link.label}</Text>
-            </Pressable>
-          ))}
-        </View>
+        <View style={styles.rule} />
 
-        <Text style={styles.fineprint}>
-          Game data by RAWG · No account, no tracking — your library lives on
-          this device.
-        </Text>
+        <View style={styles.bottomRow}>
+          <Text style={styles.fineprint}>Game data by RAWG</Text>
+          <Text style={styles.fineprint}>Built for the backlog</Text>
+        </View>
       </View>
     </View>
   );
@@ -90,54 +111,84 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.navy,
     borderTopWidth: 1,
     borderTopColor: COLORS.stroke,
+    overflow: 'hidden',
+  },
+  // A ghost of the wordmark, barely-there, anchoring the band's depth
+  // without a single gradient.
+  watermark: {
+    position: 'absolute',
+    right: -8,
+    bottom: -26,
+    fontFamily: 'Noah-Black',
+    fontSize: 128,
+    letterSpacing: 6,
+    color: 'rgba(255,255,255,0.028)',
   },
   inner: {
     width: '100%',
     maxWidth: LAYOUT.maxExpandedWidth,
     alignSelf: 'center',
     paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.xl,
+    paddingTop: SPACING.xl + 6,
     gap: SPACING.lg,
   },
-  masthead: { gap: SPACING.xs },
+  topRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: SPACING.xl,
+    columnGap: SPACING.xl * 2,
+  },
+  brand: { gap: SPACING.xs + 2, maxWidth: 360 },
   wordmark: {
     fontFamily: 'Noah-Black',
-    fontSize: 18,
+    fontSize: 19,
     color: COLORS.white,
     letterSpacing: 0.2,
   },
   tagline: {
-    fontFamily: 'Noah-Regular',
+    fontFamily: 'Noah-Bold',
     fontSize: 13,
+    color: COLORS.lightGrey,
+  },
+  pitch: {
+    fontFamily: 'Noah-Regular',
+    fontSize: 12,
+    lineHeight: 18,
     color: COLORS.mediumGrey,
+    marginTop: 2,
   },
-  links: {
+  cols: {
     flexDirection: 'row',
+    columnGap: SPACING.xl * 2,
+    rowGap: SPACING.lg,
     flexWrap: 'wrap',
-    alignItems: 'center',
-    columnGap: SPACING.lg,
-    rowGap: SPACING.sm,
   },
-  divider: {
-    width: 1,
-    height: 12,
-    backgroundColor: COLORS.strokeStrong,
+  col: { gap: SPACING.sm + 2, minWidth: 96 },
+  colHeading: {
+    fontFamily: 'Noah-Bold',
+    fontSize: 10,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    color: COLORS.mediumGrey,
+    marginBottom: 2,
   },
   link: {
     fontFamily: 'Noah-Bold',
     fontSize: 12.5,
     color: COLORS.lightGrey,
   },
-  linkQuiet: {
-    fontFamily: 'Noah-Bold',
-    fontSize: 12.5,
-    color: COLORS.mediumGrey,
+  rule: { height: 1, backgroundColor: COLORS.stroke },
+  bottomRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: SPACING.sm,
   },
   fineprint: {
     fontFamily: 'Noah-Regular',
     fontSize: 11,
     color: COLORS.mediumGrey,
     opacity: 0.85,
-    lineHeight: 16,
   },
 });

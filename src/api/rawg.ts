@@ -81,35 +81,84 @@ const windowed = (
 
 const page = (n: number) => ({ page: String(n), page_size: PAGE_SIZE });
 
+/** User-chosen refinements layered onto any browse view. */
+export interface BrowseFilters {
+  /** Overrides the section's default ordering when set. */
+  ordering?: string;
+  /** Comma-separated RAWG parent-platform ids (1 PC, 2 PS, 3 Xbox, 7 Switch). */
+  parentPlatforms?: string;
+  /** Only Metacritic 80+. */
+  minMetacritic?: boolean;
+}
+
+const filterParams = (f?: BrowseFilters) => ({
+  ...(f?.parentPlatforms ? { parent_platforms: f.parentPlatforms } : {}),
+  ...(f?.minMetacritic ? { metacritic: '80,100' } : {}),
+  ...(f?.ordering ? { ordering: f.ordering } : {}),
+});
+
 /** What players are adding right now. */
-export const getTrendingGames = (pageNum = 1): Promise<Paged<Game>> =>
-  rawg('games', { ...windowed(-YEAR, 0, '-added'), ...page(pageNum) });
+export const getTrendingGames = (
+  pageNum = 1,
+  f?: BrowseFilters
+): Promise<Paged<Game>> =>
+  rawg('games', {
+    ...windowed(-YEAR, 0, '-added'),
+    ...page(pageNum),
+    ...filterParams(f),
+  });
 
 /** Out in the last three months. */
-export const getNewReleases = (pageNum = 1): Promise<Paged<Game>> =>
-  rawg('games', { ...windowed(-90, 0, '-added'), ...page(pageNum) });
+export const getNewReleases = (
+  pageNum = 1,
+  f?: BrowseFilters
+): Promise<Paged<Game>> =>
+  rawg('games', {
+    ...windowed(-90, 0, '-added'),
+    ...page(pageNum),
+    ...filterParams(f),
+  });
 
 /** Announced and anticipated, next nine months. */
-export const getComingSoon = (pageNum = 1): Promise<Paged<Game>> =>
-  rawg('games', { ...windowed(1, 270, '-added'), ...page(pageNum) });
+export const getComingSoon = (
+  pageNum = 1,
+  f?: BrowseFilters
+): Promise<Paged<Game>> =>
+  rawg('games', {
+    ...windowed(1, 270, '-added'),
+    ...page(pageNum),
+    ...filterParams(f),
+  });
 
 /** Recent years, ranked by Metacritic. */
-export const getTopRated = (pageNum = 1): Promise<Paged<Game>> =>
+export const getTopRated = (
+  pageNum = 1,
+  f?: BrowseFilters
+): Promise<Paged<Game>> =>
   rawg('games', {
     ...windowed(-5 * YEAR, 0, '-metacritic'),
     metacritic: '80,100',
     ...page(pageNum),
+    ...filterParams(f),
   });
 
 /** Genre browsing: a wider window so there's depth, still modern. */
-export const getGames = (genre?: string, pageNum = 1): Promise<Paged<Game>> =>
+export const getGames = (
+  genre?: string,
+  pageNum = 1,
+  f?: BrowseFilters
+): Promise<Paged<Game>> =>
   rawg('games', {
     ...windowed(-3 * YEAR, 0, '-added'),
     ...(genre ? { genres: genre } : {}),
     ...page(pageNum),
+    ...filterParams(f),
   });
 
-export async function getMustPlayGames(pageNum = 1): Promise<Paged<Game>> {
+export async function getMustPlayGames(
+  pageNum = 1,
+  _f?: BrowseFilters
+): Promise<Paged<Game>> {
   const feed = await rawg<Paged<CollectionFeedItem>>(
     'collections/must-play/feed',
     page(pageNum)
@@ -121,12 +170,17 @@ export async function getMustPlayGames(pageNum = 1): Promise<Paged<Game>> {
   };
 }
 
-export const searchGames = (query: string, pageNum = 1): Promise<Paged<Game>> =>
+export const searchGames = (
+  query: string,
+  pageNum = 1,
+  f?: BrowseFilters
+): Promise<Paged<Game>> =>
   rawg('games', {
     search: query.toLowerCase(),
     ordering: '-rating',
     search_precise: 'true',
     ...page(pageNum),
+    ...filterParams(f),
   });
 
 export const getGame = (id: string | number) => rawg<GameDetail>(`games/${id}`);

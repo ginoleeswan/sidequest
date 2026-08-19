@@ -1,5 +1,13 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type ViewStyle,
+} from 'react-native';
 
 import { useRouter } from 'expo-router';
 
@@ -80,7 +88,7 @@ interface Props {
 export function Sidebar({ activeKey, onHome, onSelect }: Props) {
   const router = useRouter();
   return (
-    <View style={styles.sidebar}>
+    <View style={[styles.sidebar, STICKY]}>
       <Pressable onPress={onHome} accessibilityRole="link">
         <Text style={styles.wordmark}>SIDEQUEST</Text>
       </Pressable>
@@ -129,6 +137,16 @@ export function Sidebar({ activeKey, onHome, onSelect }: Props) {
     </View>
   );
 }
+
+/**
+ * The document is the scroller on desktop too; the sidebar opts out by
+ * pinning itself. position: sticky isn't in RN's types - cast confined
+ * here, native never mounts this component.
+ */
+const STICKY =
+  Platform.OS === 'web'
+    ? ({ position: 'sticky', top: 0, height: '100dvh' } as unknown as ViewStyle)
+    : null;
 
 const styles = StyleSheet.create({
   sidebar: {

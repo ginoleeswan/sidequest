@@ -7,7 +7,6 @@ import {
   FlatList,
   Platform,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -43,6 +42,13 @@ import {
   SkeletonHero,
   SkeletonShelf,
 } from '@/components/Skeleton';
+import { CategoryHero } from '@/components/CategoryHero';
+import {
+  DEFAULT_REFINEMENTS,
+  FilterBar,
+  toBrowseFilters,
+  type BrowseRefinements,
+} from '@/components/FilterBar';
 import { Textured } from '@/components/Textured';
 import {
   DISCOVER,
@@ -125,14 +131,23 @@ export default function HomeScreen() {
   }, []);
 
   // ------------------------------------------------------------------ data
+  const [refine, setRefine] = useState<BrowseRefinements>(
+    DEFAULT_REFINEMENTS
+  );
+  const refineKey = [
+    refine.ordering ?? 'default',
+    refine.platformIds.join(','),
+    refine.minMetacritic,
+  ] as const;
+
   const list = useInfiniteQuery({
     queryKey: searching
-      ? queryKeys.search(debouncedQuery)
-      : queryKeys.browse(section.key),
+      ? [...queryKeys.search(debouncedQuery), ...refineKey]
+      : [...queryKeys.browse(section.key), ...refineKey],
     queryFn: ({ pageParam }) =>
       searching
-        ? searchGames(debouncedQuery, pageParam)
-        : section.fetch(pageParam),
+        ? searchGames(debouncedQuery, pageParam, toBrowseFilters(refine))
+        : section.fetch(pageParam, toBrowseFilters(refine)),
     initialPageParam: 1,
     getNextPageParam: (last: Paged<Game>, pages) =>
       last.next ? pages.length + 1 : undefined,
@@ -155,15 +170,37 @@ export default function HomeScreen() {
   const selectSection = (s: Section) => {
     setQuery('');
     setSelection(s.key);
+    setRefine(DEFAULT_REFINEMENTS);
   };
   const goHome = () => {
     setQuery('');
     setSelection('home');
+    setRefine(DEFAULT_REFINEMENTS);
   };
 
   const loadMore = () => {
     if (list.hasNextPage && !list.isFetchingNextPage) list.fetchNextPage();
   };
+  const loadMoreRef = useRef(loadMore);
+  useEffect(() => {
+    loadMoreRef.current = loadMore;
+  });
+
+  // Infinite browse in document flow: the FlatList's own onEndReached
+  // never fires when the window is the scroller, so watch the window.
+  useEffect(() => {
+    if (!isExpanded || Platform.OS !== 'web') return;
+    const onScroll = () => {
+      if (
+        window.innerHeight + window.scrollY >=
+        document.body.scrollHeight - 900
+      ) {
+        loadMoreRef.current();
+      }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [isExpanded]);
 
   const refresh = (
     <RefreshControl
@@ -209,14 +246,20 @@ export default function HomeScreen() {
           totalCount ? `${totalCount.toLocaleString()} games` : undefined
         }
       />
+      <FilterBar value={refine} onChange={setRefine} />
     </View>
   ) : !isHome ? (
     <View style={styles.gridHeader}>
-      <SectionHeader
-        title={section.title}
-        eyebrow={
-          totalCount ? `${totalCount.toLocaleString()} games` : undefined
-        }
+      <CategoryHero
+        section={section}
+        lead={games[0]}
+        count={totalCount}
+        kind={GENRES.some((g) => g.key === section.key) ? 'genre' : 'discover'}
+      />
+      <FilterBar
+        value={refine}
+        onChange={setRefine}
+        disabled={section.key === 'must-play'}
       />
     </View>
   ) : null;
@@ -263,7 +306,7 @@ export default function HomeScreen() {
     return (
       <Textured style={styles.background}>
         <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-          <View style={[styles.expandedShell, { height: windowHeight }]}>
+          <View style={[styles.expandedShell, { minHeight: windowHeight }]}>
             <Sidebar
               activeKey={searching ? null : isHome ? 'home' : selection}
               onHome={goHome}
@@ -287,22 +330,16 @@ export default function HomeScreen() {
               {status ??
                 (list.isPending ? (
                   isHome ? (
-                    <ScrollView
-                      showsVerticalScrollIndicator={false}
-                      contentContainerStyle={styles.homeScroll}
-                    >
+                    <View style={styles.homeScroll}>
                       <SkeletonHero />
                       <SkeletonShelf />
                       <SkeletonShelf />
-                    </ScrollView>
+                    </View>
                   ) : (
                     <SkeletonGrid columns={columns} />
                   )
                 ) : isHome ? (
-                  <ScrollView
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={styles.homeScroll}
-                  >
+                  <View style={styles.homeScroll}>
                     <FadeInView>
                       <FeaturedHero games={featured} />
                     </FadeInView>
@@ -322,7 +359,7 @@ export default function HomeScreen() {
                       />
                     ))}
                     <SiteFooter inset={SPACING.xl} />
-                  </ScrollView>
+                  </View>
                 ) : (
                   grid
                 ))}
@@ -492,7 +529,7 @@ const styles = StyleSheet.create({
   homeScroll: { flexGrow: 1 },
 
   // grid
-  gridHeader: { marginBottom: SPACING.md },
+  gridHeader: { marginBottom: SPACING.md, gap: SPACING.md },
   gridRow: { gap: LAYOUT.gridGap },
   gridContent: {
     gap: LAYOUT.gridGap,
