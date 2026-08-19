@@ -7,13 +7,13 @@ import type { PlatformRef } from '@/api/types';
 
 const VECTOR: Record<string, { name: string; type: IconType }> = {
   playstation: { name: 'logo-playstation', type: 'ionicon' },
-  pc: { name: 'microsoft-windows', type: 'material-community' },
+  pc: { name: 'microsoft-windows', type: 'glyph' },
   mac: { name: 'logo-apple', type: 'ionicon' },
-  linux: { name: 'linux', type: 'font-awesome-5' },
-  android: { name: 'android', type: 'font-awesome-5' },
-  ios: { name: 'apple-ios', type: 'material-community' },
-  web: { name: 'web', type: 'material-community' },
-  xbox: { name: 'microsoft-xbox', type: 'material-community' },
+  linux: { name: 'linux', type: 'glyph' },
+  android: { name: 'android', type: 'glyph' },
+  ios: { name: 'apple-ios', type: 'glyph' },
+  web: { name: 'web', type: 'glyph' },
+  xbox: { name: 'microsoft-xbox', type: 'glyph' },
 };
 
 const IMAGES: Record<string, number> = {

@@ -35,7 +35,7 @@ export const DISCOVER: Section[] = [
     title: 'Trending now',
     fetch: getTrendingGames,
     iconName: 'trending-up',
-    iconType: 'feather',
+    iconType: 'ionicon',
     variant: 'ranked',
   },
   {
@@ -54,7 +54,7 @@ export const DISCOVER: Section[] = [
     title: 'Coming soon',
     fetch: getComingSoon,
     iconName: 'calendar',
-    iconType: 'feather',
+    iconType: 'ionicon',
     variant: 'dated',
   },
   {
@@ -73,7 +73,7 @@ export const DISCOVER: Section[] = [
     title: 'Must play',
     fetch: getMustPlayGames,
     iconName: 'star',
-    iconType: 'material-community',
+    iconType: 'ionicon',
   },
 ];
 
@@ -86,7 +86,7 @@ export const GENRES: Section[] = [
     title: 'Indie',
     fetch: (p, f) => getGames('indie', p, f),
     iconName: 'heart',
-    iconType: 'material-community',
+    iconType: 'ionicon',
   },
   {
     key: 'role-playing-games-rpg',
@@ -95,7 +95,7 @@ export const GENRES: Section[] = [
     title: 'RPG',
     fetch: (p, f) => getGames('role-playing-games-rpg', p, f),
     iconName: 'shield',
-    iconType: 'material-community',
+    iconType: 'ionicon',
   },
   {
     key: 'adventure',
@@ -104,15 +104,15 @@ export const GENRES: Section[] = [
     title: 'Adventure',
     fetch: (p, f) => getGames('adventure', p, f),
     iconName: 'compass',
-    iconType: 'material-community',
+    iconType: 'ionicon',
   },
   {
     key: 'strategy',
     description: 'One more turn. You already know how this ends — at 2am.',
     title: 'Strategy',
     fetch: (p, f) => getGames('strategy', p, f),
-    iconName: 'strategy',
-    iconType: 'material-community',
+    iconName: 'extension-puzzle',
+    iconType: 'ionicon',
   },
   {
     key: 'shooter',
@@ -120,16 +120,16 @@ export const GENRES: Section[] = [
       'Twitch reflexes and tactical brains, from arena to extraction.',
     title: 'Shooter',
     fetch: (p, f) => getGames('shooter', p, f),
-    iconName: 'crosshairs',
-    iconType: 'font-awesome-5',
+    iconName: 'locate',
+    iconType: 'ionicon',
   },
   {
     key: 'racing',
     description: 'Apex hunting. Arcade drifts to millimetre-perfect sims.',
     title: 'Racing',
     fetch: (p, f) => getGames('racing', p, f),
-    iconName: 'car',
-    iconType: 'font-awesome-5',
+    iconName: 'car-sport',
+    iconType: 'ionicon',
   },
   {
     key: 'simulation',
@@ -145,8 +145,8 @@ export const GENRES: Section[] = [
     description: 'The beautiful games. Season modes and last-minute winners.',
     title: 'Sport',
     fetch: (p, f) => getGames('sports', p, f),
-    iconName: 'soccer',
-    iconType: 'material-community',
+    iconName: 'football',
+    iconType: 'ionicon',
   },
   {
     key: 'casual',
@@ -154,8 +154,8 @@ export const GENRES: Section[] = [
       'Low stakes, high comfort. Games that respect a twenty-minute window.',
     title: 'Casual',
     fetch: (p, f) => getGames('casual', p, f),
-    iconName: 'checkerboard',
-    iconType: 'material-community',
+    iconName: 'grid',
+    iconType: 'ionicon',
   },
 ];
 
@@ -176,7 +176,7 @@ export const findSection = (key: string): Section | undefined =>
 export const SEARCH_SECTION = {
   title: 'Search',
   iconName: 'search',
-  iconType: 'material-icons' as IconType,
+  iconType: 'ionicon' as IconType,
 };
 
 /**
