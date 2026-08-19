@@ -23,20 +23,20 @@ const PLATFORMS: { label: string; id: number; icon: string; type: IconType }[] =
       label: 'PC',
       id: 1,
       icon: 'microsoft-windows',
-      type: 'material-community',
+      type: 'glyph',
     },
     { label: 'PlayStation', id: 2, icon: 'logo-playstation', type: 'ionicon' },
     {
       label: 'Xbox',
       id: 3,
       icon: 'microsoft-xbox',
-      type: 'material-community',
+      type: 'glyph',
     },
     {
       label: 'Switch',
       id: 7,
       icon: 'nintendo-switch',
-      type: 'material-community',
+      type: 'glyph',
     },
   ];
 
