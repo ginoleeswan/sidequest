@@ -38,6 +38,7 @@ export function FeaturedHero({ games }: Props) {
             style={styles.image}
             iconSize={64}
             size="hero"
+            label={`${lead.name} cover art`}
           />
           <Textured fill />
           <LinearGradient
