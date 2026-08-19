@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -18,6 +18,7 @@ import { Textured } from './Textured';
 import { queryKeys } from '@/api/queryClient';
 import type { Game, Paged } from '@/api/types';
 import { DISCOVER } from '@/constants/categories';
+import { useHydrated } from '@/hooks/useHydrated';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { useLibrary } from '@/lib/library';
 import { COLORS } from '@/styles/colors';
@@ -104,12 +105,7 @@ export function Onboarding() {
   const [pace, setPace] = useState<number | null>(null);
   const [savedCount, setSavedCount] = useState(0);
 
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    // Deliberate: hydration handshake, not derived state.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMounted(true);
-  }, []);
+  const mounted = useHydrated();
 
   const trending = useQuery({
     queryKey: queryKeys.shelf(DISCOVER[0].key),

@@ -8,8 +8,12 @@ import {
 
 import { resolveDuration, type Duration } from './duration';
 import type { Game } from '@/api/types';
+import { useHydrated } from '@/hooks/useHydrated';
 
 const STORAGE_KEY = 'sidequest.durations.v1';
+
+/** A stable identity, so gating cannot itself churn memoised consumers. */
+const EMPTY: Overrides = {};
 
 /** Game id → hours the player told us it takes. */
 type Overrides = Record<string, number>;
@@ -59,7 +63,10 @@ const DurationsContext = createContext<DurationsValue | null>(null);
  * device, and makes their correction win everywhere.
  */
 export function DurationsProvider({ children }: { children: React.ReactNode }) {
-  const [overrides, setOverrides] = useState<Overrides>(load);
+  const [stored, setOverrides] = useState<Overrides>(load);
+  // The pre-rendered HTML had no stored durations, so the hydration
+  // render must not either. Writes still go to `stored`.
+  const overrides = useHydrated() ? stored : EMPTY;
 
   const setDuration = useCallback((id: number, hours: number) => {
     setOverrides((prev) => {

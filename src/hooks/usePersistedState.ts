@@ -1,6 +1,14 @@
 import { useCallback, useState } from 'react';
 
-/** useState that survives reloads via localStorage (memory-only elsewhere). */
+import { useHydrated } from './useHydrated';
+
+/**
+ * useState that survives reloads via localStorage (memory-only elsewhere).
+ *
+ * The stored value is withheld until hydration is done, so the first
+ * client render matches the pre-rendered HTML, which was generated with
+ * no storage to read. Writes are unaffected.
+ */
 export function usePersistedState<T>(
   key: string,
   initial: T
@@ -26,5 +34,7 @@ export function usePersistedState<T>(
     [key]
   );
 
-  return [value, set];
+  // Deliberately not `value`: on the hydration render the server had no
+  // storage, so neither may we.
+  return [useHydrated() ? value : initial, set];
 }
