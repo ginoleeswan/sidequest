@@ -1,5 +1,5 @@
-import { QueryClientProvider } from '@tanstack/react-query';
-import { useFonts } from 'expo-font';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { FontDisplay, useFonts } from 'expo-font';
 import { Stack, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { MAX_AGE, persister } from '@/api/persist';
 import { queryClient } from '@/api/queryClient';
 import { Onboarding } from '@/components/Onboarding';
 import { SaveErrorNotice } from '@/components/SaveErrorNotice';
@@ -33,10 +34,29 @@ function ScrollToTop() {
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  /**
+   * `swap`, not the default `auto`.
+   *
+   * Browsers read `auto` as `block`: text is invisible until the font
+   * arrives, for up to three seconds. On a slow connection that is most
+   * of the time someone spends looking at the app, and it is the single
+   * clearest tell that this is a web page rather than an app. With
+   * `swap` the copy is readable immediately in the fallback and
+   * re-renders in Noah when it lands.
+   */
   const [fontsLoaded, fontError] = useFonts({
-    'Noah-Black': require('../../assets/fonts/Noah-Black.ttf'),
-    'Noah-Bold': require('../../assets/fonts/Noah-Bold.ttf'),
-    'Noah-Regular': require('../../assets/fonts/Noah-Regular.ttf'),
+    'Noah-Black': {
+      uri: require('../../assets/fonts/Noah-Black.ttf'),
+      display: FontDisplay.SWAP,
+    },
+    'Noah-Bold': {
+      uri: require('../../assets/fonts/Noah-Bold.ttf'),
+      display: FontDisplay.SWAP,
+    },
+    'Noah-Regular': {
+      uri: require('../../assets/fonts/Noah-Regular.ttf'),
+      display: FontDisplay.SWAP,
+    },
   });
 
   useEffect(() => {
@@ -47,7 +67,10 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{ persister, maxAge: MAX_AGE }}
+    >
       <LibraryProvider>
         <DurationsProvider>
           <SafeAreaProvider>
@@ -66,6 +89,6 @@ export default function RootLayout() {
           </SafeAreaProvider>
         </DurationsProvider>
       </LibraryProvider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
 }

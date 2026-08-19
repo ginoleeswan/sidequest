@@ -9,6 +9,8 @@ import { Textured } from './Textured';
 import type { Game } from '@/api/types';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
+import { useQueryClient } from '@tanstack/react-query';
+import { gameDetailQuery } from '@/api/gameDetail';
 
 interface Props {
   game: Game;
@@ -19,9 +21,18 @@ export function GameCard({ game, wide = false }: Props) {
   const router = useRouter();
   const year = game.released?.slice(0, 4);
 
+  // Warm the detail query the moment a finger lands; see ScaleButton.
+  const queryClient = useQueryClient();
+  const prefetch = () =>
+    queryClient.prefetchQuery({
+      ...gameDetailQuery(game.id),
+      staleTime: 5 * 60 * 1000,
+    });
+
   return (
     <ScaleButton
       onPress={() => router.push(`/game/${game.id}`)}
+      onPressIn={prefetch}
       // Shadow and radius must live on the same element, or the web
       // box-shadow renders as a square box behind the rounded card.
       style={styles.shadowWrap}

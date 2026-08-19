@@ -10,6 +10,8 @@ import type { Game } from '@/api/types';
 import { COLORS } from '@/styles/colors';
 import { RADIUS, SHADOW, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
+import { useQueryClient } from '@tanstack/react-query';
+import { gameDetailQuery } from '@/api/gameDetail';
 
 /** Row-style result card: thumbnail, identity, facts. */
 export function GameInfoCard({ game }: { game: Game }) {
@@ -17,9 +19,18 @@ export function GameInfoCard({ game }: { game: Game }) {
   const year = game.released?.slice(0, 4);
   const genre = game.genres?.[0]?.name;
 
+  // Warm the detail query the moment a finger lands; see ScaleButton.
+  const queryClient = useQueryClient();
+  const prefetch = () =>
+    queryClient.prefetchQuery({
+      ...gameDetailQuery(game.id),
+      staleTime: 5 * 60 * 1000,
+    });
+
   return (
     <ScaleButton
       onPress={() => router.push(`/game/${game.id}`)}
+      onPressIn={prefetch}
       style={styles.card}
       activeScale={0.97}
     >
