@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { HowItWorks } from '@/components/HowItWorks';
 import { LandingProof } from '@/components/LandingProof';
 import { Rise, useInView } from '@/components/Rise';
 import { LandingWall } from '@/components/LandingWall';
@@ -216,6 +217,21 @@ export default function AboutScreen() {
           ]}
         >
           <LandingWall columns={isExpanded ? 7 : 4} />
+          {/* The page's first pixels, in exactly the colour iOS Safari
+              paints its status bar.
+
+              While the toolbar is expanded that strip belongs to the
+              browser, not the document, so artwork cannot be drawn into
+              it — but a seam between two dark blues is only a seam
+              because they are two. Landing the hero on the theme colour
+              and dissolving out of it makes the bar read as the top of
+              the picture rather than a slab above it. */}
+          <LinearGradient
+            colors={[COLORS.navy, COLORS.navy, 'rgba(39,47,63,0)']}
+            locations={[0, 0.45, 1]}
+            style={[styles.statusMatch, { height: safe.top + SPACING.xl }]}
+            pointerEvents="none"
+          />
           {/* Heavy where the words are, open at the top right, so the
                 pile is visible without ever competing with the line it
                 exists to prove. */}
@@ -285,6 +301,12 @@ export default function AboutScreen() {
             </View>
           </View>
         </WhenNear>
+
+        {/* The problem is stated above; this is the answer, before any
+            of the detail. Somebody deciding whether to bother needs to
+            know what will be asked of them, and three numbered steps is
+            the plainest way to say it. */}
+        <HowItWorks inset={inset} wide={isExpanded} />
 
         {BEATS.map((beat, index) => (
           <View
@@ -384,6 +406,7 @@ const styles = StyleSheet.create({
 
   // masthead
   masthead: { justifyContent: 'flex-end', overflow: 'hidden' },
+  statusMatch: { position: 'absolute', top: 0, left: 0, right: 0 },
   mastheadCopy: { paddingBottom: SPACING.xl * 2 },
   lockup: {
     flexDirection: 'row',
