@@ -25,6 +25,7 @@ import { ChromeWeld } from '@/components/ChromeWeld';
 import { CoverImage } from '@/components/CoverImage';
 import { GameCard } from '@/components/GameCard';
 import { Message } from '@/components/Message';
+import { Commitment } from '@/components/Commitment';
 import { PageTitle } from '@/components/PageTitle';
 import { PlatformIcons } from '@/components/PlatformIcons';
 import { Rail } from '@/components/Rail';
@@ -290,6 +291,7 @@ export default function GameInfoScreen() {
         <Text style={styles.heroTitle}>{game.name}</Text>
         <StatStrip game={game} onEditLength={() => setEditingLength(true)} />
         <StatusActions game={game} />
+        <Commitment gameId={game.id} />
       </View>
     </View>
   );
@@ -325,6 +327,7 @@ export default function GameInfoScreen() {
           <Text style={styles.deskTitle}>{game.name}</Text>
           <StatStrip game={game} onEditLength={() => setEditingLength(true)} />
           <StatusActions game={game} />
+          <Commitment gameId={game.id} />
         </View>
         <View style={styles.deskArtFrame}>
           <CoverImage

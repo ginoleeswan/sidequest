@@ -13,6 +13,7 @@ export const SUBSET_ICONS = [
   'bookmark',
   'bookmark-outline',
   'calendar',
+  'calendar-outline',
   'car-sport',
   'checkbox',
   'checkmark',

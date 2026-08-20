@@ -189,3 +189,101 @@ describe('pickTonight', () => {
     expect(pickTonight(items, 10).shortest?.id).toBe(2);
   });
 });
+
+/**
+ * A pin is the player overruling the engine: "I don't care what the
+ * arithmetic says, I am finishing this one." The engine's job is then to
+ * honour it and be honest about the price.
+ */
+describe('games that must be played', () => {
+  const now = Date.UTC(2026, 0, 1);
+  const weeks = (n: number) => now + n * 7 * 24 * 60 * 60 * 1000;
+
+  it('keeps a long pinned game that the count would rather drop', () => {
+    const plan = planSchedule(
+      [
+        { id: 1, name: 'Epic', hours: 40, want: 3 },
+        { id: 2, name: 'Short A', hours: 6 },
+        { id: 3, name: 'Short B', hours: 6 },
+      ],
+      { hoursPerWeek: 10, now, deadline: weeks(4) }
+    );
+    expect(plan.scheduled.map((s) => s.id)).toEqual([1]);
+    // Forty hours of capacity: the epic takes all of it. Unpinned the
+    // engine would finish the two short games instead, so the pin costs
+    // exactly one game — and says so.
+    expect(plan.costOfPins).toBe(1);
+  });
+
+  it('says a pin was free when it was', () => {
+    const plan = planSchedule(
+      [
+        { id: 1, name: 'Short', hours: 4, want: 3 },
+        { id: 2, name: 'Also short', hours: 4 },
+      ],
+      { hoursPerWeek: 10, now, deadline: weeks(2) }
+    );
+    expect(plan.scheduled).toHaveLength(2);
+    expect(plan.costOfPins).toBe(0);
+  });
+
+  it('still drops a pinned game that cannot fit its own deadline', () => {
+    const plan = planSchedule(
+      [{ id: 1, name: 'Impossible', hours: 200, want: 3, deadline: weeks(1) }],
+      { hoursPerWeek: 5, now }
+    );
+    expect(plan.scheduled).toHaveLength(0);
+    expect(plan.dropped.map((d) => d.id)).toEqual([1]);
+  });
+
+  it('leaves the optimal answer alone when nothing is pinned', () => {
+    const items = [
+      { id: 1, name: 'A', hours: 20 },
+      { id: 2, name: 'B', hours: 6 },
+      { id: 3, name: 'C', hours: 6 },
+    ];
+    const plan = planSchedule(items, {
+      hoursPerWeek: 10,
+      now,
+      deadline: weeks(2),
+    });
+    expect(plan.scheduled.map((s) => s.id).sort()).toEqual([2, 3]);
+    expect(plan.costOfPins).toBe(0);
+  });
+
+  it('honours a per-game deadline over the window', () => {
+    const plan = planSchedule(
+      [
+        { id: 1, name: 'Due soon', hours: 8, deadline: weeks(1) },
+        { id: 2, name: 'Whenever', hours: 8 },
+      ],
+      { hoursPerWeek: 10, now }
+    );
+    // The urgent one is scheduled first even though both fit.
+    expect(plan.scheduled[0].id).toBe(1);
+  });
+
+  /**
+   * Pinning is where feasibility could quietly break: evicting one
+   * six-hour game does not make room for a forty-hour one, so the
+   * eviction has to keep going. This checks the promise directly —
+   * nothing scheduled finishes after its own deadline — over a spread of
+   * random boards.
+   */
+  it('never schedules a game past its deadline, however the pins fall', () => {
+    for (let seed = 0; seed < 40; seed++) {
+      const items = Array.from({ length: 6 }, (_, i) => ({
+        id: i + 1,
+        name: `G${i}`,
+        hours: ((seed * 7 + i * 13) % 40) + 1,
+        want: (seed + i) % 3 === 0 ? 3 : 2,
+        deadline: weeks(((seed + i) % 6) + 1),
+      }));
+      const plan = planSchedule(items, { hoursPerWeek: 10, now });
+      for (const item of plan.scheduled) {
+        expect(item.finishAt).toBeLessThanOrEqual(item.deadline as number);
+      }
+      expect(plan.scheduled.length + plan.dropped.length).toBe(items.length);
+    }
+  });
+});

@@ -97,6 +97,10 @@ interface Entry {
   playing: boolean;
   /** The length is an estimate we don't fully trust. */
   rough: boolean;
+  /** This one has to be finished, whatever the arithmetic prefers. */
+  must: boolean;
+  /** Its own deadline, epoch ms, if it has one. */
+  deadline?: number;
   source: 'yours' | 'estimate' | 'unknown';
 }
 
@@ -137,9 +141,14 @@ function QuestRow({
         iconSize={16}
       />
       <View style={styles.questBody}>
-        <Text style={styles.questTitle} numberOfLines={1}>
-          {item.name}
-        </Text>
+        <View style={styles.questTitleRow}>
+          {entry?.must && (
+            <Ionicons name="star" size={11} color={COLORS.accent} />
+          )}
+          <Text style={styles.questTitle} numberOfLines={1}>
+            {item.name}
+          </Text>
+        </View>
         <View style={styles.questMetaRow}>
           <View style={styles.questBarTrack}>
             <View style={[styles.questBarFill, { width: `${barPct}%` }]} />
@@ -206,6 +215,8 @@ export default function PlanScreen() {
           played: e.hoursPlayed,
           playing: true,
           rough: duration.rough,
+          must: (e.want ?? 2) >= 3,
+          deadline: e.deadline,
           source: duration.source,
         };
       }),
@@ -220,6 +231,8 @@ export default function PlanScreen() {
           played: e.hoursPlayed,
           playing: false,
           rough: duration.rough,
+          must: (e.want ?? 2) >= 3,
+          deadline: e.deadline,
           source: duration.source,
         };
       }),
@@ -243,7 +256,13 @@ export default function PlanScreen() {
   const schedule = useMemo(() => {
     const items: PlanItem[] = entries
       .filter((e) => e.hours > 0)
-      .map((e) => ({ id: e.game.id, name: e.game.name, hours: e.hours }));
+      .map((e) => ({
+        id: e.game.id,
+        name: e.game.name,
+        hours: e.hours,
+        want: e.must ? 3 : 2,
+        deadline: e.deadline,
+      }));
     return planSchedule(items, {
       hoursPerWeek: pace,
       now,
@@ -363,6 +382,15 @@ export default function PlanScreen() {
                       <Text style={styles.verdictDetail}>
                         Give it more time or a wider window — or let a few of
                         these go. That’s allowed.
+                      </Text>
+                    )}
+
+                    {schedule.costOfPins > 0 && (
+                      <Text style={styles.pinCost}>
+                        Keeping what you marked must-play costs you{' '}
+                        {schedule.costOfPins} other{' '}
+                        {schedule.costOfPins === 1 ? 'game' : 'games'} in this
+                        window. Worth it, probably.
                       </Text>
                     )}
 
@@ -660,6 +688,10 @@ const styles = StyleSheet.create({
     ...TYPE.p,
     color: COLORS.mediumGrey,
   },
+  pinCost: {
+    ...TYPE.caption,
+    color: COLORS.accent,
+  },
   sentence: {
     ...TYPE.body,
     color: COLORS.lightGrey,
@@ -766,9 +798,11 @@ const styles = StyleSheet.create({
   },
   questThumb: { width: 64, height: 40, borderRadius: 6 },
   questBody: { flex: 1, gap: 1 },
+  questTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   questTitle: {
     ...TYPE.label,
     color: COLORS.lightGrey,
+    flexShrink: 1,
   },
   questMetaRow: {
     flexDirection: 'row',
