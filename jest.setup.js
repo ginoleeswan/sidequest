@@ -4,6 +4,19 @@ jest.mock('expo-font', () => ({
   isLoaded: () => true,
 }));
 
+/**
+ * expo-video's native module is absent in the test environment and its
+ * player class fails at import time. Trailers are a leaf; the screens
+ * that carry them are not.
+ */
+jest.mock('expo-video', () => {
+  const { View } = require('react-native');
+  return {
+    useVideoPlayer: () => ({ play: jest.fn(), pause: jest.fn() }),
+    VideoView: View,
+  };
+});
+
 jest.mock('expo-splash-screen', () => ({
   preventAutoHideAsync: jest.fn(),
   hideAsync: jest.fn(),
@@ -28,7 +41,8 @@ jest.mock('expo-router', () => {
     router,
     useRouter: () => router,
     usePathname: () => '/',
-    useLocalSearchParams: () => ({}),
+    // Route params a test can set: globalThis.routeParams = { id: '1' }.
+    useLocalSearchParams: () => globalThis.routeParams ?? {},
     useSegments: () => [],
     useFocusEffect: jest.fn(),
     Link: View,
