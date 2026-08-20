@@ -20,7 +20,7 @@ import { SteamConnect } from '@/components/SteamConnect';
 import { Textured } from '@/components/Textured';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { DurationSheet } from '@/components/DurationSheet';
-import { formatHours } from '@/lib/duration';
+import { formatHours, remainingHours } from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
 import { useLibrary } from '@/lib/library';
 import {
@@ -88,7 +88,12 @@ const finishDate = (ms: number) =>
 
 interface Entry {
   game: Game;
+  /** Hours left, not hours long — see lib/duration remainingHours. */
   hours: number;
+  /** The whole game's length, for saying "10h left of 40h". */
+  totalHours: number;
+  /** Measured, when Steam knows it. */
+  played?: number;
   playing: boolean;
   /** The length is an estimate we don't fully trust. */
   rough: boolean;
@@ -154,6 +159,9 @@ function QuestRow({
           >
             {entry?.source === 'yours' ? '' : '~'}
             {formatHours(item.hours)}
+            {entry?.played != null && entry.totalHours > 0
+              ? ` left of ${formatHours(entry.totalHours)}`
+              : ''}
             {entry?.rough ? ' ?' : ''}
             <Text style={styles.questPencil}> ✎</Text>
           </Text>
@@ -190,7 +198,12 @@ export default function PlanScreen() {
         const duration = durationOf(e.game);
         return {
           game: e.game,
-          hours: duration.hours * 0.5,
+          hours: remainingHours(duration.hours, {
+            hoursPlayed: e.hoursPlayed,
+            playing: true,
+          }),
+          totalHours: duration.hours,
+          played: e.hoursPlayed,
           playing: true,
           rough: duration.rough,
           source: duration.source,
@@ -200,7 +213,11 @@ export default function PlanScreen() {
         const duration = durationOf(e.game);
         return {
           game: e.game,
-          hours: duration.hours,
+          hours: remainingHours(duration.hours, {
+            hoursPlayed: e.hoursPlayed,
+          }),
+          totalHours: duration.hours,
+          played: e.hoursPlayed,
           playing: false,
           rough: duration.rough,
           source: duration.source,
@@ -397,6 +414,7 @@ export default function PlanScreen() {
                         setPace(measured);
                         setSteamOpen(false);
                       }}
+                      onImport={() => router.push('/import')}
                     />
                   )}
 

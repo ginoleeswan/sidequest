@@ -19,6 +19,15 @@ export interface LibraryEntry {
   status: LibraryStatus;
   addedAt: number;
   /**
+   * Hours already put in, when we know them — measured from Steam, not
+   * guessed. What is left of a game is its length minus this, which is
+   * the difference between a plan that knows you are 30 hours into a 40
+   * hour game and one that assumes you are halfway through everything.
+   */
+  hoursPlayed?: number;
+  /** The Steam app this entry was matched to, if it came from there. */
+  steamAppId?: number;
+  /**
    * When the credits rolled. Distinct from addedAt, which is when the
    * game entered the library — a game saved last year and finished today
    * belongs to today.
@@ -36,6 +45,21 @@ export const STATUS_META: Record<
 };
 
 type Entries = Record<string, LibraryEntry>;
+
+/** Persist a snapshot of what the app renders, not RAWG's whole payload. */
+const slim = (game: Game): Game => ({
+  id: game.id,
+  slug: game.slug,
+  name: game.name,
+  background_image: game.background_image,
+  rating: game.rating,
+  rating_top: game.rating_top,
+  released: game.released,
+  playtime: game.playtime,
+  metacritic: game.metacritic,
+  parent_platforms: game.parent_platforms,
+  genres: game.genres?.slice(0, 2),
+});
 
 const STORAGE_KEY = 'sidequest.library.v1';
 
@@ -59,6 +83,26 @@ interface LibraryContextValue {
   exportJson: () => string;
   /** Merge a transfer string in; returns how many entries were added. */
   importJson: (raw: string) => number;
+  /**
+   * Record measured progress against games already saved. Hours of 0 or
+   * less clear it — an entry claiming zero progress is noise.
+   */
+  setProgress: (progress: Record<number, number>) => void;
+  /**
+   * Save several games at once, as one write.
+   *
+   * Importing a library one setStatus at a time would be dozens of
+   * renders and dozens of writes to the device, and a failure halfway
+   * through would leave a half-imported library behind.
+   */
+  addGames: (
+    games: {
+      game: Game;
+      status: LibraryStatus;
+      hoursPlayed?: number;
+      steamAppId?: number;
+    }[]
+  ) => number;
   /** Set when the last write to the device failed; null when it landed. */
   saveError: string | null;
 }
@@ -96,31 +140,57 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       if (status == null) {
         delete next[String(game.id)];
       } else {
+        const existing = prev[String(game.id)];
         next[String(game.id)] = {
-          // Persist a slim snapshot, not the whole payload.
-          game: {
-            id: game.id,
-            slug: game.slug,
-            name: game.name,
-            background_image: game.background_image,
-            rating: game.rating,
-            rating_top: game.rating_top,
-            released: game.released,
-            playtime: game.playtime,
-            metacritic: game.metacritic,
-            parent_platforms: game.parent_platforms,
-            genres: game.genres?.slice(0, 2),
-          },
+          game: slim(game),
           status,
-          addedAt: prev[String(game.id)]?.addedAt ?? Date.now(),
+          addedAt: existing?.addedAt ?? Date.now(),
+          // Measured progress outlives a status change: moving a game to
+          // "playing" does not un-know the thirty hours behind it.
+          hoursPlayed: existing?.hoursPlayed,
+          steamAppId: existing?.steamAppId,
           finishedAt:
             status === 'finished'
-              ? (prev[String(game.id)]?.finishedAt ?? Date.now())
+              ? (existing?.finishedAt ?? Date.now())
               : undefined,
         };
       }
       return next;
     });
+  }, []);
+
+  const setProgress = useCallback((progress: Record<number, number>) => {
+    setEntries((prev) => {
+      const next = { ...prev };
+      for (const [id, hours] of Object.entries(progress)) {
+        const entry = next[id];
+        if (!entry) continue;
+        next[id] = { ...entry, hoursPlayed: hours > 0 ? hours : undefined };
+      }
+      return next;
+    });
+  }, []);
+
+  const addGames = useCallback<LibraryContextValue['addGames']>((games) => {
+    if (games.length === 0) return 0;
+    setEntries((prev) => {
+      const next = { ...prev };
+      for (const { game, status, hoursPlayed, steamAppId } of games) {
+        const existing = next[String(game.id)];
+        next[String(game.id)] = {
+          game: slim(game),
+          // A game already in the library keeps the status its owner
+          // gave it; an import adds games, it does not overrule them.
+          status: existing?.status ?? status,
+          addedAt: existing?.addedAt ?? Date.now(),
+          hoursPlayed: hoursPlayed ?? existing?.hoursPlayed,
+          steamAppId: steamAppId ?? existing?.steamAppId,
+          finishedAt: existing?.finishedAt,
+        };
+      }
+      return next;
+    });
+    return games.length;
   }, []);
 
   const importJson = useCallback((raw: string): number => {
@@ -155,9 +225,11 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       count: Object.keys(entries).length,
       exportJson: () => JSON.stringify(entries),
       importJson,
+      setProgress,
+      addGames,
       saveError,
     }),
-    [entries, setStatus, importJson, saveError]
+    [entries, setStatus, importJson, setProgress, addGames, saveError]
   );
 
   return (

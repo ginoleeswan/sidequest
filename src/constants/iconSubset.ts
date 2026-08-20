@@ -14,6 +14,7 @@ export const SUBSET_ICONS = [
   'bookmark-outline',
   'calendar',
   'car-sport',
+  'checkbox',
   'checkmark',
   'checkmark-circle',
   'chevron-back',
@@ -62,6 +63,7 @@ export const SUBSET_ICONS = [
   'star',
   'star-outline',
   'stop',
+  'time',
   'trending-up',
   'trophy',
 ] as const;

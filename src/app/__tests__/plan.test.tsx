@@ -16,7 +16,9 @@ beforeEach(() => {
 const game = (id: number, name: string, playtime: number) =>
   ({ id, name, playtime, released: '2020-01-01' }) as Game;
 
-function seed(rows: { game: Game; status: LibraryStatus }[]) {
+function seed(
+  rows: { game: Game; status: LibraryStatus; hoursPlayed?: number }[]
+) {
   store['sidequest.library.v1'] = JSON.stringify(
     Object.fromEntries(
       rows.map((r, i) => [String(r.game.id), { addedAt: i + 1, ...r }])
@@ -99,5 +101,25 @@ describe('the plan screen', () => {
     await renderApp(<PlanScreen />);
     expect(screen.getByText('Length unknown')).toBeTruthy();
     expect(screen.getByText('Set how long it takes →')).toBeTruthy();
+  });
+
+  /**
+   * The point of importing from Steam: a game 30 hours into its 40 is an
+   * evening away from done, and the plan should say so rather than
+   * assuming everything under way is half finished.
+   */
+  it('counts what is left when it knows the hours, not half of everything', async () => {
+    seed([
+      { game: game(1, 'Deep In', 40), status: 'playing', hoursPlayed: 34 },
+    ]);
+    await renderApp(<PlanScreen />);
+    expect(screen.getByText(/6h left of 40h/)).toBeTruthy();
+  });
+
+  it('falls back to half for a game under way it cannot measure', async () => {
+    seed([{ game: game(1, 'Unmeasured', 40), status: 'playing' }]);
+    await renderApp(<PlanScreen />);
+    expect(screen.getAllByText(/20h/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/left of/)).toBeNull();
   });
 });

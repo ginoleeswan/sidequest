@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CoverImage } from './CoverImage';
-import { formatHours } from '@/lib/duration';
+import { formatHours, remainingHours } from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
 import { useLibrary } from '@/lib/library';
 import { pickTonight } from '@/lib/scheduler';
@@ -39,8 +39,10 @@ export function TonightCard() {
       entries.map(({ entry, playing }) => ({
         id: entry.game.id,
         name: entry.game.name,
-        // Half of what's left, for something already under way.
-        hours: durationOf(entry.game).hours * (playing ? 0.5 : 1),
+        hours: remainingHours(durationOf(entry.game).hours, {
+          hoursPlayed: entry.hoursPlayed,
+          playing,
+        }),
         playing,
       })),
       SESSION_MINUTES

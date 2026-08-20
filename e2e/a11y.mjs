@@ -21,7 +21,15 @@ const ROOT = new URL('../dist', import.meta.url).pathname;
 const AXE = new URL('../node_modules/axe-core/axe.min.js', import.meta.url)
   .pathname;
 
-const ROUTES = ['/', '/plan', '/library', '/game/3498', '/about', '/privacy'];
+const ROUTES = [
+  '/',
+  '/plan',
+  '/library',
+  '/import',
+  '/game/3498',
+  '/about',
+  '/privacy',
+];
 const VIEWPORTS = [
   { name: 'mobile', width: 390, height: 844, isMobile: true },
   { name: 'desktop', width: 1280, height: 900, isMobile: false },
