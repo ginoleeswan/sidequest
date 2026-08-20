@@ -211,12 +211,19 @@ describe('the home screen', () => {
    */
   it('tells you what day it is, and what came out on it', async () => {
     await renderApp(<HomeScreen />);
-    const today = new Date().toLocaleDateString(undefined, {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-    });
-    await waitFor(() => expect(screen.getByText(today)).toBeTruthy());
+    // The date lives in the stage's eyebrow now, next to the reason the
+    // slide is there — a floating date line above a carousel said nothing
+    // about anything on screen.
+    const today = new Date()
+      .toLocaleDateString(undefined, {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+      })
+      .toUpperCase();
+    await waitFor(() =>
+      expect(screen.getByText(new RegExp(today, 'i'))).toBeTruthy()
+    );
   });
 
   it('leaves out the games you already saved', async () => {

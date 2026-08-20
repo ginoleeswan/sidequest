@@ -185,11 +185,10 @@ export function SkeletonRow() {
 export function SkeletonCompactHome() {
   return (
     <View style={styles.compact}>
-      {/* the hero carousel: Rail gap is SPACING.md here, not gridGap */}
-      <View style={[styles.row, styles.bleed, styles.heroRow]}>
-        <Skeleton style={styles.wideCard} />
-        <Skeleton style={styles.wideCard} />
-      </View>
+      {/* One full-bleed block: the stage is a single picture, so a pair of
+          card-shaped bones here would be a silhouette of a layout the page
+          no longer has. */}
+      <Skeleton style={styles.stage} />
       <View style={styles.compactShelves}>
         {/* One row per shelf the home page actually renders: the ranked
             trending row, then HOME_SHELVES. Two stand-ins for six left the
@@ -319,9 +318,10 @@ const styles = StyleSheet.create({
     height: LAYOUT.cardHeight,
     borderRadius: RADIUS.xl,
   },
-  compact: { paddingHorizontal: SPACING.md, gap: SPACING.xs },
-  compactShelves: { marginTop: SPACING.sm },
-  heroRow: { gap: SPACING.md, marginBottom: RAIL_NET },
+  compact: { gap: 0 },
+  compactShelves: { paddingHorizontal: SPACING.md, paddingTop: SPACING.lg },
+  /** Matches the stage's floor: see stageHeight on the home screen. */
+  stage: { height: 440, borderRadius: 0 },
   bleed: {
     marginHorizontal: -SPACING.md,
     paddingHorizontal: SPACING.md,
