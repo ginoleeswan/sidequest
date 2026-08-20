@@ -238,6 +238,15 @@ export const QUICK_WINS: Section = {
   iconName: 'flash',
   iconType: 'ionicon',
   description: 'Short enough to actually see the credits.',
+  /**
+   * Larger frames than the genre rows below it.
+   *
+   * This is the row the app is for. Set identically to Shooter and
+   * Racing it claimed no more attention than either, and a page where
+   * every row is weighted the same is a page with no argument about
+   * what matters on it.
+   */
+  variant: 'large',
 };
 
 /** Longest a game can be and still count as a weekend. */

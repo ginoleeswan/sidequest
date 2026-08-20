@@ -44,6 +44,7 @@ import { GameTile } from '@/components/GameTile';
 import { Message } from '@/components/Message';
 import { PageTitle } from '@/components/PageTitle';
 import { InstallPrompt } from '@/components/InstallPrompt';
+import { PromptBand } from '@/components/PromptBand';
 import { RecentShelf } from '@/components/RecentShelf';
 import { SeriesNews } from '@/components/SeriesNews';
 import { SearchInput } from '@/components/SearchInput';
@@ -86,6 +87,7 @@ import { useDurations } from '@/lib/durations';
 import { useLibrary } from '@/lib/library';
 import {
   becauseYouSaved,
+  dedupeGames,
   feedSeed,
   likeYouFinish,
   pickShelves,
@@ -309,6 +311,29 @@ export default function HomeScreen() {
         : [],
     [isHome, personal.length, games]
   );
+
+  /**
+   * Each rotating row gets games no row above it already showed.
+   *
+   * The shelves are independent RAWG queries, so nothing stopped the
+   * same game turning up in Shooter and again in Adventure — or, since
+   * RAWG carries some releases under two entries, twice inside one row
+   * as "The Sinking City 2" and "Sinking City 2". Two rows on one screen
+   * offering the same game is the kind of thing nobody reports and
+   * everybody notices.
+   *
+   * Seeded with what the rows above these already spent, in the order
+   * the page reads.
+   */
+  const shelfGames = (() => {
+    const seen = new Set<string>();
+    dedupeGames(quickWins, seen);
+    dedupeGames(trendingShelf.slice(0, 12), seen);
+    dedupeGames(lengthShelf, seen);
+    return homeShelves.map((_, index) =>
+      dedupeGames(withoutOwned(shelves[index]?.data ?? [], library), seen)
+    );
+  })();
 
   const selectSection = (s: Section) => {
     setQuery('');
@@ -537,6 +562,7 @@ export default function HomeScreen() {
                       onViewAll={selectSection}
                       inset={SPACING.xl}
                     />
+                    <PromptBand inset={SPACING.xl} />
                     {personal.mood && (moodShelf.data?.length ?? 0) > 0 && (
                       <Shelf
                         section={{
@@ -573,10 +599,7 @@ export default function HomeScreen() {
                       >
                         <Shelf
                           section={shelf}
-                          games={withoutOwned(
-                            shelves[index].data ?? [],
-                            library
-                          )}
+                          games={shelfGames[index] ?? []}
                           onViewAll={selectSection}
                           inset={SPACING.xl}
                         />
@@ -653,6 +676,10 @@ export default function HomeScreen() {
                     onViewAll={selectSection}
                     inset={SPACING.md}
                   />
+                  {/* Deep enough in to be a break in the rhythm rather
+                      than a second header, and above the rows that are
+                      about you rather than about the shop. */}
+                  <PromptBand inset={SPACING.md} />
                   {personal.mood && (moodShelf.data?.length ?? 0) > 0 && (
                     <Shelf
                       section={{
@@ -692,10 +719,7 @@ export default function HomeScreen() {
                     >
                       <Shelf
                         section={shelf}
-                        games={withoutOwned(
-                          shelves[index].data ?? [],
-                          library
-                        ).slice(0, 12)}
+                        games={(shelfGames[index] ?? []).slice(0, 12)}
                         onViewAll={selectSection}
                         inset={SPACING.md}
                       />
