@@ -51,7 +51,7 @@ import { findSection } from '@/constants/categories';
 import { COLORS } from '@/styles/colors';
 import { DURATION, EASING } from '@/styles/motion';
 import { LAYOUT, RADIUS, SHADOW, SHADOW_ROOM, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { OVER_IMAGE, TYPE } from '@/styles/typography';
 
 const HTML_TAGS = /(<([^>]+)>)/gi;
 
@@ -239,7 +239,7 @@ export default function GameInfoScreen() {
           <AppHeader immersive />
         ) : (
           <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
-            <BackButton />
+            <BackButton onImage />
           </View>
         )}
       </Textured>
@@ -251,7 +251,7 @@ export default function GameInfoScreen() {
       <View style={styles.background}>
         <PageTitle>Sidequest</PageTitle>
         <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
-          <BackButton />
+          <BackButton onImage />
         </View>
         <Message
           icon="cloud-offline-outline"
@@ -556,7 +556,7 @@ export default function GameInfoScreen() {
           <AppHeader immersive />
         ) : (
           <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
-            <BackButton />
+            <BackButton onImage />
           </View>
         )}
 
@@ -659,13 +659,9 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   heroTitle: {
-    fontFamily: 'Noah-Black',
-    fontSize: 32,
-    lineHeight: 36,
+    ...TYPE.display,
+    ...OVER_IMAGE.heading,
     color: COLORS.white,
-    textShadowColor: 'rgba(0,0,0,0.7)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 10,
   },
 
   // stats
@@ -683,17 +679,15 @@ const styles = StyleSheet.create({
    */
   statValue: {
     ...TYPE.h3,
+    ...OVER_IMAGE.body,
     color: COLORS.white,
-    textShadowColor: 'rgba(0,0,0,0.65)',
-    textShadowRadius: 10,
   },
   statFlag: { color: COLORS.accent },
   statPencil: { fontSize: 11, color: COLORS.lightGrey },
   statLabel: {
     ...TYPE.micro,
+    ...OVER_IMAGE.body,
     color: COLORS.lightGrey,
-    textShadowColor: 'rgba(0,0,0,0.7)',
-    textShadowRadius: 8,
   },
 
   // body
@@ -744,14 +738,13 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     alignItems: 'flex-start',
   },
+  /** The one display size the scale does not carry: a desktop masthead. */
   deskTitle: {
-    fontFamily: 'Noah-Black',
+    ...TYPE.display,
+    ...OVER_IMAGE.heading,
     fontSize: 44,
     lineHeight: 50,
     color: COLORS.white,
-    textShadowColor: 'rgba(0,0,0,0.6)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 12,
   },
   deskArtFrame: {
     width: '42%',
@@ -786,7 +779,7 @@ const styles = StyleSheet.create({
 
   // blocks
   block: { gap: SPACING.sm + 2, marginBottom: SPACING.lg },
-  aboutText: { fontSize: 13, lineHeight: 20 },
+  aboutText: { ...TYPE.p },
   genreRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',

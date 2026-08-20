@@ -17,6 +17,20 @@ export const COLORS = {
   /** Hairline strokes on dark surfaces. */
   stroke: 'rgba(255,255,255,0.08)',
   strokeStrong: 'rgba(255,255,255,0.16)',
+  /**
+   * The faint lift a card gets off the page. One value, because it was
+   * eight places at 0.03 and one at 0.035 — a difference nobody can see
+   * and nobody meant.
+   */
+  raised: 'rgba(255,255,255,0.03)',
+  /**
+   * A control sitting on artwork rather than on the page: header chips,
+   * the stage's ghost action. Dark enough for a blown-out frame, since
+   * what is behind it is whatever the API returned.
+   */
+  plate: 'rgba(18,24,36,0.55)',
+  /** The stroke that goes with `plate` — a hairline vanishes on a photo. */
+  strokeOnImage: 'rgba(255,255,255,0.22)',
 } as const;
 
 /** RAWG community-rating buckets. */

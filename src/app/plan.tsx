@@ -43,7 +43,7 @@ import {
 } from '@/lib/scheduler';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { OVER_IMAGE, TYPE } from '@/styles/typography';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -833,22 +833,16 @@ const styles = StyleSheet.create({
   tonightBody: { gap: SPACING.xs + 2, padding: SPACING.lg },
   tonightHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   /** Anything set over the artwork rather than over the page. */
-  onArt: {
-    color: COLORS.white,
-    textShadowColor: 'rgba(0,0,0,0.6)',
-    textShadowRadius: 10,
-  },
+  onArt: { ...OVER_IMAGE.body, color: COLORS.white },
   tonightEyebrow: {
     ...TYPE.tag,
     color: COLORS.accent,
-    letterSpacing: 1.3,
   },
   /* Over artwork, so the copy carries its own contrast. */
   tonightWhy: {
     ...TYPE.p,
+    ...OVER_IMAGE.body,
     color: COLORS.lightGrey,
-    textShadowColor: 'rgba(0,0,0,0.6)',
-    textShadowRadius: 10,
   },
   tonightName: { fontFamily: 'Noah-Black', color: COLORS.white },
 
@@ -858,7 +852,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.md,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: COLORS.raised,
     borderWidth: 1,
     borderColor: COLORS.stroke,
     borderRadius: RADIUS.md,

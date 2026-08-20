@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm + 2,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: COLORS.raised,
   },
   text: {
     ...TYPE.caption,

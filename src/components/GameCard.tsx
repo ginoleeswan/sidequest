@@ -8,6 +8,7 @@ import { ScaleButton } from './ScaleButton';
 import { Textured } from './Textured';
 import type { Game } from '@/api/types';
 import { COLORS } from '@/styles/colors';
+import { OVER_IMAGE, TYPE } from '@/styles/typography';
 import { LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
 import { useQueryClient } from '@tanstack/react-query';
 import { gameDetailQuery } from '@/api/gameDetail';
@@ -111,13 +112,10 @@ const styles = StyleSheet.create({
     gap: SPACING.xs,
   },
   title: {
-    fontFamily: 'Noah-Black',
-    fontSize: 16,
+    ...TYPE.h4,
+    ...OVER_IMAGE.heading,
     color: COLORS.white,
     textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 1)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 5,
   },
   metaRow: {
     flexDirection: 'row',
@@ -125,11 +123,8 @@ const styles = StyleSheet.create({
     gap: SPACING.xs,
   },
   meta: {
-    fontFamily: 'Noah-Regular',
-    fontSize: 12,
+    ...TYPE.caption,
+    ...OVER_IMAGE.body,
     color: COLORS.lightGrey,
-    textShadowColor: 'rgba(0, 0, 0, 0.9)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
   },
 });

@@ -136,3 +136,29 @@ export const TYPE = StyleSheet.create({
     color: COLORS.white,
   },
 });
+
+/**
+ * Text set over artwork.
+ *
+ * Where the background is a photograph nobody chose, contrast is not a
+ * property of the palette — a scrim tuned for dark key art is invisible
+ * over bright, and axe cannot evaluate either. A soft shadow buys the
+ * contrast back without painting over the picture.
+ *
+ * Two steps, because there are two jobs: display type can carry a wide
+ * soft shadow that would smear a caption, and small text needs a tight
+ * one. These grew as nine hand-tuned pairs scattered across four files
+ * — 0.5/18, 0.55/12, 0.6/8, 0.6/10, 0.65/9, 0.65/10, 0.7/8, 0.7/10 —
+ * which is what eyeballing a number instead of using a scale looks
+ * like.
+ */
+export const OVER_IMAGE = StyleSheet.create({
+  heading: {
+    textShadowColor: 'rgba(0,0,0,0.55)',
+    textShadowRadius: 16,
+  },
+  body: {
+    textShadowColor: 'rgba(0,0,0,0.65)',
+    textShadowRadius: 9,
+  },
+});

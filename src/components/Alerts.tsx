@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
     padding: SPACING.md,
     gap: SPACING.sm,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: COLORS.raised,
   },
   cardWarn: { borderColor: 'rgba(245,165,36,0.45)' },
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm },

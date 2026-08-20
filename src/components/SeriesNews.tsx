@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
     borderWidth: 1,
     borderColor: COLORS.stroke,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: COLORS.raised,
   },
   art: { width: 72, height: 44, borderRadius: RADIUS.sm },
   body: { flex: 1, gap: 2 },

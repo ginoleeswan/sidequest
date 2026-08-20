@@ -4,8 +4,15 @@ import { StyleSheet } from 'react-native';
 
 import { ScaleButton } from './ScaleButton';
 import { COLORS } from '@/styles/colors';
+import { OVER_IMAGE } from '@/styles/typography';
 
-export function BackButton() {
+/**
+ * @param onImage Sitting over artwork, where the glyph needs a shadow to
+ * survive whatever is behind it. On a flat page it does not: a drop
+ * shadow with nothing to lift off is decoration, and it only muddies a
+ * thin stroke.
+ */
+export function BackButton({ onImage = false }: { onImage?: boolean }) {
   const router = useRouter();
   // Deep links (shared URLs, fresh tabs) have no history to pop - fall
   // back to home instead of a button that silently does nothing.
@@ -22,7 +29,10 @@ export function BackButton() {
       style={styles.button}
       accessibilityLabel="Go back"
     >
-      <Ionicons name="chevron-back" style={styles.icon} />
+      <Ionicons
+        name="chevron-back"
+        style={[styles.icon, onImage && OVER_IMAGE.heading]}
+      />
     </ScaleButton>
   );
 }
@@ -37,8 +47,5 @@ const styles = StyleSheet.create({
   icon: {
     color: COLORS.lightGrey,
     fontSize: 40,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
   },
 });

@@ -98,7 +98,6 @@ const styles = StyleSheet.create({
   eyebrow: {
     ...TYPE.tag,
     color: COLORS.accent,
-    letterSpacing: 1.4,
   },
   headline: {
     ...TYPE.title,
@@ -106,9 +105,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   detail: {
-    ...TYPE.p,
-    fontSize: 14,
-    lineHeight: 21,
+    ...TYPE.body,
     color: COLORS.mediumGrey,
     marginBottom: SPACING.md,
   },

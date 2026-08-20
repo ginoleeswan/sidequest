@@ -19,7 +19,7 @@ import { useDurations } from '@/lib/durations';
 import { useLibrary } from '@/lib/library';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { OVER_IMAGE, TYPE } from '@/styles/typography';
 
 interface Props {
   game: Game;
@@ -256,8 +256,7 @@ const styles = StyleSheet.create({
     lineHeight: 56,
     color: COLORS.white,
     opacity: 0.92,
-    textShadowColor: 'rgba(0,0,0,0.55)',
-    textShadowRadius: 12,
+    ...OVER_IMAGE.heading,
   },
   title: {
     ...TYPE.labelSmall,

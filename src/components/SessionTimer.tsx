@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
     padding: SPACING.md,
     gap: SPACING.sm,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: COLORS.raised,
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   live: {
