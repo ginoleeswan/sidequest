@@ -29,7 +29,7 @@ interface NavItemProps {
 function NavItem({ label, iconName, iconType, active, onPress }: NavItemProps) {
   const [hovered, setHovered] = useState(false);
   const color = active
-    ? COLORS.darkGrey
+    ? COLORS.white
     : hovered
       ? COLORS.white
       : COLORS.mediumGrey;
@@ -45,7 +45,12 @@ function NavItem({ label, iconName, iconType, active, onPress }: NavItemProps) {
         !active && hovered && styles.navItemHovered,
       ]}
     >
-      <DynamicIcon type={iconType} name={iconName} size={18} color={color} />
+      <DynamicIcon
+        type={iconType}
+        name={iconName}
+        size={18}
+        color={active ? COLORS.accent : color}
+      />
       <Text style={[styles.navLabel, { color }]}>{label}</Text>
     </Pressable>
   );
@@ -158,13 +163,22 @@ const STICKY =
     : null;
 
 const styles = StyleSheet.create({
+  /**
+   * A rail, not a margin.
+   *
+   * This was navy at 45% over the page's dark grey, which resolves to
+   * about three values away from it — so the column read as text
+   * floating on the left rather than as a surface holding it. Solid
+   * navy is a real step down, and the hairline then marks an edge that
+   * actually exists.
+   */
   sidebar: {
     width: LAYOUT.sidebarWidth,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.lg,
-    backgroundColor: 'rgba(39,47,63,0.45)',
-    borderRightWidth: StyleSheet.hairlineWidth,
-    borderRightColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: COLORS.navy,
+    borderRightWidth: 1,
+    borderRightColor: COLORS.stroke,
   },
   brand: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   wordmark: {
@@ -196,8 +210,28 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm + 1,
     paddingHorizontal: SPACING.sm + 2,
     borderRadius: RADIUS.sm,
+    borderLeftWidth: 2,
+    borderLeftColor: 'transparent',
   },
-  navItemActive: { backgroundColor: COLORS.white },
+  /**
+   * Marked, not spotlit.
+   *
+   * The active row was a solid white pill — the colour this app spends
+   * on its primary button — while every other row sat at forty percent
+   * grey. One element at full strength among seventeen at a whisper is
+   * a blob, not a hierarchy. A raised surface and the accent say the
+   * same thing at the weight a navigation item deserves, and they are
+   * the first amber in a rail that otherwise shared nothing with the
+   * rest of the app.
+   */
+  navItemActive: {
+    backgroundColor: COLORS.raised,
+    borderLeftColor: COLORS.accent,
+    // Square on the marked edge: a 2px rule bent around a 10px radius
+    // reads as a parenthesis rather than as a marker.
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
+  },
   navItemHovered: { backgroundColor: 'rgba(255,255,255,0.06)' },
   navLabel: { ...TYPE.labelSmall },
 });

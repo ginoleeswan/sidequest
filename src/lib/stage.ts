@@ -63,12 +63,29 @@ export const MAX_SLIDES = 3;
  * the stage will. It was a separate hard-coded number there, and the two
  * drifted 117 pixels apart the moment this one changed.
  */
-export const STAGE_BOUNDS = { min: 380, max: 620, ratio: 0.66 } as const;
+/**
+ * How much of the window the stage takes.
+ *
+ * A phone gets two thirds: there is nothing beside the hero, so the
+ * first screen may as well be one picture. A desktop gets barely half,
+ * because the sidebar is already competing for attention and a hero at
+ * the phone's proportion left no room for the first shelf — the page
+ * looked like it ended at the fold. Half puts the top of "Finish it
+ * this weekend" on screen, which is what says there is more here.
+ */
+export const STAGE_BOUNDS = {
+  min: 380,
+  max: 620,
+  ratio: 0.66,
+  expandedRatio: 0.52,
+  expandedMin: 340,
+} as const;
 
 export function stageHeight(windowHeight: number, isExpanded: boolean): number {
-  const { min, max, ratio } = STAGE_BOUNDS;
+  const { min, max, ratio, expandedRatio, expandedMin } = STAGE_BOUNDS;
+  const wanted = windowHeight * (isExpanded ? expandedRatio : ratio);
   return Math.round(
-    Math.min(Math.max(windowHeight * (isExpanded ? 0.62 : ratio), min), max)
+    Math.min(Math.max(wanted, isExpanded ? expandedMin : min), max)
   );
 }
 

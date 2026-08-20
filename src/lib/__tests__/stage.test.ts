@@ -137,12 +137,25 @@ describe('stageHeight', () => {
     expect(stageHeight(2000, false)).toBe(STAGE_BOUNDS.max);
   });
 
-  it('gives a desktop slightly less, since it has chrome beside it', () => {
+  /**
+   * The sidebar is already competing for attention, and a hero at the
+   * phone's proportion left no room for the first shelf.
+   */
+  it('leaves a desktop room to see the first shelf', () => {
+    expect(stageHeight(900, true)).toBe(468);
     expect(stageHeight(900, true)).toBeLessThan(stageHeight(900, false));
   });
 
-  /** The bones' clamp is built from these; drift here is drift there. */
+  it('still floors on a short laptop window', () => {
+    expect(stageHeight(500, true)).toBe(STAGE_BOUNDS.expandedMin);
+  });
+
+  /**
+   * The compact bones are a CSS clamp built from exactly these three;
+   * drift here is drift there, and nothing in JavaScript would catch it.
+   */
   it('keeps the bounds the CSS clamp is written from', () => {
-    expect(STAGE_BOUNDS).toEqual({ min: 380, max: 620, ratio: 0.66 });
+    const { min, max, ratio } = STAGE_BOUNDS;
+    expect({ min, max, ratio }).toEqual({ min: 380, max: 620, ratio: 0.66 });
   });
 });

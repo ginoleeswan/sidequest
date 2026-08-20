@@ -120,6 +120,7 @@ const css = `
   }
   ::selection { background: #1E69E1; color: #fff; }
 
+
   /*
    * THE DOCUMENT IS THE SCROLLER.
    *
@@ -189,11 +190,18 @@ const css = `
   }
   .skip-link:focus { left: 0; }
 
-  /* One focus language: no ring on pointer/programmatic focus, a branded
-     ring for keyboard navigation. */
+  /*
+   * One focus language: no ring on pointer/programmatic focus, a branded
+   * ring for keyboard navigation.
+   *
+   * The ring was a light blue belonging to no part of this palette, and
+   * it is the first thing a stranger sees — opening the welcome moves
+   * focus into the dialog, so the very first screen carried a colour the
+   * app never uses anywhere else. It is the accent now. (COLORS.accent)
+   */
   :focus { outline: none; }
   :focus-visible {
-    outline: 2px solid #7EB1FF;
+    outline: 2px solid #F2A93B;
     outline-offset: 2px;
     border-radius: 4px;
   }
