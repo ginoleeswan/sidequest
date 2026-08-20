@@ -27,6 +27,7 @@ const ROUTES = [
   '/library',
   '/import',
   '/memcard',
+  '/tidy',
   '/game/3498',
   '/about',
   '/privacy',

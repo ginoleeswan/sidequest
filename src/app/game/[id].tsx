@@ -27,6 +27,7 @@ import { GameCard } from '@/components/GameCard';
 import { Message } from '@/components/Message';
 import { Commitment } from '@/components/Commitment';
 import { PageTitle } from '@/components/PageTitle';
+import { PersonalNote } from '@/components/PersonalNote';
 import { PlatformIcons } from '@/components/PlatformIcons';
 import { Rail } from '@/components/Rail';
 import { RatingsBreakdown } from '@/components/RatingsBreakdown';
@@ -341,6 +342,12 @@ export default function GameInfoScreen() {
     </View>
   );
 
+  const yourTake = (
+    <View style={styles.block}>
+      <PersonalNote gameId={game.id} />
+    </View>
+  );
+
   const about = summary ? (
     <View style={styles.block}>
       <SectionHeader title="About" />
@@ -519,6 +526,7 @@ export default function GameInfoScreen() {
               <Animated.View style={[styles.twoColumn, { opacity }]}>
                 <View style={styles.columnMain}>
                   {genres}
+                  {yourTake}
                   {about}
                   {ratingsBreakdown}
                 </View>
@@ -537,6 +545,7 @@ export default function GameInfoScreen() {
               {hero}
               <Animated.View style={[styles.compactBody, { opacity }]}>
                 {genres}
+                {yourTake}
                 {about}
                 {ratingsBreakdown}
                 {media}

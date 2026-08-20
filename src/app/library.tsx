@@ -199,6 +199,24 @@ export default function LibraryScreen() {
             </View>
           )}
 
+          {count > 3 && (
+            <Pressable
+              onPress={() => router.push('/tidy')}
+              style={styles.memcardLink}
+              accessibilityRole="link"
+            >
+              <Ionicons name="sparkles" size={14} color={COLORS.mediumGrey} />
+              <Text style={styles.memcardText}>
+                Too many? Let some go — backlog amnesty
+              </Text>
+              <Ionicons
+                name="chevron-forward"
+                size={13}
+                color={COLORS.mediumGrey}
+              />
+            </Pressable>
+          )}
+
           {stats.finished > 0 && (
             <Pressable
               onPress={() => router.push('/memcard')}

@@ -35,6 +35,10 @@ export interface LibraryEntry {
   deadline?: number;
   /** 3 = must play, 2 = normal (default), 1 = maybe. See lib/scheduler. */
   want?: number;
+  /** Whatever you want to remember about it. Yours, and only on here. */
+  note?: string;
+  /** What you thought of it, 1-5. Nothing to do with the critics. */
+  rating?: number;
   /**
    * When the credits rolled. Distinct from addedAt, which is when the
    * game entered the library — a game saved last year and finished today
@@ -119,6 +123,19 @@ interface LibraryContextValue {
   setDeadline: (id: number, deadline: number | null) => void;
   /** Mark how much a saved game is wanted: 3 must play, 2 normal, 1 maybe. */
   setWant: (id: number, want: number) => void;
+  /** Your own note on a saved game; empty clears it. */
+  setNote: (id: number, note: string) => void;
+  /** Your own score out of five; 0 clears it. */
+  setRating: (id: number, rating: number) => void;
+  /**
+   * Let several games go at once.
+   *
+   * The point of the app is permission to drop things, and dropping
+   * them one at a time is a chore that quietly argues against doing it.
+   */
+  removeMany: (ids: number[]) => number;
+  /** Move several games to a status in one write. */
+  moveMany: (ids: number[], status: LibraryStatus) => number;
   /** Set when the last write to the device failed; null when it landed. */
   saveError: string | null;
 }
@@ -140,6 +157,15 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
    * copy of this data, so a write that fails has to be said out loud
    * rather than swallowed.
    */
+  // Counting what a bulk action touched needs the current entries, and a
+  // state updater cannot report back — it may run more than once. Kept
+  // in sync from an effect rather than during render, which would be a
+  // write while rendering.
+  const entriesRef = useRef(stored);
+  useEffect(() => {
+    entriesRef.current = stored;
+  }, [stored]);
+
   const firstRender = useRef(true);
   useEffect(() => {
     if (firstRender.current) {
@@ -230,6 +256,63 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const setNote = useCallback((id: number, note: string) => {
+    setEntries((prev) => {
+      const entry = prev[String(id)];
+      if (!entry) return prev;
+      const trimmed = note.trim();
+      return {
+        ...prev,
+        [String(id)]: { ...entry, note: trimmed === '' ? undefined : trimmed },
+      };
+    });
+  }, []);
+
+  const setRating = useCallback((id: number, rating: number) => {
+    setEntries((prev) => {
+      const entry = prev[String(id)];
+      if (!entry) return prev;
+      return {
+        ...prev,
+        [String(id)]: {
+          ...entry,
+          rating: rating > 0 ? Math.min(5, Math.round(rating)) : undefined,
+        },
+      };
+    });
+  }, []);
+
+  const removeMany = useCallback((ids: number[]) => {
+    const count = ids.filter((id) => entriesRef.current[String(id)]).length;
+    setEntries((prev) => {
+      const next = { ...prev };
+      for (const id of ids) delete next[String(id)];
+      return next;
+    });
+    return count;
+  }, []);
+
+  const moveMany = useCallback((ids: number[], status: LibraryStatus) => {
+    const count = ids.filter((id) => entriesRef.current[String(id)]).length;
+    setEntries((prev) => {
+      const next = { ...prev };
+      for (const id of ids) {
+        const entry = next[String(id)];
+        if (!entry) continue;
+        next[String(id)] = {
+          ...entry,
+          status,
+          finishedAt:
+            status === 'finished'
+              ? (entry.finishedAt ?? Date.now())
+              : undefined,
+        };
+      }
+      return next;
+    });
+    return count;
+  }, []);
+
   const importJson = useCallback((raw: string): number => {
     const parsed = JSON.parse(raw) as Entries;
     const incoming = Object.entries(parsed).filter(
@@ -266,6 +349,10 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       addGames,
       setDeadline,
       setWant,
+      setNote,
+      setRating,
+      removeMany,
+      moveMany,
       saveError,
     }),
     [
@@ -276,6 +363,10 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       addGames,
       setDeadline,
       setWant,
+      setNote,
+      setRating,
+      removeMany,
+      moveMany,
       saveError,
     ]
   );
