@@ -35,7 +35,7 @@ import {
   type LibrarySort,
 } from '@/lib/libraryStats';
 import { COLORS } from '@/styles/colors';
-import { LAYOUT, SPACING } from '@/styles/theme';
+import { LAYOUT, RADIUS, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 const TABS: LibraryStatus[] = ['wishlist', 'playing', 'finished'];
@@ -197,6 +197,24 @@ export default function LibraryScreen() {
                 />
               )}
             </View>
+          )}
+
+          {stats.finished > 0 && (
+            <Pressable
+              onPress={() => router.push('/memcard')}
+              style={styles.memcardLink}
+              accessibilityRole="link"
+            >
+              <Ionicons name="albums" size={14} color={COLORS.accent} />
+              <Text style={styles.memcardText}>
+                See your Memcard — the year, as a card you can post
+              </Text>
+              <Ionicons
+                name="chevron-forward"
+                size={13}
+                color={COLORS.mediumGrey}
+              />
+            </Pressable>
           )}
 
           <View style={styles.tabs}>
@@ -378,6 +396,21 @@ const styles = StyleSheet.create({
   gridContent: { gap: LAYOUT.gridGap },
   gridSpacer: { flex: 1 },
   emptyFrame: { minHeight: 320 },
+  memcardLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: COLORS.stroke,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm + 1,
+  },
+  memcardText: {
+    ...TYPE.labelSmall,
+    color: COLORS.lightGrey,
+  },
   transferRow: { flexDirection: 'row', gap: SPACING.lg },
   transferLink: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   transferText: {
