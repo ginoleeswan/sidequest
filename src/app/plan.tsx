@@ -1,5 +1,4 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import Head from 'expo-router/head';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -15,6 +14,7 @@ import { FadeInView } from '@/components/FadeInView';
 import { AppHeader } from '@/components/AppHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import { Message } from '@/components/Message';
+import { PageTitle } from '@/components/PageTitle';
 import { SectionHeader } from '@/components/SectionHeader';
 import { SteamConnect } from '@/components/SteamConnect';
 import { Textured } from '@/components/Textured';
@@ -270,9 +270,7 @@ export default function PlanScreen() {
 
   return (
     <Textured style={styles.background}>
-      <Head>
-        <title>The Plan — Sidequest</title>
-      </Head>
+      <PageTitle>The Plan — Sidequest</PageTitle>
       {isExpanded ? (
         <AppHeader />
       ) : (

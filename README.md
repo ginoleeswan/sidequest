@@ -52,9 +52,10 @@ Open in [Expo Go](https://expo.dev/go), an emulator, or press `w` for web.
 | `npm run format`                     | Prettier write                                         |
 | `npm test`                           | Jest (unit and component)                              |
 | `npm run test:hydration`             | builds nothing — runs `e2e/hydration.mjs` over `dist/` |
+| `npm run test:a11y`                  | axe (WCAG A/AA) over `dist/`, both widths              |
 | `node scripts/duration-coverage.mjs` | data-source validation (see `docs/validation/`)        |
 
-`test:hydration` needs a `dist/` from `npm run build`, and a Chromium that
+`test:hydration` and `test:a11y` need a `dist/` from `npm run build`, and a Chromium that
 Playwright can launch. Where the installed browser does not match the
 Playwright build (a sandbox with its own browsers, say), point at it:
 

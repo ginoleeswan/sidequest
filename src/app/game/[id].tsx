@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import Head from 'expo-router/head';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -26,6 +25,7 @@ import { ChromeWeld } from '@/components/ChromeWeld';
 import { CoverImage } from '@/components/CoverImage';
 import { GameCard } from '@/components/GameCard';
 import { Message } from '@/components/Message';
+import { PageTitle } from '@/components/PageTitle';
 import { PlatformIcons } from '@/components/PlatformIcons';
 import { Rail } from '@/components/Rail';
 import { RatingsBreakdown } from '@/components/RatingsBreakdown';
@@ -202,6 +202,8 @@ export default function GameInfoScreen() {
   if (isPending) {
     return (
       <Textured style={styles.background}>
+        {/* The name is not known yet, but a blank tab is never right. */}
+        <PageTitle>Sidequest</PageTitle>
         <View
           style={[
             isExpanded ? styles.skeletonShellWide : styles.skeletonShell,
@@ -227,6 +229,7 @@ export default function GameInfoScreen() {
   if (error || !data) {
     return (
       <View style={styles.background}>
+        <PageTitle>Sidequest</PageTitle>
         <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
           <BackButton />
         </View>
@@ -496,9 +499,7 @@ export default function GameInfoScreen() {
 
   return (
     <Textured style={styles.background}>
-      <Head>
-        <title>{`${game.name} — Sidequest`}</title>
-      </Head>
+      <PageTitle>{`${game.name} — Sidequest`}</PageTitle>
       <View style={styles.container}>
         {isExpanded ? (
           <AppHeader immersive />

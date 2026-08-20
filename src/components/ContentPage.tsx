@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppHeader } from './AppHeader';
+import { PageTitle } from './PageTitle';
 import { BackButton } from './BackButton';
 import { SiteFooter } from './SiteFooter';
 import { Textured } from './Textured';
@@ -13,15 +14,23 @@ import { TYPE } from '@/styles/typography';
 interface Props {
   title: string;
   updated?: string;
+  /** Browser-tab title; defaults to the page's own heading. */
+  documentTitle?: string;
   children: React.ReactNode;
 }
 
 /** Shared layout for static pages: About, Terms, Privacy. */
-export function ContentPage({ title, updated, children }: Props) {
+export function ContentPage({
+  title,
+  updated,
+  documentTitle,
+  children,
+}: Props) {
   const insets = useSafeAreaInsets();
   const { isExpanded } = useBreakpoint();
   return (
     <Textured style={styles.background}>
+      <PageTitle>{`${documentTitle ?? title} — Sidequest`}</PageTitle>
       {isExpanded ? (
         <AppHeader />
       ) : (
