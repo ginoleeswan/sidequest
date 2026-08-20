@@ -327,24 +327,71 @@ const filterParams = (f?: BrowseFilters) => ({
   ...(f?.ordering ? { ordering: f.ordering } : {}),
 });
 
-/** What players are adding right now. */
+/**
+ * What players are picking up right now.
+ *
+ * Six months, not twelve. RAWG can only window by release date, so this
+ * is "recent games, most added first" — over a year that is a chart of
+ * the year and barely moves; halve it and it turns over, which is what
+ * the word trending is supposed to mean. Not narrower than that, or it
+ * becomes New releases wearing a different hat.
+ */
 export const getTrendingGames = (
   pageNum = 1,
   f?: BrowseFilters
 ): Promise<Paged<Game>> =>
   rawg('games', {
-    ...windowed(-YEAR, 0, '-added'),
+    ...windowed(-180, 0, '-added'),
     ...page(pageNum),
     ...filterParams(f),
   });
 
-/** Out in the last three months. */
+/**
+ * Out in the last seven days, most added first.
+ *
+ * The only shelf on the page that is different every morning, and the
+ * reason the homepage can say something true about today.
+ */
+export const getOutThisWeek = (
+  pageNum = 1,
+  f?: BrowseFilters
+): Promise<Paged<Game>> =>
+  rawg('games', {
+    ...windowed(-7, 0, '-added'),
+    ...page(pageNum),
+    ...filterParams(f),
+  });
+
+/**
+ * How many games came out today.
+ *
+ * Asked as one row rather than a page: the number is the point, and the
+ * games themselves are already in the week's shelf.
+ */
+export const getOutTodayCount = async (): Promise<number> => {
+  const today = fromToday(0);
+  const answer = await rawg<Paged<Game>>('games', {
+    dates: `${today},${today}`,
+    ordering: '-added',
+    page: '1',
+    page_size: '1',
+  });
+  return answer.count ?? 0;
+};
+
+/**
+ * Out in the last month, newest first.
+ *
+ * Ordered by release date rather than by adds: this shelf answers "what
+ * just came out", and ranking it by popularity turns it into a second
+ * trending shelf — which is exactly what it used to be.
+ */
 export const getNewReleases = (
   pageNum = 1,
   f?: BrowseFilters
 ): Promise<Paged<Game>> =>
   rawg('games', {
-    ...windowed(-90, 0, '-added'),
+    ...windowed(-30, 0, '-released'),
     ...page(pageNum),
     ...filterParams(f),
   });
@@ -396,7 +443,11 @@ export async function getMustPlayGames(
   return {
     count: feed.count,
     next: feed.next,
-    results: feed.results.map((item) => item.game),
+    // A feed is a list of posts, not of games, and an entry can carry
+    // something other than one. Anything without a game is dropped here
+    // rather than becoming a hole in a shelf, which reads to a list as a
+    // row with no key and crashes it.
+    results: feed.results.map((item) => item.game).filter(Boolean),
   };
 }
 

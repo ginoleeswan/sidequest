@@ -3,6 +3,7 @@ import {
   getGames,
   getMustPlayGames,
   getNewReleases,
+  getOutThisWeek,
   getTopRated,
   getTrendingGames,
 } from '@/api/rawg';
@@ -39,13 +40,24 @@ export const DISCOVER: Section[] = [
     variant: 'ranked',
   },
   {
-    key: 'new-releases',
+    key: 'out-this-week',
     description:
-      'Fresh off the press. New this window, sorted by who’s picking them up.',
+      'Released in the last seven days — the shelf that is different every morning.',
+    title: 'Out this week',
+    eyebrow: 'The last seven days',
+    fetch: getOutThisWeek,
+    iconName: 'today',
+    iconType: 'ionicon',
+    variant: 'dated',
+  },
+  {
+    key: 'new-releases',
+    description: 'What actually came out this month, newest first.',
     title: 'New releases',
     fetch: getNewReleases,
     iconName: 'sparkles',
     iconType: 'ionicon',
+    variant: 'dated',
   },
   {
     key: 'coming-soon',
@@ -159,13 +171,46 @@ export const GENRES: Section[] = [
   },
 ];
 
-/** Shelves shown on the Home storefront, in order. Trending feeds the hero. */
+/**
+ * Shelves shown on the Home storefront, in order. Trending feeds the hero.
+ *
+ * Kept as the fixed set the pre-rendered page is built from — see
+ * SHELF_POOL for the rotation the client picks from once it knows what
+ * day it is.
+ */
 export const HOME_SHELVES: Section[] = [
-  DISCOVER[1], // New releases
-  DISCOVER[2], // Coming soon
-  DISCOVER[3], // Critically acclaimed
-  GENRES[0], // Indie
-  GENRES[1], // RPG
+  byKey(DISCOVER, 'out-this-week'),
+  byKey(DISCOVER, 'new-releases'),
+  byKey(DISCOVER, 'coming-soon'),
+  byKey(DISCOVER, 'top-rated'),
+  byKey(GENRES, 'indie'),
+];
+
+/**
+ * Positional references break the moment a section is inserted, and the
+ * shelves are exactly where that would go unnoticed.
+ */
+function byKey(sections: Section[], key: string): Section {
+  const found = sections.find((section) => section.key === key);
+  if (!found) throw new Error(`No section named ${key}`);
+  return found;
+}
+
+/**
+ * Everything the storefront can show, for the daily rotation.
+ *
+ * The first entry is pinned: this week's releases are the reason to come
+ * back, and a shelf that only appears on some days cannot be that. The
+ * rest are drawn from this pool by lib/homeFeed, seeded on the date, so
+ * the page is a different page tomorrow without being a different page
+ * on every refresh.
+ */
+export const SHELF_POOL: Section[] = [
+  byKey(DISCOVER, 'new-releases'),
+  byKey(DISCOVER, 'coming-soon'),
+  byKey(DISCOVER, 'top-rated'),
+  byKey(DISCOVER, 'must-play'),
+  ...GENRES,
 ];
 
 export const ALL_SECTIONS: Section[] = [...DISCOVER, ...GENRES];
