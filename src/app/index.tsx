@@ -83,6 +83,7 @@ import {
 } from '@/constants/categories';
 import { useHydrated } from '@/hooks/useHydrated';
 import { useStage } from '@/hooks/useStage';
+import { stageHeight as stageHeightFor } from '@/lib/stage';
 import { useDurations } from '@/lib/durations';
 import { useLibrary } from '@/lib/library';
 import {
@@ -299,9 +300,7 @@ export default function HomeScreen() {
     short: quickWins,
     enabled: isHome,
   });
-  const stageHeight = Math.round(
-    Math.min(Math.max(windowHeight * (isExpanded ? 0.62 : 0.66), 380), 620)
-  );
+  const stageHeight = stageHeightFor(windowHeight, isExpanded);
 
   /** No extra request: the right-length games out of what is loaded. */
   const lengthShelf = useMemo(
@@ -628,11 +627,16 @@ export default function HomeScreen() {
         <Reveal
           pending={list.isPending}
           skeleton={
-            <View style={{ paddingTop: headerHeight }}>
+            // Only the non-home bones clear the header: the home stage
+            // runs up behind it, so its skeleton starts at the top of
+            // the document exactly as the stage does.
+            <View>
               {isHome ? (
                 <SkeletonCompactHome />
               ) : (
-                <View style={styles.compactShelves}>
+                <View
+                  style={[styles.compactShelves, { paddingTop: headerHeight }]}
+                >
                   {searching ? (
                     <>
                       <SkeletonRow />

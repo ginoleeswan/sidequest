@@ -52,6 +52,26 @@ export interface StageInput {
 /** Most slides a stage will ever show. Three reasons is plenty. */
 export const MAX_SLIDES = 3;
 
+/**
+ * How tall the stage is, given the window.
+ *
+ * Tall enough that the first screen is one picture rather than the top
+ * third of a shelf, capped so a desktop monitor doesn't get a billboard,
+ * and floored so a short laptop window still has a stage.
+ *
+ * Shared with the loading skeleton, which has to occupy the same pixels
+ * the stage will. It was a separate hard-coded number there, and the two
+ * drifted 117 pixels apart the moment this one changed.
+ */
+export const STAGE_BOUNDS = { min: 380, max: 620, ratio: 0.66 } as const;
+
+export function stageHeight(windowHeight: number, isExpanded: boolean): number {
+  const { min, max, ratio } = STAGE_BOUNDS;
+  return Math.round(
+    Math.min(Math.max(windowHeight * (isExpanded ? 0.62 : ratio), min), max)
+  );
+}
+
 const hoursPhrase = (hours: number): string =>
   hours > 0 ? `About ${formatHours(hours)}` : '';
 

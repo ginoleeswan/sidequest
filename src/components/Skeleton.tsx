@@ -1,8 +1,16 @@
 import { useEffect } from 'react';
-import { Animated, StyleSheet, View, type ViewStyle } from 'react-native';
+import {
+  Animated,
+  Platform,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+  type ViewStyle,
+} from 'react-native';
 
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { STAGE_BOUNDS, stageHeight } from '@/lib/stage';
 import { HOME_SHELVES } from '@/constants/categories';
 import { DURATION, EASING } from '@/styles/motion';
 import { LAYOUT, RADIUS, SHADOW_ROOM, SPACING } from '@/styles/theme';
@@ -33,7 +41,11 @@ const EYEBROW_H = TYPE.micro.lineHeight;
 const RAIL_NET = Math.round(SHADOW_ROOM.card * 0.4);
 
 /** Pulsing placeholder block — the atom every skeleton is built from. */
-export function Skeleton({ style }: { style?: ViewStyle | ViewStyle[] }) {
+export function Skeleton({
+  style,
+}: {
+  style?: ViewStyle | (ViewStyle | undefined)[];
+}) {
   const opacity = useAnimatedValue(0.45);
   const reduced = useReducedMotion();
 
@@ -176,25 +188,90 @@ export function SkeletonRow() {
   );
 }
 
-/** Compact home silhouette: the hero carousel peeking, then tile shelves. */
+/**
+ * Compact home silhouette: the stage, then the rows in the order the
+ * page actually renders them.
+ *
+ * Reveal's contract is that the bones occupy the pixels the content
+ * will, so the swap is a dissolve rather than a jump. Measured against
+ * the loaded page these had drifted badly: the stage bone was 117px
+ * short of the real stage, the first row's art 50px short and 82px
+ * narrow because that row now uses the large frames, the band below it
+ * was missing entirely, and the document came out a thousand pixels —
+ * nearly a third — under the real one.
+ */
 export function SkeletonCompactHome() {
+  const { height } = useWindowDimensions();
+
   return (
     <View style={styles.compact}>
-      {/* One full-bleed block: the stage is a single picture, so a pair of
-          card-shaped bones here would be a silhouette of a layout the page
-          no longer has. */}
-      <Skeleton style={styles.stage} />
+      {/* Full bleed and starting at the top of the document, because the
+          stage runs up behind the floating header rather than below it. */}
+      <Skeleton style={[styles.stage, stageBone(height)]} />
       <View style={styles.compactShelves}>
-        {/* One row per shelf the home page actually renders: the ranked
-            trending row, then HOME_SHELVES. Two stand-ins for six left the
-            loading document barely taller than the viewport, which on iOS
-            means Safari's translucent toolbar blurs over bare canvas
-            instead of over content. */}
+        {/* "Finish it this weekend" — the signature row, and the only one
+            set in the large frames. */}
+        <SkeletonShelf
+          tiles={2}
+          inset={SPACING.md}
+          eyebrow
+          tileWidth={LAYOUT.shelfTileLarge}
+        />
+        {/* Trending: ranked, so it carries a "Top 10" line. */}
         <SkeletonShelf tiles={3} inset={SPACING.md} eyebrow />
-        {HOME_SHELVES.map((shelf) => (
-          <SkeletonShelf key={shelf.key} tiles={3} inset={SPACING.md} />
+        <SkeletonBand inset={SPACING.md} />
+        {/* Only "out this week" carries an eyebrow; the rest of the pool
+            is genres, whose rows are a title alone. */}
+        {HOME_SHELVES.map((shelf, index) => (
+          <SkeletonShelf
+            key={shelf.key}
+            tiles={3}
+            inset={SPACING.md}
+            eyebrow={index === 0}
+          />
         ))}
       </View>
+    </View>
+  );
+}
+
+/**
+ * The bone's height, in the same terms the stage's own height is in.
+ *
+ * On web this has to be a CSS length rather than a number. The bones are
+ * pre-rendered without a viewport, so any height computed in JavaScript
+ * is wrong on the server and gets adopted at hydration — a 117px jump
+ * under the reader's eyes, which the perf budget caught as CLS 0.066
+ * against a 0.05 ceiling. Expressed in viewport units the server and the
+ * client agree on it without either having to measure, so there is
+ * nothing to adopt and nothing to shift.
+ *
+ * `dvh` rather than `vh` deliberately: on iOS `vh` is the viewport with
+ * the toolbar collapsed, which is not what `useWindowDimensions` reports
+ * to the stage, and the two would land on different numbers.
+ */
+function stageBone(windowHeight: number): ViewStyle {
+  if (Platform.OS !== 'web')
+    return { height: stageHeight(windowHeight, false) };
+  const { min, max, ratio } = STAGE_BOUNDS;
+  return {
+    height: `clamp(${min}px, ${Math.round(ratio * 100)}dvh, ${max}px)`,
+  } as unknown as ViewStyle;
+}
+
+/** The colour field halfway down, where the page speaks for itself. */
+function SkeletonBand({ inset }: { inset: number }) {
+  return (
+    <View
+      style={[
+        styles.band,
+        { marginHorizontal: -inset, paddingHorizontal: inset },
+      ]}
+    >
+      <Skeleton style={styles.eyebrow} />
+      <Skeleton style={styles.bandHeadline} />
+      <Skeleton style={styles.bandLine} />
+      <Skeleton style={styles.bandAction} />
     </View>
   );
 }
@@ -314,9 +391,21 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.xl,
   },
   compact: { gap: 0 },
-  compactShelves: { paddingHorizontal: SPACING.md, paddingTop: SPACING.lg },
-  /** Matches the stage's floor: see stageHeight on the home screen. */
-  stage: { height: 440, borderRadius: 0 },
+  compactShelves: {
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.xl * 1.5,
+  },
+  /** Height comes from stageHeight, so the two cannot drift again. */
+  stage: { borderRadius: 0 },
+  band: {
+    paddingVertical: SPACING.xl,
+    marginBottom: SPACING.xl,
+    gap: SPACING.xs,
+  },
+  bandHeadline: { height: TYPE.title.lineHeight, width: '72%', marginTop: 2 },
+  bandLine: { height: 21 * 2, width: '92%', marginBottom: SPACING.md },
+  bandAction: { height: 42, width: 148, borderRadius: RADIUS.lg },
   bleed: {
     marginHorizontal: -SPACING.md,
     paddingHorizontal: SPACING.md,

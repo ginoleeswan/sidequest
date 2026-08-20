@@ -1,4 +1,10 @@
-import { buildStage, MAX_SLIDES, type StageInput } from '../stage';
+import {
+  buildStage,
+  MAX_SLIDES,
+  STAGE_BOUNDS,
+  stageHeight,
+  type StageInput,
+} from '../stage';
 import type { Game } from '@/api/types';
 
 const game = (id: number, name: string, playtime = 0): Game =>
@@ -108,5 +114,35 @@ describe('buildStage', () => {
     );
     expect(slide.detail).not.toContain('0h');
     expect(slide.detail).toContain('just landed');
+  });
+});
+
+/**
+ * The loading skeleton has to occupy the pixels the stage will, and it
+ * used to carry its own hard-coded number. The two drifted 117px apart
+ * the moment this one changed, so they share a function now — and the
+ * web bones express the same bounds as a CSS clamp, which is why the
+ * bounds are exported rather than inlined.
+ */
+describe('stageHeight', () => {
+  it('gives a phone two thirds of its window', () => {
+    expect(stageHeight(844, false)).toBe(557);
+  });
+
+  it('floors on a short window rather than collapsing', () => {
+    expect(stageHeight(400, false)).toBe(STAGE_BOUNDS.min);
+  });
+
+  it('caps on a tall one rather than becoming a billboard', () => {
+    expect(stageHeight(2000, false)).toBe(STAGE_BOUNDS.max);
+  });
+
+  it('gives a desktop slightly less, since it has chrome beside it', () => {
+    expect(stageHeight(900, true)).toBeLessThan(stageHeight(900, false));
+  });
+
+  /** The bones' clamp is built from these; drift here is drift there. */
+  it('keeps the bounds the CSS clamp is written from', () => {
+    expect(STAGE_BOUNDS).toEqual({ min: 380, max: 620, ratio: 0.66 });
   });
 });
