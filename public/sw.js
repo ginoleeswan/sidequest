@@ -33,7 +33,15 @@ const MEDIA_MAX_ENTRIES = 180;
  * different route — the same class of bug e2e/hydration.mjs exists to
  * catch, and it would have shipped disguised as "offline support".
  */
-const ROUTES = ['/', '/plan', '/library', '/about', '/terms', '/privacy'];
+const ROUTES = [
+  '/',
+  '/plan',
+  '/library',
+  '/import',
+  '/about',
+  '/terms',
+  '/privacy',
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

@@ -113,4 +113,57 @@ describe('connecting Steam', () => {
       expect(store['sidequest.steam.v1']).toBe(JSON.stringify(null))
     );
   });
+
+  /**
+   * The reason to connect at all: the hours are already there, and the
+   * plan should stop guessing the moment it can measure.
+   */
+  it('finds your hours on games you had already saved', async () => {
+    store['sidequest.library.v1'] = JSON.stringify({
+      '11': {
+        addedAt: 1,
+        status: 'playing',
+        game: { id: 11, name: 'Hades 2', playtime: 25 },
+      },
+    });
+    globalThis.fetch = jest.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            player: { name: 'gino', avatar: null },
+            gameCount: 1,
+            games: [
+              {
+                appid: 1,
+                name: 'Hades II',
+                minutesForever: 600,
+                minutes2Weeks: 60,
+              },
+            ],
+          })
+        )
+    ) as unknown as typeof fetch;
+
+    await renderApp(<SteamConnect onUsePace={jest.fn()} />);
+    await fireEvent.changeText(
+      screen.getByPlaceholderText('Profile URL or vanity name…'),
+      '76561198000000000'
+    );
+    await fireEvent.press(screen.getByText('Connect'));
+
+    await waitFor(() =>
+      expect(JSON.parse(store['sidequest.library.v1'])['11'].hoursPlayed).toBe(
+        10
+      )
+    );
+    expect(screen.getByText(/Found your hours on 1 saved game/)).toBeTruthy();
+  });
+
+  it('offers to bring the whole library in', async () => {
+    store['sidequest.steam.v1'] = JSON.stringify(snapshot);
+    const onImport = jest.fn();
+    await renderApp(<SteamConnect onUsePace={jest.fn()} onImport={onImport} />);
+    await fireEvent.press(screen.getByText('Bring my Steam library in'));
+    expect(onImport).toHaveBeenCalled();
+  });
 });

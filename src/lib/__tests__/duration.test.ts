@@ -1,4 +1,9 @@
-import { formatHours, parseHours, resolveDuration } from '../duration';
+import {
+  formatHours,
+  parseHours,
+  remainingHours,
+  resolveDuration,
+} from '../duration';
 
 const NOW = Date.parse('2026-08-19T00:00:00Z');
 const game = (playtime: number, released: string | null = '2024-01-01') => ({
@@ -95,5 +100,32 @@ describe('parseHours', () => {
     expect(parseHours('0')).toBeNull();
     expect(parseHours('-4')).toBeNull();
     expect(parseHours('99999')).toBeNull();
+  });
+});
+
+describe('what is left of a game', () => {
+  it('is the whole thing when it has not been started', () => {
+    expect(remainingHours(30, {})).toBe(30);
+  });
+
+  it('is half, honestly guessed, for something under way we cannot measure', () => {
+    expect(remainingHours(30, { playing: true })).toBe(15);
+  });
+
+  it('is the measurement when there is one, whatever the status says', () => {
+    expect(remainingHours(40, { hoursPlayed: 30 })).toBe(10);
+    expect(remainingHours(40, { hoursPlayed: 30, playing: true })).toBe(10);
+  });
+
+  it('keeps an hour on the board past the estimate — the end is the slow part', () => {
+    expect(remainingHours(40, { hoursPlayed: 90 })).toBe(1);
+  });
+
+  it('stays at zero for a game whose length nobody knows', () => {
+    expect(remainingHours(0, { hoursPlayed: 12 })).toBe(0);
+  });
+
+  it('ignores a zero measurement rather than calling it finished', () => {
+    expect(remainingHours(30, { hoursPlayed: 0, playing: true })).toBe(15);
   });
 });

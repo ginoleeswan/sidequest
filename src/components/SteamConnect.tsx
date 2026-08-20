@@ -11,7 +11,9 @@ import {
 } from 'react-native';
 
 import { useToast } from './Toast';
-import { connectSteam, type SteamSnapshot } from '@/api/steam';
+import { connectSteam, steamLibrary, type SteamSnapshot } from '@/api/steam';
+import { useLibrary } from '@/lib/library';
+import { progressForLibrary } from '@/lib/steamMatch';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { COLORS } from '@/styles/colors';
 import { RADIUS, SPACING } from '@/styles/theme';
@@ -20,10 +22,13 @@ import { TYPE } from '@/styles/typography';
 interface Props {
   /** Called with the measured pace when the user applies it. */
   onUsePace: (hoursPerWeek: number) => void;
+  /** Take me to the import screen. */
+  onImport?: () => void;
 }
 
-export function SteamConnect({ onUsePace }: Props) {
+export function SteamConnect({ onUsePace, onImport }: Props) {
   const toast = useToast();
+  const { entries, setProgress } = useLibrary();
   const [snapshot, setSnapshot] = usePersistedState<SteamSnapshot | null>(
     'sidequest.steam.v1',
     null
@@ -39,6 +44,22 @@ export function SteamConnect({ onUsePace }: Props) {
       const snap = await connectSteam(raw);
       setSnapshot(snap);
       toast(`Connected as ${snap.name}`, 'logo-steam');
+      // Progress for games already saved costs nothing extra: the whole
+      // library is in the same response, and a name that matches is a
+      // game whose hours we now know.
+      const library = Object.values(entries);
+      if (library.length > 0) {
+        const games = await steamLibrary(snap.steamid).catch(() => []);
+        const measured = progressForLibrary(games, library);
+        const known = Object.keys(measured).length;
+        if (known > 0) {
+          setProgress(measured);
+          toast(
+            `Found your hours on ${known} saved ${known === 1 ? 'game' : 'games'}`,
+            'time'
+          );
+        }
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Steam connection failed');
     } finally {
@@ -126,6 +147,17 @@ export function SteamConnect({ onUsePace }: Props) {
         </Text>
       )}
 
+      {onImport && (
+        <Pressable
+          onPress={onImport}
+          accessibilityRole="link"
+          style={styles.importLink}
+        >
+          <Ionicons name="download-outline" size={14} color={COLORS.accent} />
+          <Text style={styles.importText}>Bring my Steam library in</Text>
+        </Pressable>
+      )}
+
       {snapshot.hoursPerWeek > 0 && (
         <Pressable
           onPress={() => {
@@ -208,5 +240,10 @@ const styles = StyleSheet.create({
   recent: {
     ...TYPE.caption,
     color: COLORS.mediumGrey,
+  },
+  importLink: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  importText: {
+    ...TYPE.labelSmall,
+    color: COLORS.accent,
   },
 });

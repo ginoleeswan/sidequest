@@ -6,5 +6,6 @@ Allow: /
 # content behind them, so there is nothing to index.
 Disallow: /library
 Disallow: /plan
+Disallow: /import
 
 Sitemap: https://sidequest-bice-nu.vercel.app/sitemap.xml

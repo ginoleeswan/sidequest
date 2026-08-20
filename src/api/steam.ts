@@ -71,6 +71,18 @@ async function call<T>(params: Record<string, string>): Promise<T> {
   return body;
 }
 
+/**
+ * The full owned-games list for a resolved profile.
+ *
+ * `connectSteam` keeps only what the card shows — a pace and the last
+ * few games — because a 300-game list has no business sitting in device
+ * storage. The import screen needs all of it, once, so it asks again.
+ */
+export async function steamLibrary(steamid: string): Promise<SteamGame[]> {
+  const data = await call<{ games: SteamGame[] }>({ op: 'owned', steamid });
+  return data.games ?? [];
+}
+
 export async function connectSteam(rawInput: string): Promise<SteamSnapshot> {
   const parsed = parseSteamInput(rawInput);
   if (!parsed) {

@@ -61,6 +61,31 @@ export function resolveDuration(
   return { hours: estimate, source: 'estimate', rough };
 }
 
+/**
+ * What is left of a game, given what has already gone into it.
+ *
+ * Measured progress beats a guess: someone thirty hours into a forty
+ * hour RPG has an evening's worth left, not a fortnight's, and the plan
+ * should say so. Without a measurement the old assumption stands — a
+ * game under way is treated as half done, which is a guess but an
+ * honest one.
+ *
+ * Past the estimate the answer is never zero. A game whose length has
+ * been exceeded is not finished, it is at the part that always takes
+ * longer than the average says, so an hour stays on the board until
+ * someone marks it finished.
+ */
+export function remainingHours(
+  totalHours: number,
+  options: { hoursPlayed?: number; playing?: boolean }
+): number {
+  if (totalHours <= 0) return 0;
+  const { hoursPlayed, playing } = options;
+  if (hoursPlayed == null || hoursPlayed <= 0)
+    return playing ? totalHours * 0.5 : totalHours;
+  return Math.max(1, totalHours - hoursPlayed);
+}
+
 /** Hours as a person would write them: "2h", "2.5h", "40h". */
 export function formatHours(hours: number): string {
   if (hours <= 0) return '—';
