@@ -37,14 +37,12 @@ import type { Game, Paged } from '@/api/types';
 import { RouteError } from '@/components/RouteError';
 import { Chip } from '@/components/Chip';
 import { FadeInView } from '@/components/FadeInView';
-import { FeaturedHero } from '@/components/FeaturedHero';
 import { SiteFooter } from '@/components/SiteFooter';
-import { GameCard } from '@/components/GameCard';
+import { HomeStage } from '@/components/HomeStage';
 import { GameInfoCard } from '@/components/GameInfoCard';
 import { GameTile } from '@/components/GameTile';
 import { Message } from '@/components/Message';
 import { PageTitle } from '@/components/PageTitle';
-import { Rail } from '@/components/Rail';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { RecentShelf } from '@/components/RecentShelf';
 import { SeriesNews } from '@/components/SeriesNews';
@@ -63,8 +61,6 @@ import {
 } from '@/components/Skeleton';
 import { CategoryHero } from '@/components/CategoryHero';
 import { Mark } from '@/components/Mark';
-import { SurpriseButton } from '@/components/SurpriseButton';
-import { TonightCard } from '@/components/TonightCard';
 import { ProgressLine } from '@/components/ProgressLine';
 import { Reveal } from '@/components/Reveal';
 import {
@@ -73,7 +69,6 @@ import {
   toBrowseFilters,
   type BrowseRefinements,
 } from '@/components/FilterBar';
-import { TodayLine } from '@/components/TodayLine';
 import { GrainScrim, Textured } from '@/components/Textured';
 import {
   DISCOVER,
@@ -86,6 +81,7 @@ import {
   type Section,
 } from '@/constants/categories';
 import { useHydrated } from '@/hooks/useHydrated';
+import { useStage } from '@/hooks/useStage';
 import { useDurations } from '@/lib/durations';
 import { useLibrary } from '@/lib/library';
 import {
@@ -288,6 +284,22 @@ export default function HomeScreen() {
     [games, isHome]
   );
   const trendingShelf = isHome ? games.slice(FEATURED_COUNT) : [];
+
+  /**
+   * The opening argument, and how much room to give it.
+   *
+   * Tall enough that the first screen is one picture rather than the top
+   * third of a shelf, capped so a desktop monitor doesn't get a
+   * billboard, and floored so a short laptop window still has a stage.
+   */
+  const stage = useStage({
+    trending: featured,
+    short: quickWins,
+    enabled: isHome,
+  });
+  const stageHeight = Math.round(
+    Math.min(Math.max(windowHeight * (isExpanded ? 0.62 : 0.66), 380), 620)
+  );
 
   /** No extra request: the right-length games out of what is loaded. */
   const lengthShelf = useMemo(
@@ -501,17 +513,17 @@ export default function HomeScreen() {
                   )
                 ) : isHome ? (
                   <View style={styles.homeScroll}>
-                    <TodayLine inset={SPACING.xl} />
                     <FadeInView>
-                      <FeaturedHero games={featured} />
+                      <View style={styles.stageBleedWide}>
+                        <HomeStage
+                          slides={stage}
+                          games={games}
+                          headerHeight={0}
+                          height={stageHeight}
+                          inset={SPACING.xl}
+                        />
+                      </View>
                     </FadeInView>
-                    <View style={styles.homeModulesWide}>
-                      <TonightCard />
-                      <SurpriseButton games={games} />
-                    </View>
-                    <View style={{ paddingHorizontal: SPACING.xl }}>
-                      <InstallPrompt />
-                    </View>
                     <SeriesNews inset={SPACING.xl} />
                     <RecentShelf inset={SPACING.xl} />
                     <Shelf
@@ -549,33 +561,6 @@ export default function HomeScreen() {
                         inset={SPACING.xl}
                       />
                     )}
-                    {personal.mood && (moodShelf.data?.length ?? 0) > 0 && (
-                      <Shelf
-                        section={{
-                          ...DISCOVER[0],
-                          key: personal.mood.key,
-                          title: personal.mood.title,
-                          eyebrow: personal.mood.eyebrow,
-                        }}
-                        games={withoutOwned(
-                          moodShelf.data ?? [],
-                          library
-                        ).slice(0, 12)}
-                        inset={SPACING.md}
-                      />
-                    )}
-                    {personal.length && lengthShelf.length > 0 && (
-                      <Shelf
-                        section={{
-                          ...QUICK_WINS,
-                          key: personal.length.key,
-                          title: personal.length.title,
-                          eyebrow: personal.length.eyebrow,
-                        }}
-                        games={lengthShelf}
-                        inset={SPACING.md}
-                      />
-                    )}
                     {homeShelves.map((shelf, index) => (
                       <WhenNear
                         key={shelf.key}
@@ -598,6 +583,9 @@ export default function HomeScreen() {
                         />
                       </WhenNear>
                     ))}
+                    <View style={styles.installSlotWide}>
+                      <InstallPrompt />
+                    </View>
                     <SiteFooter inset={SPACING.xl} />
                   </View>
                 ) : (
@@ -640,28 +628,19 @@ export default function HomeScreen() {
         >
           {status ??
             (isHome ? (
-              <View style={[styles.compactHome, { paddingTop: headerHeight }]}>
-                {featured.length > 0 && (
-                  <View style={styles.carouselFrame}>
-                    <Rail
-                      data={featured}
-                      keyExtractor={(item) => String(item.id)}
-                      renderItem={(item) => <GameCard game={item} wide />}
-                      inset={SPACING.md}
-                      gap={SPACING.md}
-                      snapInterval={LAYOUT.cardWideWidth + SPACING.md}
-                    />
-                  </View>
-                )}
+              <View
+                style={[
+                  styles.compactHome,
+                  stage.length === 0 && { paddingTop: headerHeight },
+                ]}
+              >
+                <HomeStage
+                  slides={stage}
+                  games={games}
+                  headerHeight={headerHeight}
+                  height={stageHeight}
+                />
                 <View style={styles.compactShelves}>
-                  <TodayLine inset={SPACING.md} />
-                  <View style={styles.homeModules}>
-                    <TonightCard />
-                    <SurpriseButton games={games} />
-                  </View>
-                  <View style={{ paddingHorizontal: SPACING.md }}>
-                    <InstallPrompt />
-                  </View>
                   <SeriesNews inset={SPACING.md} />
                   <RecentShelf inset={SPACING.md} />
                   <Shelf
@@ -675,6 +654,33 @@ export default function HomeScreen() {
                     onViewAll={selectSection}
                     inset={SPACING.md}
                   />
+                  {personal.mood && (moodShelf.data?.length ?? 0) > 0 && (
+                    <Shelf
+                      section={{
+                        ...DISCOVER[0],
+                        key: personal.mood.key,
+                        title: personal.mood.title,
+                        eyebrow: personal.mood.eyebrow,
+                      }}
+                      games={withoutOwned(moodShelf.data ?? [], library).slice(
+                        0,
+                        12
+                      )}
+                      inset={SPACING.md}
+                    />
+                  )}
+                  {personal.length && lengthShelf.length > 0 && (
+                    <Shelf
+                      section={{
+                        ...QUICK_WINS,
+                        key: personal.length.key,
+                        title: personal.length.title,
+                        eyebrow: personal.length.eyebrow,
+                      }}
+                      games={lengthShelf}
+                      inset={SPACING.md}
+                    />
+                  )}
                   {homeShelves.map((shelf, index) => (
                     <WhenNear
                       key={shelf.key}
@@ -697,6 +703,9 @@ export default function HomeScreen() {
                       />
                     </WhenNear>
                   ))}
+                  <View style={styles.installSlot}>
+                    <InstallPrompt />
+                  </View>
                 </View>
                 <SiteFooter />
               </View>
@@ -861,19 +870,26 @@ const styles = StyleSheet.create({
 
   // compact
   compactShell: { flexGrow: 1 },
-  compactHome: { gap: SPACING.xs },
-  carouselFrame: { paddingHorizontal: SPACING.md },
-  homeModules: { gap: SPACING.sm, marginBottom: SPACING.lg },
-  homeModulesWide: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
-    marginBottom: SPACING.xl,
+  /** Out past the content column's padding, flush to the sidebar and the top. */
+  stageBleedWide: {
+    marginHorizontal: -SPACING.xl,
+    marginTop: -SPACING.lg,
+    marginBottom: SPACING.lg,
   },
+  // The stage runs to the edges and ends on navy, so the shelves start
+  // straight after it with no seam and no gap of their own to explain.
+  compactHome: { gap: 0 },
   compactShelves: {
     paddingHorizontal: SPACING.md,
-    marginTop: SPACING.sm,
+    paddingTop: SPACING.lg,
     paddingBottom: SPACING.xl * 1.5,
+  },
+  /** An offer, not an interruption: last thing before the footer. */
+  installSlot: { paddingTop: SPACING.lg },
+  installSlotWide: {
+    paddingHorizontal: SPACING.xl,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.md,
   },
   headerFloat: {
     position: 'absolute',
@@ -911,6 +927,7 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     height: 46,
   },
+
   list: { flexGrow: 1, paddingHorizontal: SPACING.md },
 });
 
