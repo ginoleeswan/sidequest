@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FeatureIndex } from '@/components/FeatureIndex';
 import { HowItWorks } from '@/components/HowItWorks';
+import { InstallPrompt } from '@/components/InstallPrompt';
 import { LandingShelf } from '@/components/LandingShelf';
 import { Memcard } from '@/components/Memcard';
 import { LandingProof } from '@/components/LandingProof';
@@ -133,10 +134,16 @@ function Sum({
   return (
     <View ref={ref} style={style}>
       <Text style={styles.sumLead}>The average backlog is</Text>
-      <Text style={[styles.sumFigure, figure]}>
-        {Math.round(hours)}
-        <Text style={[styles.sumUnit, unit]}>h</Text>
-      </Text>
+      {/* The unit is a sibling on the baseline, not a nested Text.
+          Nested, it inherited the figure's tracking — and the figure is
+          tracked at minus three percent, which on a 21px glyph is a
+          collision rather than a style. It also stopped being a shrunken
+          digit and became a word, because "900h" is a stopwatch reading
+          and this is a sentence about somebody's life. */}
+      <View style={styles.sumLine}>
+        <Text style={[styles.sumFigure, figure]}>{Math.round(hours)}</Text>
+        <Text style={[styles.sumUnit, unit]}>hours</Text>
+      </View>
     </View>
   );
 }
@@ -195,13 +202,15 @@ export default function AboutScreen() {
    * itself. This is the single most persuasive thing on the page, so it
    * gets the room.
    */
-  const sum = Math.round(Math.min(Math.max(width * 0.15, 84), 196));
+  const sum = Math.round(Math.min(Math.max(width * 0.17, 96), 196));
   const figure = {
     fontSize: sum,
     lineHeight: Math.round(sum * 0.92),
-    letterSpacing: Math.round(sum * -0.055),
+    // Was minus five and a half percent, which closed "900" up until the
+    // nine and the first zero shared a stroke.
+    letterSpacing: Math.round(sum * -0.03),
   };
-  const unit = { fontSize: Math.round(sum * 0.42) };
+  const unit = { fontSize: Math.round(sum * 0.22), letterSpacing: 0 };
 
   const masthead = {
     fontSize: display,
@@ -482,6 +491,15 @@ export default function AboutScreen() {
               An independent project, not affiliated with any platform,
               publisher or store. Open source at ginoleeswan/sidequest.
             </Text>
+            {/* The one honest answer to "put the artwork behind the
+                browser's own toolbar": in Safari that strip is chrome
+                and the page cannot draw into it — but on a home screen
+                the chrome is gone and it does, edge to edge. This is
+                where saying so belongs, and it says nothing at all on a
+                desktop that cannot install anything. */}
+            <View style={styles.install}>
+              <InstallPrompt />
+            </View>
           </View>
           <View style={[styles.closeCta, isExpanded && styles.closeCtaWide]}>
             {open}
@@ -575,12 +593,18 @@ const styles = StyleSheet.create({
   sumTailSlot: { flex: 1 },
   sumTailWide: { flex: 1, maxWidth: 560 },
   sumLead: { ...TYPE.micro, color: COLORS.mediumGrey },
-  sumFigure: {
-    ...TYPE.numeral,
-    color: COLORS.accent,
+  sumLine: {
+    flexDirection: 'row',
+    // On the baseline, so the word sits on the numeral's feet rather
+    // than floating in the middle of its height.
+    alignItems: 'baseline',
+    gap: SPACING.sm + 2,
     marginVertical: SPACING.sm,
   },
-  sumUnit: { ...TYPE.numeral, fontSize: 48, color: COLORS.accent },
+  sumFigure: { ...TYPE.numeral, color: COLORS.accent },
+  // Grey, not amber. Two amber weights in one line is two things
+  // shouting; the number is the thing worth shouting.
+  sumUnit: { ...TYPE.title, color: COLORS.lightGrey },
   sumTail: {
     ...TYPE.body,
     fontSize: 17,
@@ -666,6 +690,7 @@ const styles = StyleSheet.create({
     gap: SPACING.xl * 2,
   },
   plainCopy: { flex: 1, gap: SPACING.md },
+  install: { marginTop: SPACING.sm, alignSelf: 'flex-start' },
   closeCtaWide: { marginTop: 0, flexShrink: 0 },
   plainLead: { ...TYPE.title, color: COLORS.white },
   plainBody: {
