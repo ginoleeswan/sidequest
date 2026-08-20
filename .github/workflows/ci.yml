@@ -8,6 +8,9 @@ on:
 jobs:
   checks:
     runs-on: ubuntu-latest
+    # A hung step otherwise sits on the runner for six hours before
+    # GitHub kills it, and reads as "still running" the whole time.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -23,9 +26,13 @@ jobs:
         run: npm run format:check
       - name: Test
         run: npm test
+        timeout-minutes: 8
       - name: Bundle (web export)
         run: npx expo export --platform web
+        timeout-minutes: 10
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
+        timeout-minutes: 6
       - name: Hydration check
         run: npm run test:hydration
+        timeout-minutes: 8
