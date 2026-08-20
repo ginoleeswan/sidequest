@@ -41,7 +41,19 @@ export function useInView(
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) setSeen(true);
       },
-      { rootMargin: `${band} 0px ${band} 0px` }
+      /**
+       * Generous above, held back below.
+       *
+       * A band in the middle of the viewport is skippable: flick or jump
+       * past a section in one frame and it never reports intersecting,
+       * so it stays invisible for the rest of the visit. Content that
+       * never appears is far worse than content that does not animate.
+       * Extending the top margin means anything at or above the fold
+       * counts as reached, whether it was scrolled to or scrolled past,
+       * while the held bottom edge still makes it wait its turn on the
+       * way down.
+       */
+      { rootMargin: `400% 0px ${band} 0px` }
     );
     observer.observe(node);
     return () => observer.disconnect();
@@ -86,7 +98,17 @@ export function Rise({
       duration: DURATION.entrance,
       delay,
       easing: EASING.standard,
-      useNativeDriver: true,
+      /**
+       * The JS driver, deliberately.
+       *
+       * With the native driver react-native-web does not write the
+       * value's starting style to the DOM — it only begins writing once
+       * an animation runs. So a section waiting to be revealed sat at
+       * full opacity until it was reached and then flashed from nothing
+       * to everything, which is worse than never having animated. The
+       * JS driver writes every frame, including the first.
+       */
+      useNativeDriver: false,
     });
     animation.start();
     return () => animation.stop();
