@@ -17,7 +17,13 @@ const game = (id: number, name: string, playtime: number) =>
   ({ id, name, playtime, released: '2020-01-01' }) as Game;
 
 function seed(
-  rows: { game: Game; status: LibraryStatus; hoursPlayed?: number }[]
+  rows: {
+    game: Game;
+    status: LibraryStatus;
+    hoursPlayed?: number;
+    want?: number;
+    deadline?: number;
+  }[]
 ) {
   store['sidequest.library.v1'] = JSON.stringify(
     Object.fromEntries(
@@ -121,5 +127,36 @@ describe('the plan screen', () => {
     await renderApp(<PlanScreen />);
     expect(screen.getAllByText(/20h/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/left of/)).toBeNull();
+  });
+
+  /**
+   * A pin is the player overruling the engine. The plan has to honour it
+   * and then be honest about the price, which is the product's whole
+   * voice in one line.
+   */
+  it('keeps a game you insisted on, and says what it cost', async () => {
+    seed([
+      { game: game(1, 'Epic', 40), status: 'wishlist', want: 3 },
+      { game: game(2, 'Short A', 6), status: 'wishlist' },
+      { game: game(3, 'Short B', 6), status: 'wishlist' },
+    ]);
+    await renderApp(<PlanScreen />);
+    // 20h a week for two weeks is exactly 40 hours: room for the game
+    // that was insisted on, or for both short ones, but not both.
+    for (const pace of ['6h', '8h', '12h']) {
+      await fireEvent.press(
+        screen.getByLabelText(`Hours per week: ${pace}. Tap to change.`)
+      );
+    }
+    await fireEvent.press(
+      screen.getByLabelText('Finish window: whenever. Tap to change.')
+    );
+    expect(screen.getByText(/costs you/)).toBeTruthy();
+  });
+
+  it('says nothing about pins when nothing is pinned', async () => {
+    seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
+    await renderApp(<PlanScreen />);
+    expect(screen.queryByText(/costs you/)).toBeNull();
   });
 });

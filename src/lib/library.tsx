@@ -28,6 +28,14 @@ export interface LibraryEntry {
   /** The Steam app this entry was matched to, if it came from there. */
   steamAppId?: number;
   /**
+   * Finish it by this date, epoch ms. A game's own deadline beats the
+   * plan's window: "before the sequel lands" is a real constraint and it
+   * belongs to one game, not to the whole backlog.
+   */
+  deadline?: number;
+  /** 3 = must play, 2 = normal (default), 1 = maybe. See lib/scheduler. */
+  want?: number;
+  /**
    * When the credits rolled. Distinct from addedAt, which is when the
    * game entered the library — a game saved last year and finished today
    * belongs to today.
@@ -103,6 +111,14 @@ interface LibraryContextValue {
       steamAppId?: number;
     }[]
   ) => number;
+  /**
+   * Set a game's own deadline (epoch ms) or clear it with null. Only
+   * applies to a game already in the library — a deadline on something
+   * you have not saved is not a plan, it is a wish.
+   */
+  setDeadline: (id: number, deadline: number | null) => void;
+  /** Mark how much a saved game is wanted: 3 must play, 2 normal, 1 maybe. */
+  setWant: (id: number, want: number) => void;
   /** Set when the last write to the device failed; null when it landed. */
   saveError: string | null;
 }
@@ -149,6 +165,8 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
           // "playing" does not un-know the thirty hours behind it.
           hoursPlayed: existing?.hoursPlayed,
           steamAppId: existing?.steamAppId,
+          deadline: existing?.deadline,
+          want: existing?.want,
           finishedAt:
             status === 'finished'
               ? (existing?.finishedAt ?? Date.now())
@@ -193,6 +211,25 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     return games.length;
   }, []);
 
+  const setDeadline = useCallback((id: number, deadline: number | null) => {
+    setEntries((prev) => {
+      const entry = prev[String(id)];
+      if (!entry) return prev;
+      return {
+        ...prev,
+        [String(id)]: { ...entry, deadline: deadline ?? undefined },
+      };
+    });
+  }, []);
+
+  const setWant = useCallback((id: number, want: number) => {
+    setEntries((prev) => {
+      const entry = prev[String(id)];
+      if (!entry) return prev;
+      return { ...prev, [String(id)]: { ...entry, want } };
+    });
+  }, []);
+
   const importJson = useCallback((raw: string): number => {
     const parsed = JSON.parse(raw) as Entries;
     const incoming = Object.entries(parsed).filter(
@@ -227,9 +264,20 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       importJson,
       setProgress,
       addGames,
+      setDeadline,
+      setWant,
       saveError,
     }),
-    [entries, setStatus, importJson, setProgress, addGames, saveError]
+    [
+      entries,
+      setStatus,
+      importJson,
+      setProgress,
+      addGames,
+      setDeadline,
+      setWant,
+      saveError,
+    ]
   );
 
   return (
