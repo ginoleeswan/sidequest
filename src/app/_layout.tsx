@@ -27,6 +27,22 @@ export { ErrorBoundary } from 'expo-router';
  */
 function ScrollToTop() {
   const pathname = usePathname();
+
+  /**
+   * Reloading should show the top of the page, not wherever you left it.
+   *
+   * Browsers restore the scroll position on refresh, which is right for
+   * a document you were reading and wrong for an app: pulling to refresh
+   * on the landing page left it half way down its own hero. Taking
+   * manual control has to happen before the first paint, and once —
+   * hence a separate effect from the per-route one below.
+   */
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    window.scrollTo(0, 0);
+  }, []);
+
   useEffect(() => {
     if (Platform.OS === 'web') window.scrollTo(0, 0);
   }, [pathname]);
