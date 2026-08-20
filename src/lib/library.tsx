@@ -40,6 +40,11 @@ export interface LibraryEntry {
   /** What you thought of it, 1-5. Nothing to do with the critics. */
   rating?: number;
   /**
+   * Your own shelves: "co-op", "with Sam", "winter". A backlog is not
+   * one list, and three statuses cannot say what a person means.
+   */
+  tags?: string[];
+  /**
    * When the credits rolled. Distinct from addedAt, which is when the
    * game entered the library — a game saved last year and finished today
    * belongs to today.
@@ -127,6 +132,12 @@ interface LibraryContextValue {
   setNote: (id: number, note: string) => void;
   /** Your own score out of five; 0 clears it. */
   setRating: (id: number, rating: number) => void;
+  /** Add one of your own shelves to a saved game. */
+  addTag: (id: number, tag: string) => void;
+  /** Take it off again. */
+  removeTag: (id: number, tag: string) => void;
+  /** Every shelf in use, alphabetically — the filter list writes itself. */
+  tags: string[];
   /**
    * Let several games go at once.
    *
@@ -282,6 +293,37 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const addTag = useCallback((id: number, tag: string) => {
+    const clean = tag.trim().slice(0, 24);
+    if (clean === '') return;
+    setEntries((prev) => {
+      const entry = prev[String(id)];
+      if (!entry) return prev;
+      const existing = entry.tags ?? [];
+      // Case-insensitively unique: "Co-op" and "co-op" are one shelf.
+      if (existing.some((t) => t.toLowerCase() === clean.toLowerCase()))
+        return prev;
+      return {
+        ...prev,
+        [String(id)]: { ...entry, tags: [...existing, clean] },
+      };
+    });
+  }, []);
+
+  const removeTag = useCallback((id: number, tag: string) => {
+    setEntries((prev) => {
+      const entry = prev[String(id)];
+      if (!entry?.tags) return prev;
+      const next = entry.tags.filter(
+        (t) => t.toLowerCase() !== tag.toLowerCase()
+      );
+      return {
+        ...prev,
+        [String(id)]: { ...entry, tags: next.length > 0 ? next : undefined },
+      };
+    });
+  }, []);
+
   const removeMany = useCallback((ids: number[]) => {
     const count = ids.filter((id) => entriesRef.current[String(id)]).length;
     setEntries((prev) => {
@@ -351,6 +393,11 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       setWant,
       setNote,
       setRating,
+      addTag,
+      removeTag,
+      tags: [
+        ...new Set(Object.values(entries).flatMap((entry) => entry.tags ?? [])),
+      ].sort((a, b) => a.localeCompare(b)),
       removeMany,
       moveMany,
       saveError,
@@ -365,6 +412,8 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       setWant,
       setNote,
       setRating,
+      addTag,
+      removeTag,
       removeMany,
       moveMany,
       saveError,

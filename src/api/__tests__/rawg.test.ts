@@ -1,4 +1,9 @@
-import { getGame, getMustPlayGames, searchGames } from '../rawg';
+import {
+  getGame,
+  getMustPlayGames,
+  searchCreators,
+  searchGames,
+} from '../rawg';
 
 const ORIGINAL_KEY = process.env.EXPO_PUBLIC_RAWG_API_KEY;
 
@@ -77,5 +82,88 @@ describe('api key hygiene', () => {
       (spy.mock.calls[0][0] as string).replace(/^\/rawg/, 'https://x/rawg')
     );
     expect(url.searchParams.get('key')).toBe('abc123');
+  });
+});
+
+describe('finding the people who make the games', () => {
+  it('asks nothing for a word too short to be a name', async () => {
+    const before = (globalThis.fetch as jest.Mock).mock.calls.length;
+    expect(await searchCreators('su')).toEqual([]);
+    expect((globalThis.fetch as jest.Mock).mock.calls).toHaveLength(before);
+  });
+
+  it('asks both endpoints and ranks by catalogue size', async () => {
+    (globalThis.fetch as jest.Mock).mockImplementation(
+      async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('/developers'))
+          return new Response(
+            JSON.stringify({
+              results: [
+                { id: 1, name: 'Small Studio', slug: 's', games_count: 3 },
+              ],
+            })
+          );
+        return new Response(
+          JSON.stringify({
+            results: [
+              { id: 2, name: 'Big Label', slug: 'b', games_count: 300 },
+            ],
+          })
+        );
+      }
+    );
+    const found = await searchCreators('supergiant');
+    expect(found.map((c) => c.name)).toEqual(['Big Label', 'Small Studio']);
+    expect(found[0].kind).toBe('publisher');
+  });
+
+  it('keeps one entry when a studio publishes itself', async () => {
+    (globalThis.fetch as jest.Mock).mockImplementation(
+      async (input: RequestInfo | URL) =>
+        new Response(
+          JSON.stringify({
+            results: [
+              {
+                id: String(input).includes('/developers') ? 1 : 2,
+                name: 'Supergiant Games',
+                slug: 'supergiant',
+                games_count: String(input).includes('/developers') ? 8 : 12,
+              },
+            ],
+          })
+        )
+    );
+    const found = await searchCreators('supergiant');
+    expect(found).toHaveLength(1);
+    expect(found[0].gamesCount).toBe(12);
+  });
+
+  it('drops anyone with nothing to show', async () => {
+    (globalThis.fetch as jest.Mock).mockImplementation(
+      async () =>
+        new Response(
+          JSON.stringify({
+            results: [{ id: 1, name: 'Empty', slug: 'e', games_count: 0 }],
+          })
+        )
+    );
+    expect(await searchCreators('empty')).toEqual([]);
+  });
+
+  it('survives one endpoint failing', async () => {
+    (globalThis.fetch as jest.Mock).mockImplementation(
+      async (input: RequestInfo | URL) => {
+        if (String(input).includes('/developers'))
+          return new Response('nope', { status: 500 });
+        return new Response(
+          JSON.stringify({
+            results: [{ id: 2, name: 'Label', slug: 'l', games_count: 20 }],
+          })
+        );
+      }
+    );
+    const found = await searchCreators('label');
+    expect(found.map((c) => c.name)).toEqual(['Label']);
   });
 });

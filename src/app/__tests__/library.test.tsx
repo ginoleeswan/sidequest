@@ -18,7 +18,7 @@ const KEY = 'sidequest.library.v1';
 const game = (id: number, name: string, playtime: number) =>
   ({ id, name, playtime }) as Game;
 
-function seed(rows: { game: Game; status: LibraryStatus }[]) {
+function seed(rows: { game: Game; status: LibraryStatus; tags?: string[] }[]) {
   store[KEY] = JSON.stringify(
     Object.fromEntries(
       rows.map((r, i) => [String(r.game.id), { addedAt: i + 1, ...r }])
@@ -147,5 +147,22 @@ describe('the library screen', () => {
     // The one already there is still there.
     expect(screen.getByText('Celeste')).toBeTruthy();
     expect(screen.getByText('Hades II')).toBeTruthy();
+  });
+
+  it('filters by a shelf of your own', async () => {
+    seed([
+      { game: game(1, 'Together', 12), status: 'wishlist', tags: ['co-op'] },
+      { game: game(2, 'Alone', 30), status: 'wishlist' },
+    ]);
+    await renderApp(<LibraryScreen />);
+    await fireEvent.press(screen.getByText('co-op'));
+    expect(screen.getByText('Together')).toBeTruthy();
+    expect(screen.queryByText('Alone')).toBeNull();
+  });
+
+  it('offers no shelves when none have been made', async () => {
+    seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
+    await renderApp(<LibraryScreen />);
+    expect(screen.queryByText('All shelves')).toBeNull();
   });
 });

@@ -28,6 +28,7 @@ import { Message } from '@/components/Message';
 import { Commitment } from '@/components/Commitment';
 import { PageTitle } from '@/components/PageTitle';
 import { PersonalNote } from '@/components/PersonalNote';
+import { rememberGame } from '@/lib/recent';
 import { PlatformIcons } from '@/components/PlatformIcons';
 import { Rail } from '@/components/Rail';
 import { RatingsBreakdown } from '@/components/RatingsBreakdown';
@@ -200,6 +201,11 @@ export default function GameInfoScreen() {
   useEffect(() => {
     if (data?.game.slug) learnDurations([data.game.slug]);
   }, [data?.game.slug, learnDurations]);
+
+  // Somewhere to come back to. See lib/recent.
+  useEffect(() => {
+    if (data?.game) rememberGame(data.game);
+  }, [data?.game]);
 
   useEffect(() => {
     if (data) {
