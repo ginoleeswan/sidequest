@@ -6,6 +6,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { MONTH_INITIALS } from '@/lib/memcard';
 import { COLORS } from '@/styles/colors';
 import { DURATION, EASING } from '@/styles/motion';
+
 import { TYPE } from '@/styles/typography';
 
 /** Four is as tall as a month gets before the card stops being readable. */
@@ -27,6 +28,7 @@ export function YearBlocks({
   months,
   landed,
   size = 12,
+  fill = false,
 }: {
   /** Games finished per month, January first. */
   months: number[];
@@ -34,9 +36,32 @@ export function YearBlocks({
   landed: number | null;
   /** Block width. The card is drawn larger where it is the subject. */
   size?: number;
+  /**
+   * Lay the whole year in, month by month, instead of standing there
+   * complete. For the one place the card is the subject rather than the
+   * record — a year of finishing things ought to arrive the way it was
+   * earned, a month at a time.
+   */
+  fill?: boolean;
 }) {
   const reduced = useReducedMotion();
   const drop = useAnimatedValue(reduced || landed == null ? 1 : 0);
+  const laid = useAnimatedValue(reduced || !fill ? 1 : 0);
+
+  useEffect(() => {
+    if (reduced || !fill) {
+      laid.setValue(1);
+      return;
+    }
+    const animation = Animated.timing(laid, {
+      toValue: 1,
+      duration: DURATION.drift / 8,
+      easing: EASING.linear,
+      useNativeDriver: true,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [laid, fill, reduced]);
 
   useEffect(() => {
     if (reduced || landed == null) {
@@ -64,6 +89,14 @@ export function YearBlocks({
             const filled = height < Math.min(count, ROWS);
             const isNew =
               landed === month && height === Math.min(count, ROWS) - 1;
+            // Each month waits its turn, and each block within a month
+            // waits for the one under it.
+            const turn = (month + height * 0.35) / (ROWS + 12);
+            const laying = laid.interpolate({
+              inputRange: [turn, Math.min(turn + 0.16, 1)],
+              outputRange: [0, 1],
+              extrapolate: 'clamp',
+            });
             return (
               <Animated.View
                 key={row}
@@ -72,6 +105,7 @@ export function YearBlocks({
                   styles.block,
                   { width: size, height: Math.round(size * 0.84) },
                   filled && styles.filled,
+                  filled && fill && !isNew && { opacity: laying },
                   isNew && {
                     opacity: drop,
                     transform: [

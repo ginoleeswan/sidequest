@@ -20,7 +20,7 @@ export function useCountUp(to: number, from = 0, run = true): number {
   // mean writing to it from inside an effect, which is a cascading
   // render for a value that was never going to change.
   const travels = run && !reduced && from !== to;
-  const [value, setValue] = useState(travels ? from : to);
+  const [value, setValue] = useState(from);
 
   useEffect(() => {
     if (!travels) return;
@@ -37,5 +37,15 @@ export function useCountUp(to: number, from = 0, run = true): number {
     return () => cancelAnimationFrame(frame);
   }, [travels, to, from]);
 
-  return travels ? value : to;
+  /**
+   * Not running is not the same as finished.
+   *
+   * These used to share an answer, and a counter waiting to be scrolled
+   * to therefore sat there displaying the number it was going to count
+   * to — spoiling the only thing it existed to reveal. Someone who has
+   * asked for less animation still gets the final figure; someone who
+   * has not reached it yet gets the one it starts from.
+   */
+  if (reduced || from === to) return to;
+  return travels ? value : from;
 }
