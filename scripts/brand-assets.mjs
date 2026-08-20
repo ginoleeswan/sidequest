@@ -81,30 +81,96 @@ const FONT_BODY = readFileSync(
   join(ROOT, 'assets/fonts/Noah-Regular.ttf')
 ).toString('base64');
 
-/** The link-preview card: 1200×630, the size every crawler crops from. */
+/**
+ * The memory card, drawn at card scale.
+ *
+ * Sidequest's own object rather than a game's cover: twelve columns, one
+ * per month, one block per game finished. It is the only image here the
+ * app can use without borrowing a publisher's art for its marketing, and
+ * it says what the product is about — a year, and what you saw the end
+ * of — without a word.
+ */
+function memcard() {
+  const cols = 12;
+  const rows = 4;
+  const cellW = 30;
+  const cellH = 26;
+  const gx = 40;
+  const gy = 52;
+  // A plausible year: quiet spring, a good autumn.
+  const filled = [1, 0, 2, 1, 0, 1, 3, 2, 4, 2, 1, 3];
+
+  let blocks = '';
+  for (let month = 0; month < cols; month++) {
+    for (let row = 0; row < rows; row++) {
+      const on = row < filled[month];
+      const x = gx + month * cellW;
+      const y = gy + (rows - 1 - row) * cellH;
+      blocks +=
+        `<rect x="${x}" y="${y}" width="${cellW - 5}" height="${cellH - 5}" rx="3" ` +
+        `fill="${on ? AMBER : 'rgba(255,255,255,0.07)'}"/>`;
+    }
+  }
+
+  const w = gx * 2 + cols * cellW - 5;
+  const h = gy + rows * cellH + 44;
+  const cut = 26;
+  // The notched corner every memory card has.
+  const shell =
+    `M14 0 H${w - cut} L${w} ${cut} V${h - 14} A14 14 0 0 1 ${w - 14} ${h} ` +
+    `H14 A14 14 0 0 1 0 ${h - 14} V14 A14 14 0 0 1 14 0 Z`;
+
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+    <path d="${shell}" fill="${NAVY}" stroke="rgba(255,255,255,0.10)"/>
+    ${blocks}
+    <text x="${gx}" y="${h - 18}" font-family="Noah" font-weight="700"
+          font-size="17" letter-spacing="2" fill="#7C8496">A YEAR OF FINISHING THINGS</text>
+  </svg>`;
+}
+
+/**
+ * The link-preview card: 1200×630, the size every crawler crops from.
+ *
+ * Built for the size it is actually seen at. In a timeline this is about
+ * five hundred pixels wide, so the promise is set large enough to survive
+ * the shrink and everything else gets out of its way. The old card set
+ * that line at 44px and left the right-hand forty percent of the canvas
+ * empty, which is a lot of nothing to publish under your own name.
+ */
 function ogCard() {
   return `<!doctype html><meta charset="utf-8"><style>
     @font-face { font-family: Noah; font-weight: 900; src: url(data:font/ttf;base64,${FONT}); }
     @font-face { font-family: Noah; font-weight: 700; src: url(data:font/ttf;base64,${FONT_BOLD}); }
     @font-face { font-family: Noah; font-weight: 400; src: url(data:font/ttf;base64,${FONT_BODY}); }
     * { margin: 0; box-sizing: border-box; }
-    body { width: 1200px; height: 630px; background: ${DEEP}; font-family: Noah, sans-serif;
-           padding: 92px; display: flex; flex-direction: column; justify-content: center; }
-    .lockup { display: flex; align-items: center; gap: 30px; margin-bottom: 74px; }
-    .word { font-weight: 900; font-size: 82px; letter-spacing: -1px; color: ${WHITE}; }
-    h1 { font-weight: 700; font-size: 44px; color: ${WHITE}; margin-bottom: 22px; }
-    p { font-weight: 400; font-size: 30px; color: ${GREY}; }
-    .rule { width: 132px; height: 5px; border-radius: 3px; background: ${AMBER}; margin: 52px 0 26px; }
-    .fine { font-size: 24px; color: #7C8496; }
+    body { width: 1200px; height: 630px; font-family: Noah, sans-serif;
+           background:
+             radial-gradient(1100px 620px at 88% 12%, rgba(242,169,59,0.10), transparent 60%),
+             radial-gradient(900px 700px at 8% 96%, rgba(39,47,63,0.85), transparent 62%),
+             ${DEEP};
+           padding: 74px 78px; display: flex; align-items: center; gap: 56px; }
+    /* Held short of the art so the sub-line does not orphan a word. */
+    .copy { flex: 1; min-width: 0; max-width: 560px; }
+    .lockup { display: flex; align-items: center; gap: 18px; margin-bottom: 40px; }
+    .word { font-weight: 900; font-size: 40px; letter-spacing: 0.5px; color: ${WHITE}; }
+    h1 { font-weight: 900; font-size: 66px; line-height: 1.04; letter-spacing: -1.6px;
+         color: ${WHITE}; margin-bottom: 26px; }
+    p { font-weight: 400; font-size: 27px; line-height: 1.35; color: ${GREY}; }
+    .rule { width: 108px; height: 5px; border-radius: 3px; background: ${AMBER}; margin: 40px 0 22px; }
+    .fine { font-weight: 400; font-size: 21px; color: #7C8496; }
+    .art { flex: 0 0 auto; transform: rotate(-4deg); }
   </style>
-  <div class="lockup">
-    <svg viewBox="${TIGHT}" width="96" height="96">${mark()}</svg>
-    <div class="word">SIDEQUEST</div>
+  <div class="copy">
+    <div class="lockup">
+      <svg viewBox="${TIGHT}" width="52" height="52">${mark()}</svg>
+      <div class="word">SIDEQUEST</div>
+    </div>
+    <h1>Know what you<br/>can actually finish.</h1>
+    <p>Backlog triage for people with<br/>more games than time.</p>
+    <div class="rule"></div>
+    <div class="fine">No account. No tracking. It stays on your device.</div>
   </div>
-  <h1>Know what you can actually finish.</h1>
-  <p>Backlog triage for people with more games than time.</p>
-  <div class="rule"></div>
-  <div class="fine">No account. No tracking. Your library stays on your device.</div>`;
+  <div class="art">${memcard()}</div>`;
 }
 
 const { chromium } = await import('playwright');

@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Animated,
   Modal,
@@ -12,13 +12,16 @@ import {
 
 import { CoverImage } from './CoverImage';
 import { Mark } from './Mark';
+import { YearBlocks } from './YearBlocks';
 import type { Game } from '@/api/types';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
+import { useCountUp } from '@/hooks/useCountUp';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { formatHours } from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
 import { useLibrary } from '@/lib/library';
 import { libraryStats } from '@/lib/libraryStats';
+import { blocksByMonth, buildMemcard } from '@/lib/memcard';
 import { COLORS } from '@/styles/colors';
 import { SPRING } from '@/styles/motion';
 import { RADIUS, SPACING } from '@/styles/theme';
@@ -47,6 +50,8 @@ export function FinishCelebration({
   const { durationOf } = useDurations();
   const rise = useAnimatedValue(0);
   const reduced = useReducedMotion();
+  // Read once: a date taken during render moves under the animation.
+  const [now] = useState(() => Date.now());
 
   useEffect(() => {
     if (!game) {
@@ -67,14 +72,46 @@ export function FinishCelebration({
     return () => animation.stop();
   }, [game, rise, reduced]);
 
-  if (!game) return null;
-
-  const stats = libraryStats(
-    Object.values(entries),
-    (g) => durationOf(g).hours
-  );
-  const duration = durationOf(game);
+  const library = Object.values(entries);
+  const stats = libraryStats(library, (g) => durationOf(g).hours);
+  const duration = game ? durationOf(game) : null;
   const left = stats.waiting + stats.playing;
+
+  /**
+   * The year this finish just landed in.
+   *
+   * The month comes from the card rather than from the clock, so a game
+   * finished with a back-dated `finishedAt` lands where it belongs — and
+   * so nothing is marked at all if, for any reason, the finish did not
+   * make it into the year.
+   */
+  const card = buildMemcard(
+    library,
+    (g) => durationOf(g).hours,
+    new Date(now).getFullYear()
+  );
+  const months = blocksByMonth(card);
+  const newest = game
+    ? card.blocks.find((block) => block.id === game.id)
+    : undefined;
+
+  // The two numbers this screen exists to move. Counted from where they
+  // stood a moment ago, which is this game's worth of hours ago.
+  const finished = useCountUp(
+    stats.finished,
+    Math.max(stats.finished - 1, 0),
+    game != null
+  );
+  const rolled = useCountUp(
+    stats.hoursFinished,
+    Math.max(
+      stats.hoursFinished - (duration?.rough ? 0 : (duration?.hours ?? 0)),
+      0
+    ),
+    game != null
+  );
+
+  if (!game || !duration) return null;
 
   return (
     <Modal transparent animationType="fade" onRequestClose={onClose}>
@@ -113,6 +150,13 @@ export function FinishCelebration({
               />
             </View>
 
+            {/* The block this just earned, landing on the year it lands
+                in. The card is the only object the app owns, and until
+                now it was nowhere near the moment that creates one. */}
+            <View style={styles.year}>
+              <YearBlocks months={months} landed={newest?.month ?? null} />
+            </View>
+
             <Text style={styles.line}>
               {/* Only quote a number we stand behind. An estimate the app
                   has already flagged as shaky has no business being the
@@ -124,13 +168,11 @@ export function FinishCelebration({
 
             <View style={styles.stats}>
               <View style={styles.stat}>
-                <Text style={styles.statValue}>{stats.finished}</Text>
+                <Text style={styles.statValue}>{Math.round(finished)}</Text>
                 <Text style={styles.statLabel}>finished</Text>
               </View>
               <View style={styles.stat}>
-                <Text style={styles.statValue}>
-                  {formatHours(stats.hoursFinished)}
-                </Text>
+                <Text style={styles.statValue}>{formatHours(rolled)}</Text>
                 <Text style={styles.statLabel}>credits rolled</Text>
               </View>
               <View style={styles.stat}>
@@ -195,6 +237,7 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     textAlign: 'center',
   },
+  year: { marginBottom: SPACING.lg, alignItems: 'center' },
   artRow: { alignItems: 'center', marginVertical: SPACING.sm },
   art: {
     width: '100%',
