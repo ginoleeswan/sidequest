@@ -13,6 +13,15 @@ interface Props {
   iconType?: IconType;
   /** Muted, non-interactive styling — used for tag lists. */
   quiet?: boolean;
+  /**
+   * Sitting over artwork rather than over the page.
+   *
+   * The outline chip is a hairline ring with no fill, which is right on
+   * a flat surface and illegible over a photograph — a ring and some
+   * light grey text on whatever the picture happened to be. This gives
+   * it a plate of its own.
+   */
+  onImage?: boolean;
 }
 
 export function Chip({
@@ -22,6 +31,7 @@ export function Chip({
   iconName,
   iconType,
   quiet = false,
+  onImage = false,
 }: Props) {
   return (
     <Pressable
@@ -29,7 +39,13 @@ export function Chip({
       disabled={!onPress}
       style={[
         styles.chip,
-        quiet ? styles.quiet : selected ? styles.solid : styles.outline,
+        quiet
+          ? styles.quiet
+          : selected
+            ? styles.solid
+            : onImage
+              ? styles.onImage
+              : styles.outline,
       ]}
     >
       {iconName && iconType ? (
@@ -68,6 +84,20 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: COLORS.strokeStrong,
+  },
+  onImage: {
+    /**
+     * Dark enough for the worst artwork, not the average.
+     *
+     * Nothing automated checks this: axe cannot see what is behind a
+     * translucent plate, so the sum was done by hand against a blown-out
+     * white frame — the scrims above it, then this — and lands near 5:1
+     * where the header's gradient is weakest. Everything realistic is
+     * far better than that.
+     */
+    backgroundColor: 'rgba(18,24,36,0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
   },
   quiet: {
     backgroundColor: 'transparent',
