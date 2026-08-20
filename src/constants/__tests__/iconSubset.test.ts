@@ -1,0 +1,57 @@
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+
+import IoniconsGlyphs from '@expo/vector-icons/build/vendor/react-native-vector-icons/glyphmaps/Ionicons.json';
+
+import { SUBSET_ICONS } from '../iconSubset';
+
+/**
+ * The app ships a cut-down Ionicons — a few dozen glyphs out of ~1,300,
+ * 9 KB instead of 381. The cut is generated from the source by
+ * scripts/subset-icons.mjs, so the danger is not the subset being wrong
+ * but the source moving on: name a new icon, forget to regenerate, and
+ * it renders as a blank box for everyone.
+ *
+ * The browser-side proof that the glyphs actually draw lives in
+ * e2e/icons.mjs. This is the fast half: does the shipped list still
+ * cover what the code asks for?
+ */
+const ionicons = IoniconsGlyphs as Record<string, number>;
+const SRC = join(__dirname, '../..');
+
+function sources(dir: string): string[] {
+  return readdirSync(dir).flatMap((entry) => {
+    const path = join(dir, entry);
+    if (statSync(path).isDirectory()) return sources(path);
+    return /\.tsx?$/.test(path) ? [path] : [];
+  });
+}
+
+const used = new Set<string>();
+for (const file of sources(SRC)) {
+  for (const [, name] of readFileSync(file, 'utf8').matchAll(
+    /['"`]([a-z][a-z0-9-]{2,})['"`]/g
+  )) {
+    if (name in ionicons) used.add(name);
+  }
+}
+
+describe('the Ionicons subset', () => {
+  it('finds the icons the app names', () => {
+    expect(used.size).toBeGreaterThan(30);
+  });
+
+  it('carries every one of them', () => {
+    const missing = [...used].filter(
+      (name) => !(SUBSET_ICONS as readonly string[]).includes(name)
+    );
+    expect(missing).toEqual([]);
+  });
+
+  it('carries nothing the app does not name', () => {
+    // Not waste for its own sake: an entry here that the source no
+    // longer uses means the list was hand-edited rather than generated.
+    const stale = SUBSET_ICONS.filter((name) => !used.has(name));
+    expect(stale).toEqual([]);
+  });
+});

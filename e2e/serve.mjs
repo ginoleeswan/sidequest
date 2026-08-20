@@ -20,6 +20,7 @@ const MIME = {
   '.jpg': 'image/jpeg',
   '.svg': 'image/svg+xml',
   '.ttf': 'font/ttf',
+  '.woff2': 'font/woff2',
   '.webmanifest': 'application/manifest+json',
 };
 

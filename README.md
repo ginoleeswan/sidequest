@@ -53,6 +53,9 @@ Open in [Expo Go](https://expo.dev/go), an emulator, or press `w` for web.
 | `npm test`                           | Jest (unit and component)                              |
 | `npm run test:hydration`             | builds nothing — runs `e2e/hydration.mjs` over `dist/` |
 | `npm run test:a11y`                  | axe (WCAG A/AA) over `dist/`, both widths              |
+| `npm run test:icons`                 | every named icon draws from the subset font            |
+| `npm run test:perf`                  | 4G + 4x CPU: bytes, FCP, LCP, CLS against budgets      |
+| `node scripts/subset-icons.mjs`      | regenerate the Ionicons subset (after adding an icon)  |
 | `node scripts/duration-coverage.mjs` | data-source validation (see `docs/validation/`)        |
 
 `test:hydration` and `test:a11y` need a `dist/` from `npm run build`, and a Chromium that
