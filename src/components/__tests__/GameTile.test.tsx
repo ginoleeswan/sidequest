@@ -34,6 +34,26 @@ describe('GameTile', () => {
     expect(screen.getByText('Roguelike · 2024 · ★ 4.6')).toBeTruthy();
   });
 
+  /**
+   * The page is built out of these. If the tile does not say how long a
+   * game takes, neither does 95% of the app that exists to answer it.
+   */
+  it('leads with how long it takes, in place of a five-point rating', async () => {
+    await renderApp(<GameTile game={{ ...GAME, playtime: 12 } as Game} />);
+    expect(screen.getByText(/12h/)).toBeTruthy();
+    expect(screen.queryByText(/★/)).toBeNull();
+  });
+
+  it('falls back to the rating when no length is known', async () => {
+    await renderApp(<GameTile game={GAME} />);
+    expect(screen.getByText('Roguelike · 2024 · ★ 4.6')).toBeTruthy();
+  });
+
+  it('draws its place in a top ten', async () => {
+    await renderApp(<GameTile game={GAME} rank={3} />);
+    expect(screen.getByText('3')).toBeTruthy();
+  });
+
   it('opens the game when tapped', async () => {
     await renderApp(<GameTile game={GAME} />);
     await act(async () => fireEvent.press(screen.getByText('Hades II')));

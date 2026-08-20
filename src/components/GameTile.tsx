@@ -14,6 +14,8 @@ import { gameDetailQuery } from '@/api/gameDetail';
 import { useToast } from './Toast';
 import type { Game } from '@/api/types';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { formatHours } from '@/lib/duration';
+import { useDurations } from '@/lib/durations';
 import { useLibrary } from '@/lib/library';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
@@ -25,6 +27,8 @@ interface Props {
   width?: number;
   /** Small emphasis pill on the art, e.g. a release date. */
   badge?: string;
+  /** Position in a top-ten row, drawn on the art. */
+  rank?: number;
 }
 
 /**
@@ -33,9 +37,10 @@ interface Props {
  * identity. On pointer hover the art cycles through the game's actual
  * screenshots, and a quick-save control appears.
  */
-export function GameTile({ game, width, badge }: Props) {
+export function GameTile({ game, width, badge, rank }: Props) {
   const router = useRouter();
   const { statusOf, setStatus } = useLibrary();
+  const { durationOf } = useDurations();
   const { isCompact } = useBreakpoint();
   const toast = useToast();
   const [hovered, setHovered] = useState(false);
@@ -71,10 +76,22 @@ export function GameTile({ game, width, badge }: Props) {
 
   const year = game.released?.slice(0, 4);
   const genre = game.genres?.[0]?.name;
+  /**
+   * How long it takes, first and in the accent colour.
+   *
+   * Every tile on this page used to read "Adventure · 2026 · ★ 3.6" —
+   * RAWG's facts, the same three any games site would print. The one
+   * thing Sidequest exists to tell you was the one thing missing from
+   * the atom the whole page is built out of. A five-point community
+   * rating loses its place to it; where the length is genuinely unknown
+   * the rating comes back, because then it is the only signal there is.
+   */
+  const { hours } = durationOf(game);
+  const length = hours > 0 ? formatHours(hours) : null;
   const meta = [
     genre,
     year,
-    game.rating > 0 ? `★ ${game.rating.toFixed(1)}` : null,
+    !length && game.rating > 0 ? `★ ${game.rating.toFixed(1)}` : null,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -141,14 +158,23 @@ export function GameTile({ game, width, badge }: Props) {
               />
             </Pressable>
           )}
-          {game.parent_platforms && game.parent_platforms.length > 0 && (
-            <View style={styles.platforms}>
-              <PlatformIcons
-                platforms={game.parent_platforms.slice(0, 4)}
-                size={12}
-                color="rgba(255,255,255,0.85)"
-              />
-            </View>
+          {/* The rank takes the bottom-left corner when there is one. As a
+              watermark behind the tile it was clipped by the rail's edge
+              on the first item and surfaced between tiles on the rest,
+              which read as a rendering artifact rather than a top ten. */}
+          {rank != null ? (
+            <Text style={styles.rank}>{rank}</Text>
+          ) : (
+            game.parent_platforms &&
+            game.parent_platforms.length > 0 && (
+              <View style={styles.platforms}>
+                <PlatformIcons
+                  platforms={game.parent_platforms.slice(0, 4)}
+                  size={12}
+                  color="rgba(255,255,255,0.85)"
+                />
+              </View>
+            )
           )}
         </View>
         <Text
@@ -157,8 +183,10 @@ export function GameTile({ game, width, badge }: Props) {
         >
           {game.name}
         </Text>
-        {meta ? (
+        {length || meta ? (
           <Text style={styles.meta} numberOfLines={1}>
+            {length ? <Text style={styles.length}>{length}</Text> : null}
+            {length && meta ? ' · ' : ''}
             {meta}
           </Text>
         ) : null}
@@ -213,6 +241,18 @@ const styles = StyleSheet.create({
     bottom: SPACING.sm,
     left: SPACING.sm + 2,
   },
+  rank: {
+    ...TYPE.numeral,
+    position: 'absolute',
+    bottom: -6,
+    left: SPACING.sm,
+    fontSize: 52,
+    lineHeight: 56,
+    color: COLORS.white,
+    opacity: 0.92,
+    textShadowColor: 'rgba(0,0,0,0.55)',
+    textShadowRadius: 12,
+  },
   title: {
     ...TYPE.labelSmall,
     color: COLORS.lightGrey,
@@ -222,5 +262,9 @@ const styles = StyleSheet.create({
   meta: {
     ...TYPE.fine,
     color: COLORS.mediumGrey,
+  },
+  length: {
+    ...TYPE.fine,
+    color: COLORS.accent,
   },
 });
