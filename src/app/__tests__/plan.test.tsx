@@ -78,4 +78,26 @@ describe('the plan screen', () => {
       screen.getByLabelText('Hours per week: 8h. Tap to change.')
     ).toBeTruthy();
   });
+
+  it('is honest about what will not fit, rather than hiding it', async () => {
+    seed([
+      { game: game(1, 'Short', 4), status: 'wishlist' },
+      { game: game(2, 'Enormous', 300), status: 'wishlist' },
+    ]);
+    await renderApp(<PlanScreen />);
+    // 6h a week against a "whenever" window still drops a 300h game only
+    // when a deadline exists, so pick one: two weeks.
+    await fireEvent.press(
+      screen.getByLabelText('Finish window: whenever. Tap to change.')
+    );
+    expect(screen.getByText('Side quests — for later')).toBeTruthy();
+    expect(screen.getByText('Enormous')).toBeTruthy();
+  });
+
+  it('asks for the lengths nobody has reported', async () => {
+    seed([{ game: game(1, 'Obscure', 0), status: 'wishlist' }]);
+    await renderApp(<PlanScreen />);
+    expect(screen.getByText('Length unknown')).toBeTruthy();
+    expect(screen.getByText('Set how long it takes →')).toBeTruthy();
+  });
 });
