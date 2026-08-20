@@ -55,6 +55,7 @@ export const SUBSET_ICONS = [
   'moon',
   'open-outline',
   'person',
+  'play',
   'refresh',
   'repeat',
   'ribbon',
