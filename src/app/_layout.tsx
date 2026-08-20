@@ -11,6 +11,7 @@ import { MAX_AGE, persister } from '@/api/persist';
 import { queryClient } from '@/api/queryClient';
 import { CommandPalette } from '@/components/CommandPalette';
 import { Onboarding } from '@/components/Onboarding';
+import { ScreenFade } from '@/components/ScreenFade';
 import { SaveErrorNotice } from '@/components/SaveErrorNotice';
 import { ToastProvider } from '@/components/Toast';
 import { DurationsProvider } from '@/lib/durations';
@@ -107,12 +108,14 @@ export default function RootLayout() {
             <ToastProvider>
               <StatusBar style="light" />
               <ScrollToTop />
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: { backgroundColor: COLORS.darkGrey },
-                }}
-              />
+              <ScreenFade>
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: COLORS.darkGrey },
+                  }}
+                />
+              </ScreenFade>
               <Onboarding />
               <CommandPalette />
               <SaveErrorNotice />
