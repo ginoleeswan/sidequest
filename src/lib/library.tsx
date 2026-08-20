@@ -132,6 +132,12 @@ interface LibraryContextValue {
   setNote: (id: number, note: string) => void;
   /** Your own score out of five; 0 clears it. */
   setRating: (id: number, rating: number) => void;
+  /**
+   * Add measured play time to a game, from a session just finished.
+   * Saves the game first if it was not saved — you cannot play
+   * something for an hour and have the app deny it is yours.
+   */
+  addPlayTime: (game: Game, hours: number) => void;
   /** Add one of your own shelves to a saved game. */
   addTag: (id: number, tag: string) => void;
   /** Take it off again. */
@@ -293,6 +299,32 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const addPlayTime = useCallback((game: Game, hours: number) => {
+    if (hours <= 0) return;
+    setEntries((prev) => {
+      const existing = prev[String(game.id)];
+      return {
+        ...prev,
+        [String(game.id)]: {
+          game: slim(game),
+          // Playing something is the strongest signal there is that it
+          // is under way, so an unsaved game becomes one.
+          status: existing?.status ?? 'playing',
+          addedAt: existing?.addedAt ?? Date.now(),
+          hoursPlayed:
+            Math.round(((existing?.hoursPlayed ?? 0) + hours) * 10) / 10,
+          steamAppId: existing?.steamAppId,
+          deadline: existing?.deadline,
+          want: existing?.want,
+          note: existing?.note,
+          rating: existing?.rating,
+          tags: existing?.tags,
+          finishedAt: existing?.finishedAt,
+        },
+      };
+    });
+  }, []);
+
   const addTag = useCallback((id: number, tag: string) => {
     const clean = tag.trim().slice(0, 24);
     if (clean === '') return;
@@ -393,6 +425,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       setWant,
       setNote,
       setRating,
+      addPlayTime,
       addTag,
       removeTag,
       tags: [
@@ -412,6 +445,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       setWant,
       setNote,
       setRating,
+      addPlayTime,
       addTag,
       removeTag,
       removeMany,

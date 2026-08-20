@@ -28,7 +28,9 @@ import {
 } from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
 import { buildAlerts } from '@/lib/alerts';
+import { useHydrated } from '@/hooks/useHydrated';
 import { useLibrary } from '@/lib/library';
+import { sessionMinutesFor } from '@/lib/sessions';
 import {
   pickTonight,
   planSchedule,
@@ -206,7 +208,13 @@ export default function PlanScreen() {
     'sidequest.plan.window',
     null
   );
+  // The session the plan opens on knows what day it is: a Saturday is
+  // not a Tuesday, and answering ninety minutes on both is answering the
+  // wrong question two days in seven. Captured once, after hydration.
+  const hydrated = useHydrated();
+  const [weekendSession] = useState(() => sessionMinutesFor());
   const [session, setSession] = useState(60);
+  const sessionMinutes = hydrated && session === 60 ? weekendSession : session;
   const [steamOpen, setSteamOpen] = useState(false);
 
   // Playing games count at half their length - you're partway in.
@@ -309,9 +317,9 @@ export default function PlanScreen() {
           hours: e.hours,
           playing: e.playing,
         })),
-        session
+        sessionMinutes
       ),
-    [entries, session]
+    [entries, sessionMinutes]
   );
 
   const tonightPick =
@@ -495,11 +503,13 @@ export default function PlanScreen() {
                           I have
                           <InlineValue
                             label={
-                              session >= 60 ? `${session / 60}h` : `${session}m`
+                              sessionMinutes >= 60
+                                ? `${sessionMinutes / 60}h`
+                                : `${sessionMinutes}m`
                             }
                             hint="Session length"
                             onPress={() =>
-                              setSession(cycle(SESSION_OPTIONS, session))
+                              setSession(cycle(SESSION_OPTIONS, sessionMinutes))
                             }
                           />
                           → {tonightVerb}{' '}

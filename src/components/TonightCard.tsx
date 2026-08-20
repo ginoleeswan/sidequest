@@ -1,9 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CoverImage } from './CoverImage';
+import { useHydrated } from '@/hooks/useHydrated';
+import { sessionMinutesFor } from '@/lib/sessions';
 import { formatHours, remainingHours } from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
 import { useLibrary } from '@/lib/library';
@@ -12,8 +14,18 @@ import { COLORS } from '@/styles/colors';
 import { RADIUS, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
-/** An evening most people actually have. */
-const SESSION_MINUTES = 90;
+/**
+ * How long tonight is.
+ *
+ * Ninety minutes is a Tuesday. Read once, after hydration — the
+ * pre-rendered HTML has no idea what day it is being read on, and a
+ * Saturday's answer in Monday's markup is a hydration mismatch.
+ */
+function useSessionMinutes(): number {
+  const hydrated = useHydrated();
+  const [minutes] = useState(() => sessionMinutesFor());
+  return hydrated ? minutes : 90;
+}
 
 /**
  * The one thing to play tonight, on the home page.
@@ -26,6 +38,7 @@ const SESSION_MINUTES = 90;
  */
 export function TonightCard() {
   const router = useRouter();
+  const sessionMinutes = useSessionMinutes();
   const { byStatus } = useLibrary();
   const { durationOf } = useDurations();
 
@@ -45,7 +58,7 @@ export function TonightCard() {
         }),
         playing,
       })),
-      SESSION_MINUTES
+      sessionMinutes
     );
 
     const chosen =
@@ -66,7 +79,7 @@ export function TonightCard() {
           ? 'Already under way — chip away at it.'
           : 'The shortest thing you’ve saved.',
     };
-  }, [byStatus, durationOf]);
+  }, [byStatus, durationOf, sessionMinutes]);
 
   if (!pick) return null;
 
