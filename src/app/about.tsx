@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import {
@@ -10,8 +11,9 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { LandingProof } from '@/components/LandingProof';
 import { LandingWall } from '@/components/LandingWall';
 import { Mark } from '@/components/Mark';
 import { PageTitle } from '@/components/PageTitle';
@@ -21,6 +23,9 @@ import { SiteFooter } from '@/components/SiteFooter';
 import { GrainScrim, Textured } from '@/components/Textured';
 import { WhenNear } from '@/components/WhenNear';
 import { YearBlocks } from '@/components/YearBlocks';
+import { queryKeys } from '@/api/queryClient';
+import { getTrendingGames } from '@/api/rawg';
+import type { Game, Paged } from '@/api/types';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -48,16 +53,19 @@ const SAMPLE_YEAR = [1, 0, 2, 1, 0, 1, 3, 2, 4, 2, 1, 3];
 
 const BEATS = [
   {
+    kind: 'length' as const,
     lead: 'It knows how long things take.',
-    body: 'Every game carries a real length, from the people who have finished it — not a guess, and not a store page.',
+    body: 'Every game carries a real length, from the people who have finished it — not a guess, and not a store page. It is on every tile, in amber, before you tap anything.',
   },
   {
+    kind: 'tonight' as const,
     lead: 'It picks what fits tonight.',
     body: 'Ninety minutes on a Tuesday is not three hours on a Saturday. Sidequest does the arithmetic and names one game.',
   },
   {
+    kind: 'drop' as const,
     lead: 'It lets you put things down.',
-    body: 'Most of a backlog is never going to be played, and saying so out loud is the only thing that makes the rest enjoyable.',
+    body: 'Most of a backlog is never going to be played, and saying so out loud is the only thing that makes the rest enjoyable. It asks why, and only so the shelves can learn something.',
   },
 ];
 
@@ -65,6 +73,7 @@ export default function AboutScreen() {
   const router = useRouter();
   const { isExpanded, width } = useBreakpoint();
   const { height } = useWindowDimensions();
+  const safe = useSafeAreaInsets();
   const reduced = useReducedMotion();
   const enter = useAnimatedValue(reduced ? 1 : 0);
 
@@ -114,6 +123,17 @@ export default function AboutScreen() {
   };
   const inset = isExpanded ? SPACING.xl * 2 : SPACING.lg;
 
+  /**
+   * The same games the wall is built from, so the demonstrations below
+   * cost nothing: one request, already in flight before this reads it.
+   */
+  const { data: games } = useQuery({
+    queryKey: queryKeys.shelf('landing-wall'),
+    queryFn: () => getTrendingGames(1),
+    select: (page: Paged<Game>) => page.results,
+    staleTime: 6 * 60 * 60 * 1000,
+  });
+
   const open = (
     <ScaleButton
       onPress={() => router.push('/')}
@@ -130,125 +150,131 @@ export default function AboutScreen() {
   return (
     <Textured style={styles.background}>
       <PageTitle>About Sidequest</PageTitle>
-      <SafeAreaView edges={['top']}>
-        <ScrollView contentContainerStyle={styles.scroll}>
-          <View
-            style={[
-              styles.masthead,
-              { minHeight: Math.max(Math.round(height * 0.94), 560) },
-            ]}
-          >
-            <LandingWall columns={isExpanded ? 7 : 4} />
-            {/* Heavy where the words are, open at the top right, so the
+      {/* No safe-area view around this. Reserving the top inset put a
+          band of flat page colour above the hero and stopped the
+          artwork reaching the top of the screen; the copy clears the
+          status bar on its own instead. */}
+      <ScrollView contentContainerStyle={styles.scroll}>
+        <View
+          style={[
+            styles.masthead,
+            { minHeight: Math.max(Math.round(height * 0.94), 560) },
+          ]}
+        >
+          <LandingWall columns={isExpanded ? 7 : 4} />
+          {/* Heavy where the words are, open at the top right, so the
                 pile is visible without ever competing with the line it
                 exists to prove. */}
-            <LinearGradient
-              colors={[
-                'rgba(51,61,81,0.55)',
-                'rgba(51,61,81,0.80)',
-                'rgba(51,61,81,0.97)',
-                COLORS.darkGrey,
-              ]}
-              locations={[0, 0.42, 0.78, 1]}
-              start={{ x: 0.75, y: 0 }}
-              end={{ x: 0.15, y: 1 }}
-              style={StyleSheet.absoluteFill}
-              pointerEvents="none"
-            />
-            <View style={[styles.mastheadCopy, { paddingHorizontal: inset }]}>
-              {/* No back chevron. Most people reach this page from a link
+          <LinearGradient
+            colors={[
+              'rgba(51,61,81,0.55)',
+              'rgba(51,61,81,0.80)',
+              'rgba(51,61,81,0.97)',
+              COLORS.darkGrey,
+            ]}
+            locations={[0, 0.42, 0.78, 1]}
+            start={{ x: 0.75, y: 0 }}
+            end={{ x: 0.15, y: 1 }}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+          <View
+            style={[
+              styles.mastheadCopy,
+              { paddingHorizontal: inset, paddingTop: safe.top + SPACING.xl },
+            ]}
+          >
+            {/* No back chevron. Most people reach this page from a link
                   and have nowhere to go back to; the ones who came from
                   the footer have a browser button and the mark below. */}
-              <Animated.View style={[styles.lockup, step(0, 0.35)]}>
-                <Mark size={26} />
-                <Text style={styles.word}>SIDEQUEST</Text>
-              </Animated.View>
-              <Animated.Text
-                style={[styles.headline, masthead, step(0.08, 0.6)]}
-              >
-                Know what you can actually finish.
-              </Animated.Text>
-              <Animated.Text style={[styles.standfirst, step(0.2, 0.75)]}>
-                Forty games waiting. Three you will actually see the end of.
-                Sidequest works out which three.
-              </Animated.Text>
-              <Animated.View style={step(0.32, 0.9)}>{open}</Animated.View>
-            </View>
+            <Animated.View style={[styles.lockup, step(0, 0.35)]}>
+              <Mark size={26} />
+              <Text style={styles.word}>SIDEQUEST</Text>
+            </Animated.View>
+            <Animated.Text style={[styles.headline, masthead, step(0.08, 0.6)]}>
+              Know what you can actually finish.
+            </Animated.Text>
+            <Animated.Text style={[styles.standfirst, step(0.2, 0.75)]}>
+              Forty games waiting. Three you will actually see the end of.
+              Sidequest works out which three.
+            </Animated.Text>
+            <Animated.View style={step(0.32, 0.9)}>{open}</Animated.View>
           </View>
+        </View>
 
-          {/* The arithmetic nobody does for themselves, set as the number
+        {/* The arithmetic nobody does for themselves, set as the number
               it is. This is the whole case for the product, and it is
               more persuasive than any sentence about it. */}
-          <WhenNear placeholder={<View style={styles.sumRoom} />}>
-            <View style={[styles.sum, { paddingHorizontal: inset }]}>
-              <Text style={styles.sumLead}>The average backlog is</Text>
-              <Text style={styles.sumFigure}>
-                900<Text style={styles.sumUnit}>h</Text>
-              </Text>
-              <Text style={styles.sumTail}>
-                and the average week has about six in it. That is fifteen years
-                of evenings, which is not a to-do list — it is a fantasy about a
-                different life.
-              </Text>
-            </View>
-          </WhenNear>
-
-          {BEATS.map((beat) => (
-            <View
-              key={beat.lead}
-              style={[
-                styles.beat,
-                { paddingHorizontal: inset },
-                isExpanded && styles.beatWide,
-              ]}
-            >
-              <Text
-                style={[styles.beatLead, isExpanded && styles.beatLeadWide]}
-              >
-                {beat.lead}
-              </Text>
-              <Text
-                style={[styles.beatBody, isExpanded && styles.beatBodyWide]}
-              >
-                {beat.body}
-              </Text>
-            </View>
-          ))}
-
-          {/* The app's own object, at the size it deserves. */}
-          <View style={[styles.card, { paddingHorizontal: inset }]}>
-            <View style={styles.cardFrame}>
-              <GrainScrim style={StyleSheet.absoluteFill} />
-              <YearBlocks
-                months={SAMPLE_YEAR}
-                landed={null}
-                size={isExpanded ? 26 : 17}
-              />
-            </View>
-            <Text style={styles.cardCaption}>
-              A year of finishing things. One block for every set of credits you
-              actually reach.
+        <WhenNear placeholder={<View style={styles.sumRoom} />}>
+          <View style={[styles.sum, { paddingHorizontal: inset }]}>
+            <Text style={styles.sumLead}>The average backlog is</Text>
+            <Text style={styles.sumFigure}>
+              900<Text style={styles.sumUnit}>h</Text>
+            </Text>
+            <Text style={styles.sumTail}>
+              and the average week has about six in it. That is fifteen years of
+              evenings, which is not a to-do list — it is a fantasy about a
+              different life.
             </Text>
           </View>
+        </WhenNear>
 
-          <View style={[styles.plain, { paddingHorizontal: inset }]}>
-            <Text style={styles.plainLead}>No account. No tracking.</Text>
-            <Text style={styles.plainBody}>
-              Your library lives in your browser and goes nowhere. There is
-              nothing to sign up for, nothing to cancel, and nobody selling what
-              you play. Game data comes from RAWG; lengths come from IGDB and
-              from you.
+        {BEATS.map((beat, index) => (
+          <View
+            key={beat.lead}
+            style={[
+              styles.beat,
+              { paddingHorizontal: inset },
+              isExpanded && styles.beatWide,
+            ]}
+          >
+            <Text style={[styles.beatLead, isExpanded && styles.beatLeadWide]}>
+              {beat.lead}
             </Text>
-            <Text style={styles.plainBody}>
-              An independent project, not affiliated with any platform,
-              publisher or store. Open source at ginoleeswan/sidequest.
-            </Text>
-            <View style={styles.closeCta}>{open}</View>
+            <View style={isExpanded ? styles.beatBodyWide : undefined}>
+              <Text style={styles.beatBody}>{beat.body}</Text>
+              {/* The app's own components, fed real data: a claim with
+                  the thing itself under it beats a claim with an icon
+                  over it. */}
+              <LandingProof kind={beat.kind} game={games?.[index + 2]} />
+            </View>
           </View>
+        ))}
 
-          <SiteFooter inset={inset} />
-        </ScrollView>
-      </SafeAreaView>
+        {/* The app's own object, at the size it deserves. */}
+        <View style={[styles.card, { paddingHorizontal: inset }]}>
+          <View style={styles.cardFrame}>
+            <GrainScrim style={StyleSheet.absoluteFill} />
+            <YearBlocks
+              months={SAMPLE_YEAR}
+              landed={null}
+              size={isExpanded ? 26 : 17}
+            />
+          </View>
+          <Text style={styles.cardCaption}>
+            A year of finishing things. One block for every set of credits you
+            actually reach.
+          </Text>
+        </View>
+
+        <View style={[styles.plain, { paddingHorizontal: inset }]}>
+          <Text style={styles.plainLead}>No account. No tracking.</Text>
+          <Text style={styles.plainBody}>
+            Your library lives in your browser and goes nowhere. There is
+            nothing to sign up for, nothing to cancel, and nobody selling what
+            you play. Game data comes from RAWG; lengths come from IGDB and from
+            you.
+          </Text>
+          <Text style={styles.plainBody}>
+            An independent project, not affiliated with any platform, publisher
+            or store. Open source at ginoleeswan/sidequest.
+          </Text>
+          <View style={styles.closeCta}>{open}</View>
+        </View>
+
+        {/* No bleed: this page pads its sections, not its scroller. */}
+        <SiteFooter pad={inset} />
+      </ScrollView>
     </Textured>
   );
 }
@@ -259,7 +285,7 @@ const styles = StyleSheet.create({
 
   // masthead
   masthead: { justifyContent: 'flex-end', overflow: 'hidden' },
-  mastheadCopy: { paddingTop: SPACING.xl, paddingBottom: SPACING.xl * 2 },
+  mastheadCopy: { paddingBottom: SPACING.xl * 2 },
   lockup: {
     flexDirection: 'row',
     alignItems: 'center',

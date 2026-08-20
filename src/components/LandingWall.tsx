@@ -9,6 +9,7 @@ import type { Game, Paged } from '@/api/types';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { COLORS } from '@/styles/colors';
+import { DURATION, EASING } from '@/styles/motion';
 import { RADIUS } from '@/styles/theme';
 
 /**
@@ -46,6 +47,93 @@ const KEPT = [1, 10, 19];
  * screen — the payoff played to an empty room.
  */
 const FADE_DISTANCE = 280;
+
+/** How far a lane wanders from where it started, in points. */
+const DRIFT = 34;
+
+/**
+ * One lane of the wall, drifting.
+ *
+ * Each lane travels on its own clock and starts at its own point in the
+ * cycle, because lanes moving together are an escalator and lanes
+ * moving apart are a heap settling. Nothing here loops back to a seam:
+ * it goes out and comes back, so there is no moment where the wall
+ * jumps.
+ */
+function Lane({
+  items,
+  index,
+  dim,
+  lit,
+}: {
+  items: { game: Game; index: number }[];
+  index: number;
+  dim: Animated.AnimatedInterpolation<number>;
+  lit: Animated.AnimatedInterpolation<number>;
+}) {
+  const reduced = useReducedMotion();
+  const wander = useAnimatedValue(0);
+
+  useEffect(() => {
+    if (reduced) return;
+    const duration = DURATION.drift + index * 2300;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(wander, {
+          toValue: 1,
+          duration,
+          easing: EASING.standard,
+          useNativeDriver: true,
+        }),
+        Animated.timing(wander, {
+          toValue: 0,
+          duration,
+          easing: EASING.standard,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [wander, index, reduced]);
+
+  const up = index % 2 === 0;
+  const travel = wander.interpolate({
+    inputRange: [0, 1],
+    outputRange: up ? [-DRIFT, DRIFT] : [DRIFT, -DRIFT],
+  });
+
+  return (
+    <Animated.View
+      style={[
+        styles.lane,
+        index % 2 === 1 && styles.laneOffset,
+        { transform: [{ translateY: travel }] },
+      ]}
+    >
+      {items.map(({ game, index: position }) => {
+        const kept = KEPT.includes(position);
+        return (
+          <Animated.View
+            key={game.id}
+            style={[
+              styles.slot,
+              kept && styles.kept,
+              { opacity: kept ? lit : dim },
+            ]}
+          >
+            <CoverImage
+              uri={game.background_image}
+              style={StyleSheet.absoluteFill}
+              size="thumb"
+              iconSize={18}
+            />
+          </Animated.View>
+        );
+      })}
+    </Animated.View>
+  );
+}
 
 export function LandingWall({ columns }: { columns: number }) {
   const reduced = useReducedMotion();
@@ -106,36 +194,13 @@ export function LandingWall({ columns }: { columns: number }) {
     <View style={styles.wall} pointerEvents="none">
       <View style={styles.lanes}>
         {dealt.map((lane, laneIndex) => (
-          <View
+          <Lane
             key={laneIndex}
-            style={[
-              styles.lane,
-              // Every other lane hangs lower, so the wall reads as a pile
-              // rather than as a table of contents.
-              laneIndex % 2 === 1 && styles.laneOffset,
-            ]}
-          >
-            {lane.map(({ game, index }) => {
-              const kept = KEPT.includes(index);
-              return (
-                <Animated.View
-                  key={game.id}
-                  style={[
-                    styles.slot,
-                    kept && styles.kept,
-                    { opacity: kept ? lit : dim },
-                  ]}
-                >
-                  <CoverImage
-                    uri={game.background_image}
-                    style={StyleSheet.absoluteFill}
-                    size="thumb"
-                    iconSize={18}
-                  />
-                </Animated.View>
-              );
-            })}
-          </View>
+            items={lane}
+            index={laneIndex}
+            dim={dim}
+            lit={lit}
+          />
         ))}
       </View>
     </View>
