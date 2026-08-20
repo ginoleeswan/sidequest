@@ -451,6 +451,16 @@ export async function getMustPlayGames(
   };
 }
 
+/**
+ * The rest of a game's series, for the games somebody finished.
+ *
+ * "You finished Hades. Hades II came out this week" is the only kind of
+ * news this app can honestly deliver: it comes from release dates and a
+ * library, not from a feed somebody else curates.
+ */
+export const getSeries = (id: number | string): Promise<Paged<Game>> =>
+  getGameSeries(id);
+
 export const searchGames = (
   query: string,
   pageNum = 1,

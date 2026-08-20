@@ -25,6 +25,8 @@ import { SectionHeader } from '@/components/SectionHeader';
 import { Textured } from '@/components/Textured';
 import { useToast } from '@/components/Toast';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { importTitles } from '@/api/steamImport';
+import { parseCsv } from '@/lib/csvImport';
 import { formatHours } from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
 import { STATUS_META, useLibrary, type LibraryStatus } from '@/lib/library';
@@ -96,7 +98,7 @@ function Stat({
 
 export default function LibraryScreen() {
   const router = useRouter();
-  const { byStatus, entries, count, exportJson, importJson, tags } =
+  const { byStatus, entries, count, exportJson, importJson, addGames, tags } =
     useLibrary();
   const { durationOf, learnDurations } = useDurations();
   const [sort, setSort] = useState<LibrarySort>('added');
@@ -120,6 +122,10 @@ export default function LibraryScreen() {
   const [shelf, setShelf] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [importText, setImportText] = useState('');
+  const [importing, setImporting] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
 
   const copyLibrary = async () => {
     try {
@@ -133,15 +139,62 @@ export default function LibraryScreen() {
     }
   };
 
-  const runImport = () => {
+  /**
+   * One box, two formats.
+   *
+   * A Sidequest export is JSON and arrives whole. Everything else — a
+   * Backloggd export, a HowLongToBeat export, a spreadsheet somebody has
+   * kept since 2014 — is CSV with names but no ids, so every title has
+   * to be looked up. Rather than making someone pick the right button,
+   * the paste is read for what it is.
+   */
+  const runImport = async () => {
+    const text = importText.trim();
     try {
-      const total = importJson(importText.trim());
+      const total = importJson(text);
       setImportOpen(false);
       setImportText('');
       toast(`Imported ${total} ${total === 1 ? 'game' : 'games'}`, 'download');
+      return;
     } catch {
-      toast('That doesn\u2019t look like a library export', 'alert-circle');
+      // Not our own export; try it as a spreadsheet.
     }
+
+    const { rows, headers } = parseCsv(text);
+    if (rows.length === 0) {
+      toast(
+        headers.length > 0
+          ? 'No title column in that — expected Title, Name or Game'
+          : 'That doesn\u2019t look like a library export',
+        'alert-circle'
+      );
+      return;
+    }
+
+    setImporting({ done: 0, total: rows.length });
+    const { matched, unmatched } = await importTitles(
+      rows.map((row) => row.title),
+      (done, total) => setImporting({ done, total })
+    );
+
+    const byTitle = new Map(rows.map((row) => [row.title, row]));
+    addGames(
+      matched.map(({ title, game }) => ({
+        game,
+        status: byTitle.get(title)?.status ?? ('wishlist' as const),
+        hoursPlayed: byTitle.get(title)?.hours,
+      }))
+    );
+
+    setImporting(null);
+    setImportOpen(false);
+    setImportText('');
+    toast(
+      unmatched.length === 0
+        ? `Imported ${matched.length} ${matched.length === 1 ? 'game' : 'games'}`
+        : `Imported ${matched.length}, couldn\u2019t match ${unmatched.length}`,
+      'download'
+    );
   };
 
   const games = sortLibrary(byStatus(tab), sort, hoursOf)
@@ -362,7 +415,9 @@ export default function LibraryScreen() {
           <Pressable style={styles.modalCard} onPress={() => {}}>
             <Text style={styles.modalTitle}>Import a library</Text>
             <Text style={styles.modalHint}>
-              On your other device: Library → Copy library. Then paste it here.
+              On your other device: Library → Copy library. Or paste a CSV
+              export from Backloggd, HowLongToBeat or a spreadsheet — a column
+              called Title, Name or Game is all it needs.
             </Text>
             <TextInput
               value={importText}
@@ -374,13 +429,17 @@ export default function LibraryScreen() {
             />
             <Pressable
               onPress={runImport}
-              disabled={importText.trim() === ''}
+              disabled={importText.trim() === '' || importing != null}
               style={[
                 styles.modalButton,
                 importText.trim() === '' && styles.modalButtonDisabled,
               ]}
             >
-              <Text style={styles.modalButtonText}>Merge into my library</Text>
+              <Text style={styles.modalButtonText}>
+                {importing
+                  ? `Matching ${importing.done} of ${importing.total}…`
+                  : 'Merge into my library'}
+              </Text>
             </Pressable>
           </Pressable>
         </Pressable>

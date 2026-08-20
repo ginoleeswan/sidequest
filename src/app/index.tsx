@@ -45,7 +45,9 @@ import { GameTile } from '@/components/GameTile';
 import { Message } from '@/components/Message';
 import { PageTitle } from '@/components/PageTitle';
 import { Rail } from '@/components/Rail';
+import { InstallPrompt } from '@/components/InstallPrompt';
 import { RecentShelf } from '@/components/RecentShelf';
+import { SeriesNews } from '@/components/SeriesNews';
 import { SearchInput } from '@/components/SearchInput';
 import { SectionHeader } from '@/components/SectionHeader';
 import { Shelf } from '@/components/Shelf';
@@ -507,6 +509,10 @@ export default function HomeScreen() {
                       <TonightCard />
                       <SurpriseButton games={games} />
                     </View>
+                    <View style={{ paddingHorizontal: SPACING.xl }}>
+                      <InstallPrompt />
+                    </View>
+                    <SeriesNews inset={SPACING.xl} />
                     <RecentShelf inset={SPACING.xl} />
                     <Shelf
                       section={QUICK_WINS}
@@ -653,6 +659,10 @@ export default function HomeScreen() {
                     <TonightCard />
                     <SurpriseButton games={games} />
                   </View>
+                  <View style={{ paddingHorizontal: SPACING.md }}>
+                    <InstallPrompt />
+                  </View>
+                  <SeriesNews inset={SPACING.md} />
                   <RecentShelf inset={SPACING.md} />
                   <Shelf
                     section={QUICK_WINS}

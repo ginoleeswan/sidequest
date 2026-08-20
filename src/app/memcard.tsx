@@ -16,9 +16,13 @@ import { SiteFooter } from '@/components/SiteFooter';
 import { Textured } from '@/components/Textured';
 import { useToast } from '@/components/Toast';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { useHydrated } from '@/hooks/useHydrated';
 import { useDurations } from '@/lib/durations';
 import { useLibrary } from '@/lib/library';
+import { dropInsight, readDrops, totalDrops } from '@/lib/drops';
 import { buildMemcard, memcardYears } from '@/lib/memcard';
+import { formatMinutes } from '@/lib/sessions';
+import { yearStats } from '@/lib/yearStats';
 import { shareMemcard } from '@/lib/memcardImage';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, RADIUS, SPACING } from '@/styles/theme';
@@ -43,6 +47,7 @@ export default function MemcardScreen() {
 
   const all = useMemo(() => Object.values(entries), [entries]);
   const years = useMemo(() => memcardYears(all), [all]);
+  const hydrated = useHydrated();
   const [thisYear] = useState(() => new Date().getFullYear());
   const [year, setYear] = useState<number | null>(null);
   const shown = year ?? years[0] ?? thisYear;
@@ -51,6 +56,18 @@ export default function MemcardScreen() {
     () => buildMemcard(all, (game) => durationOf(game).hours, shown),
     [all, durationOf, shown]
   );
+
+  /**
+   * The card is the brag; this is the mirror. Same year, the questions a
+   * share artifact would never put on itself: did the pile grow, how
+   * long was the longest silence, how much of this is measured rather
+   * than estimated.
+   */
+  const stats = useMemo(
+    () => yearStats(all, (entry) => durationOf(entry.game).hours, shown),
+    [all, durationOf, shown]
+  );
+  const drops = useMemo(() => (hydrated ? readDrops() : {}), [hydrated]);
 
   const save = async () => {
     setBusy(true);
@@ -121,6 +138,47 @@ export default function MemcardScreen() {
         ) : (
           <>
             <Memcard card={card} maxWidth={LAYOUT.maxContentWidth} />
+            <View style={styles.stats}>
+              <SectionHeader title="How the year is going" />
+              <Text style={styles.verdict}>{stats.verdict}</Text>
+              <View style={styles.statRow}>
+                <Stat value={String(stats.added)} label="saved this year" />
+                <Stat
+                  value={String(stats.finished)}
+                  label="finished"
+                  accent={stats.finished > 0}
+                />
+                {stats.medianLength > 0 && (
+                  <Stat
+                    value={`${Math.round(stats.medianLength)}h`}
+                    label="typical length"
+                  />
+                )}
+                {stats.longestGap > 14 && (
+                  <Stat
+                    value={`${stats.longestGap}d`}
+                    label="longest quiet spell"
+                  />
+                )}
+                {stats.measuredMinutes > 0 && (
+                  <Stat
+                    value={formatMinutes(stats.measuredMinutes)}
+                    label="timed here"
+                    accent
+                  />
+                )}
+                {totalDrops(drops) > 0 && (
+                  <Stat
+                    value={String(totalDrops(drops))}
+                    label="let go, guilt-free"
+                  />
+                )}
+              </View>
+              {dropInsight(drops) && (
+                <Text style={styles.insight}>{dropInsight(drops)}</Text>
+              )}
+            </View>
+
             {Platform.OS === 'web' && (
               <Pressable
                 onPress={save}
@@ -143,6 +201,26 @@ export default function MemcardScreen() {
       </View>
       <SiteFooter />
     </Textured>
+  );
+}
+
+/** One number and what it means, matching the library's stat strip. */
+function Stat({
+  value,
+  label,
+  accent,
+}: {
+  value: string;
+  label: string;
+  accent?: boolean;
+}) {
+  return (
+    <View style={styles.stat}>
+      <Text style={[styles.statValue, accent && styles.statAccent]}>
+        {value}
+      </Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
   );
 }
 
@@ -178,6 +256,31 @@ const styles = StyleSheet.create({
   saveText: {
     ...TYPE.label,
     color: COLORS.darkGrey,
+  },
+  stats: { gap: SPACING.sm, marginTop: SPACING.lg },
+  verdict: {
+    ...TYPE.p,
+    color: COLORS.lightGrey,
+  },
+  statRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.xl,
+    marginTop: SPACING.xs,
+  },
+  stat: { gap: 2 },
+  statValue: {
+    ...TYPE.h3,
+    color: COLORS.white,
+  },
+  statAccent: { color: COLORS.accent },
+  statLabel: {
+    ...TYPE.micro,
+    color: COLORS.mediumGrey,
+  },
+  insight: {
+    ...TYPE.caption,
+    color: COLORS.mediumGrey,
   },
 });
 
