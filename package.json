@@ -16,7 +16,9 @@
     "test:watch": "jest --watch",
     "build": "node scripts/build-sitemap.mjs && expo export --platform web",
     "test:hydration": "node e2e/hydration.mjs",
-    "test:a11y": "node e2e/a11y.mjs"
+    "test:a11y": "node e2e/a11y.mjs",
+    "test:perf": "node e2e/perf.mjs",
+    "test:icons": "node e2e/icons.mjs"
   },
   "engines": {
     "node": ">=20.19.4"

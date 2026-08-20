@@ -1,5 +1,5 @@
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
-import { FontDisplay, useFonts } from 'expo-font';
+import { FontDisplay, useFonts, type FontSource } from 'expo-font';
 import { Stack, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -33,6 +33,48 @@ function ScrollToTop() {
 
 SplashScreen.preventAutoHideAsync();
 
+/**
+ * The same three weights in the format each platform can read.
+ *
+ * Web takes woff2: 99 KB for all three against 291 KB of TTF, with the
+ * same 711 glyphs — and the largest thing on the page is text, so those
+ * bytes are on the path to the last paint. Native cannot read woff2, so
+ * it keeps the TTFs.
+ */
+const FACES: Record<string, FontSource> =
+  Platform.OS === 'web'
+    ? {
+        /**
+         * Ionicons, cut down to the glyphs this app names.
+         *
+         * Registered under the family name @expo/vector-icons uses, and
+         * before any icon mounts, so its own `Font.isLoaded('ionicons')`
+         * check passes and the vendored 381 KB TTF — the largest asset
+         * the site had — is never requested. See scripts/subset-icons.
+         */
+        ionicons: {
+          uri: require('../../assets/fonts/ionicons-subset.woff2'),
+          display: FontDisplay.SWAP,
+        },
+        'Noah-Black': {
+          uri: require('../../assets/fonts/Noah-Black.woff2'),
+          display: FontDisplay.SWAP,
+        },
+        'Noah-Bold': {
+          uri: require('../../assets/fonts/Noah-Bold.woff2'),
+          display: FontDisplay.SWAP,
+        },
+        'Noah-Regular': {
+          uri: require('../../assets/fonts/Noah-Regular.woff2'),
+          display: FontDisplay.SWAP,
+        },
+      }
+    : {
+        'Noah-Black': require('../../assets/fonts/Noah-Black.ttf'),
+        'Noah-Bold': require('../../assets/fonts/Noah-Bold.ttf'),
+        'Noah-Regular': require('../../assets/fonts/Noah-Regular.ttf'),
+      };
+
 export default function RootLayout() {
   /**
    * `swap`, not the default `auto`.
@@ -44,20 +86,7 @@ export default function RootLayout() {
    * `swap` the copy is readable immediately in the fallback and
    * re-renders in Noah when it lands.
    */
-  const [fontsLoaded, fontError] = useFonts({
-    'Noah-Black': {
-      uri: require('../../assets/fonts/Noah-Black.ttf'),
-      display: FontDisplay.SWAP,
-    },
-    'Noah-Bold': {
-      uri: require('../../assets/fonts/Noah-Bold.ttf'),
-      display: FontDisplay.SWAP,
-    },
-    'Noah-Regular': {
-      uri: require('../../assets/fonts/Noah-Regular.ttf'),
-      display: FontDisplay.SWAP,
-    },
-  });
+  const [fontsLoaded, fontError] = useFonts(FACES);
 
   useEffect(() => {
     // Don't hold the splash hostage to a font that will never arrive.
