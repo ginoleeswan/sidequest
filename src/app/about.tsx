@@ -116,6 +116,21 @@ export default function AboutScreen() {
    * one has to carry a screen on its own.
    */
   const display = Math.round(Math.min(Math.max(width * 0.098, 38), 104));
+  /**
+   * The sum, set as the number it is.
+   *
+   * Ninety-six points is the app's watermark numeral, which is right
+   * behind a tile and small for a statement that has a whole band to
+   * itself. This is the single most persuasive thing on the page, so it
+   * gets the room.
+   */
+  const sum = Math.round(Math.min(Math.max(width * 0.15, 84), 196));
+  const figure = {
+    fontSize: sum,
+    lineHeight: Math.round(sum * 0.92),
+    letterSpacing: Math.round(sum * -0.055),
+  };
+  const unit = { fontSize: Math.round(sum * 0.42) };
   const masthead = {
     fontSize: display,
     lineHeight: Math.round(display * 1.02),
@@ -206,16 +221,27 @@ export default function AboutScreen() {
               it is. This is the whole case for the product, and it is
               more persuasive than any sentence about it. */}
         <WhenNear placeholder={<View style={styles.sumRoom} />}>
-          <View style={[styles.sum, { paddingHorizontal: inset }]}>
-            <Text style={styles.sumLead}>The average backlog is</Text>
-            <Text style={styles.sumFigure}>
-              900<Text style={styles.sumUnit}>h</Text>
-            </Text>
-            <Text style={styles.sumTail}>
-              and the average week has about six in it. That is fifteen years of
-              evenings, which is not a to-do list — it is a fantasy about a
-              different life.
-            </Text>
+          <View style={styles.band}>
+            <View
+              style={[
+                styles.sum,
+                { paddingHorizontal: inset },
+                isExpanded && styles.sumWide,
+              ]}
+            >
+              <View style={isExpanded && styles.sumFigureWide}>
+                <Text style={styles.sumLead}>The average backlog is</Text>
+                <Text style={[styles.sumFigure, figure]}>
+                  900
+                  <Text style={[styles.sumUnit, unit]}>h</Text>
+                </Text>
+              </View>
+              <Text style={[styles.sumTail, isExpanded && styles.sumTailWide]}>
+                and the average week has about six in it. That is fifteen years
+                of evenings, which is not a to-do list — it is a fantasy about a
+                different life.
+              </Text>
+            </View>
           </View>
         </WhenNear>
 
@@ -226,6 +252,10 @@ export default function AboutScreen() {
               styles.beat,
               { paddingHorizontal: inset },
               isExpanded && styles.beatWide,
+              // Every other one turned around. Three identical
+              // two-column splits stacked is a table; alternating them
+              // is what makes a reader's eye travel down a page.
+              isExpanded && index % 2 === 1 && styles.beatFlipped,
             ]}
           >
             <Text style={[styles.beatLead, isExpanded && styles.beatLeadWide]}>
@@ -242,7 +272,7 @@ export default function AboutScreen() {
         ))}
 
         {/* The app's own object, at the size it deserves. */}
-        <View style={[styles.card, { paddingHorizontal: inset }]}>
+        <View style={[styles.band, styles.card, { paddingHorizontal: inset }]}>
           <View style={styles.cardFrame}>
             <GrainScrim style={StyleSheet.absoluteFill} />
             <YearBlocks
@@ -257,19 +287,29 @@ export default function AboutScreen() {
           </Text>
         </View>
 
-        <View style={[styles.plain, { paddingHorizontal: inset }]}>
-          <Text style={styles.plainLead}>No account. No tracking.</Text>
-          <Text style={styles.plainBody}>
-            Your library lives in your browser and goes nowhere. There is
-            nothing to sign up for, nothing to cancel, and nobody selling what
-            you play. Game data comes from RAWG; lengths come from IGDB and from
-            you.
-          </Text>
-          <Text style={styles.plainBody}>
-            An independent project, not affiliated with any platform, publisher
-            or store. Open source at ginoleeswan/sidequest.
-          </Text>
-          <View style={styles.closeCta}>{open}</View>
+        <View
+          style={[
+            styles.plain,
+            { paddingHorizontal: inset },
+            isExpanded && styles.plainWide,
+          ]}
+        >
+          <View style={isExpanded ? styles.plainCopy : undefined}>
+            <Text style={styles.plainLead}>No account. No tracking.</Text>
+            <Text style={styles.plainBody}>
+              Your library lives in your browser and goes nowhere. There is
+              nothing to sign up for, nothing to cancel, and nobody selling what
+              you play. Game data comes from RAWG; lengths come from IGDB and
+              from you.
+            </Text>
+            <Text style={styles.plainBody}>
+              An independent project, not affiliated with any platform,
+              publisher or store. Open source at ginoleeswan/sidequest.
+            </Text>
+          </View>
+          <View style={[styles.closeCta, isExpanded && styles.closeCtaWide]}>
+            {open}
+          </View>
         </View>
 
         {/* No bleed: this page pads its sections, not its scroller. */}
@@ -281,7 +321,13 @@ export default function AboutScreen() {
 
 const styles = StyleSheet.create({
   background: { flexGrow: 1, backgroundColor: COLORS.darkGrey },
-  scroll: { maxWidth: LAYOUT.maxExpandedWidth, width: '100%' },
+  // Centred past the cap, or a 4K monitor gets the whole page pinned to
+  // its left edge with half a screen of nothing beside it.
+  scroll: {
+    maxWidth: LAYOUT.maxExpandedWidth,
+    width: '100%',
+    alignSelf: 'center',
+  },
 
   // masthead
   masthead: { justifyContent: 'flex-end', overflow: 'hidden' },
@@ -324,13 +370,27 @@ const styles = StyleSheet.create({
   },
   ctaLabel: { ...TYPE.label, color: COLORS.navy },
 
+  /**
+   * Bands, not hairlines.
+   *
+   * Every section shared one background and was separated by a rule,
+   * which reads as one long scroll with faint lines in it rather than
+   * as a page with parts. Alternating the ground is what gives a
+   * landing page its rhythm, and it works at both widths — where an
+   * asymmetric column layout only works at one.
+   */
+  band: { backgroundColor: COLORS.navy },
+
   // the sum
   sumRoom: { height: 320 },
-  sum: {
-    paddingVertical: SPACING.xl * 2,
-    borderTopWidth: 1,
-    borderColor: COLORS.stroke,
+  sum: { paddingVertical: SPACING.xl * 2 },
+  sumWide: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xl * 2,
   },
+  sumFigureWide: { flexShrink: 0 },
+  sumTailWide: { flex: 1, maxWidth: 560 },
   sumLead: { ...TYPE.micro, color: COLORS.mediumGrey },
   sumFigure: {
     ...TYPE.numeral,
@@ -347,13 +407,17 @@ const styles = StyleSheet.create({
   },
 
   // the three beats
-  beat: {
-    paddingVertical: SPACING.xl,
-    borderTopWidth: 1,
-    borderColor: COLORS.stroke,
-    gap: SPACING.md,
+  beat: { paddingVertical: SPACING.xl, gap: SPACING.md },
+  beatWide: {
+    flexDirection: 'row',
+    // Tops aligned, not centres. Centred against a tall column the lead
+    // floated in the middle of its own row with nothing beside it,
+    // reading as two unrelated things rather than a claim and its
+    // evidence.
+    alignItems: 'flex-start',
+    gap: SPACING.xl * 2,
   },
-  beatWide: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.xl },
+  beatFlipped: { flexDirection: 'row-reverse' },
   beatLead: { ...TYPE.title, color: COLORS.white, maxWidth: 420 },
   beatLeadWide: { flex: 1.1 },
   beatBody: {
@@ -363,13 +427,11 @@ const styles = StyleSheet.create({
     color: COLORS.mediumGrey,
     maxWidth: 480,
   },
-  beatBodyWide: { flex: 1, marginTop: 6 },
+  beatBodyWide: { flex: 1 },
 
   // the card
   card: {
     paddingVertical: SPACING.xl * 2,
-    borderTopWidth: 1,
-    borderColor: COLORS.stroke,
     alignItems: 'center',
     gap: SPACING.lg,
   },
@@ -377,8 +439,10 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: COLORS.stroke,
-    backgroundColor: COLORS.navy,
+    borderColor: COLORS.strokeStrong,
+    // A shade under the band it now sits on. Navy on navy would have
+    // been an object vanishing into the ground it was placed on.
+    backgroundColor: '#1F2634',
     overflow: 'hidden',
   },
   cardCaption: {
@@ -388,12 +452,15 @@ const styles = StyleSheet.create({
   },
 
   // the plain truth
-  plain: {
-    paddingVertical: SPACING.xl * 2,
-    borderTopWidth: 1,
-    borderColor: COLORS.stroke,
-    gap: SPACING.md,
+  plain: { paddingVertical: SPACING.xl * 2, gap: SPACING.md },
+  plainWide: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: SPACING.xl * 2,
   },
+  plainCopy: { flex: 1, gap: SPACING.md },
+  closeCtaWide: { marginTop: 0, flexShrink: 0 },
   plainLead: { ...TYPE.title, color: COLORS.white },
   plainBody: {
     ...TYPE.body,
