@@ -73,6 +73,8 @@ function GameRow({
       style={[styles.row, picked && styles.rowPicked]}
       accessibilityRole="checkbox"
       accessibilityState={{ checked: picked }}
+      // See tidy.tsx: web reads aria-checked, not accessibilityState.
+      aria-checked={picked}
       accessibilityLabel={game.name}
     >
       <View style={[styles.box, picked && styles.boxOn]}>

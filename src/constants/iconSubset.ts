@@ -62,6 +62,7 @@ export const SUBSET_ICONS = [
   'share-outline',
   'shield',
   'sparkles',
+  'sparkles-outline',
   'speedometer',
   'star',
   'star-outline',
