@@ -9,5 +9,6 @@ Disallow: /plan
 Disallow: /import
 Disallow: /memcard
 Disallow: /tidy
+Disallow: /shared
 
 Sitemap: https://sidequest-bice-nu.vercel.app/sitemap.xml

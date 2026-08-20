@@ -40,6 +40,7 @@ const ROUTES = [
   '/import',
   '/memcard',
   '/tidy',
+  '/shared',
   '/by/developer',
   '/about',
   '/terms',

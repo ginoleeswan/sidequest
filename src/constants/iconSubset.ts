@@ -46,6 +46,7 @@ export const SUBSET_ICONS = [
   'library',
   'library-outline',
   'link',
+  'link-outline',
   'locate',
   'logo-apple',
   'logo-playstation',

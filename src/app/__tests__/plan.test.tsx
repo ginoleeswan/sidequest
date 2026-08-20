@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react-native';
+import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import PlanScreen from '../plan';
 import type { Game } from '@/api/types';
@@ -56,7 +56,8 @@ describe('the plan screen', () => {
     ]);
     await renderApp(<PlanScreen />);
     expect(screen.getByText('Your route')).toBeTruthy();
-    expect(screen.getByText('Celeste')).toBeTruthy();
+    // Once in the week, once in the route.
+    expect(screen.getAllByText('Celeste').length).toBeGreaterThan(0);
   });
 
   it('lets you correct a length from the plan itself', async () => {
@@ -170,5 +171,50 @@ describe('the plan screen', () => {
     ]);
     await renderApp(<PlanScreen />);
     expect(screen.getByText(/Move the date, or let it go/)).toBeTruthy();
+  });
+
+  /**
+   * "Done by 4 Sep" is an ordering; "Tonight 1.5h, Tomorrow 1.5h" is a
+   * plan. The week is the same schedule, spread across the evenings
+   * somebody actually has.
+   */
+  it('spreads the plan across the evenings you have', async () => {
+    seed([{ game: game(1, 'Celeste', 6), status: 'wishlist' }]);
+    await renderApp(<PlanScreen />);
+    expect(screen.getByText('This week')).toBeTruthy();
+    // "Tonight" is also the heading on the tonight card above it.
+    expect(screen.getAllByText('Tonight').length).toBeGreaterThan(1);
+    expect(screen.getByText('Tomorrow')).toBeTruthy();
+  });
+
+  it('marks the evening the credits roll', async () => {
+    seed([{ game: game(1, 'Short', 1), status: 'wishlist' }]);
+    await renderApp(<PlanScreen />);
+    expect(screen.getAllByText(/credits/).length).toBeGreaterThan(0);
+  });
+
+  it('shows no week at all when there is nothing scheduled', async () => {
+    seed([{ game: game(1, 'Unknown length', 0), status: 'wishlist' }]);
+    await renderApp(<PlanScreen />);
+    expect(screen.queryByText('This week')).toBeNull();
+  });
+
+  it('hands the plan over as a link that carries itself', async () => {
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(globalThis, 'navigator', {
+      configurable: true,
+      value: { clipboard: { writeText } },
+    });
+    seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
+    await renderApp(<PlanScreen />);
+    await fireEvent.press(screen.getByLabelText('Copy a link to this plan'));
+    await waitFor(() => expect(writeText).toHaveBeenCalled());
+    expect(writeText.mock.calls[0][0]).toContain('/shared?p=');
+  });
+
+  it('offers no link when there is no plan to share', async () => {
+    seed([{ game: game(1, 'Unknown', 0), status: 'wishlist' }]);
+    await renderApp(<PlanScreen />);
+    expect(screen.queryByLabelText('Copy a link to this plan')).toBeNull();
   });
 });

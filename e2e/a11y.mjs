@@ -28,6 +28,7 @@ const ROUTES = [
   '/import',
   '/memcard',
   '/tidy',
+  '/shared',
   '/game/3498',
   '/by/developer?id=9&name=Supergiant%20Games',
   '/about',
