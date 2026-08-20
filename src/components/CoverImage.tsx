@@ -74,23 +74,36 @@ export function CoverImage({
   }
 
   return (
-    <Image
-      source={{ uri: src }}
-      style={style as object}
-      contentFit={contentFit}
-      transition={DURATION.base}
-      onError={() => setFailed(true)}
-      accessible={!!label}
-      accessibilityRole={label ? 'image' : undefined}
-      accessibilityLabel={label}
-      // Decorative by default: a cover beside its own title is noise.
-      importantForAccessibility={label ? 'yes' : 'no-hide-descendants'}
-      alt={label ?? ''}
-    />
+    // The caller's style describes the slot — where it sits, how big, how
+    // round — so it stays on the frame, and the picture fills it.
+    <View style={style}>
+      <Image
+        source={{ uri: src }}
+        style={StyleSheet.absoluteFill}
+        contentFit={contentFit}
+        transition={DURATION.base}
+        onError={() => setFailed(true)}
+        accessible={!!label}
+        accessibilityRole={label ? 'image' : undefined}
+        accessibilityLabel={label}
+        // Decorative by default: a cover beside its own title is noise.
+        importantForAccessibility={label ? 'yes' : 'no-hide-descendants'}
+        alt={label ?? ''}
+      />
+      <View style={styles.veil} pointerEvents="none" />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  veil: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: COLORS.grade,
+  },
   fallback: {
     backgroundColor: COLORS.navy,
     alignItems: 'center',

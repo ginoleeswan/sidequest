@@ -199,6 +199,23 @@ const css = `
    * focus into the dialog, so the very first screen carried a colour the
    * app never uses anywhere else. It is the accent now. (COLORS.accent)
    */
+  /*
+   * The grade every cover wears.
+   *
+   * Every <img> in this app is publisher key art — a few thousand
+   * different briefs, each graded to shout on somebody else's store
+   * page. Pulled fractionally off full saturation, with a touch of
+   * contrast to hold the blacks, they stop competing and start looking
+   * like one page. The rest of the unification is a veil at the app's
+   * own colour, which CoverImage lays over each frame.
+   *
+   * It lives here because react-native-web drops style keys it does not
+   * recognise, so the filter property is unreachable from a StyleSheet.
+   * Measured both ways — RN's array form and a CSS string — and both
+   * computed to none.
+   */
+  #root img { filter: saturate(0.92) contrast(1.03); }
+
   :focus { outline: none; }
   :focus-visible {
     outline: 2px solid #F2A93B;
