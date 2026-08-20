@@ -2,6 +2,7 @@ import {
   keepPreviousData,
   useInfiniteQuery,
   useQueries,
+  useQuery,
 } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -26,7 +27,7 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { queryKeys } from '@/api/queryClient';
-import { friendlyError, searchGames } from '@/api/rawg';
+import { friendlyError, searchCreators, searchGames } from '@/api/rawg';
 import type { Game, Paged } from '@/api/types';
 import { RouteError } from '@/components/RouteError';
 import { Chip } from '@/components/Chip';
@@ -39,6 +40,7 @@ import { GameTile } from '@/components/GameTile';
 import { Message } from '@/components/Message';
 import { PageTitle } from '@/components/PageTitle';
 import { Rail } from '@/components/Rail';
+import { RecentShelf } from '@/components/RecentShelf';
 import { SearchInput } from '@/components/SearchInput';
 import { SectionHeader } from '@/components/SectionHeader';
 import { Shelf } from '@/components/Shelf';
@@ -178,6 +180,20 @@ export default function HomeScreen() {
       last.next ? pages.length + 1 : undefined,
   });
 
+  /**
+   * Studios and publishers matching the same words.
+   *
+   * "Supergiant" used to find nothing at all, because search only ever
+   * looked at game titles. Asked only while searching, and only for
+   * something long enough to mean a name.
+   */
+  const creators = useQuery({
+    queryKey: ['creators', debouncedQuery],
+    queryFn: () => searchCreators(debouncedQuery),
+    enabled: searching && debouncedQuery.trim().length >= 3,
+    staleTime: 10 * 60 * 1000,
+  });
+
   const shelves = useQueries({
     queries: HOME_SHELVES.map((shelf) => ({
       queryKey: queryKeys.shelf(shelf.key),
@@ -289,6 +305,27 @@ export default function HomeScreen() {
           totalCount ? `${totalCount.toLocaleString()} games` : undefined
         }
       />
+      {(creators.data?.length ?? 0) > 0 && (
+        <View style={styles.creatorRow}>
+          <Text style={styles.creatorLabel}>Also by</Text>
+          {creators.data?.map((creator) => (
+            <Chip
+              key={`${creator.kind}-${creator.id}`}
+              title={`${creator.name} (${creator.gamesCount})`}
+              onPress={() =>
+                router.push({
+                  pathname: '/by/[kind]',
+                  params: {
+                    kind: creator.kind,
+                    id: String(creator.id),
+                    name: creator.name,
+                  },
+                })
+              }
+            />
+          ))}
+        </View>
+      )}
       <FilterBar value={refine} onChange={setRefine} />
       {refining && <ProgressLine />}
     </View>
@@ -391,6 +428,7 @@ export default function HomeScreen() {
                       <TonightCard />
                       <SurpriseButton games={games} />
                     </View>
+                    <RecentShelf inset={SPACING.xl} />
                     <Shelf
                       section={QUICK_WINS}
                       games={quickWins}
@@ -481,6 +519,7 @@ export default function HomeScreen() {
                     <TonightCard />
                     <SurpriseButton games={games} />
                   </View>
+                  <RecentShelf inset={SPACING.md} />
                   <Shelf
                     section={QUICK_WINS}
                     games={quickWins}
@@ -651,6 +690,16 @@ const styles = StyleSheet.create({
   homeScroll: { flexGrow: 1 },
 
   // grid
+  creatorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+  },
+  creatorLabel: {
+    ...TYPE.micro,
+    color: COLORS.mediumGrey,
+  },
   gridHeader: { marginBottom: SPACING.md, gap: SPACING.md },
   gridRow: { gap: LAYOUT.gridGap },
   gridContent: {

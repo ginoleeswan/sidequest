@@ -16,10 +16,11 @@ import { TYPE } from '@/styles/typography';
  * yours. It stays on the device with the rest of the library.
  */
 export function PersonalNote({ gameId }: { gameId: number }) {
-  const { entries, setNote, setRating } = useLibrary();
+  const { entries, setNote, setRating, addTag, removeTag, tags } = useLibrary();
   const entry = entries[String(gameId)];
   const stored = entry?.note ?? '';
   const [draft, setDraft] = useState(stored);
+  const [tagDraft, setTagDraft] = useState('');
 
   // The library arrives after the first render — it is gated on
   // hydration — so the box has to adopt a note that appears later, and
@@ -76,6 +77,55 @@ export function PersonalNote({ gameId }: { gameId: number }) {
         accessibilityLabel="Your note on this game"
       />
 
+      <View style={styles.tags}>
+        {(entry.tags ?? []).map((tag) => (
+          <Pressable
+            key={tag}
+            onPress={() => removeTag(gameId, tag)}
+            style={styles.tag}
+            accessibilityRole="button"
+            accessibilityLabel={`Remove the ${tag} shelf`}
+          >
+            <Text style={styles.tagText}>{tag}</Text>
+            <Ionicons name="close" size={11} color={COLORS.mediumGrey} />
+          </Pressable>
+        ))}
+        <TextInput
+          value={tagDraft}
+          onChangeText={setTagDraft}
+          onSubmitEditing={() => {
+            addTag(gameId, tagDraft);
+            setTagDraft('');
+          }}
+          placeholder="+ shelf"
+          placeholderTextColor={COLORS.mediumGrey}
+          style={styles.tagInput}
+          accessibilityLabel="Add this game to one of your shelves"
+          returnKeyType="done"
+        />
+      </View>
+
+      {/* Shelves already in use, so a second game joins the same one
+          rather than starting "Co-op" next to "co op". */}
+      {tagDraft === '' &&
+        tags.filter((tag) => !(entry.tags ?? []).includes(tag)).length > 0 && (
+          <View style={styles.suggestions}>
+            {tags
+              .filter((tag) => !(entry.tags ?? []).includes(tag))
+              .slice(0, 6)
+              .map((tag) => (
+                <Pressable
+                  key={tag}
+                  onPress={() => addTag(gameId, tag)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Add to ${tag}`}
+                >
+                  <Text style={styles.suggestion}>+ {tag}</Text>
+                </Pressable>
+              ))}
+          </View>
+        )}
+
       {draft !== stored && (
         <Pressable
           onPress={() => setNote(gameId, draft)}
@@ -110,6 +160,38 @@ const styles = StyleSheet.create({
     minHeight: 64,
     textAlignVertical: 'top',
     outlineWidth: 0,
+  },
+  tags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  tag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderWidth: 1,
+    borderColor: COLORS.strokeStrong,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.sm + 2,
+    paddingVertical: 4,
+  },
+  tagText: {
+    ...TYPE.labelTiny,
+    color: COLORS.lightGrey,
+  },
+  tagInput: {
+    ...TYPE.labelTiny,
+    color: COLORS.lightGrey,
+    minWidth: 90,
+    paddingVertical: 4,
+    outlineWidth: 0,
+  },
+  suggestions: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.md },
+  suggestion: {
+    ...TYPE.fine,
+    color: COLORS.mediumGrey,
   },
   save: { alignSelf: 'flex-start' },
   saveText: {

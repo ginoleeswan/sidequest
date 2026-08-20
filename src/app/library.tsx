@@ -96,7 +96,8 @@ function Stat({
 
 export default function LibraryScreen() {
   const router = useRouter();
-  const { byStatus, entries, count, exportJson, importJson } = useLibrary();
+  const { byStatus, entries, count, exportJson, importJson, tags } =
+    useLibrary();
   const { durationOf, learnDurations } = useDurations();
   const [sort, setSort] = useState<LibrarySort>('added');
 
@@ -116,6 +117,7 @@ export default function LibraryScreen() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const [tab, setTab] = useState<LibraryStatus>('wishlist');
+  const [shelf, setShelf] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [importText, setImportText] = useState('');
 
@@ -142,9 +144,9 @@ export default function LibraryScreen() {
     }
   };
 
-  const games = sortLibrary(byStatus(tab), sort, hoursOf).map(
-    (entry) => entry.game
-  );
+  const games = sortLibrary(byStatus(tab), sort, hoursOf)
+    .filter((entry) => shelf == null || (entry.tags ?? []).includes(shelf))
+    .map((entry) => entry.game);
 
   return (
     <Textured style={styles.background}>
@@ -249,6 +251,24 @@ export default function LibraryScreen() {
               />
             ))}
           </View>
+
+          {tags.length > 0 && (
+            <View style={styles.shelfRow}>
+              <Chip
+                title="All shelves"
+                selected={shelf == null}
+                onPress={() => setShelf(null)}
+              />
+              {tags.map((tag) => (
+                <Chip
+                  key={tag}
+                  title={tag}
+                  selected={shelf === tag}
+                  onPress={() => setShelf(shelf === tag ? null : tag)}
+                />
+              ))}
+            </View>
+          )}
 
           {games.length > 1 && (
             <View style={styles.sortRow}>
@@ -399,6 +419,7 @@ const styles = StyleSheet.create({
     ...TYPE.micro,
     color: COLORS.mediumGrey,
   },
+  shelfRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
   sortRow: {
     flexDirection: 'row',
     alignItems: 'center',

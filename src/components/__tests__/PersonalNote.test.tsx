@@ -79,4 +79,49 @@ describe('your own take on a game', () => {
     );
     await waitFor(() => expect(saved().rating).toBeUndefined());
   });
+
+  /**
+   * Shelves are the part three statuses cannot say: "co-op", "with
+   * Sam", "winter". They are yours, so the app does not police them —
+   * it only refuses to keep two spellings of the same one.
+   */
+  it('puts a game on a shelf of your own', async () => {
+    seed();
+    await renderApp(<PersonalNote gameId={1} />);
+    await fireEvent(
+      screen.getByLabelText('Add this game to one of your shelves'),
+      'changeText',
+      'co-op'
+    );
+    await fireEvent(
+      screen.getByLabelText('Add this game to one of your shelves'),
+      'submitEditing'
+    );
+    await waitFor(() => expect(saved().tags).toEqual(['co-op']));
+  });
+
+  it('takes it off again', async () => {
+    seed({ tags: ['co-op'] });
+    await renderApp(<PersonalNote gameId={1} />);
+    await fireEvent.press(screen.getByLabelText('Remove the co-op shelf'));
+    await waitFor(() => expect(saved().tags).toBeUndefined());
+  });
+
+  it('will not keep two spellings of one shelf', async () => {
+    seed({ tags: ['Co-op'] });
+    await renderApp(<PersonalNote gameId={1} />);
+    const box = screen.getByLabelText('Add this game to one of your shelves');
+    await fireEvent(box, 'changeText', 'co-op');
+    await fireEvent(box, 'submitEditing');
+    await waitFor(() => expect(saved().tags).toEqual(['Co-op']));
+  });
+
+  it('ignores an empty shelf name', async () => {
+    seed();
+    await renderApp(<PersonalNote gameId={1} />);
+    const box = screen.getByLabelText('Add this game to one of your shelves');
+    await fireEvent(box, 'changeText', '   ');
+    await fireEvent(box, 'submitEditing');
+    await waitFor(() => expect(saved().tags).toBeUndefined());
+  });
 });

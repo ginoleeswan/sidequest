@@ -38,12 +38,35 @@ let respond: () => Response;
 beforeAll(() => {
   store = useFakeStorage();
   process.env.EXPO_PUBLIC_RAWG_API_KEY = 'test-key';
-  globalThis.fetch = jest.fn(async () => respond()) as unknown as typeof fetch;
+  globalThis.fetch = jest.fn(async (input: RequestInfo | URL) => {
+    const url = String(input);
+    // Studios and publishers are their own endpoints; everything else is
+    // whatever the test asked for.
+    if (url.includes('/developers'))
+      return new Response(
+        JSON.stringify({
+          results: [
+            { id: 9, name: 'Supergiant Games', slug: 'sg', games_count: 8 },
+          ],
+        })
+      );
+    if (url.includes('/publishers'))
+      return new Response(JSON.stringify({ results: [] }));
+    return respond();
+  }) as unknown as typeof fetch;
 });
 afterAll(() => {
   process.env.EXPO_PUBLIC_RAWG_API_KEY = ORIGINAL_KEY;
 });
 beforeEach(() => {
+  // Each test starts on a desktop-shaped screen; the compact test opts
+  // out for itself rather than leaving everyone after it on a phone.
+  jest.mocked(useBreakpoint).mockReturnValue({
+    width: 1280,
+    isCompact: false,
+    isExpanded: true,
+    columns: 4,
+  });
   for (const k of Object.keys(store)) delete store[k];
   // Onboarding would cover the screen on a first visit.
   store['sidequest.onboarded.v1'] = JSON.stringify(true);
@@ -152,5 +175,33 @@ describe('the home screen', () => {
     );
     // The rail's tagline is the one string only the sidebar renders.
     expect(screen.queryByText('Discover your next game')).toBeNull();
+  });
+
+  /**
+   * Search only ever looked at game titles, so the name of a studio
+   * found nothing — the one search everybody tries after finishing
+   * something they loved.
+   */
+  it('offers the studio as well as the games', async () => {
+    jest.useFakeTimers();
+    try {
+      await renderApp(<HomeScreen />);
+      await act(async () => {
+        jest.advanceTimersByTime(500);
+      });
+      await fireEvent.changeText(
+        screen.getByPlaceholderText('Search games…'),
+        'supergiant'
+      );
+      await act(async () => {
+        jest.advanceTimersByTime(500);
+      });
+      await waitFor(() =>
+        expect(screen.getByText('Supergiant Games (8)')).toBeTruthy()
+      );
+      expect(screen.getByText('Also by')).toBeTruthy();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

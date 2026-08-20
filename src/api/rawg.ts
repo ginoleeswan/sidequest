@@ -198,6 +198,92 @@ async function rawg<T>(
   return res.json() as Promise<T>;
 }
 
+/** A studio or a label, as something you can browse. */
+export interface Creator {
+  kind: 'developer' | 'publisher';
+  id: number;
+  name: string;
+  slug: string;
+  gamesCount: number;
+  image: string | null;
+}
+
+interface CreatorRow {
+  id: number;
+  name: string;
+  slug: string;
+  games_count?: number;
+  image_background?: string | null;
+}
+
+/**
+ * Studios and publishers matching a search.
+ *
+ * Searching this app only ever looked at game titles, so "Supergiant"
+ * found nothing and "Annapurna" found a game with it in the name. Both
+ * endpoints are asked at once and the answers are ranked by catalogue
+ * size, because the studio someone means is almost always the one with
+ * the games.
+ */
+export async function searchCreators(query: string): Promise<Creator[]> {
+  const term = query.trim();
+  if (term.length < 3) return [];
+
+  const [developers, publishers] = await Promise.all([
+    rawg<Paged<CreatorRow>>('developers', {
+      search: term,
+      page_size: '5',
+    }).catch(() => null),
+    rawg<Paged<CreatorRow>>('publishers', {
+      search: term,
+      page_size: '5',
+    }).catch(() => null),
+  ]);
+
+  const asCreator = (kind: Creator['kind']) => (row: CreatorRow) => ({
+    kind,
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    gamesCount: row.games_count ?? 0,
+    image: row.image_background ?? null,
+  });
+
+  const found = [
+    ...(developers?.results ?? []).map(asCreator('developer')),
+    ...(publishers?.results ?? []).map(asCreator('publisher')),
+  ];
+
+  // A studio and its own publishing arm are usually the same name; keep
+  // whichever has the bigger catalogue rather than offering both.
+  const byName = new Map<string, Creator>();
+  for (const creator of found) {
+    const key = creator.name.toLowerCase();
+    const existing = byName.get(key);
+    if (!existing || creator.gamesCount > existing.gamesCount)
+      byName.set(key, creator);
+  }
+
+  return [...byName.values()]
+    .filter((creator) => creator.gamesCount > 0)
+    .sort((a, b) => b.gamesCount - a.gamesCount)
+    .slice(0, 6);
+}
+
+/** One studio's catalogue, newest first — a shelf of their own. */
+export const getGamesByCreator = (
+  kind: Creator['kind'],
+  id: number | string,
+  pageNum = 1,
+  f?: BrowseFilters
+): Promise<Paged<Game>> =>
+  rawg('games', {
+    [kind === 'developer' ? 'developers' : 'publishers']: String(id),
+    ordering: '-released',
+    ...page(pageNum),
+    ...filterParams(f),
+  });
+
 /** YYYY-MM-DD, `offset` days from today (negative = past). */
 function fromToday(offset: number): string {
   const d = new Date();
