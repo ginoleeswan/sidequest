@@ -85,4 +85,34 @@ describe('GameTile', () => {
     expect(screen.getByText('Unknown')).toBeTruthy();
     expect(screen.queryByText(/★/)).toBeNull();
   });
+
+  /**
+   * Hovering a tile cycles the game's own screenshots — a living preview
+   * rather than a still. It has to stop when the pointer leaves, or every
+   * tile the pointer ever crossed keeps a timer running.
+   */
+  it('cycles screenshots while hovered, and stops when the pointer leaves', async () => {
+    jest.useFakeTimers();
+    try {
+      const withShots = {
+        ...GAME,
+        short_screenshots: [
+          { id: 1, image: 'https://media.rawg.io/media/games/a/shot-1.jpg' },
+          { id: 2, image: 'https://media.rawg.io/media/games/a/shot-2.jpg' },
+        ],
+      } as Game;
+      const clear = jest.spyOn(globalThis, 'clearInterval');
+      await renderApp(<GameTile game={withShots} />);
+      const tile = screen.getByText('Hades II');
+      await fireEvent(tile, 'pointerEnter');
+      await act(async () => {
+        jest.advanceTimersByTime(1200);
+      });
+      await fireEvent(tile, 'pointerLeave');
+      expect(clear).toHaveBeenCalled();
+      clear.mockRestore();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
 });
