@@ -73,3 +73,55 @@ describe('the week', () => {
     expect(eveningLabel(week[2], MONDAY)).toBe('Wednesday');
   });
 });
+
+/**
+ * The plan's order maximises finishes; tonight's card answers what to do
+ * with the next ninety minutes. On one screen they were contradicting
+ * each other, so the week defers to the card.
+ */
+describe('planWeek leading with tonight', () => {
+  const item = (id: number, name: string, hours: number) =>
+    ({ id, name, hours, endHours: hours, finishAt: 0 }) as never;
+
+  const monday = new Date(2026, 7, 17, 18).getTime();
+
+  it('starts the week on the game the card named', () => {
+    const week = planWeek(
+      [item(1, 'Tomb Raider', 10), item(2, 'GTA V', 20)],
+      monday,
+      7,
+      2
+    );
+    expect(week[0].games[0].name).toBe('GTA V');
+  });
+
+  it('leaves the order alone when nothing is named', () => {
+    const week = planWeek(
+      [item(1, 'Tomb Raider', 10), item(2, 'GTA V', 20)],
+      monday
+    );
+    expect(week[0].games[0].name).toBe('Tomb Raider');
+  });
+
+  /** A pick the scheduler dropped is not in the plan to lead it. */
+  it('leaves the order alone when the pick is not in the plan', () => {
+    const week = planWeek(
+      [item(1, 'Tomb Raider', 10), item(2, 'GTA V', 20)],
+      monday,
+      7,
+      99
+    );
+    expect(week[0].games[0].name).toBe('Tomb Raider');
+  });
+
+  it('keeps every game, just in a different order', () => {
+    const week = planWeek(
+      [item(1, 'A', 4), item(2, 'B', 4), item(3, 'C', 4)],
+      monday,
+      7,
+      3
+    );
+    const names = new Set(week.flatMap((e) => e.games.map((g) => g.name)));
+    expect(names).toEqual(new Set(['A', 'B', 'C']));
+  });
+});
