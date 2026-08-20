@@ -79,6 +79,42 @@ export function pickShelves(
  * is not a storefront, it is a goldfish. The bookmark on the tile said
  * "saved"; the row itself should have moved on.
  */
+/**
+ * A game's identity for the purposes of not showing it twice.
+ *
+ * RAWG carries the same release under more than one entry — "The Sinking
+ * City 2" and "Sinking City 2" are different ids with different slugs —
+ * so an id is not enough. Articles and punctuation go, because that is
+ * the whole of the difference in every case seen so far.
+ */
+export function gameKey(game: Game): string {
+  return game.name
+    .toLowerCase()
+    .replace(/^(the|a|an)\s+/, '')
+    .replace(/[^a-z0-9]+/g, '');
+}
+
+/**
+ * Drop repeats, optionally against what earlier rows already showed.
+ *
+ * Two rows on one screen offering the same game is the kind of thing
+ * nobody reports and everybody notices. Pass a shared `seen` down a
+ * page's rows to make each row's contents new.
+ */
+export function dedupeGames(
+  games: Game[],
+  seen: Set<string> = new Set()
+): Game[] {
+  return games.filter((game) => {
+    const key = gameKey(game);
+    const id = `#${game.id}`;
+    if (seen.has(key) || seen.has(id)) return false;
+    seen.add(key);
+    seen.add(id);
+    return true;
+  });
+}
+
 export function withoutOwned(games: Game[], entries: LibraryEntry[]): Game[] {
   if (entries.length === 0) return games;
   const owned = new Set(entries.map((entry) => entry.game.id));

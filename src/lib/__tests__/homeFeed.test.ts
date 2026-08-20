@@ -8,6 +8,7 @@ import {
   pickShelves,
   withinLength,
   withoutOwned,
+  dedupeGames,
 } from '../homeFeed';
 import type { LibraryEntry } from '../library';
 
@@ -157,5 +158,43 @@ describe('the length you actually finish', () => {
       { min: 7, max: 13 }
     );
     expect(shown.map((g) => g.id)).toEqual([2]);
+  });
+});
+
+describe('dedupeGames', () => {
+  const game = (id: number, name: string) => ({ id, name }) as Game;
+
+  it('drops the same game listed under two ids', () => {
+    const rows = dedupeGames([
+      game(1, 'The Sinking City 2'),
+      game(2, 'Sinking City 2'),
+      game(3, 'Hollow Knight: Silksong'),
+    ]);
+    expect(rows.map((g) => g.id)).toEqual([1, 3]);
+  });
+
+  it('ignores punctuation, which is the whole of the difference', () => {
+    const rows = dedupeGames([
+      game(1, 'S.T.A.L.K.E.R. 2: Heart of Chornobyl'),
+      game(2, 'STALKER 2 Heart of Chornobyl'),
+    ]);
+    expect(rows).toHaveLength(1);
+  });
+
+  /** A shared set is what stops row three repeating row one. */
+  it('carries what earlier rows already showed', () => {
+    const seen = new Set<string>();
+    dedupeGames([game(1, 'Satisfactory')], seen);
+    expect(
+      dedupeGames([game(1, 'Satisfactory'), game(2, 'V Rising')], seen)
+    ).toHaveLength(1);
+  });
+
+  it('keeps genuinely different games with similar names', () => {
+    const rows = dedupeGames([
+      game(1, 'MOUSE'),
+      game(2, 'MOUSE: P.I. For Hire'),
+    ]);
+    expect(rows).toHaveLength(2);
   });
 });

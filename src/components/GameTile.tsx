@@ -229,10 +229,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: SPACING.sm,
     left: SPACING.sm,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    /**
+     * Quieter than it was. A phone cannot hover, so this control is on
+     * every tile all the time — at full strength that is six hard black
+     * discs down one screen, and they read as the loudest thing on a
+     * page made of artwork.
+     */
+    backgroundColor: 'rgba(0,0,0,0.38)',
     alignItems: 'center',
     justifyContent: 'center',
   },
