@@ -1,8 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+  Animated,
   FlatList,
   Pressable,
   StyleSheet,
@@ -13,9 +14,14 @@ import {
 } from 'react-native';
 
 import { CoverImage } from './CoverImage';
+import { ScaleButton } from './ScaleButton';
 import type { Game } from '@/api/types';
+import { useAnimatedValue } from '@/hooks/useAnimatedValue';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { PARALLAX_RATE, useStageParallax } from '@/hooks/useStageParallax';
 import type { StageSlide } from '@/lib/stage';
 import { COLORS } from '@/styles/colors';
+import { DURATION, EASING } from '@/styles/motion';
 import { RADIUS, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
@@ -129,14 +135,119 @@ function Slide({
   onOpen: () => void;
   onSurprise: () => void;
 }) {
+  const reduced = useReducedMotion();
+  const enter = useAnimatedValue(reduced ? 1 : 0);
+  const drift = useAnimatedValue(0);
+  const parallax = useStageParallax(height);
+  const room = Math.round(height * PARALLAX_RATE);
+
+  /**
+   * The headline scales with the stage.
+   *
+   * 32px is an app heading — correct in a list, timid across a picture
+   * that fills the screen. It reads as a caption someone left on the
+   * artwork rather than as the page speaking. Tied to the width so a
+   * phone gets a headline and a monitor gets a masthead, with the line
+   * height and tracking following it; large display type set at a body
+   * face's proportions looks loose and unresolved.
+   */
+  const fontSize = Math.round(Math.min(Math.max(width * 0.115, 34), 68));
+  const display = {
+    fontSize,
+    lineHeight: Math.round(fontSize * 1.02),
+    letterSpacing: fontSize > 46 ? -1.6 : -0.9,
+  };
+
+  useEffect(() => {
+    if (reduced) return;
+    Animated.timing(enter, {
+      toValue: 1,
+      duration: DURATION.entrance,
+      easing: EASING.standard,
+      useNativeDriver: true,
+    }).start();
+  }, [enter, reduced]);
+
+  useEffect(() => {
+    if (reduced) return;
+    // Out and back, so it never arrives anywhere and never snaps home.
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(drift, {
+          toValue: 1,
+          duration: DURATION.drift,
+          easing: EASING.linear,
+          useNativeDriver: true,
+        }),
+        Animated.timing(drift, {
+          toValue: 0,
+          duration: DURATION.drift,
+          easing: EASING.linear,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [drift, reduced]);
+
+  /**
+   * One value, four arrivals.
+   *
+   * Each line reads a different window of the same timeline, so the
+   * eyebrow is settling while the headline is still on its way and the
+   * buttons have not started. Four separate animations would say the
+   * same thing and cost four times as much to keep in step.
+   */
+  const step = (from: number, to: number) => ({
+    opacity: enter.interpolate({
+      inputRange: [from, to],
+      outputRange: [0, 1],
+      extrapolate: 'clamp',
+    }),
+    transform: [
+      {
+        translateY: enter.interpolate({
+          inputRange: [from, to],
+          outputRange: [14, 0],
+          extrapolate: 'clamp',
+        }),
+      },
+    ],
+  });
+
   return (
     <View style={{ width, height }} testID={`stage-slide-${index}`}>
-      <CoverImage
-        uri={slide.game.background_image}
-        style={StyleSheet.absoluteFill}
-        size="hero"
-        iconSize={48}
-      />
+      {/* Hung above the frame, by exactly as far as it can travel down.
+          Translating a picture that exactly fills its container just
+          uncovers the background; room below it would buy nothing, since
+          the artwork only ever moves one way. */}
+      <Animated.View
+        style={[
+          styles.artLayer,
+          {
+            top: -room,
+            height: height + room,
+            transform: [
+              { translateY: parallax },
+              {
+                scale: drift.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [1, 1.08],
+                }),
+              },
+            ],
+          },
+        ]}
+        pointerEvents="none"
+      >
+        <CoverImage
+          uri={slide.game.background_image}
+          style={StyleSheet.absoluteFill}
+          size="hero"
+          iconSize={48}
+        />
+      </Animated.View>
       {/* Two scrims, not one. The bottom one buys legibility for the copy;
           the top one lets the header's own gradient land on something
           rather than on whatever the artwork happened to be. */}
@@ -171,25 +282,32 @@ function Slide({
         pointerEvents="none"
       />
       <View style={[styles.copy, { left: inset, right: inset }]}>
-        <Text style={styles.eyebrow} numberOfLines={1}>
+        <Animated.Text style={[styles.eyebrow, step(0, 0.4)]} numberOfLines={1}>
           {slide.eyebrow.toUpperCase()}
-        </Text>
-        <Text style={styles.title} numberOfLines={3}>
+        </Animated.Text>
+        <Animated.Text
+          style={[styles.title, display, step(0.1, 0.6)]}
+          numberOfLines={3}
+        >
           {slide.title}
-        </Text>
-        <Text style={styles.detail} numberOfLines={2}>
+        </Animated.Text>
+        <Animated.Text
+          style={[styles.detail, step(0.22, 0.75)]}
+          numberOfLines={2}
+        >
           {slide.detail}
-        </Text>
-        <View style={styles.actions}>
-          <Pressable
+        </Animated.Text>
+        <Animated.View style={[styles.actions, step(0.34, 0.9)]}>
+          <ScaleButton
             onPress={onOpen}
             style={styles.primary}
-            accessibilityRole="link"
+            activeScale={0.96}
+            hoverScale={1.04}
             accessibilityLabel={`${slide.action}: ${slide.game.name}`}
           >
             <Text style={styles.primaryLabel}>{slide.action}</Text>
             <Ionicons name="arrow-forward" size={15} color={COLORS.navy} />
-          </Pressable>
+          </ScaleButton>
           <Pressable
             onPress={onSurprise}
             style={styles.ghost}
@@ -213,7 +331,7 @@ function Slide({
               ))}
             </View>
           )}
-        </View>
+        </Animated.View>
       </View>
     </View>
   );
@@ -226,6 +344,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.darkGrey,
     overflow: 'hidden',
   },
+  artLayer: { position: 'absolute', left: 0, right: 0 },
   topScrim: { position: 'absolute', top: 0, left: 0, right: 0 },
   scrim: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '72%' },
   copy: {
@@ -243,6 +362,8 @@ const styles = StyleSheet.create({
   eyebrow: {
     ...TYPE.tag,
     color: COLORS.accent,
+    letterSpacing: 1.4,
+    marginBottom: 2,
   },
   title: {
     ...TYPE.display,
@@ -250,8 +371,12 @@ const styles = StyleSheet.create({
   },
   detail: {
     ...TYPE.p,
+    fontSize: 15,
+    lineHeight: 22,
     color: COLORS.lightGrey,
-    marginBottom: SPACING.sm,
+    marginTop: 2,
+    marginBottom: SPACING.md,
+    maxWidth: 460,
   },
   actions: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   primary: {

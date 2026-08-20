@@ -22,6 +22,19 @@ export const DURATION = {
   /** Ambient loops: the skeleton pulse, the indeterminate progress line. */
   pulse: 700,
   sweep: 1100,
+  /**
+   * The home stage's entrance: eyebrow, headline, sentence and buttons
+   * arriving in that order. Longer than `slow` because the point is the
+   * order, not the travel — a stagger that lands inside 320ms reads as
+   * one thing appearing crookedly.
+   */
+  entrance: 720,
+  /**
+   * The slow drift across the stage artwork. Fourteen seconds for eight
+   * percent of scale: below the threshold where anyone can see it move,
+   * above the one where a still image reads as a screenshot.
+   */
+  drift: 14000,
 } as const;
 
 /**

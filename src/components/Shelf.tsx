@@ -2,7 +2,6 @@ import { StyleSheet, View } from 'react-native';
 
 import { GameTile } from './GameTile';
 import { Rail } from './Rail';
-import { RankedTile } from './RankedTile';
 import { SectionHeader } from './SectionHeader';
 import type { Game } from '@/api/types';
 import type { Section } from '@/constants/categories';
@@ -39,7 +38,7 @@ export function Shelf({ section, games, onViewAll, inset = 0 }: Props) {
     switch (variant) {
       case 'ranked':
         return (
-          <RankedTile
+          <GameTile
             game={item}
             rank={data.indexOf(item) + 1}
             width={LAYOUT.shelfTileWidth}

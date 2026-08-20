@@ -31,8 +31,6 @@ const EYEBROW_H = TYPE.micro.lineHeight;
  * too, or every shelf below lands high.
  */
 const RAIL_NET = Math.round(SHADOW_ROOM.card * 0.4);
-/** RankedTile shoulders its watermark numeral, pushing the art right. */
-const RANKED_OFFSET = 22;
 
 /** Pulsing placeholder block — the atom every skeleton is built from. */
 export function Skeleton({ style }: { style?: ViewStyle | ViewStyle[] }) {
@@ -81,7 +79,6 @@ export function SkeletonShelf({
   tiles = 6,
   inset = 0,
   eyebrow = false,
-  ranked = false,
   tileWidth = LAYOUT.shelfTileWidth,
 }: {
   tiles?: number;
@@ -93,8 +90,7 @@ export function SkeletonShelf({
   inset?: number;
   /** Ranked shelves carry a "Top 10" line above the title. */
   eyebrow?: boolean;
-  /** Ranked shelves inset their art to make room for the numeral. */
-  ranked?: boolean;
+  /** Wider frames for the prestige rows. */
   tileWidth?: number;
 }) {
   return (
@@ -111,7 +107,6 @@ export function SkeletonShelf({
             marginHorizontal: -inset,
             paddingHorizontal: inset,
           },
-          ranked && { paddingLeft: inset + RANKED_OFFSET },
         ]}
       >
         {Array.from({ length: tiles }, (_, i) => (
@@ -195,7 +190,7 @@ export function SkeletonCompactHome() {
             loading document barely taller than the viewport, which on iOS
             means Safari's translucent toolbar blurs over bare canvas
             instead of over content. */}
-        <SkeletonShelf tiles={3} inset={SPACING.md} eyebrow ranked />
+        <SkeletonShelf tiles={3} inset={SPACING.md} eyebrow />
         {HOME_SHELVES.map((shelf) => (
           <SkeletonShelf key={shelf.key} tiles={3} inset={SPACING.md} />
         ))}

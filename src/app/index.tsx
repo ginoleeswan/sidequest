@@ -568,7 +568,6 @@ export default function HomeScreen() {
                           <SkeletonShelf
                             inset={SPACING.xl}
                             eyebrow={shelf.variant === 'ranked'}
-                            ranked={shelf.variant === 'ranked'}
                           />
                         }
                       >
@@ -688,7 +687,6 @@ export default function HomeScreen() {
                         <SkeletonShelf
                           inset={SPACING.md}
                           eyebrow={shelf.variant === 'ranked'}
-                          ranked={shelf.variant === 'ranked'}
                         />
                       }
                     >
