@@ -18,6 +18,7 @@ import { Message } from '@/components/Message';
 import { PageTitle } from '@/components/PageTitle';
 import { SectionHeader } from '@/components/SectionHeader';
 import { SteamConnect } from '@/components/SteamConnect';
+import { WeekView } from '@/components/WeekView';
 import { Textured } from '@/components/Textured';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { DurationSheet } from '@/components/DurationSheet';
@@ -26,9 +27,11 @@ import {
   remainingHours,
   type DurationSource,
 } from '@/lib/duration';
+import { useToast } from '@/components/Toast';
 import { useDurations } from '@/lib/durations';
 import { buildAlerts } from '@/lib/alerts';
 import { useHydrated } from '@/hooks/useHydrated';
+import { encodePlan } from '@/lib/planLink';
 import { useLibrary } from '@/lib/library';
 import { sessionMinutesFor } from '@/lib/sessions';
 import {
@@ -216,6 +219,7 @@ export default function PlanScreen() {
   const [session, setSession] = useState(60);
   const sessionMinutes = hydrated && session === 60 ? weekendSession : session;
   const [steamOpen, setSteamOpen] = useState(false);
+  const toast = useToast();
 
   // Playing games count at half their length - you're partway in.
   const entries: Entry[] = useMemo(
@@ -462,6 +466,40 @@ export default function PlanScreen() {
                       />
                     </Text>
 
+                    {schedule.scheduled.length > 0 && (
+                      <Text
+                        style={styles.steamLink}
+                        accessibilityRole="button"
+                        accessibilityLabel="Copy a link to this plan"
+                        suppressHighlighting
+                        onPress={async () => {
+                          // The plan travels in the link: no account, no
+                          // server, no copy of anyone's library anywhere.
+                          // Native has no location at all, so the
+                          // link degrades to a path rather than throwing.
+                          const origin = globalThis.location?.origin ?? '';
+                          const link = `${origin}/shared?p=${encodePlan({
+                            pace,
+                            games: schedule.scheduled.map((item) => ({
+                              name: item.name,
+                              hours: item.hours,
+                            })),
+                          })}`;
+                          try {
+                            await navigator.clipboard?.writeText(link);
+                            toast('Plan link copied', 'link');
+                          } catch {
+                            toast(
+                              'Copy failed — your browser blocked clipboard access',
+                              'alert-circle'
+                            );
+                          }
+                        }}
+                      >
+                        Share this plan →
+                      </Text>
+                    )}
+
                     <Text
                       style={styles.steamLink}
                       onPress={() => setSteamOpen((open) => !open)}
@@ -537,6 +575,16 @@ export default function PlanScreen() {
 
                 <View style={isExpanded ? styles.colRight : styles.stack}>
                   {/* the route */}
+                  {schedule.scheduled.length > 0 && (
+                    <View style={styles.section}>
+                      <SectionHeader
+                        title="This week"
+                        eyebrow="THE NEXT SEVEN EVENINGS"
+                      />
+                      <WeekView scheduled={schedule.scheduled} now={now} />
+                    </View>
+                  )}
+
                   {schedule.scheduled.length > 0 && (
                     <View style={styles.section}>
                       <SectionHeader title="Your route" />

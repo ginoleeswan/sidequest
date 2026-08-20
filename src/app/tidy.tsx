@@ -16,6 +16,7 @@ import { SiteFooter } from '@/components/SiteFooter';
 import { Textured } from '@/components/Textured';
 import { useToast } from '@/components/Toast';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { DROP_REASONS, recordDrop, type DropReason } from '@/lib/drops';
 import { formatHours } from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
 import {
@@ -67,6 +68,8 @@ export default function TidyScreen() {
   const [now] = useState(() => Date.now());
   const [filter, setFilter] = useState<Filter>('all');
   const [picked, setPicked] = useState<Set<number>>(new Set());
+  /** Set while asking why, holding the games about to go. */
+  const [asking, setAsking] = useState<number[] | null>(null);
 
   const shown = useMemo(
     () =>
@@ -94,9 +97,12 @@ export default function TidyScreen() {
 
   const chosen = () => [...picked];
 
-  const letGo = () => {
-    const count = removeMany(chosen());
+  const letGo = (reason?: DropReason) => {
+    const ids = asking ?? chosen();
+    const count = removeMany(ids);
+    if (reason) recordDrop(reason, count);
     setPicked(new Set());
+    setAsking(null);
     toast(
       count === 1
         ? 'One let go. Nothing owed.'
@@ -218,7 +224,39 @@ export default function TidyScreen() {
         )}
       </View>
 
-      {picked.size > 0 && (
+      {asking && (
+        <View
+          style={[styles.bar, { paddingBottom: insets.bottom + SPACING.md }]}
+        >
+          {/* Not a guilt trip: the shelves cannot learn anything from a
+              silent delete, and "too long" and "bounced off it" mean
+              opposite things about what to offer next. */}
+          <Text style={styles.barCount}>
+            Why {asking.length === 1 ? 'this one' : 'these'}? Optional.
+          </Text>
+          <View style={styles.barActions}>
+            {DROP_REASONS.map((reason) => (
+              <Pressable
+                key={reason.key}
+                onPress={() => letGo(reason.key)}
+                style={styles.secondary}
+                accessibilityRole="button"
+              >
+                <Text style={styles.secondaryText}>{reason.label}</Text>
+              </Pressable>
+            ))}
+            <Pressable
+              onPress={() => letGo()}
+              style={styles.primary}
+              accessibilityRole="button"
+            >
+              <Text style={styles.primaryText}>Rather not say</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
+
+      {picked.size > 0 && !asking && (
         <View
           style={[styles.bar, { paddingBottom: insets.bottom + SPACING.md }]}
         >
@@ -235,7 +273,7 @@ export default function TidyScreen() {
               <Text style={styles.secondaryText}>Actually finished</Text>
             </Pressable>
             <Pressable
-              onPress={letGo}
+              onPress={() => setAsking(chosen())}
               style={styles.primary}
               accessibilityRole="button"
             >
@@ -315,6 +353,7 @@ const styles = StyleSheet.create({
   },
   barActions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: SPACING.sm,
     justifyContent: 'center',
   },

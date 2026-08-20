@@ -88,8 +88,35 @@ describe('backlog amnesty', () => {
     await fireEvent.press(screen.getByLabelText('One'));
     await fireEvent.press(screen.getByLabelText('Two'));
     await fireEvent.press(screen.getByText('Let these go'));
+    // Why is asked, and answering is optional.
+    await fireEvent.press(screen.getByText('Rather not say'));
     await waitFor(() => expect(Object.keys(library())).toEqual(['3']));
     expect(screen.getByText('2 let go. Nothing owed.')).toBeTruthy();
+  });
+
+  it('learns from the answer when there is one', async () => {
+    seed([
+      { id: 1, name: 'Enormous' },
+      { id: 2, name: 'Also enormous' },
+    ]);
+    await renderApp(<TidyScreen />);
+    await fireEvent.press(screen.getByLabelText('Enormous'));
+    await fireEvent.press(screen.getByLabelText('Also enormous'));
+    await fireEvent.press(screen.getByText('Let these go'));
+    await fireEvent.press(screen.getByText('Too long for me'));
+    await waitFor(() =>
+      expect(JSON.parse(store['sidequest.drops.v1'] ?? '{}')['too-long']).toBe(
+        2
+      )
+    );
+  });
+
+  it('asks in the app’s own voice, not a form’s', async () => {
+    seed([{ id: 1, name: 'One' }]);
+    await renderApp(<TidyScreen />);
+    await fireEvent.press(screen.getByLabelText('One'));
+    await fireEvent.press(screen.getByText('Let these go'));
+    expect(screen.getByText('Why this one? Optional.')).toBeTruthy();
   });
 
   it('offers the other honest answer: you already finished it', async () => {
