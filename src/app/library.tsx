@@ -37,7 +37,7 @@ import {
   type LibrarySort,
 } from '@/lib/libraryStats';
 import { COLORS } from '@/styles/colors';
-import { LAYOUT, RADIUS, SPACING } from '@/styles/theme';
+import { LAYOUT, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 const TABS: LibraryStatus[] = ['wishlist', 'playing', 'finished'];
@@ -258,40 +258,32 @@ export default function LibraryScreen() {
             </View>
           )}
 
-          {count > 3 && (
-            <Pressable
-              onPress={() => router.push('/tidy')}
-              style={styles.memcardLink}
-              accessibilityRole="link"
-            >
-              <Ionicons name="sparkles" size={14} color={COLORS.mediumGrey} />
-              <Text style={styles.memcardText}>
-                Too many? Let some go — backlog amnesty
-              </Text>
-              <Ionicons
-                name="chevron-forward"
-                size={13}
-                color={COLORS.mediumGrey}
-              />
-            </Pressable>
-          )}
-
-          {stats.finished > 0 && (
-            <Pressable
-              onPress={() => router.push('/memcard')}
-              style={styles.memcardLink}
-              accessibilityRole="link"
-            >
-              <Ionicons name="albums" size={14} color={COLORS.accent} />
-              <Text style={styles.memcardText}>
-                See your Memcard — the year, as a card you can post
-              </Text>
-              <Ionicons
-                name="chevron-forward"
-                size={13}
-                color={COLORS.mediumGrey}
-              />
-            </Pressable>
+          {/* Two chips rather than two full-width bars.
+              Before the first game you passed four stats, two banners,
+              three tabs, four sort options and two more links — fifteen
+              controls ahead of the thing the page is for. These two are
+              worth keeping up here because they act on what the numbers
+              above just told you; the transfer links are not, and have
+              gone to the foot. */}
+          {(count > 3 || stats.finished > 0) && (
+            <View style={styles.quickRow}>
+              {count > 3 && (
+                <Chip
+                  title="Backlog amnesty"
+                  iconName="sparkles"
+                  iconType="ionicon"
+                  onPress={() => router.push('/tidy')}
+                />
+              )}
+              {stats.finished > 0 && (
+                <Chip
+                  title="Your Memcard"
+                  iconName="albums"
+                  iconType="ionicon"
+                  onPress={() => router.push('/memcard')}
+                />
+              )}
+            </View>
           )}
 
           <View style={styles.tabs}>
@@ -346,30 +338,6 @@ export default function LibraryScreen() {
             </View>
           )}
 
-          <View style={styles.transferRow}>
-            {count > 0 && (
-              <Pressable onPress={copyLibrary} style={styles.transferLink}>
-                <Ionicons
-                  name="copy-outline"
-                  size={13}
-                  color={COLORS.mediumGrey}
-                />
-                <Text style={styles.transferText}>Copy library</Text>
-              </Pressable>
-            )}
-            <Pressable
-              onPress={() => setImportOpen(true)}
-              style={styles.transferLink}
-            >
-              <Ionicons
-                name="download-outline"
-                size={13}
-                color={COLORS.mediumGrey}
-              />
-              <Text style={styles.transferText}>Import</Text>
-            </Pressable>
-          </View>
-
           {games.length === 0 ? (
             <View style={styles.emptyFrame}>
               <Message
@@ -398,6 +366,32 @@ export default function LibraryScreen() {
               ))}
             </View>
           )}
+
+          {/* Moving a library in or out is housekeeping, not the reason
+              anyone opened this page. */}
+          <View style={styles.transferRow}>
+            {count > 0 && (
+              <Pressable onPress={copyLibrary} style={styles.transferLink}>
+                <Ionicons
+                  name="copy-outline"
+                  size={13}
+                  color={COLORS.mediumGrey}
+                />
+                <Text style={styles.transferText}>Copy library</Text>
+              </Pressable>
+            )}
+            <Pressable
+              onPress={() => setImportOpen(true)}
+              style={styles.transferLink}
+            >
+              <Ionicons
+                name="download-outline"
+                size={13}
+                color={COLORS.mediumGrey}
+              />
+              <Text style={styles.transferText}>Import</Text>
+            </Pressable>
+          </View>
         </View>
       </FadeInView>
       <SiteFooter />
@@ -461,14 +455,20 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.xl * 1.5,
   },
   tabs: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
+  /**
+   * Two by two, deliberately.
+   *
+   * Four stats on one row do not fit a phone, so they wrapped three and
+   * one — which reads as a row that broke rather than a grid that was
+   * meant. Fixed halves make the wrap the layout.
+   */
   stats: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    columnGap: SPACING.xl,
-    rowGap: SPACING.sm,
+    rowGap: SPACING.md,
     paddingVertical: SPACING.sm,
   },
-  stat: { gap: 1 },
+  stat: { gap: 1, flexBasis: '50%', flexGrow: 1 },
   statValue: {
     ...TYPE.h2,
     color: COLORS.white,
@@ -498,22 +498,12 @@ const styles = StyleSheet.create({
   gridContent: { gap: LAYOUT.gridGap },
   gridSpacer: { flex: 1 },
   emptyFrame: { minHeight: 320 },
-  memcardLink: {
+  quickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
+  transferRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: COLORS.stroke,
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm + 1,
+    gap: SPACING.lg,
+    paddingTop: SPACING.lg,
   },
-  memcardText: {
-    ...TYPE.labelSmall,
-    color: COLORS.lightGrey,
-  },
-  transferRow: { flexDirection: 'row', gap: SPACING.lg },
   transferLink: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   transferText: {
     ...TYPE.labelTiny,
