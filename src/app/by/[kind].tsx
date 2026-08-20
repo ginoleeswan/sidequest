@@ -16,6 +16,7 @@ import { SiteFooter } from '@/components/SiteFooter';
 import { SkeletonGrid } from '@/components/Skeleton';
 import { Textured } from '@/components/Textured';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { useHydrated } from '@/hooks/useHydrated';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
@@ -38,10 +39,20 @@ export default function ByCreatorScreen() {
     name?: string;
   }>();
 
+  /**
+   * The route's params are on the URL, and the pre-rendered HTML was
+   * built without them. Reading them during the hydration render is the
+   * classic mismatch: the file says "This studio" and the client says
+   * "Supergiant Games", React throws the markup away, and the only
+   * symptom is a console error in production. So the first client
+   * render agrees with the file, and the name arrives on the next
+   * commit. See hooks/useHydrated.
+   */
+  const hydrated = useHydrated();
   const kind: Creator['kind'] =
-    params.kind === 'publisher' ? 'publisher' : 'developer';
-  const id = params.id ?? '';
-  const name = params.name ?? 'This studio';
+    hydrated && params.kind === 'publisher' ? 'publisher' : 'developer';
+  const id = hydrated ? (params.id ?? '') : '';
+  const name = hydrated ? (params.name ?? 'This studio') : 'This studio';
 
   const list = useInfiniteQuery({
     queryKey: ['creator', kind, id],

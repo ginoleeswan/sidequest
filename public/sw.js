@@ -40,6 +40,7 @@ const ROUTES = [
   '/import',
   '/memcard',
   '/tidy',
+  '/by/developer',
   '/about',
   '/terms',
   '/privacy',
@@ -119,10 +120,17 @@ async function networkFirst(request) {
     if (response.ok) cache.put(request, response.clone());
     return response;
   } catch {
+    // ignoreSearch, because a document is the same document whatever
+    // query string led to it: /by/developer?id=9 must not miss the
+    // precached /by/developer and fall through.
+    //
+    // And no shared fallback. Serving one route's document for another
+    // URL is the hydration bug this whole harness exists to catch: React
+    // is handed markup that belongs to a different page, throws it away
+    // and re-renders, and the only symptom is a console error in
+    // production. An honest failure is better.
     return (
-      (await cache.match(request)) ??
-      (await cache.match('/')) ??
-      Response.error()
+      (await cache.match(request, { ignoreSearch: true })) ?? Response.error()
     );
   }
 }

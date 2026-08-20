@@ -22,6 +22,10 @@
       "destination": "/game/[id]"
     },
     {
+      "source": "/by/:kind",
+      "destination": "/by/[kind]"
+    },
+    {
       "source": "/rawg/:path*",
       "destination": "https://api.rawg.io/api/:path*"
     },
