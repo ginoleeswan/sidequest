@@ -48,6 +48,17 @@ interface Props {
    * escapes padded containers.
    */
   inset?: number;
+  /**
+   * Where the footer's own content sits, so it lines up with the page
+   * above it.
+   *
+   * Separate from `inset` because the two are not the same number and
+   * assuming they were put every word in this band twenty pixels off:
+   * a page that pads each section rather than its scroller has nothing
+   * for the band to bleed across, so the negative margin pulled it wide
+   * of the screen and the right-hand fine print ran off the edge.
+   */
+  pad?: number;
 }
 
 /**
@@ -57,7 +68,7 @@ interface Props {
  * continuing rather than the texture falling off a cliff. The grain ends
  * on purpose, at the hairline.
  */
-export function SiteFooter({ inset = 0 }: Props) {
+export function SiteFooter({ inset = 0, pad = SPACING.lg }: Props) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
@@ -77,7 +88,7 @@ export function SiteFooter({ inset = 0 }: Props) {
       >
         SIDEQUEST
       </Text>
-      <View style={styles.inner}>
+      <View style={[styles.inner, { paddingHorizontal: pad }]}>
         <View style={styles.topRow}>
           <View style={styles.brand}>
             <Text style={styles.wordmark}>Sidequest</Text>
@@ -138,7 +149,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: LAYOUT.maxExpandedWidth,
     alignSelf: 'center',
-    paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.xl + 6,
     gap: SPACING.lg,
   },
