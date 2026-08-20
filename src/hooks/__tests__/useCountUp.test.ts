@@ -31,7 +31,17 @@ describe('useCountUp', () => {
     expect(result.current).toBe(10);
   });
 
-  it('does not travel when told not to run', async () => {
+  /**
+   * The whole point of a counter that waits for the reader to reach it
+   * is that the number is not there beforehand.
+   */
+  it('waits at the starting number until it is told to run', async () => {
+    const { result } = await renderHook(() => useCountUp(10, 4, false));
+    expect(result.current).toBe(4);
+  });
+
+  it('still shows the final figure when animation is unwanted', async () => {
+    jest.mocked(useReducedMotion).mockReturnValue(true);
     const { result } = await renderHook(() => useCountUp(10, 4, false));
     expect(result.current).toBe(10);
   });

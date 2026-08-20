@@ -10,10 +10,13 @@ import {
   Text,
   useWindowDimensions,
   View,
+  type TextStyle,
+  type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LandingProof } from '@/components/LandingProof';
+import { Rise, useInView } from '@/components/Rise';
 import { LandingWall } from '@/components/LandingWall';
 import { Mark } from '@/components/Mark';
 import { PageTitle } from '@/components/PageTitle';
@@ -27,6 +30,7 @@ import { queryKeys } from '@/api/queryClient';
 import { getTrendingGames } from '@/api/rawg';
 import type { Game, Paged } from '@/api/types';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
+import { useCountUp } from '@/hooks/useCountUp';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { COLORS } from '@/styles/colors';
@@ -68,6 +72,40 @@ const BEATS = [
     body: 'Most of a backlog is never going to be played, and saying so out loud is the only thing that makes the rest enjoyable. It asks why, and only so the shelves can learn something.',
   },
 ];
+
+/**
+ * The number, counted rather than printed.
+ *
+ * It owns its own ref, which is the whole reason it is a component: the
+ * hook lived on the screen while the element it watched lived inside a
+ * section deferred until it is scrolled near. The ref was therefore null
+ * when the observer went looking, `useInView` took its "nothing to
+ * observe, so show it" fallback, and the count ran and finished at load
+ * every time. A ref declared in a parent and attached in a subtree that
+ * has not rendered is not attached at all.
+ */
+function Sum({
+  style,
+  figure,
+  unit,
+}: {
+  style?: ViewStyle;
+  figure: TextStyle;
+  unit: TextStyle;
+}) {
+  const [ref, seen] = useInView('-30%');
+  const hours = useCountUp(900, 0, seen);
+
+  return (
+    <View ref={ref} style={style}>
+      <Text style={styles.sumLead}>The average backlog is</Text>
+      <Text style={[styles.sumFigure, figure]}>
+        {Math.round(hours)}
+        <Text style={[styles.sumUnit, unit]}>h</Text>
+      </Text>
+    </View>
+  );
+}
 
 export default function AboutScreen() {
   const router = useRouter();
@@ -131,6 +169,7 @@ export default function AboutScreen() {
     letterSpacing: Math.round(sum * -0.055),
   };
   const unit = { fontSize: Math.round(sum * 0.42) };
+
   const masthead = {
     fontSize: display,
     lineHeight: Math.round(display * 1.02),
@@ -229,18 +268,20 @@ export default function AboutScreen() {
                 isExpanded && styles.sumWide,
               ]}
             >
-              <View style={isExpanded && styles.sumFigureWide}>
-                <Text style={styles.sumLead}>The average backlog is</Text>
-                <Text style={[styles.sumFigure, figure]}>
-                  900
-                  <Text style={[styles.sumUnit, unit]}>h</Text>
+              <Sum
+                style={isExpanded ? styles.sumFigureWide : undefined}
+                figure={figure}
+                unit={unit}
+              />
+              <Rise from="right" delay={160} style={styles.sumTailSlot}>
+                <Text
+                  style={[styles.sumTail, isExpanded && styles.sumTailWide]}
+                >
+                  and the average week has about six in it. That is fifteen
+                  years of evenings, which is not a to-do list — it is a fantasy
+                  about a different life.
                 </Text>
-              </View>
-              <Text style={[styles.sumTail, isExpanded && styles.sumTailWide]}>
-                and the average week has about six in it. That is fifteen years
-                of evenings, which is not a to-do list — it is a fantasy about a
-                different life.
-              </Text>
+              </Rise>
             </View>
           </View>
         </WhenNear>
@@ -258,29 +299,39 @@ export default function AboutScreen() {
               isExpanded && index % 2 === 1 && styles.beatFlipped,
             ]}
           >
-            <Text style={[styles.beatLead, isExpanded && styles.beatLeadWide]}>
-              {beat.lead}
-            </Text>
+            <Rise
+              from={isExpanded ? (index % 2 === 1 ? 'right' : 'left') : 'below'}
+              style={isExpanded ? styles.beatLeadWide : undefined}
+            >
+              <Text style={styles.beatLead}>{beat.lead}</Text>
+            </Rise>
             <View style={isExpanded ? styles.beatBodyWide : undefined}>
-              <Text style={styles.beatBody}>{beat.body}</Text>
+              <Rise delay={90}>
+                <Text style={styles.beatBody}>{beat.body}</Text>
+              </Rise>
               {/* The app's own components, fed real data: a claim with
                   the thing itself under it beats a claim with an icon
                   over it. */}
-              <LandingProof kind={beat.kind} game={games?.[index + 2]} />
+              <Rise delay={200}>
+                <LandingProof kind={beat.kind} game={games?.[index + 2]} />
+              </Rise>
             </View>
           </View>
         ))}
 
         {/* The app's own object, at the size it deserves. */}
         <View style={[styles.band, styles.card, { paddingHorizontal: inset }]}>
-          <View style={styles.cardFrame}>
-            <GrainScrim style={StyleSheet.absoluteFill} />
-            <YearBlocks
-              months={SAMPLE_YEAR}
-              landed={null}
-              size={isExpanded ? 26 : 17}
-            />
-          </View>
+          <Rise>
+            <View style={styles.cardFrame}>
+              <GrainScrim style={StyleSheet.absoluteFill} />
+              <YearBlocks
+                months={SAMPLE_YEAR}
+                landed={null}
+                fill
+                size={isExpanded ? 26 : 17}
+              />
+            </View>
+          </Rise>
           <Text style={styles.cardCaption}>
             A year of finishing things. One block for every set of credits you
             actually reach.
@@ -295,7 +346,9 @@ export default function AboutScreen() {
           ]}
         >
           <View style={isExpanded ? styles.plainCopy : undefined}>
-            <Text style={styles.plainLead}>No account. No tracking.</Text>
+            <Rise from={isExpanded ? 'left' : 'below'}>
+              <Text style={styles.plainLead}>No account. No tracking.</Text>
+            </Rise>
             <Text style={styles.plainBody}>
               Your library lives in your browser and goes nowhere. There is
               nothing to sign up for, nothing to cancel, and nobody selling what
@@ -390,6 +443,7 @@ const styles = StyleSheet.create({
     gap: SPACING.xl * 2,
   },
   sumFigureWide: { flexShrink: 0 },
+  sumTailSlot: { flex: 1 },
   sumTailWide: { flex: 1, maxWidth: 560 },
   sumLead: { ...TYPE.micro, color: COLORS.mediumGrey },
   sumFigure: {
