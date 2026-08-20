@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import {
@@ -100,6 +100,12 @@ const PACES: {
   },
 ];
 
+/**
+ * Routes that must never be covered by the setup flow: the pages whose
+ * whole job is to be read by somebody who has not started yet.
+ */
+const PUBLIC_ROUTES = ['/about', '/privacy', '/terms', '/shared'];
+
 /** How many games act three offers for the first saves. */
 const PICKS = 6;
 
@@ -156,6 +162,18 @@ export function Onboarding() {
 
   const mounted = useHydrated();
   const { isExpanded } = useBreakpoint();
+  const pathname = usePathname();
+
+  /**
+   * The pages that exist for people who have not used this yet.
+   *
+   * A stranger following a link to the about page is being asked to
+   * decide whether to try Sidequest at all, and covering that page with
+   * a setup flow answers a question they have not asked. The same goes
+   * for the legal pages, which people reach on purpose and from
+   * elsewhere.
+   */
+  const readingAbout = PUBLIC_ROUTES.some((route) => pathname === route);
 
   const trending = useQuery({
     queryKey: queryKeys.shelf(DISCOVER[0].key),
@@ -165,7 +183,7 @@ export function Onboarding() {
   });
   const picks: Game[] = (trending.data ?? []).slice(0, PICKS);
 
-  if (!mounted || done) return null;
+  if (!mounted || done || readingAbout) return null;
 
   const finish = (toPlan: boolean) => {
     setDone(true);
