@@ -22,7 +22,15 @@ import { serve } from './serve.mjs';
 
 const PORT = 8940;
 const ROOT = new URL('../dist', import.meta.url).pathname;
-const ROUTES = ['/', '/plan', '/library', '/import', '/game/3498', '/about'];
+const ROUTES = [
+  '/',
+  '/plan',
+  '/library',
+  '/import',
+  '/memcard',
+  '/game/3498',
+  '/about',
+];
 const VIEWPORTS = [
   { name: 'mobile', width: 390, height: 844, isMobile: true },
   { name: 'desktop', width: 1280, height: 900, isMobile: false },

@@ -38,6 +38,7 @@ const ROUTES = [
   '/plan',
   '/library',
   '/import',
+  '/memcard',
   '/about',
   '/terms',
   '/privacy',
