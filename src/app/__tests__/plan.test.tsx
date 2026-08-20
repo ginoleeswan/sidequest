@@ -159,4 +159,16 @@ describe('the plan screen', () => {
     await renderApp(<PlanScreen />);
     expect(screen.queryByText(/costs you/)).toBeNull();
   });
+
+  it('says the thing it would have sent you, when there is one', async () => {
+    seed([
+      {
+        game: game(1, 'Pentiment', 40),
+        status: 'wishlist',
+        deadline: Date.now() + 3 * 24 * 60 * 60 * 1000,
+      },
+    ]);
+    await renderApp(<PlanScreen />);
+    expect(screen.getByText(/Move the date, or let it go/)).toBeTruthy();
+  });
 });

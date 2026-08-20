@@ -32,6 +32,7 @@ export const SUBSET_ICONS = [
   'download-outline',
   'exit',
   'extension-puzzle',
+  'flag',
   'flame',
   'flash',
   'football',
