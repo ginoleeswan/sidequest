@@ -43,6 +43,35 @@ async function lookup(steam: SteamGame): Promise<ImportedGame | null> {
  * count up rather than freeze: importing forty games is forty requests,
  * and a spinner with no number attached feels broken well before it is.
  */
+/**
+ * The same lookup, for a list of titles from anywhere else.
+ *
+ * A pasted export has no ids and no slugs — only names — so it takes
+ * exactly the path a Steam library takes, and gets the same refusal to
+ * guess when a name is not a confident match.
+ */
+export async function importTitles(
+  titles: string[],
+  onProgress?: (done: number, total: number) => void
+): Promise<{ matched: { title: string; game: Game }[]; unmatched: string[] }> {
+  const result = await importSteamGames(
+    titles.map((title, index) => ({
+      appid: -(index + 1),
+      name: title,
+      minutesForever: 0,
+      minutes2Weeks: 0,
+    })),
+    onProgress
+  );
+  return {
+    matched: result.matched.map(({ game, steam }) => ({
+      title: steam.name,
+      game,
+    })),
+    unmatched: result.unmatched.map((steam) => steam.name),
+  };
+}
+
 export async function importSteamGames(
   games: SteamGame[],
   onProgress?: (done: number, total: number) => void

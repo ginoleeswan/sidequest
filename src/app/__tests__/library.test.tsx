@@ -5,15 +5,34 @@ import type { Game } from '@/api/types';
 import type { LibraryStatus } from '@/lib/library';
 import { renderApp, useFakeStorage } from '@/test-utils';
 
+const ORIGINAL_KEY = process.env.EXPO_PUBLIC_RAWG_API_KEY;
 let store: Record<string, string>;
 beforeAll(() => {
   store = useFakeStorage();
+  process.env.EXPO_PUBLIC_RAWG_API_KEY = 'test-key';
+  // Pasted titles have no ids, so each is looked up by name.
+  globalThis.fetch = jest.fn(async (input: RequestInfo | URL) => {
+    const search = new URL(String(input)).searchParams.get('search') ?? '';
+    const results =
+      search === 'celeste'
+        ? [{ id: 77, name: 'Celeste', playtime: 12 }]
+        : search === 'hades'
+          ? [{ id: 78, name: 'Hades', playtime: 21 }]
+          : [];
+    return new Response(JSON.stringify({ count: 0, next: null, results }));
+  }) as unknown as typeof fetch;
+});
+afterAll(() => {
+  process.env.EXPO_PUBLIC_RAWG_API_KEY = ORIGINAL_KEY;
 });
 beforeEach(() => {
   for (const k of Object.keys(store)) delete store[k];
 });
 
 const KEY = 'sidequest.library.v1';
+
+/** What actually landed on the device. */
+const library = () => JSON.parse(store[KEY] ?? '{}');
 
 const game = (id: number, name: string, playtime: number) =>
   ({ id, name, playtime }) as Game;
@@ -164,5 +183,52 @@ describe('the library screen', () => {
     seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
     await renderApp(<LibraryScreen />);
     expect(screen.queryByText('All shelves')).toBeNull();
+  });
+
+  /**
+   * The other three-quarters of a backlog live in Backloggd, HLTB or a
+   * spreadsheet. One box reads all of them.
+   */
+  it('imports a pasted CSV export, with its statuses and hours', async () => {
+    await renderApp(<LibraryScreen />);
+    await fireEvent.press(screen.getByText('Import'));
+    await fireEvent.changeText(
+      screen.getByPlaceholderText(/Paste/i),
+      ['Title,Status,Hours', 'Celeste,Completed,9', 'Hades,Playing,4'].join(
+        '\n'
+      )
+    );
+    await fireEvent.press(screen.getByText('Merge into my library'));
+
+    await waitFor(() => expect(library()['77']).toBeTruthy());
+    expect(library()['77'].status).toBe('finished');
+    expect(library()['77'].hoursPlayed).toBe(9);
+    expect(library()['78'].status).toBe('playing');
+  });
+
+  it('says which titles it could not match rather than dropping them silently', async () => {
+    await renderApp(<LibraryScreen />);
+    await fireEvent.press(screen.getByText('Import'));
+    await fireEvent.changeText(
+      screen.getByPlaceholderText(/Paste/i),
+      ['Title', 'Celeste', 'Some Obscure Thing'].join('\n')
+    );
+    await fireEvent.press(screen.getByText('Merge into my library'));
+    await waitFor(() =>
+      expect(screen.getByText(/couldn’t match 1/)).toBeTruthy()
+    );
+  });
+
+  it('explains a spreadsheet with no title column', async () => {
+    await renderApp(<LibraryScreen />);
+    await fireEvent.press(screen.getByText('Import'));
+    await fireEvent.changeText(
+      screen.getByPlaceholderText(/Paste/i),
+      ['Foo,Bar', '1,2'].join('\n')
+    );
+    await fireEvent.press(screen.getByText('Merge into my library'));
+    await waitFor(() =>
+      expect(screen.getByText(/expected Title, Name or Game/)).toBeTruthy()
+    );
   });
 });

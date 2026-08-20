@@ -9,6 +9,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { MAX_AGE, persister } from '@/api/persist';
 import { queryClient } from '@/api/queryClient';
+import { CommandPalette } from '@/components/CommandPalette';
 import { Onboarding } from '@/components/Onboarding';
 import { SaveErrorNotice } from '@/components/SaveErrorNotice';
 import { ToastProvider } from '@/components/Toast';
@@ -113,6 +114,7 @@ export default function RootLayout() {
                 }}
               />
               <Onboarding />
+              <CommandPalette />
               <SaveErrorNotice />
             </ToastProvider>
           </SafeAreaProvider>
