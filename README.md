@@ -45,12 +45,22 @@ Open in [Expo Go](https://expo.dev/go), an emulator, or press `w` for web.
 
 ### Scripts
 
-| Command                              |                                                 |
-| ------------------------------------ | ----------------------------------------------- |
-| `npm run typecheck`                  | TypeScript, no emit                             |
-| `npm run lint`                       | ESLint                                          |
-| `npm run format`                     | Prettier write                                  |
-| `node scripts/duration-coverage.mjs` | data-source validation (see `docs/validation/`) |
+| Command                              |                                                        |
+| ------------------------------------ | ------------------------------------------------------ |
+| `npm run typecheck`                  | TypeScript, no emit                                    |
+| `npm run lint`                       | ESLint                                                 |
+| `npm run format`                     | Prettier write                                         |
+| `npm test`                           | Jest (unit and component)                              |
+| `npm run test:hydration`             | builds nothing — runs `e2e/hydration.mjs` over `dist/` |
+| `node scripts/duration-coverage.mjs` | data-source validation (see `docs/validation/`)        |
+
+`test:hydration` needs a `dist/` from `npm run build`, and a Chromium that
+Playwright can launch. Where the installed browser does not match the
+Playwright build (a sandbox with its own browsers, say), point at it:
+
+```bash
+CHROMIUM_PATH=/path/to/chrome npm run test:hydration
+```
 
 ## Deploy (Vercel)
 
