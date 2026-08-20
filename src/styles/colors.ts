@@ -31,6 +31,19 @@ export const COLORS = {
   plate: 'rgba(18,24,36,0.55)',
   /** The stroke that goes with `plate` — a hairline vanishes on a photo. */
   strokeOnImage: 'rgba(255,255,255,0.22)',
+  /**
+   * The veil every piece of cover art wears.
+   *
+   * Nothing in this app's imagery was chosen by anyone here: it is a
+   * few thousand publishers' key art, shot and graded to a few thousand
+   * different briefs. A golden fantasy poster next to an ice-blue
+   * roguelike next to a blood-red soulslike is not a palette, and no
+   * amount of layout makes a page out of it. A common veil at the app's
+   * own colour gives them one black point and one cast to share, which
+   * is what a colourist does to make disparate footage read as one
+   * film.
+   */
+  grade: 'rgba(39,47,63,0.14)',
 } as const;
 
 /** RAWG community-rating buckets. */
