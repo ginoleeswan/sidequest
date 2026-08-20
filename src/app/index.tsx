@@ -757,19 +757,24 @@ export default function HomeScreen() {
           style={[styles.headerFloat, { paddingTop: insets.top + SPACING.sm }]}
           onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
         >
-          {/* Opaque behind the controls, then a long dissolve. The grain
-              rides the same curve, so the chrome melts into the textured
-              page instead of ending on a visible seam. */}
+          {/* Opaque behind the wordmark only, then a long dissolve the
+              chips ride down.
+
+              This used to stay solid for 72 of its 128 pixels, which put
+              the chip row inside the chrome and left the whole dissolve
+              below them carrying nothing — a fade for its own sake, and
+              128 pixels of artwork spent on a bar. The opaque band now
+              ends under the wordmark, so the chips sit on the lip with
+              the picture coming up behind them. */}
           <LinearGradient
             colors={[
               COLORS.navy,
               COLORS.darkGrey,
-              COLORS.darkGrey,
-              'rgba(51,61,81,0.86)',
-              'rgba(51,61,81,0.45)',
+              'rgba(51,61,81,0.72)',
+              'rgba(51,61,81,0.34)',
               'rgba(51,61,81,0)',
             ]}
-            locations={[0, 0.34, 0.56, 0.74, 0.89, 1]}
+            locations={[0, 0.3, 0.52, 0.78, 1]}
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
           />
@@ -841,6 +846,7 @@ export default function HomeScreen() {
                   selected={!searching && !isHome && section.key === item.key}
                   iconName={item.iconName}
                   iconType={item.iconType}
+                  onImage={isHome}
                   onPress={() => selectSection(item)}
                 />
               )}
@@ -928,7 +934,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: SPACING.md,
     paddingHorizontal: SPACING.md,
-    marginBottom: SPACING.sm + 4,
+    // Clear of the opaque band, so the chips land on the dissolve.
+    marginBottom: SPACING.md + 2,
   },
   wordmark: {
     ...TYPE.h1,

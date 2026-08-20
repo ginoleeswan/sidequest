@@ -253,8 +253,8 @@ function Slide({
           rather than on whatever the artwork happened to be. */}
       <LinearGradient
         colors={[
-          'rgba(39,47,63,0.5)',
-          'rgba(39,47,63,0.22)',
+          'rgba(39,47,63,0.32)',
+          'rgba(39,47,63,0.15)',
           'rgba(39,47,63,0)',
         ]}
         locations={[0, 0.45, 1]}
