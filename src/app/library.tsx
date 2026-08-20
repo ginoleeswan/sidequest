@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -97,13 +97,17 @@ function Stat({
 export default function LibraryScreen() {
   const router = useRouter();
   const { byStatus, entries, count, exportJson, importJson } = useLibrary();
-  const { durationOf } = useDurations();
+  const { durationOf, learnDurations } = useDurations();
   const [sort, setSort] = useState<LibrarySort>('added');
 
   const hoursOf = useCallback(
     (game: Parameters<typeof durationOf>[0]) => durationOf(game).hours,
     [durationOf]
   );
+  useEffect(() => {
+    learnDurations(Object.values(entries).map((entry) => entry.game.slug));
+  }, [entries, learnDurations]);
+
   const stats = useMemo(
     () => libraryStats(Object.values(entries), hoursOf),
     [entries, hoursOf]
