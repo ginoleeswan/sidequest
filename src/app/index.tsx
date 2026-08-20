@@ -27,7 +27,12 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { queryKeys } from '@/api/queryClient';
-import { friendlyError, searchCreators, searchGames } from '@/api/rawg';
+import {
+  friendlyError,
+  getGames,
+  searchCreators,
+  searchGames,
+} from '@/api/rawg';
 import type { Game, Paged } from '@/api/types';
 import { RouteError } from '@/components/RouteError';
 import { Chip } from '@/components/Chip';
@@ -66,6 +71,7 @@ import {
   toBrowseFilters,
   type BrowseRefinements,
 } from '@/components/FilterBar';
+import { TodayLine } from '@/components/TodayLine';
 import { GrainScrim, Textured } from '@/components/Textured';
 import {
   DISCOVER,
@@ -74,8 +80,20 @@ import {
   HOME_SHELVES,
   QUICK_WIN_HOURS,
   QUICK_WINS,
+  SHELF_POOL,
   type Section,
 } from '@/constants/categories';
+import { useHydrated } from '@/hooks/useHydrated';
+import { useDurations } from '@/lib/durations';
+import { useLibrary } from '@/lib/library';
+import {
+  becauseYouSaved,
+  feedSeed,
+  likeYouFinish,
+  pickShelves,
+  withinLength,
+  withoutOwned,
+} from '@/lib/homeFeed';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useDebounced } from '@/hooks/useDebounced';
 import { COLORS } from '@/styles/colors';
@@ -194,8 +212,33 @@ export default function HomeScreen() {
     staleTime: 10 * 60 * 1000,
   });
 
+  /**
+   * Today's storefront.
+   *
+   * The pre-rendered HTML is built from the fixed HOME_SHELVES, so that
+   * is what the hydration render must show; once the client knows what
+   * day it is and what is in the library, the rotation takes over. See
+   * lib/homeFeed for why it turns over daily rather than per refresh.
+   */
+  const hydrated = useHydrated();
+  const { entries: libraryEntries } = useLibrary();
+  const { durationOf } = useDurations();
+  const library = useMemo(
+    () => Object.values(libraryEntries),
+    [libraryEntries]
+  );
+  const [today] = useState(() => Date.now());
+
+  const homeShelves = useMemo(() => {
+    if (!hydrated) return HOME_SHELVES;
+    return [
+      HOME_SHELVES[0],
+      ...pickShelves(SHELF_POOL, 4, feedSeed(today, library)),
+    ];
+  }, [hydrated, today, library]);
+
   const shelves = useQueries({
-    queries: HOME_SHELVES.map((shelf) => ({
+    queries: homeShelves.map((shelf) => ({
       queryKey: queryKeys.shelf(shelf.key),
       queryFn: () => shelf.fetch(1),
       select: (r: Paged<Game>) => r.results,
@@ -203,7 +246,33 @@ export default function HomeScreen() {
     })),
   });
 
-  const games = dedupeById(list.data?.pages.flatMap((p) => p.results) ?? []);
+  /** Two rows nothing else can build: your mood, and your length. */
+  const personal = useMemo(() => {
+    if (!hydrated) return { mood: null, length: null };
+    return {
+      mood: becauseYouSaved(library),
+      length: likeYouFinish(library, (entry) => durationOf(entry.game).hours),
+    };
+  }, [hydrated, library, durationOf]);
+
+  const moodShelf = useQuery({
+    queryKey: ['personal', personal.mood?.key],
+    queryFn: () => getGames(personal.mood?.genre, 1),
+    select: (r: Paged<Game>) => r.results,
+    enabled: isHome && personal.mood != null,
+    staleTime: 30 * 60 * 1000,
+  });
+
+  const fetched = dedupeById(list.data?.pages.flatMap((p) => p.results) ?? []);
+  /**
+   * A storefront that keeps offering the game you saved last week is a
+   * goldfish. The library is empty until hydration, so this is a no-op
+   * on the pre-rendered render and takes effect on the next commit.
+   */
+  const games = useMemo(
+    () => withoutOwned(fetched, library),
+    [fetched, library]
+  );
   const totalCount = list.data?.pages[0]?.count ?? 0;
   const featured = isHome ? games.slice(0, FEATURED_COUNT) : [];
   // No extra request: the short games out of everything already fetched.
@@ -217,6 +286,15 @@ export default function HomeScreen() {
     [games, isHome]
   );
   const trendingShelf = isHome ? games.slice(FEATURED_COUNT) : [];
+
+  /** No extra request: the right-length games out of what is loaded. */
+  const lengthShelf = useMemo(
+    () =>
+      isHome && personal.length
+        ? withinLength(games, personal.length.window!).slice(0, 12)
+        : [],
+    [isHome, personal.length, games]
+  );
 
   const selectSection = (s: Section) => {
     setQuery('');
@@ -421,6 +499,7 @@ export default function HomeScreen() {
                   )
                 ) : isHome ? (
                   <View style={styles.homeScroll}>
+                    <TodayLine inset={SPACING.xl} />
                     <FadeInView>
                       <FeaturedHero games={featured} />
                     </FadeInView>
@@ -440,7 +519,58 @@ export default function HomeScreen() {
                       onViewAll={selectSection}
                       inset={SPACING.xl}
                     />
-                    {HOME_SHELVES.map((shelf, index) => (
+                    {personal.mood && (moodShelf.data?.length ?? 0) > 0 && (
+                      <Shelf
+                        section={{
+                          ...DISCOVER[0],
+                          key: personal.mood.key,
+                          title: personal.mood.title,
+                          eyebrow: personal.mood.eyebrow,
+                        }}
+                        games={withoutOwned(moodShelf.data ?? [], library)}
+                        inset={SPACING.xl}
+                      />
+                    )}
+                    {personal.length && lengthShelf.length > 0 && (
+                      <Shelf
+                        section={{
+                          ...QUICK_WINS,
+                          key: personal.length.key,
+                          title: personal.length.title,
+                          eyebrow: personal.length.eyebrow,
+                        }}
+                        games={lengthShelf}
+                        inset={SPACING.xl}
+                      />
+                    )}
+                    {personal.mood && (moodShelf.data?.length ?? 0) > 0 && (
+                      <Shelf
+                        section={{
+                          ...DISCOVER[0],
+                          key: personal.mood.key,
+                          title: personal.mood.title,
+                          eyebrow: personal.mood.eyebrow,
+                        }}
+                        games={withoutOwned(
+                          moodShelf.data ?? [],
+                          library
+                        ).slice(0, 12)}
+                        inset={SPACING.md}
+                      />
+                    )}
+                    {personal.length && lengthShelf.length > 0 && (
+                      <Shelf
+                        section={{
+                          ...QUICK_WINS,
+                          key: personal.length.key,
+                          title: personal.length.title,
+                          eyebrow: personal.length.eyebrow,
+                        }}
+                        games={lengthShelf}
+                        inset={SPACING.md}
+                      />
+                    )}
+                    {homeShelves.map((shelf, index) => (
                       <WhenNear
                         key={shelf.key}
                         placeholder={
@@ -453,7 +583,10 @@ export default function HomeScreen() {
                       >
                         <Shelf
                           section={shelf}
-                          games={shelves[index].data ?? []}
+                          games={withoutOwned(
+                            shelves[index].data ?? [],
+                            library
+                          )}
                           onViewAll={selectSection}
                           inset={SPACING.xl}
                         />
@@ -515,6 +648,7 @@ export default function HomeScreen() {
                   </View>
                 )}
                 <View style={styles.compactShelves}>
+                  <TodayLine inset={SPACING.md} />
                   <View style={styles.homeModules}>
                     <TonightCard />
                     <SurpriseButton games={games} />
@@ -531,7 +665,7 @@ export default function HomeScreen() {
                     onViewAll={selectSection}
                     inset={SPACING.md}
                   />
-                  {HOME_SHELVES.map((shelf, index) => (
+                  {homeShelves.map((shelf, index) => (
                     <WhenNear
                       key={shelf.key}
                       placeholder={
@@ -544,7 +678,10 @@ export default function HomeScreen() {
                     >
                       <Shelf
                         section={shelf}
-                        games={(shelves[index].data ?? []).slice(0, 12)}
+                        games={withoutOwned(
+                          shelves[index].data ?? [],
+                          library
+                        ).slice(0, 12)}
                         onViewAll={selectSection}
                         inset={SPACING.md}
                       />

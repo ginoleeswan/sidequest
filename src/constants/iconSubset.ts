@@ -70,6 +70,7 @@ export const SUBSET_ICONS = [
   'stop',
   'sync',
   'time',
+  'today',
   'trending-up',
   'trophy',
 ] as const;

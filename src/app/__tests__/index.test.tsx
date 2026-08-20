@@ -204,4 +204,55 @@ describe('the home screen', () => {
       jest.useRealTimers();
     }
   });
+
+  /**
+   * The storefront used to be the same five shelves in the same order
+   * for everyone, for ever. These pin the three things that changed.
+   */
+  it('tells you what day it is, and what came out on it', async () => {
+    await renderApp(<HomeScreen />);
+    const today = new Date().toLocaleDateString(undefined, {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    });
+    await waitFor(() => expect(screen.getByText(today)).toBeTruthy());
+  });
+
+  it('leaves out the games you already saved', async () => {
+    store['sidequest.library.v1'] = JSON.stringify({
+      '3': {
+        addedAt: 1,
+        status: 'wishlist',
+        game: { id: 3, name: 'Game 3', playtime: 10 },
+      },
+    });
+    await renderApp(<HomeScreen />);
+    await waitFor(() =>
+      expect(screen.getAllByText('Game 1').length).toBeGreaterThan(0)
+    );
+    // Saved last week; the storefront has moved on.
+    expect(screen.queryByText('Game 3')).toBeNull();
+  });
+
+  it('builds a shelf out of the last thing you saved', async () => {
+    store['sidequest.library.v1'] = JSON.stringify({
+      '99': {
+        addedAt: 5,
+        status: 'wishlist',
+        game: {
+          id: 99,
+          name: 'Tunic',
+          playtime: 12,
+          genres: [{ id: 1, name: 'Puzzle', slug: 'puzzle' }],
+        },
+      },
+    });
+    await renderApp(<HomeScreen />);
+    await waitFor(() =>
+      expect(
+        screen.getAllByText(/More puzzle, like Tunic/).length
+      ).toBeGreaterThan(0)
+    );
+  });
 });
