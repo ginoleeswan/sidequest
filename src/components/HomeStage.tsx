@@ -217,7 +217,16 @@ function Slide({
   });
 
   return (
-    <View style={{ width, height }} testID={`stage-slide-${index}`}>
+    // Clips its own artwork. The drift scales the art layer up to 1.08,
+    // which spills four percent of the width past each edge — so the
+    // slide waiting off-screen to the right was painting a strip of
+    // itself over the one you were looking at. Nothing in the layout
+    // shows this: the boxes are all exactly a viewport wide, and it is
+    // the paint that overflows.
+    <View
+      style={{ width, height, overflow: 'hidden' }}
+      testID={`stage-slide-${index}`}
+    >
       {/* Hung above the frame, by exactly as far as it can travel down.
           Translating a picture that exactly fills its container just
           uncovers the background; room below it would buy nothing, since
@@ -273,11 +282,16 @@ function Slide({
       <LinearGradient
         colors={[
           'rgba(39,47,63,0)',
-          'rgba(39,47,63,0.55)',
-          'rgba(39,47,63,0.92)',
+          'rgba(39,47,63,0.5)',
+          'rgba(39,47,63,0.88)',
           COLORS.darkGrey,
         ]}
-        locations={[0, 0.42, 0.74, 1]}
+        // Reaching full opacity a fifth of the way from the bottom left
+        // the lowest hundred pixels as a flat grey shelf with the buttons
+        // sitting on it, and the picture appeared to stop rather than to
+        // continue underneath. It only goes solid at the very last, where
+        // it has to meet the page.
+        locations={[0, 0.5, 0.88, 1]}
         style={styles.scrim}
         pointerEvents="none"
       />
@@ -359,21 +373,37 @@ const styles = StyleSheet.create({
      */
     maxWidth: 640,
   },
+  /**
+   * The copy carries its own legibility.
+   *
+   * Now that the scrim stops short of solid, the artwork behind these
+   * lines is whatever RAWG sent — and against a bright frame the sums
+   * come out near 3:1, under the 4.5 normal text needs. Nothing
+   * automated catches it: axe cannot evaluate a photograph. A soft dark
+   * shadow buys the contrast back without painting over the picture,
+   * which is the whole reason the scrim was lifted.
+   */
   eyebrow: {
     ...TYPE.tag,
     color: COLORS.accent,
     letterSpacing: 1.4,
     marginBottom: 2,
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowRadius: 8,
   },
   title: {
     ...TYPE.display,
     color: COLORS.white,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowRadius: 18,
   },
   detail: {
     ...TYPE.p,
     fontSize: 15,
     lineHeight: 22,
     color: COLORS.lightGrey,
+    textShadowColor: 'rgba(0,0,0,0.65)',
+    textShadowRadius: 10,
     marginTop: 2,
     marginBottom: SPACING.md,
     maxWidth: 460,
@@ -400,7 +430,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     borderRadius: RADIUS.lg,
     borderWidth: 1,
-    borderColor: COLORS.strokeStrong,
+    borderColor: 'rgba(255,255,255,0.22)',
+    // A plate, for the same reason the header chips have one: an outline
+    // with no fill was legible only because the scrim behind it was
+    // solid, and it is not solid any more.
+    backgroundColor: 'rgba(18,24,36,0.5)',
   },
   ghostLabel: {
     ...TYPE.label,
