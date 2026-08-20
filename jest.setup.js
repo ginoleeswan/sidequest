@@ -40,7 +40,8 @@ jest.mock('expo-router', () => {
   return {
     router,
     useRouter: () => router,
-    usePathname: () => '/',
+    // Current path a test can set: globalThis.routePathname = '/library'.
+    usePathname: () => globalThis.routePathname ?? '/',
     // Route params a test can set: globalThis.routeParams = { id: '1' }.
     useLocalSearchParams: () => globalThis.routeParams ?? {},
     useSegments: () => [],
