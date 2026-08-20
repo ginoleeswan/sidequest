@@ -7,7 +7,7 @@ import type { Game } from '@/api/types';
 import type { Section } from '@/constants/categories';
 import { COLORS } from '@/styles/colors';
 import { RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { OVER_IMAGE, TYPE } from '@/styles/typography';
 
 interface Props {
   section: Section;
@@ -81,13 +81,9 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
   title: {
-    fontFamily: 'Noah-Black',
-    fontSize: 30,
-    lineHeight: 34,
+    ...TYPE.title,
+    ...OVER_IMAGE.heading,
     color: COLORS.white,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 8,
   },
   description: {
     ...TYPE.p,

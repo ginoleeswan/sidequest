@@ -95,9 +95,9 @@ const styles = StyleSheet.create({
      * where the header's gradient is weakest. Everything realistic is
      * far better than that.
      */
-    backgroundColor: 'rgba(18,24,36,0.55)',
+    backgroundColor: COLORS.plate,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
+    borderColor: COLORS.strokeOnImage,
   },
   quiet: {
     backgroundColor: 'transparent',

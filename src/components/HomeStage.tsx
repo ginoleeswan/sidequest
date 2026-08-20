@@ -23,7 +23,7 @@ import type { StageSlide } from '@/lib/stage';
 import { COLORS } from '@/styles/colors';
 import { DURATION, EASING } from '@/styles/motion';
 import { RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { OVER_IMAGE, TYPE } from '@/styles/typography';
 
 /**
  * The top of the home page: one full-bleed picture with an argument on
@@ -385,25 +385,19 @@ const styles = StyleSheet.create({
    */
   eyebrow: {
     ...TYPE.tag,
+    ...OVER_IMAGE.body,
     color: COLORS.accent,
-    letterSpacing: 1.4,
     marginBottom: 2,
-    textShadowColor: 'rgba(0,0,0,0.6)',
-    textShadowRadius: 8,
   },
   title: {
     ...TYPE.display,
+    ...OVER_IMAGE.heading,
     color: COLORS.white,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowRadius: 18,
   },
   detail: {
-    ...TYPE.p,
-    fontSize: 15,
-    lineHeight: 22,
+    ...TYPE.body,
+    ...OVER_IMAGE.body,
     color: COLORS.lightGrey,
-    textShadowColor: 'rgba(0,0,0,0.65)',
-    textShadowRadius: 10,
     marginTop: 2,
     marginBottom: SPACING.md,
     maxWidth: 460,
@@ -430,11 +424,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     borderRadius: RADIUS.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
+    borderColor: COLORS.strokeOnImage,
     // A plate, for the same reason the header chips have one: an outline
     // with no fill was legible only because the scrim behind it was
     // solid, and it is not solid any more.
-    backgroundColor: 'rgba(18,24,36,0.5)',
+    backgroundColor: COLORS.plate,
   },
   ghostLabel: {
     ...TYPE.label,

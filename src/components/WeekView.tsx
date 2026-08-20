@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.sm,
     borderWidth: 1,
     borderColor: COLORS.stroke,
-    backgroundColor: 'rgba(255,255,255,0.035)',
+    backgroundColor: COLORS.raised,
   },
   /** An empty evening is information, so it is drawn rather than skipped. */
   free: { backgroundColor: 'transparent', borderStyle: 'dashed' },
@@ -135,7 +135,6 @@ const styles = StyleSheet.create({
   when: {
     ...TYPE.micro,
     color: COLORS.mediumGrey,
-    letterSpacing: 1.1,
   },
   credits: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   creditsText: {

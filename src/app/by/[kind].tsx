@@ -72,7 +72,7 @@ export default function ByCreatorScreen() {
         <AppHeader />
       ) : (
         <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
-          <BackButton />
+          <BackButton onImage />
         </View>
       )}
 

@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.strokeStrong,
     borderRadius: RADIUS.md,
     padding: SPACING.md,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: COLORS.raised,
   },
   paceCardSelected: {
     backgroundColor: COLORS.white,

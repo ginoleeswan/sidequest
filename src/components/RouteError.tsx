@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: COLORS.strokeStrong,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: COLORS.raised,
     marginBottom: SPACING.xs,
   },
   title: {
