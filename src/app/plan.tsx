@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 
 import type { Game } from '@/api/types';
+import { Alerts } from '@/components/Alerts';
 import { RouteError } from '@/components/RouteError';
 import { BackButton } from '@/components/BackButton';
 import { CoverImage } from '@/components/CoverImage';
@@ -26,6 +27,7 @@ import {
   type DurationSource,
 } from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
+import { buildAlerts } from '@/lib/alerts';
 import { useLibrary } from '@/lib/library';
 import {
   pickTonight,
@@ -195,7 +197,7 @@ export default function PlanScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isExpanded } = useBreakpoint();
-  const { byStatus } = useLibrary();
+  const { byStatus, entries: libraryEntries } = useLibrary();
   const { durationOf, learnDurations, count: correctionCount } = useDurations();
   const [editing, setEditing] = useState<Game | null>(null);
 
@@ -285,6 +287,19 @@ export default function PlanScreen() {
 
   const unknown = entries.filter((e) => e.hours <= 0);
 
+  // What the app would have told you, if it could tell you anything —
+  // worked out on open rather than pushed. See components/Alerts.
+  const alerts = useMemo(
+    () =>
+      buildAlerts(
+        Object.values(libraryEntries),
+        (entry) => durationOf(entry.game).hours,
+        pace,
+        now
+      ),
+    [libraryEntries, durationOf, pace, now]
+  );
+
   const tonight = useMemo(
     () =>
       pickTonight(
@@ -357,6 +372,8 @@ export default function PlanScreen() {
             ) : (
               <View style={isExpanded ? styles.columns : styles.stack}>
                 <View style={isExpanded ? styles.colLeft : styles.stack}>
+                  <Alerts alerts={alerts} />
+
                   {/* the answer, first */}
                   <View style={styles.verdict}>
                     <View style={styles.verdictBar} />
