@@ -1,7 +1,12 @@
-import { act, render, screen } from '@testing-library/react-native';
+import { act, render, renderHook, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
 import { DurationsProvider, useDurations } from '../durations';
+
+/** The provider on its own, for the hooks that only need the value. */
+const wrapper = ({ children }: { children: React.ReactNode }) => (
+  <DurationsProvider>{children}</DurationsProvider>
+);
 
 const KEY = 'sidequest.durations.v1';
 let store: Record<string, string> = {};
@@ -112,5 +117,75 @@ describe('DurationsProvider', () => {
     const quiet = jest.spyOn(console, 'error').mockImplementation(() => {});
     await expect(render(<Probe />)).rejects.toThrow();
     quiet.mockRestore();
+  });
+});
+
+/**
+ * The provider is what turns one screen asking about a game into every
+ * screen knowing its length.
+ */
+describe('learning what games take', () => {
+  it('asks the server once per slug, however many screens ask', async () => {
+    const fetchSpy = jest.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            durations: { hades: { normally: 21, submissions: 400 } },
+          })
+        )
+    );
+    globalThis.fetch = fetchSpy as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useDurations(), { wrapper });
+    await act(async () => {
+      result.current.learnDurations(['hades']);
+      result.current.learnDurations(['hades']);
+    });
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses a reported length in place of the estimate, everywhere', async () => {
+    globalThis.fetch = jest.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            durations: { pentiment: { normally: 9.2, submissions: 240 } },
+          })
+        )
+    ) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useDurations(), { wrapper });
+    const game = {
+      id: 1,
+      slug: 'pentiment',
+      playtime: 2,
+      released: '2022-11-15',
+    };
+    expect(result.current.durationOf(game).hours).toBe(2);
+
+    await act(async () => {
+      result.current.learnDurations(['pentiment']);
+    });
+    expect(result.current.durationOf(game).hours).toBe(9.2);
+    expect(result.current.durationOf(game).source).toBe('reported');
+  });
+
+  it('carries on with the estimate when the lookup fails', async () => {
+    globalThis.fetch = jest.fn(async () => {
+      throw new Error('offline');
+    }) as unknown as typeof fetch;
+
+    const { result } = await renderHook(() => useDurations(), { wrapper });
+    await act(async () => {
+      result.current.learnDurations(['celeste']);
+    });
+    expect(
+      result.current.durationOf({
+        id: 2,
+        slug: 'celeste',
+        playtime: 12,
+        released: '2018-01-25',
+      }).source
+    ).toBe('estimate');
   });
 });

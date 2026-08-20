@@ -129,3 +129,58 @@ describe('what is left of a game', () => {
     expect(remainingHours(30, { hoursPlayed: 0, playing: true })).toBe(15);
   });
 });
+
+/**
+ * Reported completion times against RAWG's average. The whole reason the
+ * app wants them: RAWG says Pentiment is 2 hours, and it is about nine.
+ */
+describe('where a length comes from', () => {
+  const game = { playtime: 2, released: '2022-11-15' };
+
+  it('prefers what players reported over the average', () => {
+    const duration = resolveDuration(game, undefined, Date.now(), {
+      normally: 9.2,
+      submissions: 240,
+    });
+    expect(duration.hours).toBe(9.2);
+    expect(duration.source).toBe('reported');
+    expect(duration.rough).toBe(false);
+  });
+
+  it('still lets your own number win', () => {
+    const duration = resolveDuration(game, 11, Date.now(), {
+      normally: 9.2,
+      submissions: 240,
+    });
+    expect(duration.hours).toBe(11);
+    expect(duration.source).toBe('yours');
+  });
+
+  it('ignores a report nobody has corroborated', () => {
+    const duration = resolveDuration(game, undefined, Date.now(), {
+      normally: 40,
+      submissions: 1,
+    });
+    expect(duration.source).toBe('estimate');
+    expect(duration.hours).toBe(2);
+  });
+
+  it('ignores an empty report', () => {
+    const duration = resolveDuration(game, undefined, Date.now(), {
+      normally: null,
+      submissions: 500,
+    });
+    expect(duration.source).toBe('estimate');
+  });
+
+  it('is still unsure about a game nobody has played yet', () => {
+    const duration = resolveDuration(
+      { playtime: 0, released: '2099-01-01' },
+      undefined,
+      Date.now(),
+      { normally: 12, submissions: 40 }
+    );
+    expect(duration.source).toBe('reported');
+    expect(duration.rough).toBe(true);
+  });
+});

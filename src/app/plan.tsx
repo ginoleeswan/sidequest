@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -20,7 +20,11 @@ import { SteamConnect } from '@/components/SteamConnect';
 import { Textured } from '@/components/Textured';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { DurationSheet } from '@/components/DurationSheet';
-import { formatHours, remainingHours } from '@/lib/duration';
+import {
+  formatHours,
+  remainingHours,
+  type DurationSource,
+} from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
 import { useLibrary } from '@/lib/library';
 import {
@@ -101,7 +105,7 @@ interface Entry {
   must: boolean;
   /** Its own deadline, epoch ms, if it has one. */
   deadline?: number;
-  source: 'yours' | 'estimate' | 'unknown';
+  source: DurationSource;
 }
 
 function QuestRow({
@@ -156,7 +160,8 @@ function QuestRow({
           <Text
             style={[
               styles.questMeta,
-              entry?.source === 'yours' && styles.questMetaYours,
+              (entry?.source === 'yours' || entry?.source === 'reported') &&
+                styles.questMetaYours,
             ]}
             onPress={(event) => {
               event.stopPropagation();
@@ -166,7 +171,9 @@ function QuestRow({
             accessibilityRole="button"
             accessibilityLabel={`Change how long ${item.name} takes`}
           >
-            {entry?.source === 'yours' ? '' : '~'}
+            {entry?.source === 'yours' || entry?.source === 'reported'
+              ? ''
+              : '~'}
             {formatHours(item.hours)}
             {entry?.played != null && entry.totalHours > 0
               ? ` left of ${formatHours(entry.totalHours)}`
@@ -189,7 +196,7 @@ export default function PlanScreen() {
   const insets = useSafeAreaInsets();
   const { isExpanded } = useBreakpoint();
   const { byStatus } = useLibrary();
-  const { durationOf, count: correctionCount } = useDurations();
+  const { durationOf, learnDurations, count: correctionCount } = useDurations();
   const [editing, setEditing] = useState<Game | null>(null);
 
   const [pace, setPace] = usePersistedState('sidequest.plan.pace', 6);
@@ -239,6 +246,12 @@ export default function PlanScreen() {
     ],
     [byStatus, durationOf]
   );
+
+  // Ask what people actually reported for these, once per screen. The
+  // answers replace RAWG's average everywhere in the app, not just here.
+  useEffect(() => {
+    learnDurations(entries.map((entry) => entry.game.slug));
+  }, [entries, learnDurations]);
 
   const gamesById = useMemo(
     () => new Map(entries.map((e) => [e.game.id, e.game])),

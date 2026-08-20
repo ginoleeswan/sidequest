@@ -80,6 +80,12 @@ The web build is a static export — `vercel.json` is already configured.
      powers Steam connect on The Plan. Server-side only (used by
      `api/steam.ts`), never shipped to the browser. Optional: without it,
      Steam connect shows a friendly "not configured" message.
+   - `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` = a Twitch application
+     ([dev.twitch.tv/console/apps](https://dev.twitch.tv/console/apps)) —
+     IGDB authenticates through Twitch, and these power the reported
+     time-to-beat figures the plan is built on. Server-side only (used by
+     `api/igdb.ts`). Optional: without them every length falls back to
+     RAWG's average, which is the behaviour before they are set.
 3. Deploy. Dynamic game pages (`/game/123`) are served via the rewrite in
    `vercel.json`.
 

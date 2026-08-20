@@ -1,6 +1,6 @@
 import type { Game } from '@/api/types';
 
-export type DurationSource = 'yours' | 'estimate' | 'unknown';
+export type DurationSource = 'yours' | 'reported' | 'estimate' | 'unknown';
 
 export interface Duration {
   /** Hours to finish. 0 when nothing is known. */
@@ -30,6 +30,15 @@ function isUnreleased(game: Pick<Game, 'released'>, now: number): boolean {
 }
 
 /**
+ * How few submissions is too few.
+ *
+ * IGDB's times are player submissions. One person's Tuesday is not a
+ * length — but three people agreeing beats an average of everyone who
+ * ever left the game running, which is what the alternative is.
+ */
+const ENOUGH_SUBMISSIONS = 3;
+
+/**
  * What a game will take, and how much to trust it.
  *
  * RAWG's `playtime` is the average of what players reported, which is the
@@ -42,10 +51,27 @@ function isUnreleased(game: Pick<Game, 'released'>, now: number): boolean {
 export function resolveDuration(
   game: Pick<Game, 'playtime' | 'released'>,
   override: number | undefined,
-  now: number = Date.now()
+  now: number = Date.now(),
+  reported?: { normally: number | null; submissions: number }
 ): Duration {
   if (override != null && override > 0) {
     return { hours: override, source: 'yours', rough: false };
+  }
+
+  // What players actually reported finishing it in, where enough of them
+  // did. This is the number the plan is meant to be built on: RAWG's
+  // average is over everyone who ever launched the game, including the
+  // people who left it running overnight.
+  if (
+    reported?.normally != null &&
+    reported.normally > 0 &&
+    reported.submissions >= ENOUGH_SUBMISSIONS
+  ) {
+    return {
+      hours: reported.normally,
+      source: 'reported',
+      rough: isUnreleased(game, now),
+    };
   }
 
   const estimate = game.playtime ?? 0;

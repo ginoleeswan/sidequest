@@ -9,6 +9,7 @@ import {
 } from 'react';
 
 import { resolveDuration, type Duration } from './duration';
+import { fetchTimesToBeat, type TimeToBeatBySlug } from '@/api/igdb';
 import type { Game } from '@/api/types';
 import { useHydrated } from '@/hooks/useHydrated';
 import { readVersioned, writeFailureMessage, writeJson } from '@/lib/storage';
@@ -32,7 +33,17 @@ function load(): Overrides {
 
 interface DurationsValue {
   /** How long this game takes, and where that number came from. */
-  durationOf: (game: Pick<Game, 'id' | 'playtime' | 'released'>) => Duration;
+  durationOf: (
+    game: Pick<Game, 'id' | 'playtime' | 'released'> & { slug?: string }
+  ) => Duration;
+  /**
+   * Ask for the reported completion times of these games.
+   *
+   * Idempotent and batched: a slug already known, or already being
+   * asked about, costs nothing. Screens call this for whatever they are
+   * showing and the answers improve every length in the app at once.
+   */
+  learnDurations: (slugs: (string | undefined)[]) => void;
   /** Record what a game actually takes. */
   setDuration: (id: number, hours: number) => void;
   /** Go back to RAWG's estimate. */
@@ -55,6 +66,15 @@ const DurationsContext = createContext<DurationsValue | null>(null);
  */
 export function DurationsProvider({ children }: { children: React.ReactNode }) {
   const [stored, setOverrides] = useState<Overrides>(load);
+  /**
+   * Reported times, by slug.
+   *
+   * Kept in memory rather than on the device: they belong to IGDB, not
+   * to this person, and the query cache already keeps the HTTP answer
+   * around. `asked` stops a screen that re-renders from re-asking.
+   */
+  const [reported, setReported] = useState<TimeToBeatBySlug>({});
+  const asked = useRef<Set<string>>(new Set());
   const [saveError, setSaveError] = useState<string | null>(null);
   // The pre-rendered HTML had no stored durations, so the hydration
   // render must not either. Writes still go to `stored`.
@@ -71,6 +91,23 @@ export function DurationsProvider({ children }: { children: React.ReactNode }) {
     const result = writeJson(STORAGE_KEY, stored);
     setSaveError(result.ok ? null : writeFailureMessage(result));
   }, [stored]);
+
+  const learnDurations = useCallback((slugs: (string | undefined)[]) => {
+    const wanted = slugs.filter(
+      (slug): slug is string => Boolean(slug) && !asked.current.has(slug!)
+    );
+    if (wanted.length === 0) return;
+    for (const slug of wanted) asked.current.add(slug);
+
+    fetchTimesToBeat(wanted)
+      .then((times) => {
+        if (Object.keys(times).length === 0) return;
+        setReported((prev) => ({ ...prev, ...times }));
+      })
+      // A length nobody has is better than a screen that will not draw:
+      // everything here degrades to RAWG's estimate.
+      .catch(() => {});
+  }, []);
 
   const setDuration = useCallback((id: number, hours: number) => {
     setOverrides((prev) => {
@@ -89,13 +126,20 @@ export function DurationsProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<DurationsValue>(
     () => ({
-      durationOf: (game) => resolveDuration(game, overrides[String(game.id)]),
+      durationOf: (game) =>
+        resolveDuration(
+          game,
+          overrides[String(game.id)],
+          undefined,
+          game.slug ? reported[game.slug] : undefined
+        ),
+      learnDurations,
       setDuration,
       clearDuration,
       count: Object.keys(overrides).length,
       saveError,
     }),
-    [overrides, setDuration, clearDuration, saveError]
+    [overrides, reported, learnDurations, setDuration, clearDuration, saveError]
   );
 
   return (

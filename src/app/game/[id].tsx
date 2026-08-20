@@ -121,7 +121,13 @@ function StatStrip({
               <Text style={styles.statPencil}> ✎</Text>
             </Text>
           }
-          label={duration.source === 'yours' ? 'Your length' : 'To finish'}
+          label={
+            duration.source === 'yours'
+              ? 'Your length'
+              : duration.source === 'reported'
+                ? 'Players report'
+                : 'To finish'
+          }
         />
       </Pressable>
       {game.released && (
@@ -180,7 +186,7 @@ export default function GameInfoScreen() {
   const router = useRouter();
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
   const [editingLength, setEditingLength] = useState(false);
-  const { durationOf } = useDurations();
+  const { durationOf, learnDurations } = useDurations();
 
   const { isExpanded, width } = useBreakpoint();
   const insets = useSafeAreaInsets();
@@ -189,6 +195,11 @@ export default function GameInfoScreen() {
   // Four endpoints, one unit: the screen gets a single loading/error
   // state, and a hovered tile can prefetch exactly this.
   const { data, isPending, error } = useQuery(gameDetailQuery(id));
+
+  // What people reported finishing this in, if anyone has.
+  useEffect(() => {
+    if (data?.game.slug) learnDurations([data.game.slug]);
+  }, [data?.game.slug, learnDurations]);
 
   useEffect(() => {
     if (data) {
