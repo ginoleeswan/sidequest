@@ -26,11 +26,14 @@ const ROWS = 4;
 export function YearBlocks({
   months,
   landed,
+  size = 12,
 }: {
   /** Games finished per month, January first. */
   months: number[];
   /** The month that just gained one, or null for a still year. */
   landed: number | null;
+  /** Block width. The card is drawn larger where it is the subject. */
+  size?: number;
 }) {
   const reduced = useReducedMotion();
   const drop = useAnimatedValue(reduced || landed == null ? 1 : 0);
@@ -67,6 +70,7 @@ export function YearBlocks({
                 testID={filled ? 'year-block-on' : 'year-block-off'}
                 style={[
                   styles.block,
+                  { width: size, height: Math.round(size * 0.84) },
                   filled && styles.filled,
                   isNew && {
                     opacity: drop,

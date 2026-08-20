@@ -1,35 +1,304 @@
-import { ContentPage, H, P } from '@/components/ContentPage';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useRouter } from 'expo-router';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { Mark } from '@/components/Mark';
+import { PageTitle } from '@/components/PageTitle';
 import { RouteError } from '@/components/RouteError';
+import { ScaleButton } from '@/components/ScaleButton';
+import { SiteFooter } from '@/components/SiteFooter';
+import { GrainScrim, Textured } from '@/components/Textured';
+import { WhenNear } from '@/components/WhenNear';
+import { YearBlocks } from '@/components/YearBlocks';
+import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { COLORS } from '@/styles/colors';
+import { LAYOUT, RADIUS, SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
+
+/**
+ * The page for people who have not used it yet.
+ *
+ * Everywhere else in Sidequest is a tool being used. This is the one
+ * surface that has to make the case cold, to somebody who followed a
+ * link and will give it eight seconds — so it is built like a poster
+ * rather than like a screen: one idea at a time, set large, with the
+ * app's own objects doing the illustrating.
+ *
+ * Deliberately not a feature grid. Three cards with an icon, a title and
+ * two lines of body is what a page looks like when nobody decided what
+ * mattered most; the order and the scale here are the argument.
+ */
+
+/** A plausible year, for the card that has no data of its own to show. */
+const SAMPLE_YEAR = [1, 0, 2, 1, 0, 1, 3, 2, 4, 2, 1, 3];
+
+const BEATS = [
+  {
+    lead: 'It knows how long things take.',
+    body: 'Every game carries a real length, from the people who have finished it — not a guess, and not a store page.',
+  },
+  {
+    lead: 'It picks what fits tonight.',
+    body: 'Ninety minutes on a Tuesday is not three hours on a Saturday. Sidequest does the arithmetic and names one game.',
+  },
+  {
+    lead: 'It lets you put things down.',
+    body: 'Most of a backlog is never going to be played, and saying so out loud is the only thing that makes the rest enjoyable.',
+  },
+];
 
 export default function AboutScreen() {
+  const router = useRouter();
+  const { isExpanded, width } = useBreakpoint();
+
+  /**
+   * The masthead scales with the page rather than sitting on the app's
+   * heading scale. A landing line set at a UI size is a caption; this
+   * one has to carry a screen on its own.
+   */
+  const display = Math.round(Math.min(Math.max(width * 0.098, 38), 104));
+  const masthead = {
+    fontSize: display,
+    lineHeight: Math.round(display * 1.02),
+    letterSpacing: display > 60 ? -3 : -1.2,
+  };
+  const inset = isExpanded ? SPACING.xl * 2 : SPACING.lg;
+
+  const open = (
+    <ScaleButton
+      onPress={() => router.push('/')}
+      style={styles.cta}
+      activeScale={0.97}
+      hoverScale={1.03}
+      accessibilityLabel="Open Sidequest"
+    >
+      <Text style={styles.ctaLabel}>Open Sidequest</Text>
+      <Ionicons name="arrow-forward" size={16} color={COLORS.navy} />
+    </ScaleButton>
+  );
+
   return (
-    <ContentPage title="About Sidequest" documentTitle="About">
-      <P>
-        Sidequest is a fast, beautiful way to discover your next game — what’s
-        trending, what just came out, what’s coming, and what the critics and
-        community actually think.
-      </P>
-      <H>The story</H>
-      <P>
-        This project began life in 2021 as ARCADE, a game database browser. In
-        2026 it was resurrected, rebuilt on a modern stack, and redesigned into
-        what you’re using now. It’s an independent project — not affiliated with
-        any platform, publisher, or store.
-      </P>
-      <H>The data</H>
-      <P>
-        All game data — titles, artwork, ratings, screenshots, and store links —
-        comes from RAWG, one of the largest video game databases in the world.
-        Community figures reflect RAWG’s users.
-      </P>
-      <H>Built with</H>
-      <P>
-        React Native and Expo, running on web, with a single codebase from phone
-        to desktop. Open source on GitHub: ginoleeswan/sidequest.
-      </P>
-    </ContentPage>
+    <Textured style={styles.background}>
+      <PageTitle>About Sidequest</PageTitle>
+      <SafeAreaView edges={['top']}>
+        <ScrollView contentContainerStyle={styles.scroll}>
+          <View style={[styles.masthead, { paddingHorizontal: inset }]}>
+            {/* No back chevron. Most people reach this page from a link
+                and have nowhere to go back to; the ones who came from the
+                footer have a browser button and the mark below. */}
+            <View style={styles.lockup}>
+              <Mark size={26} />
+              <Text style={styles.word}>SIDEQUEST</Text>
+            </View>
+            <Text style={[styles.headline, masthead]}>
+              Know what you can actually finish.
+            </Text>
+            <Text style={styles.standfirst}>
+              Backlog triage for people with more games than time.
+            </Text>
+            {open}
+          </View>
+
+          {/* The arithmetic nobody does for themselves, set as the number
+              it is. This is the whole case for the product, and it is
+              more persuasive than any sentence about it. */}
+          <WhenNear placeholder={<View style={styles.sumRoom} />}>
+            <View style={[styles.sum, { paddingHorizontal: inset }]}>
+              <Text style={styles.sumLead}>The average backlog is</Text>
+              <Text style={styles.sumFigure}>
+                900<Text style={styles.sumUnit}>h</Text>
+              </Text>
+              <Text style={styles.sumTail}>
+                and the average week has about six in it. That is fifteen years
+                of evenings, which is not a to-do list — it is a fantasy about a
+                different life.
+              </Text>
+            </View>
+          </WhenNear>
+
+          {BEATS.map((beat) => (
+            <View
+              key={beat.lead}
+              style={[
+                styles.beat,
+                { paddingHorizontal: inset },
+                isExpanded && styles.beatWide,
+              ]}
+            >
+              <Text
+                style={[styles.beatLead, isExpanded && styles.beatLeadWide]}
+              >
+                {beat.lead}
+              </Text>
+              <Text
+                style={[styles.beatBody, isExpanded && styles.beatBodyWide]}
+              >
+                {beat.body}
+              </Text>
+            </View>
+          ))}
+
+          {/* The app's own object, at the size it deserves. */}
+          <View style={[styles.card, { paddingHorizontal: inset }]}>
+            <View style={styles.cardFrame}>
+              <GrainScrim style={StyleSheet.absoluteFill} />
+              <YearBlocks
+                months={SAMPLE_YEAR}
+                landed={null}
+                size={isExpanded ? 26 : 17}
+              />
+            </View>
+            <Text style={styles.cardCaption}>
+              A year of finishing things. One block for every set of credits you
+              actually reach.
+            </Text>
+          </View>
+
+          <View style={[styles.plain, { paddingHorizontal: inset }]}>
+            <Text style={styles.plainLead}>No account. No tracking.</Text>
+            <Text style={styles.plainBody}>
+              Your library lives in your browser and goes nowhere. There is
+              nothing to sign up for, nothing to cancel, and nobody selling what
+              you play. Game data comes from RAWG; lengths come from IGDB and
+              from you.
+            </Text>
+            <Text style={styles.plainBody}>
+              An independent project, not affiliated with any platform,
+              publisher or store. Open source at ginoleeswan/sidequest.
+            </Text>
+            <View style={styles.closeCta}>{open}</View>
+          </View>
+
+          <SiteFooter inset={inset} />
+        </ScrollView>
+      </SafeAreaView>
+    </Textured>
   );
 }
+
+const styles = StyleSheet.create({
+  background: { flexGrow: 1, backgroundColor: COLORS.darkGrey },
+  scroll: { maxWidth: LAYOUT.maxExpandedWidth, width: '100%' },
+
+  // masthead
+  masthead: { paddingTop: SPACING.xl, paddingBottom: SPACING.xl * 2 },
+  lockup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm + 2,
+    marginBottom: SPACING.xl,
+  },
+  word: { ...TYPE.h1, color: COLORS.lightGrey },
+  headline: {
+    fontFamily: 'Noah-Black',
+    color: COLORS.white,
+    maxWidth: 860,
+    marginBottom: SPACING.lg,
+  },
+  standfirst: {
+    ...TYPE.body,
+    // The step between the masthead and the body. Straight from a
+    // hundred points to seventeen is a cliff, and the eye reads a cliff
+    // as two unrelated things rather than as one thought continuing.
+    fontSize: 21,
+    lineHeight: 31,
+    color: COLORS.lightGrey,
+    maxWidth: 520,
+    marginBottom: SPACING.xl,
+  },
+  cta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: SPACING.sm,
+    paddingVertical: 15,
+    paddingHorizontal: SPACING.xl,
+    borderRadius: RADIUS.lg,
+    backgroundColor: COLORS.accent,
+  },
+  ctaLabel: { ...TYPE.label, color: COLORS.navy },
+
+  // the sum
+  sumRoom: { height: 320 },
+  sum: {
+    paddingVertical: SPACING.xl * 2,
+    borderTopWidth: 1,
+    borderColor: COLORS.stroke,
+  },
+  sumLead: { ...TYPE.micro, color: COLORS.mediumGrey },
+  sumFigure: {
+    ...TYPE.numeral,
+    color: COLORS.accent,
+    marginVertical: SPACING.sm,
+  },
+  sumUnit: { ...TYPE.numeral, fontSize: 48, color: COLORS.accent },
+  sumTail: {
+    ...TYPE.body,
+    fontSize: 17,
+    lineHeight: 27,
+    color: COLORS.lightGrey,
+    maxWidth: 520,
+  },
+
+  // the three beats
+  beat: {
+    paddingVertical: SPACING.xl,
+    borderTopWidth: 1,
+    borderColor: COLORS.stroke,
+    gap: SPACING.md,
+  },
+  beatWide: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.xl },
+  beatLead: { ...TYPE.title, color: COLORS.white, maxWidth: 420 },
+  beatLeadWide: { flex: 1.1 },
+  beatBody: {
+    ...TYPE.body,
+    fontSize: 16,
+    lineHeight: 26,
+    color: COLORS.mediumGrey,
+    maxWidth: 480,
+  },
+  beatBodyWide: { flex: 1, marginTop: 6 },
+
+  // the card
+  card: {
+    paddingVertical: SPACING.xl * 2,
+    borderTopWidth: 1,
+    borderColor: COLORS.stroke,
+    alignItems: 'center',
+    gap: SPACING.lg,
+  },
+  cardFrame: {
+    padding: SPACING.lg,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.stroke,
+    backgroundColor: COLORS.navy,
+    overflow: 'hidden',
+  },
+  cardCaption: {
+    ...TYPE.caption,
+    textAlign: 'center',
+    maxWidth: 380,
+  },
+
+  // the plain truth
+  plain: {
+    paddingVertical: SPACING.xl * 2,
+    borderTopWidth: 1,
+    borderColor: COLORS.stroke,
+    gap: SPACING.md,
+  },
+  plainLead: { ...TYPE.title, color: COLORS.white },
+  plainBody: {
+    ...TYPE.body,
+    fontSize: 15,
+    lineHeight: 24,
+    color: COLORS.mediumGrey,
+    maxWidth: 560,
+  },
+  closeCta: { marginTop: SPACING.lg },
+});
 
 /**
  * expo-router renders this instead of the route when its render throws,
