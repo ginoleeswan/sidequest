@@ -37,6 +37,7 @@ import { GameCard } from '@/components/GameCard';
 import { GameInfoCard } from '@/components/GameInfoCard';
 import { GameTile } from '@/components/GameTile';
 import { Message } from '@/components/Message';
+import { PageTitle } from '@/components/PageTitle';
 import { Rail } from '@/components/Rail';
 import { SearchInput } from '@/components/SearchInput';
 import { SectionHeader } from '@/components/SectionHeader';
@@ -352,6 +353,7 @@ export default function HomeScreen() {
   if (isExpanded) {
     return (
       <Textured style={styles.background}>
+        <PageTitle>Sidequest — Discover your next game</PageTitle>
         <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
           <View style={[styles.expandedShell, { minHeight: windowHeight }]}>
             <Sidebar
@@ -434,6 +436,7 @@ export default function HomeScreen() {
   // -------------------------------------------------------------- compact
   return (
     <Textured style={styles.background}>
+      <PageTitle>Sidequest — Discover your next game</PageTitle>
       <View style={styles.compactShell}>
         <Reveal
           pending={list.isPending}

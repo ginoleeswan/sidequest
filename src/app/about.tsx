@@ -3,7 +3,7 @@ import { RouteError } from '@/components/RouteError';
 
 export default function AboutScreen() {
   return (
-    <ContentPage title="About Sidequest">
+    <ContentPage title="About Sidequest" documentTitle="About">
       <P>
         Sidequest is a fast, beautiful way to discover your next game — what’s
         trending, what just came out, what’s coming, and what the critics and

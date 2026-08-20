@@ -15,7 +15,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "build": "node scripts/build-sitemap.mjs && expo export --platform web",
-    "test:hydration": "node e2e/hydration.mjs"
+    "test:hydration": "node e2e/hydration.mjs",
+    "test:a11y": "node e2e/a11y.mjs"
   },
   "engines": {
     "node": ">=20.19.4"
@@ -51,6 +52,7 @@
     "@testing-library/react-native": "^14.0.1",
     "@types/jest": "29.5.14",
     "@types/react": "~19.2.2",
+    "axe-core": "^4.13.0",
     "eslint": "^9.39.5",
     "eslint-config-expo": "^57.0.1",
     "eslint-config-prettier": "^10.1.8",
