@@ -12,18 +12,67 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { LinearGradient } from 'expo-linear-gradient';
+
 import { CoverImage } from './CoverImage';
 import { FadeInView } from './FadeInView';
 import { Textured } from './Textured';
 import { queryKeys } from '@/api/queryClient';
 import type { Game, Paged } from '@/api/types';
 import { DISCOVER } from '@/constants/categories';
+import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useHydrated } from '@/hooks/useHydrated';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { useLibrary } from '@/lib/library';
 import { COLORS } from '@/styles/colors';
-import { RADIUS, SPACING } from '@/styles/theme';
+import { LAYOUT, RADIUS, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
+
+/**
+ * The covers, as the first screen's other half.
+ *
+ * On a phone the welcome is a column and that is the right shape. On a
+ * desktop the same column sat in the middle of fourteen hundred pixels
+ * of nothing — a mobile layout on a monitor, and, in an app about
+ * games, a first impression containing no games at all.
+ *
+ * Two staggered columns of real artwork, dimmed and fading out towards
+ * the copy so the words stay the subject. It is the app's own content,
+ * which is the only honest thing to put here.
+ */
+function CoverWall({ games }: { games: Game[] }) {
+  if (games.length < 4) return null;
+  const columns = [games.slice(0, 3), games.slice(3, 6)];
+
+  return (
+    <View style={styles.wall} pointerEvents="none">
+      {columns.map((column, index) => (
+        <View
+          key={index}
+          style={[styles.wallColumn, index === 1 && styles.wallColumnOffset]}
+        >
+          {column.map((game) => (
+            <CoverImage
+              key={game.id}
+              uri={game.background_image}
+              style={styles.wallCover}
+              size="tile"
+              iconSize={24}
+            />
+          ))}
+        </View>
+      ))}
+      {/* The words are the subject; the wall arrives out of them. */}
+      <LinearGradient
+        colors={[COLORS.darkGrey, 'rgba(51,61,81,0.65)', 'rgba(51,61,81,0)']}
+        locations={[0, 0.35, 1]}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={StyleSheet.absoluteFill}
+      />
+    </View>
+  );
+}
 
 const PACES: {
   icon: keyof typeof Ionicons.glyphMap;
@@ -106,6 +155,7 @@ export function Onboarding() {
   const [savedCount, setSavedCount] = useState(0);
 
   const mounted = useHydrated();
+  const { isExpanded } = useBreakpoint();
 
   const trending = useQuery({
     queryKey: queryKeys.shelf(DISCOVER[0].key),
@@ -135,7 +185,10 @@ export function Onboarding() {
         Sidequest finds your next game, works out what you can actually finish —
         and gives you permission to skip the rest.
       </Text>
-      <Pressable onPress={() => setStep(1)} style={styles.cta}>
+      <Pressable
+        onPress={() => setStep(1)}
+        style={[styles.cta, isExpanded && styles.ctaInline]}
+      >
         <Text style={styles.ctaText}>Set me up — 20 seconds</Text>
         <Ionicons name="arrow-forward" size={16} color={COLORS.darkGrey} />
       </Pressable>
@@ -225,7 +278,10 @@ export function Onboarding() {
           );
         })}
       </View>
-      <Pressable onPress={() => finish(savedCount > 0)} style={styles.cta}>
+      <Pressable
+        onPress={() => finish(savedCount > 0)}
+        style={[styles.cta, isExpanded && styles.ctaInline]}
+      >
         <Text style={styles.ctaText}>
           {savedCount > 0
             ? `Build my plan — ${savedCount} saved`
@@ -243,9 +299,11 @@ export function Onboarding() {
       onRequestClose={() => finish(false)}
     >
       <Textured style={styles.screen}>
-        <Text style={styles.watermark} numberOfLines={1}>
-          SIDEQUEST
-        </Text>
+        {!isExpanded && (
+          <Text style={styles.watermark} numberOfLines={1}>
+            SIDEQUEST
+          </Text>
+        )}
 
         <View style={[styles.chrome, { top: insets.top + SPACING.md }]}>
           {step > 0 ? (
@@ -268,9 +326,18 @@ export function Onboarding() {
           </Pressable>
         </View>
 
-        <View style={[styles.stage, { width: contentWidth }]}>
-          <FadeInView key={step}>{acts[step]}</FadeInView>
-        </View>
+        {isExpanded ? (
+          <View style={styles.split}>
+            <View style={styles.copyColumn}>
+              <FadeInView key={step}>{acts[step]}</FadeInView>
+            </View>
+            <CoverWall games={trending.data ?? []} />
+          </View>
+        ) : (
+          <View style={[styles.stage, { width: contentWidth }]}>
+            <FadeInView key={step}>{acts[step]}</FadeInView>
+          </View>
+        )}
 
         <View style={[styles.dots, { bottom: insets.bottom + SPACING.xl }]}>
           {acts.map((_, index) => (
@@ -318,6 +385,34 @@ const styles = StyleSheet.create({
     padding: SPACING.sm,
   },
   stage: { maxWidth: 460 },
+  split: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 1180,
+    paddingHorizontal: SPACING.xl,
+    gap: SPACING.xl,
+  },
+  copyColumn: { width: 480, flexShrink: 0, zIndex: 2 },
+  wall: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: SPACING.md,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    overflow: 'hidden',
+  },
+  wallColumn: { gap: SPACING.md, flex: 1, maxWidth: 240 },
+  /** Staggered, so it reads as a wall rather than a table. */
+  wallColumnOffset: { marginTop: SPACING.xl * 2 },
+  wallCover: {
+    width: '100%',
+    aspectRatio: LAYOUT.tileAspect,
+    borderRadius: RADIUS.sm,
+    overflow: 'hidden',
+    opacity: 0.75,
+  },
   act: { gap: SPACING.md, alignItems: 'flex-start' },
   eyebrow: {
     ...TYPE.tag,
@@ -353,6 +448,12 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     marginTop: SPACING.sm,
   },
+  /**
+   * On a phone a full-width button is the target you want. Stretched
+   * across a desktop copy column it is a 660px pill, which reads as a
+   * banner rather than as something to press.
+   */
+  ctaInline: { alignSelf: 'flex-start' },
   ctaText: {
     ...TYPE.h3,
     color: COLORS.darkGrey,
