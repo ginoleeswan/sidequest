@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react-native';
+import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import LibraryScreen from '../library';
 import type { Game } from '@/api/types';
@@ -58,5 +58,94 @@ describe('the library screen', () => {
     await renderApp(<LibraryScreen />);
     expect(screen.getByText('Copy library')).toBeTruthy();
     expect(screen.getByText('Import')).toBeTruthy();
+  });
+
+  /**
+   * "Shortest first" is the single most useful order there is when you
+   * have an hour and forty games, so the ordering is a feature, not a
+   * preference.
+   */
+  it('reorders by length on demand', async () => {
+    seed([
+      { game: game(1, 'Long', 40), status: 'wishlist' },
+      { game: game(2, 'Short', 4), status: 'wishlist' },
+    ]);
+    await renderApp(<LibraryScreen />);
+    await fireEvent.press(screen.getByText('Shortest'));
+    const titles = screen
+      .getAllByText(/^(Long|Short)$/)
+      .map((node) => node.props.children);
+    expect(titles[0]).toBe('Short');
+  });
+
+  it('offers no sort control for a single game', async () => {
+    seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
+    await renderApp(<LibraryScreen />);
+    expect(screen.queryByText('Shortest')).toBeNull();
+  });
+
+  it('copies the library out, and says so', async () => {
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(globalThis, 'navigator', {
+      configurable: true,
+      value: { clipboard: { writeText } },
+    });
+    seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
+    await renderApp(<LibraryScreen />);
+    await fireEvent.press(screen.getByText('Copy library'));
+    await waitFor(() => expect(writeText).toHaveBeenCalled());
+    expect(JSON.parse(writeText.mock.calls[0][0])['1'].game.name).toBe(
+      'Celeste'
+    );
+    await waitFor(() =>
+      expect(screen.getByText(/Library copied/)).toBeTruthy()
+    );
+  });
+
+  it('says so rather than failing silently when the browser blocks the clipboard', async () => {
+    Object.defineProperty(globalThis, 'navigator', {
+      configurable: true,
+      value: {
+        clipboard: { writeText: jest.fn().mockRejectedValue(new Error('no')) },
+      },
+    });
+    seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
+    await renderApp(<LibraryScreen />);
+    await fireEvent.press(screen.getByText('Copy library'));
+    await waitFor(() => expect(screen.getByText(/Copy failed/)).toBeTruthy());
+  });
+
+  it('refuses a paste that is not a library', async () => {
+    await renderApp(<LibraryScreen />);
+    await fireEvent.press(screen.getByText('Import'));
+    await fireEvent.changeText(
+      screen.getByPlaceholderText(/Paste/i),
+      'not json'
+    );
+    await fireEvent.press(screen.getByText('Merge into my library'));
+    await waitFor(() =>
+      expect(
+        screen.getByText(/doesn’t look like a library export/)
+      ).toBeTruthy()
+    );
+  });
+
+  it('merges a pasted library in, and counts what arrived', async () => {
+    seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
+    await renderApp(<LibraryScreen />);
+    await fireEvent.press(screen.getByText('Import'));
+    await fireEvent.changeText(
+      screen.getByPlaceholderText(/Paste/i),
+      JSON.stringify({
+        '2': { addedAt: 9, status: 'wishlist', game: game(2, 'Hades II', 30) },
+      })
+    );
+    await fireEvent.press(screen.getByText('Merge into my library'));
+    await waitFor(() =>
+      expect(screen.getByText('Imported 1 game')).toBeTruthy()
+    );
+    // The one already there is still there.
+    expect(screen.getByText('Celeste')).toBeTruthy();
+    expect(screen.getByText('Hades II')).toBeTruthy();
   });
 });
