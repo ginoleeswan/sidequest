@@ -37,6 +37,32 @@ export interface PlannedEvening {
   games: { id: number; name: string; hours: number; finishes: boolean }[];
 }
 
+/**
+ * Put tonight's game at the front, if it is in the plan at all.
+ *
+ * The plan's order comes from the scheduler, which maximises how many
+ * games get finished. Tonight's pick answers a narrower question —
+ * given the hours you have this evening, what is the best use of them —
+ * and it prefers a game already under way. Both are defensible, and on
+ * the same screen they were contradicting each other: the card said
+ * "Continue Grand Theft Auto V" and the row of evenings directly below
+ * it said tonight was Tomb Raider.
+ *
+ * The card wins, because it is the one answering the question the
+ * reader is actually asking at that moment. This only reorders the
+ * week's presentation, never the schedule that decided what fits —
+ * and only within seven evenings, which no deadline in this app is
+ * fine-grained enough to notice.
+ */
+function lead<T extends { id: number }>(items: T[], leadId?: number): T[] {
+  if (leadId == null) return items;
+  const at = items.findIndex((item) => item.id === leadId);
+  // Not in the plan means the scheduler dropped it. Saying so is the
+  // week view's job, not this one's.
+  if (at <= 0) return items;
+  return [items[at], ...items.slice(0, at), ...items.slice(at + 1)];
+}
+
 const midnight = (at: number): number => {
   const date = new Date(at);
   date.setHours(0, 0, 0, 0);
@@ -55,10 +81,14 @@ const midnight = (at: number): number => {
 export function planWeek(
   scheduled: ScheduledItem[],
   now: number = Date.now(),
-  days = 7
+  days = 7,
+  leadId?: number
 ): PlannedEvening[] {
   const evenings: PlannedEvening[] = [];
-  const queue = scheduled.map((item) => ({ ...item, left: item.hours }));
+  const queue = lead(scheduled, leadId).map((item) => ({
+    ...item,
+    left: item.hours,
+  }));
   let index = 0;
 
   for (let offset = 0; offset < days; offset++) {

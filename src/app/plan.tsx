@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -528,16 +529,38 @@ export default function PlanScreen() {
                       style={styles.tonight}
                       onPress={() => router.push(`/game/${tonightPick.id}`)}
                     >
+                      {/* The picture, not a stamp of one.
+                          This card is the answer the page exists to give
+                          and it was a paragraph with a 96px thumbnail
+                          beside it, on a screen with no other image on
+                          it. The home stage already established what an
+                          answer looks like here; this borrows it. */}
+                      <CoverImage
+                        uri={gamesById.get(tonightPick.id)?.background_image}
+                        style={StyleSheet.absoluteFill}
+                        size="hero"
+                        iconSize={32}
+                      />
+                      <LinearGradient
+                        colors={[
+                          'rgba(39,47,63,0.15)',
+                          'rgba(39,47,63,0.72)',
+                          'rgba(39,47,63,0.95)',
+                        ]}
+                        locations={[0, 0.55, 1]}
+                        style={StyleSheet.absoluteFill}
+                        pointerEvents="none"
+                      />
                       <View style={styles.tonightBody}>
                         <View style={styles.tonightHead}>
                           <Ionicons
                             name="moon"
                             size={13}
-                            color={COLORS.mediumGrey}
+                            color={COLORS.accent}
                           />
-                          <Text style={TYPE.micro}>Tonight</Text>
+                          <Text style={styles.tonightEyebrow}>TONIGHT</Text>
                         </View>
-                        <Text style={styles.sentence}>
+                        <Text style={[styles.sentence, styles.onArt]}>
                           I have
                           <InlineValue
                             label={
@@ -563,12 +586,6 @@ export default function PlanScreen() {
                               : 'The shortest thing you’ve saved.'}
                         </Text>
                       </View>
-                      <CoverImage
-                        uri={gamesById.get(tonightPick.id)?.background_image}
-                        style={styles.tonightThumb}
-                        size="thumb"
-                        iconSize={20}
-                      />
                     </Pressable>
                   )}
                 </View>
@@ -581,7 +598,11 @@ export default function PlanScreen() {
                         title="This week"
                         eyebrow="THE NEXT SEVEN EVENINGS"
                       />
-                      <WeekView scheduled={schedule.scheduled} now={now} />
+                      <WeekView
+                        scheduled={schedule.scheduled}
+                        now={now}
+                        leadId={tonightPick?.id}
+                      />
                     </View>
                   )}
 
@@ -801,23 +822,35 @@ const styles = StyleSheet.create({
   },
 
   tonight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
+    minHeight: 208,
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
     borderWidth: 1,
     borderColor: COLORS.stroke,
     borderRadius: RADIUS.md,
-    padding: SPACING.lg,
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: COLORS.navy,
   },
-  tonightBody: { flex: 1, gap: SPACING.xs + 2 },
+  tonightBody: { gap: SPACING.xs + 2, padding: SPACING.lg },
   tonightHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  /** Anything set over the artwork rather than over the page. */
+  onArt: {
+    color: COLORS.white,
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowRadius: 10,
+  },
+  tonightEyebrow: {
+    ...TYPE.tag,
+    color: COLORS.accent,
+    letterSpacing: 1.3,
+  },
+  /* Over artwork, so the copy carries its own contrast. */
   tonightWhy: {
     ...TYPE.p,
-    color: COLORS.mediumGrey,
+    color: COLORS.lightGrey,
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowRadius: 10,
   },
   tonightName: { fontFamily: 'Noah-Black', color: COLORS.white },
-  tonightThumb: { width: 96, height: 60, borderRadius: RADIUS.sm },
 
   section: { gap: SPACING.sm + 2 },
   rows: { gap: SPACING.sm },

@@ -182,9 +182,20 @@ describe('the plan screen', () => {
     seed([{ game: game(1, 'Celeste', 6), status: 'wishlist' }]);
     await renderApp(<PlanScreen />);
     expect(screen.getByText('This week')).toBeTruthy();
-    // "Tonight" is also the heading on the tonight card above it.
-    expect(screen.getAllByText('Tonight').length).toBeGreaterThan(1);
-    expect(screen.getByText('Tomorrow')).toBeTruthy();
+    // Consecutive evenings on one game are a single run, labelled with
+    // the span they cover — six hours of Celeste is not four cards. The
+    // card above the week says TONIGHT too, and now agrees with it.
+    expect(screen.getAllByText(/^TONIGHT/).length).toBeGreaterThan(0);
+  });
+
+  /**
+   * A long game eats the whole week, and seven cards all reading
+   * "Grand Theft Aut…" is a worse way to say so than one line that does.
+   */
+  it('says the week is one game rather than repeating its name', async () => {
+    seed([{ game: game(1, 'Grand Theft Auto V', 74), status: 'playing' }]);
+    await renderApp(<PlanScreen />);
+    expect(screen.getByText(/across 7 evenings/)).toBeTruthy();
   });
 
   it('marks the evening the credits roll', async () => {

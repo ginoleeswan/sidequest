@@ -20,10 +20,17 @@ import { TYPE } from '@/styles/typography';
 
 const DAY = 24 * 60 * 60 * 1000;
 
+/**
+ * Labels that finish the sentence "Finish …".
+ *
+ * They used to finish "Finish by …", which produced "Finish by no date"
+ * and "Finish by in 3 months" — neither of them English. The verb owns
+ * the preposition now, so every option reads as a sentence.
+ */
 const BY: { label: string; days: number | null }[] = [
   { label: 'no date', days: null },
   { label: 'this month', days: 30 },
-  { label: 'in 3 months', days: 90 },
+  { label: 'within 3 months', days: 90 },
   { label: 'this year', days: 365 },
 ];
 
@@ -50,6 +57,8 @@ export function Commitment({ gameId }: { gameId: number }) {
 
   const must = (entry.want ?? 2) >= 3;
   const current = labelFor(entry.deadline, now);
+  // The absence of a deadline is its own state, not a date to finish by.
+  const phrase = entry.deadline == null ? 'No deadline' : `Finish ${current}`;
   const nextIndex =
     (BY.findIndex((option) => option.label === current) + 1) % BY.length;
   const next = BY[nextIndex];
@@ -87,13 +96,13 @@ export function Commitment({ gameId }: { gameId: number }) {
           toast(
             next.days == null
               ? 'Deadline cleared'
-              : `Finish by ${next.label} — the plan will schedule it first`,
+              : `Finish ${next.label} — the plan will schedule it first`,
             'calendar'
           );
         }}
         style={[styles.chip, entry.deadline != null && styles.chipOn]}
         accessibilityRole="button"
-        accessibilityLabel={`Finish by: ${current}. Tap to change.`}
+        accessibilityLabel={`${phrase}. Tap to change.`}
       >
         <Ionicons
           name="calendar-outline"
@@ -103,7 +112,7 @@ export function Commitment({ gameId }: { gameId: number }) {
         <Text
           style={[styles.chipText, entry.deadline != null && styles.chipTextOn]}
         >
-          Finish by {current}
+          {phrase}
         </Text>
       </Pressable>
     </View>

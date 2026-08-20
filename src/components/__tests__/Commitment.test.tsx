@@ -48,19 +48,24 @@ describe('committing to a game', () => {
   it('steps through the dates rather than opening a form', async () => {
     seed();
     await renderApp(<Commitment gameId={1} />);
-    expect(screen.getByText('Finish by no date')).toBeTruthy();
-    await fireEvent.press(screen.getByLabelText(/Finish by: no date/));
+    // Not "Finish by no date": the absence of a deadline is its own
+    // state, not a date you can finish by.
+    expect(screen.getByText('No deadline')).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText(/No deadline/));
     await waitFor(() => expect(saved().deadline).toBeGreaterThan(Date.now()));
-    expect(screen.getByText('Finish by this month')).toBeTruthy();
+    expect(screen.getByText('Finish this month')).toBeTruthy();
   });
 
   it('comes back round to no date, which is a real answer', async () => {
     seed();
     await renderApp(<Commitment gameId={1} />);
-    for (const label of ['no date', 'this month', 'in 3 months', 'this year']) {
-      await fireEvent.press(
-        screen.getByLabelText(`Finish by: ${label}. Tap to change.`)
-      );
+    for (const phrase of [
+      'No deadline',
+      'Finish this month',
+      'Finish within 3 months',
+      'Finish this year',
+    ]) {
+      await fireEvent.press(screen.getByLabelText(`${phrase}. Tap to change.`));
     }
     await waitFor(() => expect(saved().deadline).toBeUndefined());
   });
@@ -68,6 +73,6 @@ describe('committing to a game', () => {
   it('reads a stored deadline back as the window it falls in', async () => {
     seed({ deadline: Date.now() + 20 * 24 * 60 * 60 * 1000 });
     await renderApp(<Commitment gameId={1} />);
-    expect(screen.getByText('Finish by this month')).toBeTruthy();
+    expect(screen.getByText('Finish this month')).toBeTruthy();
   });
 });

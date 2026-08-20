@@ -297,9 +297,13 @@ export default function GameInfoScreen() {
       />
       {/* Art dissolves into the page colour — the hero belongs to the page,
           not to a box sitting on it. */}
+      {/* The ramp starts where the copy does, not a third of the way
+          down. At the old stops the title and the stat strip sat on
+          roughly a quarter of a scrim, which is legible over dark art
+          and invisible over light — and RAWG returns both. */}
       <LinearGradient
-        colors={['#333D5100', '#333D5199', COLORS.darkGrey]}
-        locations={[0.35, 0.78, 1]}
+        colors={['#333D5100', '#333D514D', '#333D51D9', COLORS.darkGrey]}
+        locations={[0.18, 0.5, 0.86, 1]}
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
@@ -309,10 +313,27 @@ export default function GameInfoScreen() {
         <PlatformIcons platforms={game.parent_platforms ?? []} />
         <Text style={styles.heroTitle}>{game.name}</Text>
         <StatStrip game={game} onEditLength={() => setEditingLength(true)} />
-        <StatusActions game={game} />
-        <SessionTimer game={game} />
-        <Commitment gameId={game.id} />
       </View>
+    </View>
+  );
+
+  /**
+   * The controls, on solid ground rather than on the photograph.
+   *
+   * Everything used to sit on the artwork: three status pills, a primary
+   * button, two more pills, the timer and the commitment row. Over a
+   * bright frame — Grand Theft Auto V's key art is nearly cream — white
+   * text on an outline pill is simply not readable, and no amount of
+   * scrim fixes that without painting the picture out entirely. The hero
+   * keeps what identifies the game; the things you press live below it,
+   * where their contrast is a property of the page and not of whichever
+   * image RAWG happened to return.
+   */
+  const controls = (
+    <View style={styles.controls}>
+      <StatusActions game={game} />
+      <SessionTimer game={game} />
+      <Commitment gameId={game.id} />
     </View>
   );
 
@@ -563,6 +584,7 @@ export default function GameInfoScreen() {
           ) : (
             <>
               {hero}
+              {controls}
               <Animated.View style={[styles.compactBody, { opacity }]}>
                 {genres}
                 {yourTake}
@@ -619,9 +641,17 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
+  controls: {
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.md,
+    gap: SPACING.sm,
+    width: '100%',
+    maxWidth: LAYOUT.maxContentWidth,
+    alignSelf: 'center',
+  },
   heroCopy: {
     paddingHorizontal: SPACING.md,
-    paddingBottom: SPACING.sm,
+    paddingBottom: SPACING.md,
     gap: SPACING.sm,
     alignItems: 'flex-start',
     width: '100%',
@@ -646,15 +676,24 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
   },
   stat: { gap: 3, alignItems: 'flex-start' },
+  /**
+   * The strip sits on the artwork, so it carries its own contrast the
+   * way the title does. "74h TO FINISH" in medium grey over a cream
+   * frame was the least readable text in the app.
+   */
   statValue: {
     ...TYPE.h3,
     color: COLORS.white,
+    textShadowColor: 'rgba(0,0,0,0.65)',
+    textShadowRadius: 10,
   },
   statFlag: { color: COLORS.accent },
-  statPencil: { fontSize: 11, color: COLORS.mediumGrey },
+  statPencil: { fontSize: 11, color: COLORS.lightGrey },
   statLabel: {
     ...TYPE.micro,
-    color: COLORS.mediumGrey,
+    color: COLORS.lightGrey,
+    textShadowColor: 'rgba(0,0,0,0.7)',
+    textShadowRadius: 8,
   },
 
   // body
