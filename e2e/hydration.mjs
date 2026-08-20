@@ -30,6 +30,7 @@ const ROUTES = [
   '/memcard',
   '/tidy',
   '/game/3498',
+  '/by/developer?id=9&name=Supergiant%20Games',
   '/about',
 ];
 const VIEWPORTS = [
@@ -179,7 +180,12 @@ const cached = await primer.evaluate(async () => {
 // breaks hydration. Offline covers the static routes plus whichever
 // games were actually visited, and nothing else.
 const staticRoutes = ROUTES.filter((route) => !route.startsWith('/game/'));
-const missing = staticRoutes.filter((route) => !cached.includes(route));
+// Compared by path: a document is the same document whatever query
+// string led to it, and the worker matches it the same way.
+const cachedPaths = cached.map((entry) => entry.split('?')[0]);
+const missing = staticRoutes.filter(
+  (route) => !cachedPaths.includes(route.split('?')[0])
+);
 if (missing.length) {
   failures.push(
     `service worker did not precache: ${missing.join(', ')}\n` +

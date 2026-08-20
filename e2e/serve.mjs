@@ -36,6 +36,7 @@ export function serve(root, port) {
   const server = createServer(async (req, res) => {
     let path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
     if (/^\/game\/[^/]+$/.test(path)) path = '/game/[id]';
+    if (/^\/by\/[^/]+$/.test(path)) path = '/by/[kind]';
 
     for (const file of [
       join(root, path),
