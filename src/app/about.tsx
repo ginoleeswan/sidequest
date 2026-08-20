@@ -1,8 +1,18 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect } from 'react';
+import {
+  Animated,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { LandingWall } from '@/components/LandingWall';
 import { Mark } from '@/components/Mark';
 import { PageTitle } from '@/components/PageTitle';
 import { RouteError } from '@/components/RouteError';
@@ -11,10 +21,13 @@ import { SiteFooter } from '@/components/SiteFooter';
 import { GrainScrim, Textured } from '@/components/Textured';
 import { WhenNear } from '@/components/WhenNear';
 import { YearBlocks } from '@/components/YearBlocks';
+import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { COLORS } from '@/styles/colors';
+import { DURATION, EASING } from '@/styles/motion';
 import { LAYOUT, RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { OVER_IMAGE, TYPE } from '@/styles/typography';
 
 /**
  * The page for people who have not used it yet.
@@ -51,6 +64,42 @@ const BEATS = [
 export default function AboutScreen() {
   const router = useRouter();
   const { isExpanded, width } = useBreakpoint();
+  const { height } = useWindowDimensions();
+  const reduced = useReducedMotion();
+  const enter = useAnimatedValue(reduced ? 1 : 0);
+
+  useEffect(() => {
+    if (reduced) return;
+    const animation = Animated.timing(enter, {
+      toValue: 1,
+      duration: DURATION.entrance,
+      easing: EASING.standard,
+      useNativeDriver: true,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [enter, reduced]);
+
+  /**
+   * One timeline, four arrivals — the same device the home stage uses,
+   * so the two front doors of this product move the same way.
+   */
+  const step = (from: number, to: number) => ({
+    opacity: enter.interpolate({
+      inputRange: [from, to],
+      outputRange: [0, 1],
+      extrapolate: 'clamp' as const,
+    }),
+    transform: [
+      {
+        translateY: enter.interpolate({
+          inputRange: [from, to],
+          outputRange: [16, 0],
+          extrapolate: 'clamp' as const,
+        }),
+      },
+    ],
+  });
 
   /**
    * The masthead scales with the page rather than sitting on the app's
@@ -83,21 +132,48 @@ export default function AboutScreen() {
       <PageTitle>About Sidequest</PageTitle>
       <SafeAreaView edges={['top']}>
         <ScrollView contentContainerStyle={styles.scroll}>
-          <View style={[styles.masthead, { paddingHorizontal: inset }]}>
-            {/* No back chevron. Most people reach this page from a link
-                and have nowhere to go back to; the ones who came from the
-                footer have a browser button and the mark below. */}
-            <View style={styles.lockup}>
-              <Mark size={26} />
-              <Text style={styles.word}>SIDEQUEST</Text>
+          <View
+            style={[
+              styles.masthead,
+              { minHeight: Math.max(Math.round(height * 0.94), 560) },
+            ]}
+          >
+            <LandingWall columns={isExpanded ? 7 : 4} />
+            {/* Heavy where the words are, open at the top right, so the
+                pile is visible without ever competing with the line it
+                exists to prove. */}
+            <LinearGradient
+              colors={[
+                'rgba(51,61,81,0.55)',
+                'rgba(51,61,81,0.80)',
+                'rgba(51,61,81,0.97)',
+                COLORS.darkGrey,
+              ]}
+              locations={[0, 0.42, 0.78, 1]}
+              start={{ x: 0.75, y: 0 }}
+              end={{ x: 0.15, y: 1 }}
+              style={StyleSheet.absoluteFill}
+              pointerEvents="none"
+            />
+            <View style={[styles.mastheadCopy, { paddingHorizontal: inset }]}>
+              {/* No back chevron. Most people reach this page from a link
+                  and have nowhere to go back to; the ones who came from
+                  the footer have a browser button and the mark below. */}
+              <Animated.View style={[styles.lockup, step(0, 0.35)]}>
+                <Mark size={26} />
+                <Text style={styles.word}>SIDEQUEST</Text>
+              </Animated.View>
+              <Animated.Text
+                style={[styles.headline, masthead, step(0.08, 0.6)]}
+              >
+                Know what you can actually finish.
+              </Animated.Text>
+              <Animated.Text style={[styles.standfirst, step(0.2, 0.75)]}>
+                Forty games waiting. Three you will actually see the end of.
+                Sidequest works out which three.
+              </Animated.Text>
+              <Animated.View style={step(0.32, 0.9)}>{open}</Animated.View>
             </View>
-            <Text style={[styles.headline, masthead]}>
-              Know what you can actually finish.
-            </Text>
-            <Text style={styles.standfirst}>
-              Backlog triage for people with more games than time.
-            </Text>
-            {open}
           </View>
 
           {/* The arithmetic nobody does for themselves, set as the number
@@ -182,7 +258,8 @@ const styles = StyleSheet.create({
   scroll: { maxWidth: LAYOUT.maxExpandedWidth, width: '100%' },
 
   // masthead
-  masthead: { paddingTop: SPACING.xl, paddingBottom: SPACING.xl * 2 },
+  masthead: { justifyContent: 'flex-end', overflow: 'hidden' },
+  mastheadCopy: { paddingTop: SPACING.xl, paddingBottom: SPACING.xl * 2 },
   lockup: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -192,12 +269,14 @@ const styles = StyleSheet.create({
   word: { ...TYPE.h1, color: COLORS.lightGrey },
   headline: {
     fontFamily: 'Noah-Black',
+    ...OVER_IMAGE.heading,
     color: COLORS.white,
     maxWidth: 860,
     marginBottom: SPACING.lg,
   },
   standfirst: {
     ...TYPE.body,
+    ...OVER_IMAGE.body,
     // The step between the masthead and the body. Straight from a
     // hundred points to seventeen is a cliff, and the eye reads a cliff
     // as two unrelated things rather than as one thought continuing.
