@@ -12,9 +12,27 @@ import { renderApp } from '@/test-utils';
  * keep.
  */
 describe('the static pages', () => {
-  it('says what the app is', async () => {
+  /**
+   * The page a stranger lands on. It has to make the case, so what is
+   * pinned is the case rather than a heading — the promise, the sum
+   * behind it, and a way in.
+   */
+  it('makes the case to somebody who has not used it', async () => {
     await renderApp(<AboutScreen />);
-    expect(screen.getByText('About')).toBeTruthy();
+    // Twice over: the masthead, and the footer's tagline under it.
+    expect(
+      screen.getAllByText('Know what you can actually finish.').length
+    ).toBeGreaterThan(0);
+    expect(screen.getByText(/Forty games waiting/)).toBeTruthy();
+    // Not the sum: that section is deferred until it is near the
+    // viewport, so in a test it is still its placeholder.
+    expect(screen.getByText('It knows how long things take.')).toBeTruthy();
+    expect(screen.getAllByText('Open Sidequest').length).toBeGreaterThan(0);
+  });
+
+  it('is honest about what it does not take', async () => {
+    await renderApp(<AboutScreen />);
+    expect(screen.getByText('No account. No tracking.')).toBeTruthy();
   });
 
   it('states the terms', async () => {

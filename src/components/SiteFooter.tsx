@@ -13,7 +13,6 @@ const EXPLORE = [
 ] as const;
 
 const LEGAL = [
-  { label: 'About', href: '/about' },
   { label: 'Terms', href: '/terms' },
   { label: 'Privacy', href: '/privacy' },
 ] as const;
@@ -60,6 +59,7 @@ interface Props {
  */
 export function SiteFooter({ inset = 0 }: Props) {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   return (
     <View
@@ -88,6 +88,15 @@ export function SiteFooter({ inset = 0 }: Props) {
               Backlog triage for people with more games than time. No account,
               no tracking — your library lives on this device.
             </Text>
+            {/* The page that makes the case for the product was filed
+                under Legal, between the terms and the privacy policy.
+                It belongs with the sentence it expands on. */}
+            <Pressable
+              onPress={() => router.push('/about')}
+              accessibilityRole="link"
+            >
+              <Text style={styles.pitchLink}>What Sidequest is →</Text>
+            </Pressable>
           </View>
           <View style={styles.cols}>
             <LinkColumn heading="Explore" links={EXPLORE} />
@@ -148,6 +157,11 @@ const styles = StyleSheet.create({
   tagline: {
     ...TYPE.labelSmall,
     color: COLORS.lightGrey,
+  },
+  pitchLink: {
+    ...TYPE.labelSmall,
+    color: COLORS.lightGrey,
+    marginTop: SPACING.sm + 2,
   },
   pitch: {
     ...TYPE.caption,
