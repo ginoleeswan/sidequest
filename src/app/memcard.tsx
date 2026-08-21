@@ -23,9 +23,10 @@ import { dropInsight, readDrops, totalDrops } from '@/lib/drops';
 import { buildMemcard, memcardYears } from '@/lib/memcard';
 import { formatMinutes } from '@/lib/sessions';
 import { yearStats } from '@/lib/yearStats';
+import { buildIcs, downloadIcs, memcardEvents } from '@/lib/ics';
 import { shareMemcard } from '@/lib/memcardImage';
 import { COLORS } from '@/styles/colors';
-import { LAYOUT, RADIUS, SPACING } from '@/styles/theme';
+import { GUTTER, LAYOUT, RADIUS, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 /**
@@ -78,6 +79,32 @@ export default function MemcardScreen() {
     [all, durationOf, shown]
   );
   const drops = useMemo(() => (hydrated ? readDrops() : {}), [hydrated]);
+
+  /**
+   * The year, on the calendar you actually keep.
+   *
+   * The card is a thing you post; this is the same year filed where you
+   * look for your life. A `.ics` rather than an integration, because
+   * Google's API wants OAuth and a server and Apple's has no web API at
+   * all — and both would mean this app growing the account and backend
+   * it promises not to have. Every calendar worth the name opens one.
+   */
+  const addToCalendar = () => {
+    const events = memcardEvents(all, (game) => durationOf(game).hours, shown);
+    downloadIcs(
+      buildIcs(events, {
+        name: `Sidequest ${shown}`,
+        now: new Date(),
+      }),
+      `sidequest-${shown}.ics`
+    );
+    toast(
+      events.length === 1
+        ? 'One finish, ready for your calendar'
+        : `${events.length} finishes, ready for your calendar`,
+      'calendar-outline'
+    );
+  };
 
   const save = async () => {
     setBusy(true);
@@ -222,6 +249,30 @@ export default function MemcardScreen() {
                 </Text>
               </Pressable>
             )}
+
+            {/* Second, and quieter than the share. Posting the card is
+                what most people came for; filing the year is what the
+                few who keep a calendar will be glad of. */}
+            {Platform.OS === 'web' && (
+              <Pressable
+                onPress={addToCalendar}
+                style={styles.calendar}
+                accessibilityRole="button"
+              >
+                <Ionicons
+                  name="calendar-outline"
+                  size={16}
+                  color={COLORS.lightGrey}
+                />
+                <Text style={styles.calendarText}>
+                  Add these to my calendar
+                </Text>
+              </Pressable>
+            )}
+            <Text style={styles.calendarNote}>
+              Downloads a file Google Calendar, Apple Calendar and Outlook can
+              all open. Nothing is sent anywhere.
+            </Text>
           </>
         )}
       </View>
@@ -257,7 +308,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: LAYOUT.maxContentWidth,
     alignSelf: 'center',
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: GUTTER,
     paddingBottom: SPACING.xl * 2,
     gap: SPACING.md,
   },
@@ -282,6 +333,37 @@ const styles = StyleSheet.create({
   saveText: {
     ...TYPE.label,
     color: COLORS.darkGrey,
+  },
+  /**
+   * The second action, outlined rather than filled.
+   *
+   * Two solid buttons in a column read as a choice the reader has to
+   * make; a filled one and an outlined one read as the thing to do and
+   * the thing you can also do. Same height and radius as the share, so
+   * the pair sits as a pair.
+   */
+  calendar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: COLORS.strokeStrong,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    marginTop: SPACING.sm,
+  },
+  calendarText: {
+    ...TYPE.label,
+    color: COLORS.lightGrey,
+  },
+  calendarNote: {
+    ...TYPE.micro,
+    color: COLORS.mediumGrey,
+    maxWidth: 420,
+    marginTop: SPACING.xs,
   },
   stats: { gap: SPACING.sm, marginTop: SPACING.lg },
   verdict: {

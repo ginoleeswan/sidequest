@@ -12,7 +12,7 @@ import { useDurations } from '@/lib/durations';
 import { useLibrary } from '@/lib/library';
 import { buildPrompt } from '@/lib/prompt';
 import { COLORS } from '@/styles/colors';
-import { RADIUS, SPACING } from '@/styles/theme';
+import { GUTTER, RADIUS, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 /**
@@ -31,7 +31,7 @@ import { TYPE } from '@/styles/typography';
  * Gated on hydration, and not optionally — the library lives in storage,
  * so the pre-rendered HTML has no idea how many games are in it.
  */
-export function PromptBand({ inset = SPACING.md }: { inset?: number }) {
+export function PromptBand({ inset = GUTTER }: { inset?: number }) {
   const router = useRouter();
   const hydrated = useHydrated();
   const { entries } = useLibrary();

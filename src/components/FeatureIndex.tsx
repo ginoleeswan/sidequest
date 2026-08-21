@@ -25,6 +25,7 @@ const ENTRIES = [
   'Steam import',
   'CSV import',
   'The week view',
+  'Calendar export',
   'Weekend mode',
   'Deadlines',
   'Play sessions',

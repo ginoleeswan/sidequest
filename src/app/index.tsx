@@ -98,7 +98,7 @@ import {
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useDebounced } from '@/hooks/useDebounced';
 import { COLORS } from '@/styles/colors';
-import { LAYOUT, SPACING } from '@/styles/theme';
+import { GUTTER, LAYOUT, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 const FEATURED_COUNT = 5;
@@ -386,7 +386,7 @@ export default function HomeScreen() {
           <ActivityIndicator color={COLORS.mediumGrey} />
         </View>
       )}
-      <SiteFooter inset={isExpanded ? SPACING.xl : SPACING.md} />
+      <SiteFooter inset={isExpanded ? SPACING.xl : GUTTER} />
     </>
   );
 
@@ -667,23 +667,23 @@ export default function HomeScreen() {
                   height={stageHeight}
                 />
                 <View style={styles.compactShelves}>
-                  <SeriesNews inset={SPACING.md} />
-                  <RecentShelf inset={SPACING.md} />
+                  <SeriesNews inset={GUTTER} />
+                  <RecentShelf inset={GUTTER} />
                   <Shelf
                     section={QUICK_WINS}
                     games={quickWins}
-                    inset={SPACING.md}
+                    inset={GUTTER}
                   />
                   <Shelf
                     section={DISCOVER[0]}
                     games={trendingShelf.slice(0, 12)}
                     onViewAll={selectSection}
-                    inset={SPACING.md}
+                    inset={GUTTER}
                   />
                   {/* Deep enough in to be a break in the rhythm rather
                       than a second header, and above the rows that are
                       about you rather than about the shop. */}
-                  <PromptBand inset={SPACING.md} />
+                  <PromptBand inset={GUTTER} />
                   {personal.mood && (moodShelf.data?.length ?? 0) > 0 && (
                     <Shelf
                       section={{
@@ -696,7 +696,7 @@ export default function HomeScreen() {
                         0,
                         12
                       )}
-                      inset={SPACING.md}
+                      inset={GUTTER}
                     />
                   )}
                   {personal.length && lengthShelf.length > 0 && (
@@ -708,7 +708,7 @@ export default function HomeScreen() {
                         eyebrow: personal.length.eyebrow,
                       }}
                       games={lengthShelf}
-                      inset={SPACING.md}
+                      inset={GUTTER}
                     />
                   )}
                   {homeShelves.map((shelf, index) => (
@@ -716,7 +716,7 @@ export default function HomeScreen() {
                       key={shelf.key}
                       placeholder={
                         <SkeletonShelf
-                          inset={SPACING.md}
+                          inset={GUTTER}
                           eyebrow={shelf.variant === 'ranked'}
                         />
                       }
@@ -725,7 +725,7 @@ export default function HomeScreen() {
                         section={shelf}
                         games={(shelfGames[index] ?? []).slice(0, 12)}
                         onViewAll={selectSection}
-                        inset={SPACING.md}
+                        inset={GUTTER}
                       />
                     </WhenNear>
                   ))}
@@ -892,7 +892,7 @@ const styles = StyleSheet.create({
   gridRow: { gap: LAYOUT.gridGap },
   gridContent: {
     gap: LAYOUT.gridGap,
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: GUTTER,
   },
   gridSpacer: { flex: 1 },
   gridCell: { flex: 1 },
@@ -912,7 +912,7 @@ const styles = StyleSheet.create({
   // straight after it with no seam and no gap of their own to explain.
   compactHome: { gap: 0 },
   compactShelves: {
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: GUTTER,
     paddingTop: SPACING.lg,
     paddingBottom: SPACING.xl * 1.5,
   },
@@ -937,7 +937,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: SPACING.md,
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: GUTTER,
     // Clear of the opaque band, so the chips land on the dissolve.
     marginBottom: SPACING.md + 2,
   },
@@ -956,12 +956,12 @@ const styles = StyleSheet.create({
   libraryButton: { padding: 4 },
   chips: {
     alignItems: 'center',
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: GUTTER,
     gap: SPACING.sm,
     height: 46,
   },
 
-  list: { flexGrow: 1, paddingHorizontal: SPACING.md },
+  list: { flexGrow: 1, paddingHorizontal: GUTTER },
 });
 
 /**

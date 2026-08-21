@@ -42,7 +42,7 @@ import {
   type ScheduledItem,
 } from '@/lib/scheduler';
 import { COLORS } from '@/styles/colors';
-import { LAYOUT, RADIUS, SPACING } from '@/styles/theme';
+import { GUTTER, LAYOUT, RADIUS, SPACING } from '@/styles/theme';
 import { OVER_IMAGE, TYPE } from '@/styles/typography';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -739,7 +739,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: LAYOUT.maxContentWidth,
     alignSelf: 'center',
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: GUTTER,
     gap: SPACING.lg,
   },
   innerWide: { maxWidth: 1120, paddingHorizontal: SPACING.xl },

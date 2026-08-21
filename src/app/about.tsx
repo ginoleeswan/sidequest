@@ -25,6 +25,7 @@ import { MemcardBuild } from '@/components/MemcardBuild';
 import { QuestLine, QuestMark } from '@/components/QuestLine';
 import { LandingProof } from '@/components/LandingProof';
 import { Drift } from '@/components/Drift';
+import { Seam } from '@/components/Seam';
 import { Rise, useInView } from '@/components/Rise';
 import { Words } from '@/components/Words';
 import { LandingWall } from '@/components/LandingWall';
@@ -188,6 +189,9 @@ function Band({
   tone = 'ground',
   style,
   raise = false,
+  seam,
+  behind = LANDING_GROUND,
+  seamPins = true,
   children,
 }: {
   scale: LandingScale;
@@ -199,12 +203,26 @@ function Band({
    * band whose content deliberately leans over the edge.
    */
   raise?: boolean;
+  /**
+   * Which seam down the page this band's leading edge is. Given, the
+   * band arrives on a drawn memory-card edge instead of a flat colour
+   * change; the number alternates which corner is chamfered.
+   */
+  seam?: number;
+  /** The colour above, which the chamfer cuts away to reveal. */
+  behind?: string;
+  /** Off where something else already sits on this lip. */
+  seamPins?: boolean;
   children: React.ReactNode;
 }) {
+  const ground = tone === 'well' ? LANDING_WELL : LANDING_GROUND;
   return (
     <View
       style={[tone === 'well' ? styles.well : undefined, raise && styles.raise]}
     >
+      {seam != null && (
+        <Seam color={ground} behind={behind} index={seam} pins={seamPins} />
+      )}
       <View
         style={[
           styles.measure,
@@ -397,14 +415,14 @@ export default function AboutScreen() {
             >
               Know which games you can actually finish.
             </Animated.Text>
-            {/* The standfirst names the mechanism and the outcome in
-                plain words, because the person this page has to convince
-                has never used it and may not play games at all. No
-                "backlog", no "triage": how long games take, how much you
-                play, which ones you can finish, which to let go. */}
+            {/* Two short sentences: what you give it, what it knows.
+                The outcome is already in the headline, so saying it
+                again here cost twenty-seven words to repeat a claim the
+                reader had just read. What it could not skip is the
+                input — time you actually have — because that is the
+                promise the rest of the page has to keep. */}
             <Animated.Text style={[styles.standfirst, step(0.2, 0.75)]}>
-              Sidequest knows how long games take. Tell it how much you play,
-              and it names the ones you can finish — and the ones to let go.
+              Tell it how much time you get. It knows how long games take.
             </Animated.Text>
             <Animated.View style={step(0.32, 0.9)}>{open}</Animated.View>
             {/* The three objections a stranger has, answered before they
@@ -418,12 +436,16 @@ export default function AboutScreen() {
         {/* The arithmetic nobody does for themselves, set as the number
             it is. This is the whole case for the product, and it is
             more persuasive than any sentence about it. */}
-        <WhenNear placeholder={<View style={styles.sumRoom} />}>
+        <WhenNear
+          placeholder={<View style={styles.sumRoom} />}
+          style={styles.raise}
+        >
           <Band
             tone="well"
             scale={scale}
             style={scale.wide ? styles.sumWide : styles.sumTall}
             raise
+            seam={0}
           >
             <QuestMark id="sum" />
             <Sum
@@ -446,7 +468,7 @@ export default function AboutScreen() {
             six sections and only then lets you touch something has the
             order backwards. */}
         <WhenNear placeholder={<View style={styles.tryRoom} />}>
-          <Band scale={scale}>
+          <Band scale={scale} seam={1} behind={LANDING_WELL}>
             <QuestMark id="try" />
             <LandingTry scale={scale} />
           </Band>
@@ -456,7 +478,7 @@ export default function AboutScreen() {
             of the detail. Somebody deciding whether to bother needs to
             know what will be asked of them, and three numbered steps is
             the plainest way to say it. */}
-        <Band scale={scale}>
+        <Band scale={scale} seam={2}>
           <QuestMark id="how" />
           <HowItWorks scale={scale} />
         </Band>
@@ -470,6 +492,7 @@ export default function AboutScreen() {
               that runs under both edges of the screen is a world going
               past. */}
           <View style={styles.well}>
+            <Seam color={LANDING_WELL} index={3} />
             <View
               style={[
                 styles.measure,
@@ -503,7 +526,7 @@ export default function AboutScreen() {
             slab of ground and its own sixty pixels of padding top and
             bottom, which is what made the middle of the page read as
             one long grey corridor. */}
-        <Band scale={scale} style={styles.beats}>
+        <Band scale={scale} seam={4} behind={LANDING_WELL} style={styles.beats}>
           {BEATS.map((beat, index) => (
             <View
               key={beat.lead}
@@ -579,8 +602,18 @@ export default function AboutScreen() {
         {/* The one showpiece, and the only thing on the page that
             arrives crooked and straightens. Used once: a second `tilt`
             further down would turn a signature into a mannerism. */}
-        <WhenNear placeholder={<View style={styles.cardRoom} />}>
-          <Band tone="well" scale={scale} style={styles.card} raise>
+        <WhenNear
+          placeholder={<View style={styles.cardRoom} />}
+          style={styles.raise}
+        >
+          <Band
+            tone="well"
+            scale={scale}
+            style={styles.card}
+            raise
+            seam={5}
+            seamPins={false}
+          >
             <QuestMark id="memcard" />
             <Words
               text="And something to show for the year."
@@ -616,7 +649,7 @@ export default function AboutScreen() {
         </WhenNear>
 
         {/* The long tail, ranked below everything argued above it. */}
-        <Band scale={scale}>
+        <Band scale={scale} seam={6} behind={LANDING_WELL} seamPins={false}>
           <QuestMark id="index" />
           <FeatureIndex scale={scale} />
         </Band>
@@ -624,14 +657,22 @@ export default function AboutScreen() {
         {/* Where to get it, given the ceremony a store launch gets —
             because "it is just a link" is this product's proudest fact
             and was being said in a footnote. */}
-        <WhenNear placeholder={<View style={styles.takeRoom} />}>
-          <Band tone="well" scale={scale} raise>
+        <WhenNear
+          placeholder={<View style={styles.takeRoom} />}
+          style={styles.raise}
+        >
+          <Band tone="well" scale={scale} raise seam={7}>
             <QuestMark id="take" />
             <LandingTake scale={scale} />
           </Band>
         </WhenNear>
 
-        <Band scale={scale} style={scale.wide && styles.plainWide}>
+        <Band
+          scale={scale}
+          seam={8}
+          behind={LANDING_WELL}
+          style={scale.wide && styles.plainWide}
+        >
           <View style={scale.wide ? styles.plainCopy : styles.plainStack}>
             <QuestMark id="close" />
             <Words

@@ -39,7 +39,24 @@ import { TYPE } from '@/styles/typography';
  * space here is four options wide. Four numbers are one tap each and
  * say plainly what is being asked.
  */
-const PACES = [2, 5, 10, 20];
+/**
+ * The four honest answers, each with the life it belongs to.
+ *
+ * Bare numbers made this a question for people who already think about
+ * their week in hours — which is nobody. "2h" is an abstraction; "now
+ * and then" is a Tuesday somebody recognises. The captions are
+ * deliberately drawn from different lives rather than one: a sixth
+ * former, someone off a late shift, a parent after bedtime, and a week
+ * where the house is empty. The number stays, because the number is
+ * what the scheduler runs on and hiding it would make the answer feel
+ * like a guess.
+ */
+const PACES: { hours: number; life: string }[] = [
+  { hours: 2, life: 'now and then' },
+  { hours: 5, life: 'after work' },
+  { hours: 10, life: 'most evenings' },
+  { hours: 20, life: 'a proper run' },
+];
 
 /**
  * How far out to plan.
@@ -121,7 +138,7 @@ export function LandingTry({ scale }: { scale: LandingScale }) {
 
       <Rise delay={140}>
         <View style={styles.paces}>
-          {PACES.map((hours) => {
+          {PACES.map(({ hours, life }) => {
             const on = hours === pace;
             return (
               <Pressable
@@ -129,17 +146,31 @@ export function LandingTry({ scale }: { scale: LandingScale }) {
                 onPress={() => setPace(hours)}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: on }}
-                accessibilityLabel={`${hours} hours a week`}
+                accessibilityLabel={`${hours} hours a week — ${life}`}
                 style={[styles.pace, on && styles.paceOn]}
               >
                 <Text style={[styles.paceNumber, on && styles.paceNumberOn]}>
                   {hours}h
                 </Text>
+                <Text style={[styles.paceLife, on && styles.paceLifeOn]}>
+                  {life}
+                </Text>
               </Pressable>
             );
           })}
-          <Text style={styles.paceUnit}>a week</Text>
         </View>
+      </Rise>
+
+      {/* Said once, plainly, because the page's biggest unspoken
+          objection is "this is for people with more free time than
+          me". The arithmetic does not care whose week it is, and that
+          is the reassurance — not a promise that everyone will finish
+          a lot. */}
+      <Rise delay={170}>
+        <Text style={styles.everyone}>
+          A week is a week — school, shifts, work, kids, retirement. The
+          arithmetic is the same; only the number changes.
+        </Text>
       </Rise>
 
       <Rise delay={200}>
@@ -310,9 +341,16 @@ const styles = StyleSheet.create({
   lead: { color: COLORS.white, maxWidth: 900 },
   paces: {
     flexDirection: 'row',
-    alignItems: 'center',
+    // Wraps, because the chips grew a caption and stopped fitting. Four
+    // labelled chips are wider than a 390pt phone, and a row that
+    // overflows does not look full — it looks like two of the four
+    // answers are missing, which on the page's one control is the worst
+    // possible thing to imply.
+    flexWrap: 'wrap',
+    alignItems: 'stretch',
     gap: SPACING.md,
     marginTop: SPACING.xl,
+    maxWidth: 620,
   },
   /**
    * A control the section is built around should look like one. These
@@ -321,8 +359,16 @@ const styles = StyleSheet.create({
    * because tapping them is the whole point of the band.
    */
   pace: {
+    // A basis, not a width: the chips share whatever room there is,
+    // which makes them two-by-two on a phone and four across on a
+    // laptop, all identical in size at either. Four chips of four
+    // different widths — one per caption length — read as a jumble.
+    flexGrow: 1,
+    flexBasis: 128,
+    alignItems: 'center',
+    gap: 1,
     paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg + 2,
+    paddingHorizontal: SPACING.md,
     borderRadius: RADIUS.lg,
     borderWidth: 2,
     borderColor: COLORS.strokeStrong,
@@ -339,7 +385,20 @@ const styles = StyleSheet.create({
     color: COLORS.lightGrey,
   },
   paceNumberOn: { color: COLORS.navy },
-  paceUnit: { ...TYPE.caption, fontSize: 15, marginLeft: SPACING.sm },
+  paceLife: {
+    ...TYPE.micro,
+    color: COLORS.mediumGrey,
+    textAlign: 'center',
+  },
+  // Dark on amber rather than the grey, which on the selected chip
+  // fell to about 2:1 and vanished.
+  paceLifeOn: { color: 'rgba(23,29,41,0.78)' },
+  everyone: {
+    ...TYPE.p,
+    color: COLORS.mediumGrey,
+    maxWidth: 560,
+    marginTop: SPACING.md,
+  },
   verdict: { marginTop: SPACING.lg, maxWidth: 620, color: COLORS.lightGrey },
   count: { color: COLORS.accent, fontFamily: 'Noah-Black' },
   /**

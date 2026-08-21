@@ -8,7 +8,7 @@ import { SiteFooter } from './SiteFooter';
 import { Textured } from './Textured';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { COLORS } from '@/styles/colors';
-import { SPACING } from '@/styles/theme';
+import { GUTTER, LAYOUT, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 interface Props {
@@ -77,9 +77,9 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1 },
   inner: {
     width: '100%',
-    maxWidth: 680,
+    maxWidth: LAYOUT.maxContentWidth,
     alignSelf: 'center',
-    paddingHorizontal: SPACING.lg,
+    paddingHorizontal: GUTTER,
   },
   accent: {
     width: 34,

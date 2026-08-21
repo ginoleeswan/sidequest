@@ -13,7 +13,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { STAGE_BOUNDS, stageHeight } from '@/lib/stage';
 import { HOME_SHELVES } from '@/constants/categories';
 import { DURATION, EASING } from '@/styles/motion';
-import { LAYOUT, RADIUS, SHADOW_ROOM, SPACING } from '@/styles/theme';
+import { GUTTER, LAYOUT, RADIUS, SHADOW_ROOM, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 /*
@@ -213,20 +213,20 @@ export function SkeletonCompactHome() {
             set in the large frames. */}
         <SkeletonShelf
           tiles={2}
-          inset={SPACING.md}
+          inset={GUTTER}
           eyebrow
           tileWidth={LAYOUT.shelfTileLarge}
         />
         {/* Trending: ranked, so it carries a "Top 10" line. */}
-        <SkeletonShelf tiles={3} inset={SPACING.md} eyebrow />
-        <SkeletonBand inset={SPACING.md} />
+        <SkeletonShelf tiles={3} inset={GUTTER} eyebrow />
+        <SkeletonBand inset={GUTTER} />
         {/* Only "out this week" carries an eyebrow; the rest of the pool
             is genres, whose rows are a title alone. */}
         {HOME_SHELVES.map((shelf, index) => (
           <SkeletonShelf
             key={shelf.key}
             tiles={3}
-            inset={SPACING.md}
+            inset={GUTTER}
             eyebrow={index === 0}
           />
         ))}
@@ -392,7 +392,7 @@ const styles = StyleSheet.create({
   },
   compact: { gap: 0 },
   compactShelves: {
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: GUTTER,
     paddingTop: SPACING.lg,
     paddingBottom: SPACING.xl * 1.5,
   },
@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
   bandLine: { height: 21 * 2, width: '92%', marginBottom: SPACING.md },
   bandAction: { height: 42, width: 148, borderRadius: RADIUS.lg },
   bleed: {
-    marginHorizontal: -SPACING.md,
+    marginHorizontal: -GUTTER,
     paddingHorizontal: SPACING.md,
   },
   detailHero: { height: 420, borderRadius: 0 },
