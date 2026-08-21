@@ -163,7 +163,6 @@ function Band({
   style,
   raise = false,
   seam,
-  behind = 'transparent',
   seamVariant = 'lip',
   children,
 }: {
@@ -182,8 +181,6 @@ function Band({
    * change; the number alternates which corner is chamfered.
    */
   seam?: number;
-  /** The colour above, which the chamfer cuts away to reveal. */
-  behind?: string;
   /**
    * How loud this seam is.
    *
@@ -195,34 +192,36 @@ function Band({
   children: React.ReactNode;
 }) {
   /**
-   * What the seam paints as the incoming face. Well bands are opaque,
-   * so their seams arrive in the well colour; ground bands are
-   * TRANSPARENT — the page's grained ground shows through them — so
-   * their seams must be transparent too. Painting those faces navy
-   * put an 18-point flat strip over the grain under every quiet seam,
-   * the flat-patch bug at its smallest and most repeated.
+   * The seam sits ABOVE the band's own paint, not inside it.
+   *
+   * When it lived inside the well View, the well's background filled
+   * the whole seam box — including the chamfer's cut corner — so the
+   * card edge degraded to two floating hairlines over a uniform well.
+   * Out here the seam's face is the only well at that height: the cut
+   * corner is genuinely cut, and through it you see the page's grained
+   * ground, which is what "behind the card" actually looks like on
+   * this page. Ground bands paint no face at all — they are
+   * transparent themselves, so their seams are just the line.
    */
-  const ground = tone === 'well' ? LANDING_WELL : 'transparent';
   return (
-    <View
-      style={[tone === 'well' ? styles.well : undefined, raise && styles.raise]}
-    >
+    <View style={raise && styles.raise}>
       {seam != null && (
         <Seam
-          color={ground}
-          behind={behind}
+          color={tone === 'well' ? LANDING_WELL : 'transparent'}
           index={seam}
           variant={seamVariant}
         />
       )}
-      <View
-        style={[
-          styles.measure,
-          { paddingHorizontal: scale.inset, paddingVertical: scale.air },
-          style,
-        ]}
-      >
-        {children}
+      <View style={tone === 'well' ? styles.well : undefined}>
+        <View
+          style={[
+            styles.measure,
+            { paddingHorizontal: scale.inset, paddingVertical: scale.air },
+            style,
+          ]}
+        >
+          {children}
+        </View>
       </View>
     </View>
   );
@@ -472,7 +471,7 @@ export default function AboutScreen() {
             six sections and only then lets you touch something has the
             order backwards. */}
         <WhenNear placeholder={<View style={styles.tryRoom} />}>
-          <Band scale={scale} seam={1} behind={LANDING_WELL}>
+          <Band scale={scale} seam={1}>
             <QuestMark id="try" />
             <LandingTry scale={scale} />
           </Band>
@@ -509,10 +508,6 @@ export default function AboutScreen() {
                 own furniture — a pad, a disc, a cartridge, a life —
                 is what the edge is cut out of. It works because the
                 three seams above it were plain. */}
-            {/* `behind` matters doubly here: everything above the
-                wave inside the seam's box shows it, and without it the
-                well's own ground filled that area — a hard straight
-                step floating above the wavy edge. */}
             <Seam color={LANDING_WELL} index={3} variant="glyphs" />
             <View
               style={[
@@ -556,7 +551,7 @@ export default function AboutScreen() {
             An explicit navy here was the flat-patch bug again — right
             colour, wrong surface, visible as a strip under the deck. */}
         <View>
-          <Seam color="transparent" behind={LANDING_WELL} index={4} />
+          <Seam color="transparent" index={4} />
           <View style={styles.deckBody}>
             <BeatDeck scale={scale} games={games} />
           </View>
@@ -612,7 +607,7 @@ export default function AboutScreen() {
         </WhenNear>
 
         {/* The long tail, ranked below everything argued above it. */}
-        <Band scale={scale} seam={6} behind={LANDING_WELL}>
+        <Band scale={scale} seam={6}>
           <QuestMark id="index" />
           <FeatureIndex scale={scale} />
         </Band>
@@ -633,7 +628,6 @@ export default function AboutScreen() {
         <Band
           scale={scale}
           seam={8}
-          behind={LANDING_WELL}
           style={[
             // The phone above deliberately hangs over this band's
             // seam; the headline needs to start below its overhang,
@@ -826,7 +820,7 @@ const styles = StyleSheet.create({
   },
 
   plainRoom: { paddingTop: SPACING.xl * 2.5 },
-  deckBody: { paddingTop: SPACING.xl, paddingBottom: SPACING.xl * 1.5 },
+  deckBody: { paddingTop: SPACING.lg, paddingBottom: SPACING.xl * 1.5 },
 
   // the three beats
   // A hairline between claims instead of a change of ground. Three

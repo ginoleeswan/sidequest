@@ -291,8 +291,8 @@ const styles = StyleSheet.create({
    * own box, so the panels' drop shadows need padding inside it and
    * negative margins outside to hand the space back to the layout.
    */
-  railRoom: { marginVertical: -24 },
-  railContent: { gap: GAP, paddingVertical: 24 },
+  railRoom: { marginVertical: -40 },
+  railContent: { gap: GAP, paddingVertical: 40 },
   panel: {
     backgroundColor: LANDING_WELL,
     borderRadius: RADIUS.lg - 2,
@@ -300,7 +300,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     padding: PAD,
     gap: SPACING.lg,
-    boxShadow: '0 18px 44px rgba(9,12,19,0.4)',
+    // Tight enough to fit inside the rail's shadow room with margin:
+    // the first cut of this shadow blurred 44 points into a 24-point
+    // room and the clip edge read as a background change under the
+    // panels, right where the dots sit.
+    boxShadow: '0 10px 24px rgba(9,12,19,0.38)',
   },
   panelHead: { gap: SPACING.sm },
   index: {

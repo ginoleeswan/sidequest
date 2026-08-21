@@ -117,8 +117,6 @@ export interface SeamProps {
    * Defaults to the page ground.
    */
   color?: string;
-  /** The colour above, which the chamfer cuts away to reveal. */
-  behind?: string;
   /**
    * Which seam this is down the page. Even indexes cut the right
    * corner, odd the left.
@@ -129,7 +127,6 @@ export interface SeamProps {
 
 export function Seam({
   color = COLORS.navy,
-  behind = 'transparent',
   index = 0,
   variant = 'lip',
 }: SeamProps) {
@@ -236,7 +233,7 @@ export function Seam({
 
   return (
     <View
-      style={[styles.seam, { height, backgroundColor: behind }]}
+      style={[styles.seam, { height }]}
       onLayout={onLayout}
       pointerEvents="none"
       accessibilityElementsHidden
