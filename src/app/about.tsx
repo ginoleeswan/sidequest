@@ -41,7 +41,9 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { COLORS } from '@/styles/colors';
 import { DURATION, EASING } from '@/styles/motion';
 import {
+  LANDING_GROUND,
   LANDING_MEASURE,
+  LANDING_WELL,
   landingScale,
   type LandingScale,
 } from '@/styles/landing';
@@ -167,17 +169,17 @@ function Sum({
  */
 function Band({
   scale,
-  tone = 'page',
+  tone = 'ground',
   style,
   children,
 }: {
   scale: LandingScale;
-  tone?: 'page' | 'navy';
+  tone?: 'ground' | 'well';
   style?: StyleProp<ViewStyle>;
   children: React.ReactNode;
 }) {
   return (
-    <View style={tone === 'navy' ? styles.navy : undefined}>
+    <View style={tone === 'well' ? styles.well : undefined}>
       <View
         style={[
           styles.measure,
@@ -294,10 +296,10 @@ export default function AboutScreen() {
                 exists to prove. */}
           <LinearGradient
             colors={[
-              'rgba(51,61,81,0.55)',
-              'rgba(51,61,81,0.80)',
-              'rgba(51,61,81,0.97)',
-              COLORS.darkGrey,
+              'rgba(39,47,63,0.50)',
+              'rgba(39,47,63,0.78)',
+              'rgba(39,47,63,0.96)',
+              LANDING_GROUND,
             ]}
             locations={[0, 0.42, 0.78, 1]}
             start={{ x: 0.75, y: 0 }}
@@ -306,24 +308,42 @@ export default function AboutScreen() {
             pointerEvents="none"
           />
           {/* The page's first pixels, in exactly the colour iOS Safari
-              paints its status bar.
+              paints its status bar — and then a long way down before it
+              lets go of it.
 
               While the toolbar is expanded that strip belongs to the
               browser, not the document, so artwork cannot be drawn into
-              it — but a seam between two dark blues is only a seam
-              because they are two. Landing the hero on the theme colour
-              and dissolving out of it makes the bar read as the top of
-              the picture rather than a slab above it.
+              it; a seam between two dark blues is only a seam because
+              they are two. Landing the hero on the theme colour makes
+              the bar read as the top of the picture rather than a slab
+              above it.
 
               It sits AFTER the scrim, which is the whole trick. Behind
               it the top row measured rgb(47,56,75) against a status bar
               of rgb(39,47,63) — the scrim is an absolute fill and was
               laying its lightest corner straight over the one band that
-              had to match exactly. */}
+              had to match exactly.
+
+              Six stops rather than three. A flat band with one linear
+              fade under it has a visible corner where the fade begins,
+              and at sixty pixels tall the flat part was itself a slab.
+              This is opaque for about fifteen pixels and then eases out
+              over a hundred and thirty, which is a scrim rather than an
+              edge. */}
           <LinearGradient
-            colors={[COLORS.navy, COLORS.navy, 'rgba(39,47,63,0)']}
-            locations={[0, 0.5, 1]}
-            style={[styles.statusMatch, { height: safe.top + SPACING.xl * 2 }]}
+            colors={[
+              LANDING_GROUND,
+              LANDING_GROUND,
+              'rgba(39,47,63,0.86)',
+              'rgba(39,47,63,0.55)',
+              'rgba(39,47,63,0.22)',
+              'rgba(39,47,63,0)',
+            ]}
+            locations={[0, 0.1, 0.3, 0.52, 0.75, 1]}
+            style={[
+              styles.statusMatch,
+              { height: safe.top + (isExpanded ? 110 : 150) },
+            ]}
             pointerEvents="none"
           />
           {/* On the same column as every band below, so the headline
@@ -359,7 +379,7 @@ export default function AboutScreen() {
             it is. This is the whole case for the product, and it is
             more persuasive than any sentence about it. */}
         <WhenNear placeholder={<View style={styles.sumRoom} />}>
-          <Band tone="navy" scale={scale} style={scale.wide && styles.sumWide}>
+          <Band tone="well" scale={scale} style={scale.wide && styles.sumWide}>
             <Sum
               style={scale.wide ? styles.sumFigureWide : undefined}
               figure={figure}
@@ -386,7 +406,7 @@ export default function AboutScreen() {
         {/* Volume, which none of the single objects below can show.
             The row runs off the right edge on purpose. */}
         <WhenNear placeholder={<View style={styles.shelfRoom} />}>
-          <Band tone="navy" scale={scale} style={styles.pile}>
+          <Band tone="well" scale={scale} style={styles.pile}>
             <Rise from="mask">
               <Text style={[styles.lead, scale.lead]}>
                 Bring the whole pile.
@@ -484,7 +504,7 @@ export default function AboutScreen() {
             further down would turn a signature into a mannerism. */}
         <WhenNear placeholder={<View style={styles.cardRoom} />}>
           <Band
-            tone="navy"
+            tone="well"
             scale={scale}
             style={[styles.card, scale.wide && styles.cardWide]}
           >
@@ -558,7 +578,7 @@ export default function AboutScreen() {
 }
 
 const styles = StyleSheet.create({
-  background: { flexGrow: 1, backgroundColor: COLORS.darkGrey },
+  background: { flexGrow: 1, backgroundColor: LANDING_GROUND },
   // Centred past the cap, or a 4K monitor gets the whole page pinned to
   // its left edge with half a screen of nothing beside it.
   // The scroller stays as wide as the app allows, so bands bleed to
@@ -621,7 +641,7 @@ const styles = StyleSheet.create({
    * landing page its rhythm, and it works at both widths — where an
    * asymmetric column layout only works at one.
    */
-  navy: { backgroundColor: COLORS.navy },
+  well: { backgroundColor: LANDING_WELL },
   measure: {
     width: '100%',
     maxWidth: LANDING_MEASURE,

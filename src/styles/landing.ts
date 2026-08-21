@@ -76,6 +76,25 @@ const clamp = (value: number, min: number, max: number) =>
  */
 export const LANDING_MEASURE = 1180;
 
+/**
+ * The landing page's two grounds, and why neither of them is the app's.
+ *
+ * Everywhere else Sidequest sits on `darkGrey` — #333D51, a light
+ * desaturated blue that works underneath a dense grid of artwork
+ * because artwork is most of what you see. A landing page is mostly
+ * ground: long bands with one claim and one object on them. At that
+ * ratio #333D51 stops reading as a colour and starts reading as grey,
+ * which is the single most common note anybody gives this page.
+ *
+ * So it sits on ink, and its alternate band goes DOWN rather than up.
+ * Two dark tones a step apart give the page its rhythm without ever
+ * lifting toward grey, and both of them make amber and cover art carry
+ * further than they did.
+ */
+export const LANDING_GROUND = COLORS.navy;
+/** One step below the ground. `mediumGrey` still clears AA on it. */
+export const LANDING_WELL = '#1E2532';
+
 export function landingScale(width: number): LandingScale {
   const wide = width >= 900;
 
