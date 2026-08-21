@@ -65,11 +65,13 @@ function Lane({
   index,
   dim,
   lit,
+  keptScale,
 }: {
   items: { game: Game; index: number }[];
   index: number;
   dim: Animated.AnimatedInterpolation<number>;
   lit: Animated.AnimatedInterpolation<number>;
+  keptScale: Animated.AnimatedInterpolation<number>;
 }) {
   const reduced = useReducedMotion();
   const wander = useAnimatedValue(0);
@@ -120,6 +122,7 @@ function Lane({
               styles.slot,
               kept && styles.kept,
               { opacity: kept ? lit : dim },
+              kept && { transform: [{ scale: keptScale }] },
             ]}
           >
             <CoverImage
@@ -181,13 +184,26 @@ export function LandingWall({ columns }: { columns: number }) {
 
   if (!data) return null;
 
+  /**
+   * The pile starts readable and goes out; the three stay.
+   *
+   * At 0.5 under a scrim that ran to 96% the whole argument was
+   * invisible — the page's own thesis, drawn and then hidden. The pile
+   * now opens at three quarters and fades to nothing, so the going-out
+   * is something a reader can actually watch happen.
+   */
   const dim = progress.interpolate({
     inputRange: [0, 1],
-    outputRange: [0.5, 0.06],
+    outputRange: [0.72, 0.04],
   });
   const lit = progress.interpolate({
     inputRange: [0, 1],
-    outputRange: [0.5, 1],
+    outputRange: [0.72, 1],
+  });
+  /** The survivors grow a little as the rest leave. */
+  const keptScale = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.06],
   });
 
   return (
@@ -200,6 +216,7 @@ export function LandingWall({ columns }: { columns: number }) {
             index={laneIndex}
             dim={dim}
             lit={lit}
+            keptScale={keptScale}
           />
         ))}
       </View>
@@ -233,8 +250,15 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: COLORS.navy,
   },
+  /**
+   * The three that survive, made unmistakable. A two-pixel ring on a
+   * cover at half opacity under a heavy scrim was a detail nobody could
+   * see; this is a ring, a glow and a lift, which is what "these three"
+   * has to look like for the picture to make its own argument.
+   */
   kept: {
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: COLORS.accent,
+    boxShadow: '0 0 0 4px rgba(242,169,59,0.18), 0 14px 34px rgba(0,0,0,0.5)',
   },
 });

@@ -108,7 +108,12 @@ export function landingScale(width: number): LandingScale {
    */
   const lead = clamp(width * 0.042, 30, 54);
   const column = clamp(width * 0.031, 28, 40);
-  const sum = clamp(width * 0.17, 96, 196);
+  /**
+   * The page's one number, at the size a number that big deserves.
+   * At 196 it was the largest thing here and still looked like a
+   * headline; a quarter of the window makes it the event it is.
+   */
+  const sum = clamp(width * 0.235, 118, 300);
 
   const inset = wide ? 60 : 20;
   /** Matches `beatWide`'s gap. */
