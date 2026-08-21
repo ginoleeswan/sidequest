@@ -126,7 +126,7 @@ const BEATS = [
     kind: 'drop' as const,
     hue: COLORS.coral,
     lead: 'It lets you put things down.',
-    body: 'Most of a backlog will never be played. Saying so is the fun part.',
+    body: 'Most of the pile will never be played. Saying so is the fun part.',
   },
 ];
 
@@ -155,7 +155,9 @@ function Sum({
 
   return (
     <View ref={ref} style={style}>
-      <Text style={styles.sumLead}>The average backlog is</Text>
+      {/* "Backlog" is the one word on this page a non-player would
+          stumble on, and it was sitting over the biggest number. */}
+      <Text style={styles.sumLead}>An average pile of unplayed games</Text>
       {/* The unit is a sibling on the baseline, not a nested Text.
           Nested, it inherited the figure's tracking — and the figure is
           tracked at minus three percent, which on a 21px glyph is a
@@ -319,12 +321,12 @@ export default function AboutScreen() {
                 exists to prove. */}
           <LinearGradient
             colors={[
-              'rgba(39,47,63,0.50)',
-              'rgba(39,47,63,0.78)',
-              'rgba(39,47,63,0.96)',
+              'rgba(39,47,63,0.22)',
+              'rgba(39,47,63,0.62)',
+              'rgba(39,47,63,0.94)',
               LANDING_GROUND,
             ]}
-            locations={[0, 0.42, 0.78, 1]}
+            locations={[0, 0.44, 0.8, 1]}
             start={{ x: 0.75, y: 0 }}
             end={{ x: 0.15, y: 1 }}
             style={StyleSheet.absoluteFill}
@@ -385,16 +387,31 @@ export default function AboutScreen() {
               <MarkDraw size={40} />
               <Text style={styles.word}>SIDEQUEST</Text>
             </Animated.View>
+            {/* Say WHICH games, not "what".
+                "Know what you can actually finish" is a fine line and an
+                ambiguous one: finish what — books, jobs, the washing? A
+                stranger who has never heard of this should not have to
+                infer the category from the artwork behind the words. */}
             <Animated.Text
               style={[styles.headline, scale.display, step(0.08, 0.6)]}
             >
-              Know what you can actually finish.
+              Know which games you can actually finish.
             </Animated.Text>
+            {/* The standfirst names the mechanism and the outcome in
+                plain words, because the person this page has to convince
+                has never used it and may not play games at all. No
+                "backlog", no "triage": how long games take, how much you
+                play, which ones you can finish, which to let go. */}
             <Animated.Text style={[styles.standfirst, step(0.2, 0.75)]}>
-              Forty games waiting. Three you will finish. Sidequest works out
-              which three.
+              Sidequest knows how long games take. Tell it how much you play,
+              and it names the ones you can finish — and the ones to let go.
             </Animated.Text>
             <Animated.View style={step(0.32, 0.9)}>{open}</Animated.View>
+            {/* The three objections a stranger has, answered before they
+                are asked. */}
+            <Animated.Text style={[styles.terms, step(0.4, 1)]}>
+              Free · No account · Nothing to install
+            </Animated.Text>
           </View>
         </View>
 
@@ -402,7 +419,12 @@ export default function AboutScreen() {
             it is. This is the whole case for the product, and it is
             more persuasive than any sentence about it. */}
         <WhenNear placeholder={<View style={styles.sumRoom} />}>
-          <Band tone="well" scale={scale} style={scale.wide && styles.sumWide}>
+          <Band
+            tone="well"
+            scale={scale}
+            style={scale.wide ? styles.sumWide : styles.sumTall}
+            raise
+          >
             <QuestMark id="sum" />
             <Sum
               style={scale.wide ? styles.sumFigureWide : undefined}
@@ -713,6 +735,13 @@ const styles = StyleSheet.create({
     boxShadow: '0 4px 0 #B87A16',
   },
   ctaLabel: { ...TYPE.label, fontSize: 16, color: COLORS.navy },
+  terms: {
+    ...TYPE.micro,
+    fontSize: 12,
+    letterSpacing: 2,
+    color: COLORS.mediumGrey,
+    marginTop: SPACING.lg,
+  },
 
   /**
    * Bands, not hairlines.
@@ -743,6 +772,8 @@ const styles = StyleSheet.create({
 
   // the sum
   sumRoom: { height: 320 },
+  // A number this size needs a room, not a strip.
+  sumTall: { paddingVertical: 0, gap: SPACING.lg },
   sumWide: {
     flexDirection: 'row',
     // On the number's baseline side rather than its centre: a 196px
