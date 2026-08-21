@@ -48,8 +48,17 @@ const SHAFT = `M50 ${PLINTH_CY + 4} L50 ${BALL_CY + BALL_R * 0.5}`;
  */
 const SHADE = '#CBD1DC';
 
-/** The mark's own bounds, kept square so the component lays out simply. */
-const VIEW_BOX = '4 6 92 92';
+/**
+ * The mark's own bounds.
+ *
+ * Ninety-four units, not ninety-two: the plinth's near edge sits at
+ * about y=99.9 once the hexagon is laid flat and given its depth, and
+ * a box ending at 98 clipped it. At nav size that was a third of a
+ * pixel and invisible; drawn at 148 on the landing page's hill it
+ * sliced the base flat, which is why the logo looked like it was
+ * sunk behind the crest rather than standing on it.
+ */
+const VIEW_BOX = '4 6 94 94';
 
 interface Props {
   size?: number;

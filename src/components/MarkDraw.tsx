@@ -44,7 +44,17 @@ const BALL_CY = 26;
 const BALL_R = 19;
 const SHAFT_WIDTH = 11;
 const SHADE = '#CBD1DC';
-const VIEW_BOX = '4 6 92 92';
+/**
+ * The mark's own bounds.
+ *
+ * Ninety-four units, not ninety-two: the plinth's near edge sits at
+ * about y=99.9 once the hexagon is laid flat and given its depth, and
+ * a box ending at 98 clipped it. At nav size that was a third of a
+ * pixel and invisible; drawn at 148 on the landing page's hill it
+ * sliced the base flat, which is why the logo looked like it was
+ * sunk behind the crest rather than standing on it.
+ */
+const VIEW_BOX = '4 6 94 94';
 
 const layFlat = (cy: number) =>
   `translate(0 ${cy}) scale(1 ${SQUASH}) translate(0 -50)`;

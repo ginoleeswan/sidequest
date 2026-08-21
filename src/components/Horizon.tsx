@@ -179,7 +179,24 @@ export function Horizon({ onStart }: { onStart?: () => void }) {
           />
         </Svg>
 
-        {/* Standing on the crest: base a few pixels over the ridge,
+        {/* The contact shadow, on the hill and under the base. An
+            object with nothing beneath it reads as floating however
+            carefully it is placed; a soft dark ellipse where it meets
+            the ground is what says "standing". */}
+        <Animated.View
+          style={[
+            styles.contact,
+            {
+              opacity: rise.interpolate({
+                inputRange: [0.45, 1],
+                outputRange: [0, 1],
+                extrapolate: 'clamp',
+              }),
+            },
+          ]}
+        />
+
+        {/* Standing on the crest: base landing on the ridge line,
             painted after the hill, constructing itself as it settles. */}
         <Animated.View
           style={[
@@ -255,10 +272,24 @@ const styles = StyleSheet.create({
    */
   mark: {
     position: 'absolute',
-    bottom: 88,
+    bottom: 85,
     left: 0,
     right: 0,
     alignItems: 'center',
+  },
+  contact: {
+    position: 'absolute',
+    bottom: 78,
+    alignSelf: 'center',
+    width: 96,
+    height: 16,
+    borderRadius: 8,
+    // Softened with boxShadow, not filter: react-native-web drops
+    // `filter` from a StyleSheet without a word, so a blur written
+    // there is simply never applied. A spread shadow in the same
+    // colour gives the ellipse the soft edge a contact shadow needs.
+    backgroundColor: 'rgba(9,12,19,0.55)',
+    boxShadow: '0 0 16px 10px rgba(9,12,19,0.55)',
   },
   summit: {
     backgroundColor: COLORS.navy,
