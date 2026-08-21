@@ -35,13 +35,13 @@ function sources(dir: string): string[] {
  * unused glyph and a false negative ships a blank box. That trade is
  * right, but the glyph map is a thousand ordinary English words, so it
  * collides with the rest of the platform's vocabulary: "resize" is a
- * DOM event, "radio" is an ARIA role. The honest fix is to name the
+ * DOM event, "radio" is an ARIA role, "filter" is a CSS property. The honest fix is to name the
  * collisions rather than to ship glyphs nothing draws, or to contort
  * the source around a regex in a test.
  *
  * Add to this only for a word the app genuinely never draws as an icon.
  */
-const NOT_ICONS = new Set(['resize', 'radio']);
+const NOT_ICONS = new Set(['resize', 'radio', 'filter']);
 
 const used = new Set<string>();
 for (const file of sources(SRC)) {

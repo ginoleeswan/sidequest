@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppHeader } from '@/components/AppHeader';
 import { BackButton } from '@/components/BackButton';
 import { Chip } from '@/components/Chip';
-import { Memcard } from '@/components/Memcard';
+import { LandingMemcard } from '@/components/LandingMemcard';
 import { Message } from '@/components/Message';
 import { PageTitle } from '@/components/PageTitle';
 import { RouteError } from '@/components/RouteError';
@@ -39,7 +39,7 @@ import { TYPE } from '@/styles/typography';
 export default function MemcardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isExpanded } = useBreakpoint();
+  const { isExpanded, width } = useBreakpoint();
   const { entries } = useLibrary();
   const { durationOf } = useDurations();
   const toast = useToast();
@@ -55,6 +55,16 @@ export default function MemcardScreen() {
   const card = useMemo(
     () => buildMemcard(all, (game) => durationOf(game).hours, shown),
     [all, durationOf, shown]
+  );
+
+  /** Cover art for the save slots, by game id. */
+  const byId = useMemo(
+    () => new Map(all.map((entry) => [entry.game.id, entry.game])),
+    [all]
+  );
+  const cardWidth = Math.min(
+    isExpanded ? 900 : LAYOUT.maxContentWidth,
+    width - SPACING.lg * 2
   );
 
   /**
@@ -137,7 +147,23 @@ export default function MemcardScreen() {
           />
         ) : (
           <>
-            <Memcard card={card} maxWidth={LAYOUT.maxContentWidth} />
+            {/* The save-slot card, not the share image.
+                What gets posted is 1200x630 with its metadata down the
+                left — the right shape for a link preview and the wrong
+                one to look at, which on a phone rendered as small print
+                beside a thumbnail of the only part that matters. On
+                screen the grid IS the card, and every month you
+                finished something keeps that game's cover as its save
+                icon. Same object, two stages; shareMemcard still
+                rasterises the social layout. */}
+            <LandingMemcard
+              card={card}
+              width={cardWidth}
+              landed={card.blocks.length}
+              images={card.blocks.map(
+                (block) => byId.get(block.id)?.background_image ?? undefined
+              )}
+            />
             <View style={styles.stats}>
               <SectionHeader title="How the year is going" />
               <Text style={styles.verdict}>{stats.verdict}</Text>

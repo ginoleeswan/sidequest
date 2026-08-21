@@ -347,8 +347,10 @@ const styles = StyleSheet.create({
     borderTopColor: COLORS.stroke,
   },
   barCount: {
-    ...TYPE.caption,
-    color: COLORS.mediumGrey,
+    ...TYPE.tag,
+    // Letting go has its own colour in this app; the question that
+    // opens the act should be asked in it.
+    color: COLORS.coral,
     textAlign: 'center',
   },
   barActions: {
