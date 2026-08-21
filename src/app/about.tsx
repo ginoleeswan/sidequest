@@ -21,7 +21,9 @@ import { InstallPrompt } from '@/components/InstallPrompt';
 import { LandingShelf } from '@/components/LandingShelf';
 import { Memcard } from '@/components/Memcard';
 import { LandingProof } from '@/components/LandingProof';
+import { Drift } from '@/components/Drift';
 import { Rise, useInView } from '@/components/Rise';
+import { Words } from '@/components/Words';
 import { LandingWall } from '@/components/LandingWall';
 import { Mark } from '@/components/Mark';
 import { PageTitle } from '@/components/PageTitle';
@@ -36,6 +38,7 @@ import type { Game, Paged } from '@/api/types';
 import type { Memcard as MemcardModel } from '@/lib/memcard';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useCountUp } from '@/hooks/useCountUp';
+import { drift, useScrollTravel } from '@/hooks/useScrollTravel';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { COLORS } from '@/styles/colors';
@@ -407,11 +410,10 @@ export default function AboutScreen() {
             The row runs off the right edge on purpose. */}
         <WhenNear placeholder={<View style={styles.shelfRoom} />}>
           <Band tone="well" scale={scale} style={styles.pile}>
-            <Rise from="mask">
-              <Text style={[styles.lead, scale.lead]}>
-                Bring the whole pile.
-              </Text>
-            </Rise>
+            <Words
+              text="Bring the whole pile."
+              style={[styles.lead, scale.lead]}
+            />
             <Rise delay={90}>
               <Text style={[styles.pileBody, scale.body]}>
                 Paste a Steam profile and everything you own arrives with the
@@ -449,21 +451,16 @@ export default function AboutScreen() {
                   with its own body; what belongs opposite is the
                   evidence. */}
               <View style={scale.wide ? styles.beatCopyWide : styles.beatCopy}>
-                <Rise
-                  // Wide: from the side the column already sits on, so
-                  // the direction carries the layout. Narrow: a curtain,
-                  // because there is no side for it to come from.
-                  from={
-                    scale.wide ? (index % 2 === 1 ? 'right' : 'left') : 'mask'
-                  }
-                >
-                  <View style={styles.beatHead}>
+                <View style={styles.beatHead}>
+                  <Rise from={scale.wide && index % 2 === 1 ? 'right' : 'left'}>
                     <Text style={styles.beatIndex}>{`0${index + 1}`}</Text>
-                    <Text style={[styles.lead, scale.leadColumn]}>
-                      {beat.lead}
-                    </Text>
-                  </View>
-                </Rise>
+                  </Rise>
+                  <Words
+                    text={beat.lead}
+                    style={[styles.lead, scale.leadColumn]}
+                    delay={90}
+                  />
+                </View>
                 <Rise delay={90}>
                   <Text style={[styles.beatBody, scale.body]}>{beat.body}</Text>
                 </Rise>
@@ -487,13 +484,21 @@ export default function AboutScreen() {
                     : undefined
                 }
               >
-                <Rise from="lift" delay={200}>
-                  <LandingProof
-                    kind={beat.kind}
-                    game={games?.[index + 2]}
-                    width={scale.column}
-                  />
-                </Rise>
+                {/* Lags the copy beside it for the whole time the row
+                    is on screen, so a beat has depth rather than just an
+                    arrival. */}
+                <Drift
+                  distance={scale.wide ? 30 : 14}
+                  testID={`beat-proof-${index}`}
+                >
+                  <Rise from="lift" delay={200}>
+                    <LandingProof
+                      kind={beat.kind}
+                      game={games?.[index + 2]}
+                      width={scale.column}
+                    />
+                  </Rise>
+                </Drift>
               </View>
             </View>
           ))}
@@ -508,18 +513,19 @@ export default function AboutScreen() {
             scale={scale}
             style={[styles.card, scale.wide && styles.cardWide]}
           >
-            <Rise from="tilt">
-              <Memcard
-                card={sampleCard(games)}
-                maxWidth={scale.wide ? 460 : 320}
-              />
-            </Rise>
-            <View style={scale.wide ? styles.cardCopy : undefined}>
-              <Rise from="mask">
-                <Text style={[styles.lead, scale.leadColumn]}>
-                  And something to show for the year.
-                </Text>
+            <Drift distance={-22} testID="memcard-drift">
+              <Rise from="tilt">
+                <Memcard
+                  card={sampleCard(games)}
+                  maxWidth={scale.wide ? 460 : 320}
+                />
               </Rise>
+            </Drift>
+            <View style={scale.wide ? styles.cardCopy : undefined}>
+              <Words
+                text="And something to show for the year."
+                style={[styles.lead, scale.leadColumn]}
+              />
               <Rise delay={120}>
                 <Text style={[styles.cardCaption, scale.body]}>
                   Every set of credits you reach becomes a block on a card — one
@@ -539,11 +545,10 @@ export default function AboutScreen() {
 
         <Band scale={scale} style={scale.wide && styles.plainWide}>
           <View style={scale.wide ? styles.plainCopy : styles.plainStack}>
-            <Rise from={scale.wide ? 'left' : 'mask'}>
-              <Text style={[styles.lead, scale.lead]}>
-                No account. No tracking.
-              </Text>
-            </Rise>
+            <Words
+              text="No account. No tracking."
+              style={[styles.lead, scale.lead]}
+            />
             <Text style={[styles.plainBody, scale.body]}>
               Your library lives in your browser and goes nowhere. There is
               nothing to sign up for, nothing to cancel, and nobody selling what

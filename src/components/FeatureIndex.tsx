@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Rise } from './Rise';
+import { Words } from './Words';
 import type { LandingScale } from '@/styles/landing';
 import { COLORS } from '@/styles/colors';
 import { SPACING } from '@/styles/theme';
@@ -81,9 +82,11 @@ export function FeatureIndex({ scale }: { scale: LandingScale }) {
       <Rise from="mask">
         <Text style={styles.eyebrow}>Also in the box</Text>
       </Rise>
-      <Rise from="mask" delay={80}>
-        <Text style={[styles.heading, scale.lead]}>The rest of it</Text>
-      </Rise>
+      <Words
+        text="The rest of it"
+        style={[styles.heading, scale.lead]}
+        delay={80}
+      />
       <View style={[styles.list, wide && styles.listWide]}>
         {ENTRIES.map((entry, index) => (
           <Rise

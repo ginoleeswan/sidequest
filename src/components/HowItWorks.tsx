@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Rise } from './Rise';
+import { Words } from './Words';
 import type { LandingScale } from '@/styles/landing';
 import { COLORS } from '@/styles/colors';
 import { SPACING } from '@/styles/theme';
@@ -47,9 +48,11 @@ export function HowItWorks({ scale }: { scale: LandingScale }) {
       <Rise from="mask">
         <Text style={styles.eyebrow}>All of it takes about a minute</Text>
       </Rise>
-      <Rise from="mask" delay={70}>
-        <Text style={[styles.heading, scale.lead]}>How it works</Text>
-      </Rise>
+      <Words
+        text="How it works"
+        style={[styles.heading, scale.lead]}
+        delay={70}
+      />
       <View style={[styles.steps, scale.wide && styles.stepsWide]}>
         {STEPS.map((step, index) => (
           <Rise key={step.title} delay={index * 110} style={styles.stepSlot}>
