@@ -230,8 +230,46 @@ function Verdict({
     return () => animation.stop();
   }, [lit, finishes, index, reduced]);
 
+  /**
+   * Alive under the pointer.
+   *
+   * Hover a game and its real screenshots cycle — the same living
+   * preview every tile in the app already gives, and the pattern the
+   * best product landing pages use, except the footage here is the
+   * game itself rather than something rendered for marketing. Touch
+   * screens never see a hover; they get the answer animation instead,
+   * which is this band's real spectacle.
+   */
+  const [hovered, setHovered] = useState(false);
+  const [shot, setShot] = useState(0);
+  const stills = [
+    game.background_image,
+    ...(game.short_screenshots ?? [])
+      .map((s) => s.image)
+      .filter((image) => image !== game.background_image)
+      .slice(0, 4),
+  ].filter(Boolean) as string[];
+
+  useEffect(() => {
+    if (!hovered || stills.length < 2) return;
+    const timer = setInterval(
+      () => setShot((i) => (i + 1) % stills.length),
+      1100
+    );
+    return () => clearInterval(timer);
+  }, [hovered, stills.length]);
+
   return (
-    <View style={wide ? styles.cellWide : styles.cell}>
+    <Pressable
+      style={wide ? styles.cellWide : styles.cell}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => {
+        setHovered(false);
+        // Back to the cover, so the grid rests in its designed state.
+        setShot(0);
+      }}
+      accessibilityLabel={`${game.name}, ${hours} hours`}
+    >
       <Animated.View
         style={{
           opacity: lit.interpolate({
@@ -249,7 +287,7 @@ function Verdict({
         }}
       >
         <CoverImage
-          uri={game.background_image}
+          uri={stills[shot] ?? game.background_image}
           style={styles.art}
           size="thumb"
         />
@@ -270,7 +308,7 @@ function Verdict({
           {hours}h
         </Animated.Text>
       </Animated.View>
-    </View>
+    </Pressable>
   );
 }
 

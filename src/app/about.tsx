@@ -21,12 +21,13 @@ import { InstallPrompt } from '@/components/InstallPrompt';
 import { LandingShelf } from '@/components/LandingShelf';
 import { LandingTry } from '@/components/LandingTry';
 import { Memcard } from '@/components/Memcard';
+import { QuestLine, QuestMark } from '@/components/QuestLine';
 import { LandingProof } from '@/components/LandingProof';
 import { Drift } from '@/components/Drift';
 import { Rise, useInView } from '@/components/Rise';
 import { Words } from '@/components/Words';
 import { LandingWall } from '@/components/LandingWall';
-import { Mark } from '@/components/Mark';
+import { MarkDraw } from '@/components/MarkDraw';
 import { PageTitle } from '@/components/PageTitle';
 import { RouteError } from '@/components/RouteError';
 import { ScaleButton } from '@/components/ScaleButton';
@@ -362,7 +363,7 @@ export default function AboutScreen() {
                   and have nowhere to go back to; the ones who came from
                   the footer have a browser button and the mark below. */}
             <Animated.View style={[styles.lockup, step(0, 0.35)]}>
-              <Mark size={26} />
+              <MarkDraw size={26} />
               <Text style={styles.word}>SIDEQUEST</Text>
             </Animated.View>
             <Animated.Text
@@ -383,6 +384,7 @@ export default function AboutScreen() {
             more persuasive than any sentence about it. */}
         <WhenNear placeholder={<View style={styles.sumRoom} />}>
           <Band tone="well" scale={scale} style={scale.wide && styles.sumWide}>
+            <QuestMark id="sum" />
             <Sum
               style={scale.wide ? styles.sumFigureWide : undefined}
               figure={figure}
@@ -406,6 +408,7 @@ export default function AboutScreen() {
             order backwards. */}
         <WhenNear placeholder={<View style={styles.tryRoom} />}>
           <Band scale={scale}>
+            <QuestMark id="try" />
             <LandingTry scale={scale} />
           </Band>
         </WhenNear>
@@ -415,6 +418,7 @@ export default function AboutScreen() {
             know what will be asked of them, and three numbered steps is
             the plainest way to say it. */}
         <Band scale={scale}>
+          <QuestMark id="how" />
           <HowItWorks scale={scale} />
         </Band>
 
@@ -422,6 +426,7 @@ export default function AboutScreen() {
             The row runs off the right edge on purpose. */}
         <WhenNear placeholder={<View style={styles.shelfRoom} />}>
           <Band tone="well" scale={scale} style={styles.pile}>
+            <QuestMark id="pile" />
             <Words
               text="Bring the whole pile."
               style={[styles.lead, scale.lead]}
@@ -459,6 +464,7 @@ export default function AboutScreen() {
                 scale.wide && index % 2 === 1 && styles.beatFlipped,
               ]}
             >
+              <QuestMark id={`beat-${index}`} />
               {/* The claim and its sentence, together. A lead belongs
                   with its own body; what belongs opposite is the
                   evidence. */}
@@ -525,11 +531,13 @@ export default function AboutScreen() {
             scale={scale}
             style={[styles.card, scale.wide && styles.cardWide]}
           >
+            <QuestMark id="memcard" />
             <Drift distance={-22} testID="memcard-drift">
               <Rise from="tilt">
                 <Memcard
                   card={sampleCard(games)}
                   maxWidth={scale.wide ? 460 : 320}
+                  assemble
                 />
               </Rise>
             </Drift>
@@ -552,11 +560,13 @@ export default function AboutScreen() {
 
         {/* The long tail, ranked below everything argued above it. */}
         <Band scale={scale}>
+          <QuestMark id="index" />
           <FeatureIndex scale={scale} />
         </Band>
 
         <Band scale={scale} style={scale.wide && styles.plainWide}>
           <View style={scale.wide ? styles.plainCopy : styles.plainStack}>
+            <QuestMark id="close" />
             <Words
               text="No account. No tracking."
               style={[styles.lead, scale.lead]}
@@ -589,6 +599,10 @@ export default function AboutScreen() {
         {/* Padded to land on the same column the bands use, so the
             footer's first letter sits under everything above it. */}
         <SiteFooter pad={footerPad} />
+
+        {/* Above the bands, under nothing: the gutter it lives in has
+            no text to cover. */}
+        <QuestLine measure={LANDING_MEASURE} />
       </ScrollView>
     </Textured>
   );
