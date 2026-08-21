@@ -311,20 +311,35 @@ const styles = StyleSheet.create({
   paces: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
-    marginTop: SPACING.lg,
+    gap: SPACING.md,
+    marginTop: SPACING.xl,
   },
+  /**
+   * A control the section is built around should look like one. These
+   * were label-sized pills beside a fifty-four point question; they now
+   * carry the same weight and hard-offset travel as the page's buttons,
+   * because tapping them is the whole point of the band.
+   */
   pace: {
-    paddingVertical: SPACING.sm + 2,
-    paddingHorizontal: SPACING.md + 2,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg + 2,
     borderRadius: RADIUS.lg,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: COLORS.strokeStrong,
   },
-  paceOn: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
-  paceNumber: { ...TYPE.label, color: COLORS.lightGrey },
+  paceOn: {
+    backgroundColor: COLORS.accent,
+    borderColor: COLORS.accent,
+    boxShadow: '0 4px 0 #B87A16',
+  },
+  paceNumber: {
+    fontFamily: 'Noah-Black',
+    fontSize: 21,
+    letterSpacing: -0.5,
+    color: COLORS.lightGrey,
+  },
   paceNumberOn: { color: COLORS.navy },
-  paceUnit: { ...TYPE.caption, marginLeft: SPACING.xs },
+  paceUnit: { ...TYPE.caption, fontSize: 15, marginLeft: SPACING.sm },
   verdict: { marginTop: SPACING.lg, maxWidth: 620, color: COLORS.lightGrey },
   count: { color: COLORS.accent, fontFamily: 'Noah-Black' },
   /**

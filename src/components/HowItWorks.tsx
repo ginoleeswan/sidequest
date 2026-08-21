@@ -60,14 +60,28 @@ export function HowItWorks({ scale }: { scale: LandingScale }) {
         {STEPS.map((step, index) => (
           <Rise key={step.title} delay={index * 110} style={styles.stepSlot}>
             <View style={styles.step}>
-              {/* Save is amber, the evening is violet, done is mint —
-                  the same colour logic the rest of the page speaks. */}
-              <View style={[styles.badge, { backgroundColor: step.hue }]}>
-                <Ionicons name={step.icon} size={17} color={COLORS.navy} />
+              {/* The numeral is the furniture. Set at display size in
+                  the step's own colour it does the work an icon in a
+                  circle was doing badly — you can read the order of
+                  this section from across a room. */}
+              <Text
+                style={[
+                  styles.number,
+                  { color: step.hue },
+                  scale.wide && styles.numberWide,
+                ]}
+              >
+                {`0${index + 1}`}
+              </Text>
+              <View style={styles.stepHead}>
+                <View style={[styles.badge, { backgroundColor: step.hue }]}>
+                  <Ionicons name={step.icon} size={22} color={COLORS.navy} />
+                </View>
+                <Text style={[styles.title, scale.wide && styles.titleWide]}>
+                  {step.title}
+                </Text>
               </View>
-              <Text style={styles.number}>{`0${index + 1}`}</Text>
-              <Text style={styles.title}>{step.title}</Text>
-              <Text style={styles.body}>{step.body}</Text>
+              <Text style={[styles.body, scale.body]}>{step.body}</Text>
             </View>
           </Rise>
         ))}
@@ -80,33 +94,36 @@ const styles = StyleSheet.create({
   section: { gap: SPACING.sm },
   eyebrow: { ...TYPE.micro, color: COLORS.accent },
   heading: { color: COLORS.white, marginBottom: SPACING.xl },
-  // The steps sit further apart than the app's row gap: at this heading
-  // size a 20px gutter reads as three things touching.
-  steps: { gap: SPACING.lg },
+  steps: { gap: SPACING.xl * 1.4 },
   stepsWide: { flexDirection: 'row', gap: SPACING.xl * 1.6 },
   stepSlot: { flex: 1 },
   step: {
-    gap: SPACING.xs + 1,
+    gap: SPACING.sm,
     paddingTop: SPACING.md,
     borderTopWidth: 2,
     borderTopColor: COLORS.strokeStrong,
   },
+  number: {
+    fontFamily: 'Noah-Black',
+    fontSize: 46,
+    lineHeight: 50,
+    letterSpacing: -2,
+  },
+  numberWide: { fontSize: 66, lineHeight: 70, letterSpacing: -3 },
+  stepHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    marginTop: SPACING.xs,
+  },
   badge: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.xs,
   },
-  number: { ...TYPE.tag, color: COLORS.mediumGrey },
-  title: { ...TYPE.h1, color: COLORS.white },
-  body: {
-    ...TYPE.body,
-    fontSize: 16,
-    lineHeight: 25,
-    color: COLORS.mediumGrey,
-    maxWidth: 340,
-    marginTop: 2,
-  },
+  title: { ...TYPE.title, fontSize: 22, color: COLORS.white, flex: 1 },
+  titleWide: { fontSize: 26 },
+  body: { maxWidth: 360, marginTop: 2 },
 });

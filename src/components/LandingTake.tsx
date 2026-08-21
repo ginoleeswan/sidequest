@@ -85,7 +85,7 @@ export function LandingTake({ scale }: { scale: LandingScale }) {
             <View style={styles.badge}>
               <Ionicons
                 name="share-outline"
-                size={22}
+                size={28}
                 color={COLORS.lightGrey}
               />
               <View>
@@ -102,7 +102,7 @@ export function LandingTake({ scale }: { scale: LandingScale }) {
             >
               <Ionicons
                 name="download-outline"
-                size={22}
+                size={28}
                 color={event ? COLORS.navy : COLORS.lightGrey}
               />
               <View>
@@ -274,21 +274,26 @@ const styles = StyleSheet.create({
   eyebrow: { ...TYPE.micro, color: COLORS.accent },
   lead: { color: COLORS.white, marginTop: SPACING.sm },
   badges: { gap: SPACING.md, marginTop: SPACING.xl, alignSelf: 'flex-start' },
+  /**
+   * These are the section's controls and sat at half the weight of the
+   * phone beside them. Bigger box, thicker rule, bigger type — a row
+   * somebody is meant to act on should look like it.
+   */
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.md,
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
+    gap: SPACING.lg,
+    paddingVertical: SPACING.lg,
+    paddingHorizontal: SPACING.lg + 4,
     borderRadius: RADIUS.md,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: COLORS.strokeStrong,
-    minWidth: 300,
+    minWidth: 330,
   },
   badgeLive: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
-  badgeSmall: { ...TYPE.caption, fontSize: 13 },
+  badgeSmall: { ...TYPE.caption, fontSize: 14 },
   badgeSmallLive: { color: 'rgba(39,47,63,0.7)' },
-  badgeBig: { ...TYPE.h2, color: COLORS.white },
+  badgeBig: { ...TYPE.h2, fontSize: 21, color: COLORS.white },
   badgeBigLive: { color: COLORS.navy },
   footnote: { ...TYPE.caption, fontSize: 15, marginTop: SPACING.lg },
 
