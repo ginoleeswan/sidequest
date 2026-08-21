@@ -270,16 +270,28 @@ const styles = StyleSheet.create({
    * base, so a bottom of 88 puts the plinth's base about 14 pixels over
    * the ridge — standing on the lip, ridge behind the feet.
    */
+  /**
+   * Eight pixels below the crest line, not level with it.
+   *
+   * Base exactly on the apex touches at a single tangent point and
+   * reads as perched: the plinth's ellipse curves up on both sides
+   * while the hill curves down, so nothing appears to be in contact.
+   * Sinking it lets the ridge cross the plinth's lower face — the
+   * ground meeting the object on both sides, which is what standing
+   * on a hilltop looks like. The mark paints after the hill, so the
+   * part below the ridge is still drawn: sunk into the crest, never
+   * hidden behind it.
+   */
   mark: {
     position: 'absolute',
-    bottom: 85,
+    bottom: 77,
     left: 0,
     right: 0,
     alignItems: 'center',
   },
   contact: {
     position: 'absolute',
-    bottom: 78,
+    bottom: 70,
     alignSelf: 'center',
     width: 96,
     height: 16,
