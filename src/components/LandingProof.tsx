@@ -1,26 +1,44 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useEffect } from 'react';
+import { Animated, StyleSheet, Text, View } from 'react-native';
 
-import { Chip } from './Chip';
 import { CoverImage } from './CoverImage';
-import { GameTile } from './GameTile';
+import { useInView } from './Rise';
 import type { Game } from '@/api/types';
+import { useAnimatedValue } from '@/hooks/useAnimatedValue';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { DROP_REASONS } from '@/lib/drops';
 import { COLORS } from '@/styles/colors';
+import { EASING } from '@/styles/motion';
 import { RADIUS, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 /**
- * The claim, and the thing itself underneath it.
+ * The evidence beside each beat, as three staged objects.
  *
- * Three sentences about what an app does are three sentences; the same
- * three with the actual interface beside them are a demonstration. Every
- * fragment here is the app's own component fed real data, not a drawing
- * of one — so it cannot drift out of date, and nobody has to take the
- * sentence on trust.
+ * The bar is the memcard: a real object, at scale, made of real
+ * content, performing its own concept. Measured against that, what
+ * these were is embarrassing — a stock tile, a small row card, and a
+ * bordered box with four grey chips in it. The chips in particular
+ * explained nothing: "it lets you put things down" illustrated by a
+ * picker somebody would see AFTER deciding, drawn at a third the size
+ * of the sentence.
  *
- * This is also why there are no icons. A row of glyphs above a row of
- * headings is what a page reaches for when it has nothing to show.
+ * So all three are the same object now — one real cover at the column's
+ * width — differing only in what happens TO it, in the beat's own
+ * colour:
+ *
+ *   length   the hours it takes, stamped over the art in amber, which
+ *            is exactly the claim ("in amber, on every tile").
+ *   tonight  the evening's verdict laid across it in violet.
+ *   drop     the game being let go: greyed, tilted, and stamped LET GO
+ *            in coral — the act, not the menu that follows it.
+ *
+ * Each lands on a spring when the beat is reached, so the evidence
+ * performs rather than sits, and each is drawn from the same primitives
+ * the memcard's stamp uses. The reasons still appear under the third,
+ * small, where a footnote belongs.
  */
 export function LandingProof({
   kind,
@@ -30,118 +48,205 @@ export function LandingProof({
 }: {
   kind: 'length' | 'tonight' | 'drop';
   game?: Game;
+  width: number;
   /** The beat's own colour; the evidence speaks in it too. */
   hue?: string;
-  /**
-   * How much room there is, in pixels.
-   *
-   * These were drawn at the size a shelf draws them, which made sense
-   * as "the real component, not a picture of it" and made no sense at
-   * all optically: a 210px tile alone in a 500px column beside a claim
-   * set at forty points is a stamp in a field, and the field is what
-   * anybody notices. Evidence is told its measure and fills it.
-   */
-  width: number;
 }) {
-  const wide = width > 340;
-  if (kind === 'length') {
-    if (!game) return null;
-    return (
-      <View style={styles.frame}>
-        <GameTile game={game} width={Math.min(width, 460)} />
-      </View>
-    );
-  }
+  const reduced = useReducedMotion();
+  const [ref, seen] = useInView('-10%');
+  const land = useAnimatedValue(reduced ? 1 : 0);
 
-  if (kind === 'tonight') {
-    if (!game) return null;
-    return (
-      <View
-        style={[styles.frame, styles.card, wide && styles.cardWide, { width }]}
-      >
+  useEffect(() => {
+    if (reduced || !seen) return;
+    const spring = Animated.spring(land, {
+      toValue: 1,
+      tension: 90,
+      friction: 9,
+      useNativeDriver: false,
+    });
+    // A beat after the card itself arrives, so the stamp reads as
+    // landing ON something rather than with it.
+    const timer = setTimeout(() => spring.start(), 320);
+    return () => {
+      clearTimeout(timer);
+      spring.stop();
+    };
+  }, [land, seen, reduced]);
+
+  if (!game) return null;
+
+  const dropped = kind === 'drop';
+  const stamp = {
+    opacity: land.interpolate({
+      inputRange: [0, 0.2, 1],
+      outputRange: [0, 1, 1],
+    }),
+    transform: [
+      { rotate: dropped ? '-7deg' : '-3deg' },
+      {
+        scale: land.interpolate({
+          inputRange: [0, 1],
+          outputRange: [dropped ? 2.2 : 1.6, 1],
+        }),
+      },
+    ],
+  };
+
+  const hours = Math.max(1, Math.round(game.playtime || 12));
+
+  return (
+    <View ref={ref} style={[styles.frame, { width }]}>
+      <View style={[styles.card, dropped && styles.cardDropped]}>
         <CoverImage
           uri={game.background_image}
-          style={[styles.art, wide && styles.artWide]}
+          style={styles.art}
           size="thumb"
         />
-        <View style={styles.body}>
-          <View style={styles.eyebrowRow}>
-            <Ionicons name="moon" size={12} color={hue} />
-            <Text style={[styles.eyebrow, { color: hue }]}>
-              TONIGHT · 90 MINUTES
-            </Text>
-          </View>
-          <Text style={styles.title} numberOfLines={1}>
-            Finish {game.name}
-          </Text>
-          <Text style={styles.reason}>
-            You could see the credits before bed.
-          </Text>
-        </View>
-      </View>
-    );
-  }
+        {/* Letting go is drawn, not described: the art goes out. */}
+        {dropped && <View style={styles.grey} />}
+        {/* A gradient, not a block: a flat scrim at 62% draws a hard
+            rule across the artwork, which is the one thing a scrim
+            exists to avoid. */}
+        <LinearGradient
+          colors={[
+            'rgba(9,12,19,0)',
+            'rgba(9,12,19,0.45)',
+            'rgba(9,12,19,0.88)',
+          ]}
+          locations={[0, 0.55, 1]}
+          style={styles.veil}
+          pointerEvents="none"
+        />
 
-  /**
-   * The drop bar as the app draws it, prompt included.
-   *
-   * Four bare chips floating in half a row read as leftover UI: there
-   * was nothing to say what they were for, and nothing holding them
-   * together, so they had no more presence than a caption. The real
-   * thing is a bar with a question on it, and the question is the part
-   * that makes the point.
-   */
-  return (
-    <View style={[styles.frame, styles.bar, wide && styles.barWide, { width }]}>
-      <Text style={[styles.prompt, { color: hue }]}>
-        Why this one? Optional.
-      </Text>
-      <View style={styles.reasons}>
-        {DROP_REASONS.map((reason) => (
-          <Chip key={reason.key} title={reason.label} quiet />
-        ))}
+        <View style={styles.body}>
+          <Text style={styles.name} numberOfLines={1}>
+            {game.name}
+          </Text>
+          {kind === 'tonight' && (
+            <View style={styles.row}>
+              <Ionicons name="moon" size={13} color={hue} />
+              <Text style={[styles.line, { color: hue }]}>
+                Fits tonight — credits before bed
+              </Text>
+            </View>
+          )}
+          {kind === 'length' && (
+            <Text style={styles.line}>Reported by people who finished it</Text>
+          )}
+          {dropped && (
+            <Text style={styles.line}>Off the shelf, guilt-free</Text>
+          )}
+        </View>
+
+        {/* The one bold thing, in the beat's colour. */}
+        {kind === 'length' && (
+          <Animated.View style={[styles.figureSlot, stamp]}>
+            <Text style={[styles.figure, { color: hue }]}>{hours}</Text>
+            <Text style={[styles.figureUnit, { color: hue }]}>HOURS</Text>
+          </Animated.View>
+        )}
+        {kind === 'tonight' && (
+          <Animated.View style={[styles.figureSlot, stamp]}>
+            <Text style={[styles.figure, { color: hue }]}>90</Text>
+            <Text style={[styles.figureUnit, { color: hue }]}>MINUTES</Text>
+          </Animated.View>
+        )}
+        {dropped && (
+          <Animated.View
+            style={[styles.stamp, { borderColor: hue }, stamp]}
+            pointerEvents="none"
+          >
+            <Text style={[styles.stampWord, { color: hue }]}>LET GO</Text>
+          </Animated.View>
+        )}
       </View>
+
+      {dropped && (
+        <View style={styles.reasons}>
+          {DROP_REASONS.map((reason) => (
+            <Text key={reason.key} style={styles.reason}>
+              {reason.label}
+            </Text>
+          ))}
+        </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  frame: { alignSelf: 'flex-start' },
+  frame: { alignSelf: 'flex-start', gap: SPACING.md },
   card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
-    padding: SPACING.md,
+    width: '100%',
+    aspectRatio: 16 / 10,
     borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.stroke,
-    backgroundColor: COLORS.raised,
-    maxWidth: 520,
-  },
-  cardWide: { padding: SPACING.lg, gap: SPACING.lg },
-  artWide: { width: 104, height: 70 },
-  art: {
-    width: 74,
-    height: 50,
-    borderRadius: RADIUS.sm,
     overflow: 'hidden',
     backgroundColor: COLORS.navy,
-  },
-  body: { flex: 1, gap: 2 },
-  eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  eyebrow: { ...TYPE.tag },
-  title: { ...TYPE.h3, color: COLORS.white },
-  reason: { ...TYPE.caption },
-  bar: {
-    gap: SPACING.md,
-    padding: SPACING.md,
-    borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: COLORS.stroke,
-    backgroundColor: COLORS.raised,
-    maxWidth: 520,
+    borderColor: COLORS.strokeStrong,
+    boxShadow: '0 22px 48px rgba(0,0,0,0.45)',
   },
-  barWide: { padding: SPACING.lg },
-  prompt: { ...TYPE.tag },
-  reasons: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
+  cardDropped: { transform: [{ rotate: '-2.5deg' }] },
+  art: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  /** No `filter` — react-native-web drops it; a scrim does the job. */
+  grey: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(20,25,35,0.72)',
+  },
+  veil: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '72%',
+  },
+  body: {
+    position: 'absolute',
+    left: SPACING.lg,
+    right: SPACING.lg,
+    bottom: SPACING.lg,
+    gap: 3,
+  },
+  name: { ...TYPE.title, fontSize: 24, color: COLORS.white },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  line: { ...TYPE.caption, fontSize: 14 },
+
+  figureSlot: { position: 'absolute', top: SPACING.lg, right: SPACING.lg + 2 },
+  figure: {
+    fontFamily: 'Noah-Black',
+    fontSize: 68,
+    lineHeight: 68,
+    letterSpacing: -3,
+    textAlign: 'right',
+  },
+  figureUnit: {
+    ...TYPE.tag,
+    fontSize: 11,
+    letterSpacing: 3,
+    textAlign: 'right',
+    marginTop: 2,
+  },
+
+  stamp: {
+    position: 'absolute',
+    top: '30%',
+    alignSelf: 'center',
+    borderWidth: 4,
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    backgroundColor: 'rgba(20,25,35,0.6)',
+  },
+  stampWord: {
+    fontFamily: 'Noah-Black',
+    fontSize: 30,
+    letterSpacing: 4,
+  },
+
+  reasons: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.md },
+  reason: { ...TYPE.caption, fontSize: 13 },
 });
