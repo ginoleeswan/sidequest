@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
+import Svg, { Path, Rect } from 'react-native-svg';
 
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -55,6 +56,23 @@ export function landingCardHeight(width: number): number {
   return HEADER + ROWS * (cell + GAP) + INITIALS + PAD;
 }
 
+/**
+ * The shell: a rounded card with one corner cut off on the diagonal —
+ * the memory-card silhouette, which is the whole reason this object
+ * reads as saved progress rather than as a calendar widget. The first
+ * component version kept the grid and lost the notch, and with it the
+ * identity. Drawn as a path at the card's exact size, with the little
+ * grip grooves beside the cut for the people who will recognise them.
+ */
+function shellPath(w: number, h: number, notch: number): string {
+  const r = 18;
+  return (
+    `M ${r} 0 H ${w - notch} L ${w} ${notch} V ${h - r} ` +
+    `Q ${w} ${h} ${w - r} ${h} H ${r} Q 0 ${h} 0 ${h - r} ` +
+    `V ${r} Q 0 0 ${r} 0 Z`
+  );
+}
+
 export function LandingMemcard({
   card,
   width,
@@ -80,36 +98,66 @@ export function LandingMemcard({
     filled.set(`${block.month}-${row}`, true);
   });
 
-  return (
-    <View style={[styles.card, { width, height: landingCardHeight(width) }]}>
-      <View style={styles.header}>
-        <Text style={styles.year}>{card.year}</Text>
-        {/* The scoreboard: counts up as the covers land. */}
-        <Text style={styles.score}>
-          <Text style={styles.scoreNumber}>{landed}</Text> GAMES ·{' '}
-          <Text style={styles.scoreNumber}>{Math.round(hours)}</Text> HOURS
-        </Text>
-      </View>
+  const height = landingCardHeight(width);
+  const notch = Math.max(30, Math.min(52, width * 0.055));
 
-      <View style={[styles.grid, { gap: GAP }]}>
-        {Array.from({ length: ROWS }, (_, r) => ROWS - 1 - r).map((row) => (
-          <View key={row} style={[styles.gridRow, { gap: GAP }]}>
-            {Array.from({ length: COLUMNS }, (_, month) => (
-              <Block
-                key={month}
-                size={cell}
-                on={filled.get(`${month}-${row}`) === true}
-              />
-            ))}
-          </View>
+  return (
+    <View style={[styles.card, { width, height }]}>
+      <Svg
+        width={width}
+        height={height}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      >
+        <Path
+          d={shellPath(width, height, notch)}
+          fill="#1D2431"
+          stroke="rgba(255,255,255,0.12)"
+          strokeWidth={2}
+        />
+        {/* The grip grooves, beside the cut corner. */}
+        {[0, 1, 2, 3].map((slot) => (
+          <Rect
+            key={slot}
+            x={width - notch - 22 - slot * 13}
+            y={10}
+            width={5}
+            height={16}
+            rx={2.5}
+            fill="rgba(255,255,255,0.10)"
+          />
         ))}
-      </View>
-      <View style={styles.initials}>
-        {MONTH_INITIALS.map((initial, month) => (
-          <Text key={month} style={[styles.initial, { width: cell }]}>
-            {initial}
+      </Svg>
+      <View style={styles.inner}>
+        <View style={styles.header}>
+          <Text style={styles.year}>{card.year}</Text>
+          {/* The scoreboard: counts up as the covers land. */}
+          <Text style={styles.score}>
+            <Text style={styles.scoreNumber}>{landed}</Text> GAMES ·{' '}
+            <Text style={styles.scoreNumber}>{Math.round(hours)}</Text> HOURS
           </Text>
-        ))}
+        </View>
+
+        <View style={[styles.grid, { gap: GAP }]}>
+          {Array.from({ length: ROWS }, (_, r) => ROWS - 1 - r).map((row) => (
+            <View key={row} style={[styles.gridRow, { gap: GAP }]}>
+              {Array.from({ length: COLUMNS }, (_, month) => (
+                <Block
+                  key={month}
+                  size={cell}
+                  on={filled.get(`${month}-${row}`) === true}
+                />
+              ))}
+            </View>
+          ))}
+        </View>
+        <View style={styles.initials}>
+          {MONTH_INITIALS.map((initial, month) => (
+            <Text key={month} style={[styles.initial, { width: cell }]}>
+              {initial}
+            </Text>
+          ))}
+        </View>
       </View>
 
       {done && <Stamp />}
@@ -214,16 +262,11 @@ function Stamp() {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: '#1D2431',
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.strokeStrong,
-    padding: PAD,
-    paddingTop: 0,
-    boxShadow: '0 24px 60px rgba(0,0,0,0.45)',
-    overflow: 'visible',
-  },
+  // The shell SVG carries the surface, stroke and notch; the View
+  // carries only the soft shadow (which hugs the rect — close enough
+  // for a diffuse glow) and the content box.
+  card: { boxShadow: '0 24px 60px rgba(0,0,0,0.45)', borderRadius: RADIUS.md },
+  inner: { flex: 1, padding: PAD, paddingTop: 0 },
   header: {
     height: HEADER,
     flexDirection: 'row',
