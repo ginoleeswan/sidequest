@@ -68,9 +68,6 @@ export function MemcardBuild({
   const flights = card.blocks.map((block, index) => ({
     block,
     image: games[index]?.background_image,
-    row: card.blocks
-      .slice(0, index)
-      .filter((other) => other.month === block.month).length,
   }));
 
   useEffect(() => {
@@ -113,7 +110,12 @@ export function MemcardBuild({
           ],
         }}
       >
-        <LandingMemcard card={card} width={width} landed={shown} />
+        <LandingMemcard
+          card={card}
+          width={width}
+          landed={shown}
+          images={flights.map((flight) => flight.image ?? undefined)}
+        />
       </Animated.View>
 
       {/* The pieces, flying past the reader into their slots. */}
@@ -126,7 +128,7 @@ export function MemcardBuild({
               image={flight.image}
               name={flight.block.name}
               index={index}
-              slot={landingSlot(width, flight.block.month, flight.row)}
+              slot={landingSlot(width, flight.block.month)}
               width={width}
               height={height}
             />
@@ -152,7 +154,7 @@ function Flier({
   image: string;
   name: string;
   index: number;
-  slot: { x: number; y: number; size: number };
+  slot: { x: number; y: number; w: number; h: number };
   width: number;
   height: number;
 }) {
@@ -215,9 +217,11 @@ function Flier({
               }),
             },
             {
+              // Lands at the slot's own size — the cover stays a cover,
+              // because in this card a game IS its save icon.
               scale: flight.interpolate({
                 inputRange: [0, 1],
-                outputRange: [2, slot.size / flierW],
+                outputRange: [2, slot.w / flierW],
               }),
             },
             {

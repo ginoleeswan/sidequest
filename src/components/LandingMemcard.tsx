@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 
+import { CoverImage } from './CoverImage';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import type { Memcard as MemcardModel } from '@/lib/memcard';
@@ -30,39 +31,50 @@ import { TYPE } from '@/styles/typography';
  * keeping score of its own construction.
  */
 
-/** Grid shape, shared with the flight paths via `landingSlot`. */
-const COLUMNS = 12;
-const ROWS = 3;
+/**
+ * Grid shape, shared with the flight paths via `landingSlot`.
+ *
+ * Not abstract cells: SAVE SLOTS, the way the PS1's memory-card screen
+ * drew them — a grid of little framed squares, each holding the icon
+ * of what is saved in it. A landed game keeps its cover art as the
+ * slot's icon, so the card ends the build full of the games
+ * themselves rather than a bar chart of them. Six months to a row
+ * where there is width for it, three on a phone.
+ */
 const PAD = SPACING.lg;
-const GAP = 5;
-const HEADER = 74;
-const INITIALS = 26;
+const GAP = 8;
+const HEADER = 78;
+
+const columnsFor = (width: number) => (width > 700 ? 6 : 3);
 
 export function landingSlot(
   width: number,
-  month: number,
-  row: number
-): { x: number; y: number; size: number } {
-  const cell = (width - PAD * 2 - GAP * (COLUMNS - 1)) / COLUMNS;
+  month: number
+): { x: number; y: number; w: number; h: number } {
+  const columns = columnsFor(width);
+  const w = (width - PAD * 2 - GAP * (columns - 1)) / columns;
+  const h = w * 0.74;
+  const col = month % columns;
+  const row = Math.floor(month / columns);
   return {
-    x: PAD + month * (cell + GAP) + cell / 2,
-    y: HEADER + (ROWS - 1 - row) * (cell + GAP) + cell / 2,
-    size: cell,
+    x: PAD + col * (w + GAP) + w / 2,
+    y: HEADER + row * (h + GAP) + h / 2,
+    w,
+    h,
   };
 }
 
 export function landingCardHeight(width: number): number {
-  const cell = (width - PAD * 2 - GAP * (COLUMNS - 1)) / COLUMNS;
-  return HEADER + ROWS * (cell + GAP) + INITIALS + PAD;
+  const columns = columnsFor(width);
+  const rows = 12 / columns;
+  const w = (width - PAD * 2 - GAP * (columns - 1)) / columns;
+  return HEADER + rows * (w * 0.74 + GAP) - GAP + PAD;
 }
 
 /**
  * The shell: a rounded card with one corner cut off on the diagonal —
  * the memory-card silhouette, which is the whole reason this object
- * reads as saved progress rather than as a calendar widget. The first
- * component version kept the grid and lost the notch, and with it the
- * identity. Drawn as a path at the card's exact size, with the little
- * grip grooves beside the cut for the people who will recognise them.
+ * reads as saved progress rather than as a calendar widget.
  */
 function shellPath(w: number, h: number, notch: number): string {
   const r = 18;
@@ -77,25 +89,40 @@ export function LandingMemcard({
   card,
   width,
   landed,
+  images = [],
 }: {
   card: MemcardModel;
   width: number;
   /** How many of the card's blocks have arrived. */
   landed: number;
+  /** Cover art per block, aligned to card.blocks. */
+  images?: (string | undefined)[];
 }) {
-  const cell = (width - PAD * 2 - GAP * (COLUMNS - 1)) / COLUMNS;
+  const columns = columnsFor(width);
+  const slotW = (width - PAD * 2 - GAP * (columns - 1)) / columns;
+  const slotH = slotW * 0.74;
   const done = landed >= card.blocks.length;
   const hours = card.blocks
     .slice(0, landed)
     .reduce((sum, block) => sum + block.hours, 0);
 
-  // Which cell each landed block occupies.
-  const filled = new Map<string, boolean>();
+  /** The save in each month's slot, once its cover has landed. */
+  const saves = new Map<
+    number,
+    { image?: string; hours: number; extra: number }
+  >();
   card.blocks.slice(0, landed).forEach((block, index) => {
-    const row = card.blocks
-      .slice(0, index)
-      .filter((other) => other.month === block.month).length;
-    filled.set(`${block.month}-${row}`, true);
+    const existing = saves.get(block.month);
+    if (existing) {
+      existing.extra += 1;
+      existing.hours += block.hours;
+    } else {
+      saves.set(block.month, {
+        image: images[index],
+        hours: block.hours,
+        extra: 0,
+      });
+    }
   });
 
   const height = landingCardHeight(width);
@@ -130,7 +157,10 @@ export function LandingMemcard({
       </Svg>
       <View style={styles.inner}>
         <View style={styles.header}>
-          <Text style={styles.year}>{card.year}</Text>
+          <View>
+            <Text style={styles.label}>MEMORY CARD</Text>
+            <Text style={styles.year}>{card.year}</Text>
+          </View>
           {/* The scoreboard: counts up as the covers land. */}
           <Text style={styles.score}>
             <Text style={styles.scoreNumber}>{landed}</Text> GAMES ·{' '}
@@ -138,24 +168,15 @@ export function LandingMemcard({
           </Text>
         </View>
 
-        <View style={[styles.grid, { gap: GAP }]}>
-          {Array.from({ length: ROWS }, (_, r) => ROWS - 1 - r).map((row) => (
-            <View key={row} style={[styles.gridRow, { gap: GAP }]}>
-              {Array.from({ length: COLUMNS }, (_, month) => (
-                <Block
-                  key={month}
-                  size={cell}
-                  on={filled.get(`${month}-${row}`) === true}
-                />
-              ))}
-            </View>
-          ))}
-        </View>
-        <View style={styles.initials}>
-          {MONTH_INITIALS.map((initial, month) => (
-            <Text key={month} style={[styles.initial, { width: cell }]}>
-              {initial}
-            </Text>
+        <View style={styles.grid}>
+          {Array.from({ length: 12 }, (_, month) => (
+            <Slot
+              key={month}
+              w={slotW}
+              h={slotH}
+              initial={MONTH_INITIALS[month]}
+              save={saves.get(month)}
+            />
           ))}
         </View>
       </View>
@@ -165,9 +186,25 @@ export function LandingMemcard({
   );
 }
 
-/** One cell: faint until its game lands, then it pops amber. */
-function Block({ size, on }: { size: number; on: boolean }) {
+/**
+ * One save slot. Empty, it is a faint frame holding its month's
+ * initial — a slot waiting for a save. Landed, it holds the game's
+ * cover as its icon, the month as a chip and the hours in amber, and
+ * it arrives on the app's own press-spring.
+ */
+function Slot({
+  w,
+  h,
+  initial,
+  save,
+}: {
+  w: number;
+  h: number;
+  initial: string;
+  save?: { image?: string; hours: number; extra: number };
+}) {
   const reduced = useReducedMotion();
+  const on = save !== undefined;
   const pop = useAnimatedValue(on ? 1 : 0);
   const was = useRef(on);
 
@@ -189,29 +226,38 @@ function Block({ size, on }: { size: number; on: boolean }) {
   }, [on, pop, reduced]);
 
   return (
-    <View
-      style={[
-        styles.cellGhost,
-        { width: size, height: size, borderRadius: Math.min(6, size * 0.2) },
-      ]}
-    >
+    <View style={[styles.slot, { width: w, height: h }]}>
+      {!on && <Text style={styles.slotInitial}>{initial}</Text>}
       {on && (
         <Animated.View
           style={[
-            styles.cellOn,
+            styles.save,
             {
-              borderRadius: Math.min(6, size * 0.2),
               transform: [
                 {
                   scale: pop.interpolate({
                     inputRange: [0.2, 0.7, 1],
-                    outputRange: [1.5, 0.92, 1],
+                    outputRange: [1.35, 0.94, 1],
                   }),
                 },
               ],
             },
           ]}
-        />
+        >
+          {save.image ? (
+            <CoverImage uri={save.image} style={styles.saveArt} size="thumb" />
+          ) : (
+            <View style={[styles.saveArt, styles.saveBare]} />
+          )}
+          <View style={styles.saveMonth}>
+            <Text style={styles.saveMonthWord}>{initial}</Text>
+          </View>
+          <View style={styles.saveHours}>
+            <Text style={styles.saveHoursWord}>
+              {Math.round(save.hours)}h{save.extra > 0 ? ` +${save.extra}` : ''}
+            </Text>
+          </View>
+        </Animated.View>
       )}
     </View>
   );
@@ -273,6 +319,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  label: {
+    ...TYPE.micro,
+    fontSize: 10,
+    letterSpacing: 3,
+    color: COLORS.accent,
+  },
   year: {
     fontFamily: 'Noah-Black',
     fontSize: 34,
@@ -281,25 +333,51 @@ const styles = StyleSheet.create({
   },
   score: { ...TYPE.tag, color: COLORS.mediumGrey },
   scoreNumber: { color: COLORS.accent },
-  grid: {},
-  gridRow: { flexDirection: 'row' },
-  cellGhost: { backgroundColor: 'rgba(255,255,255,0.05)' },
-  cellOn: {
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
+  slot: {
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.12)',
+    borderStyle: 'dashed',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  slotInitial: { ...TYPE.h2, color: 'rgba(255,255,255,0.22)' },
+  save: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: COLORS.accent,
-    boxShadow: '0 3px 0 #B87A16',
+    top: -1.5,
+    left: -1.5,
+    right: -1.5,
+    bottom: -1.5,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: COLORS.accent,
+    overflow: 'hidden',
+    boxShadow: '0 4px 14px rgba(242,169,59,0.25)',
   },
-  initials: {
-    flexDirection: 'row',
-    gap: GAP,
-    marginTop: 8,
-    height: INITIALS - 8,
+  saveArt: { width: '100%', height: '100%' },
+  saveBare: { backgroundColor: COLORS.navy },
+  saveMonth: {
+    position: 'absolute',
+    top: 5,
+    left: 5,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 5,
+    backgroundColor: 'rgba(14,18,26,0.78)',
   },
-  initial: { ...TYPE.tag, fontSize: 10, textAlign: 'center' },
+  saveMonthWord: { ...TYPE.tag, fontSize: 10, color: COLORS.lightGrey },
+  saveHours: {
+    position: 'absolute',
+    bottom: 5,
+    right: 5,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 5,
+    backgroundColor: 'rgba(14,18,26,0.78)',
+  },
+  saveHoursWord: { ...TYPE.tag, fontSize: 11, color: COLORS.accent },
   stamp: {
     position: 'absolute',
     right: PAD + 14,
