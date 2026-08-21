@@ -3,6 +3,7 @@ import { Animated, StyleSheet, Text, View } from 'react-native';
 import Svg, {
   Defs,
   Ellipse,
+  LinearGradient,
   Path,
   RadialGradient,
   Stop,
@@ -16,7 +17,6 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { COLORS } from '@/styles/colors';
 import { DURATION, EASING } from '@/styles/motion';
 import { SEAM_GLYPHS } from './SeamGlyphs';
-import { LANDING_WELL } from '@/styles/landing';
 import { RADIUS, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
@@ -122,6 +122,16 @@ export function Horizon({ onStart }: { onStart?: () => void }) {
           style={StyleSheet.absoluteFill}
         >
           <Defs>
+            {/* Lands on zero, not on a tenth. Ending at 0.1 left the
+                hill's last row two and a half units darker than the
+                summit directly beneath it — a hairline step exactly
+                where the two are meant to be one ground. A shadow that
+                fades to nothing is the only kind that can meet plain
+                ground without a seam. */}
+            <LinearGradient id="land" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor="#0E1219" stopOpacity="0.55" />
+              <Stop offset="1" stopColor="#0E1219" stopOpacity="0" />
+            </LinearGradient>
             <RadialGradient id="dusk" cx="50%" cy="100%" rx="42%" ry="70%">
               <Stop offset="0" stopColor={COLORS.accent} stopOpacity="0.26" />
               <Stop offset="0.55" stopColor={COLORS.accent} stopOpacity="0.1" />
@@ -184,9 +194,19 @@ export function Horizon({ onStart }: { onStart?: () => void }) {
           preserveAspectRatio="none"
           style={styles.hill}
         >
+          {/* Land, not a second ground. The same navy as the sky and
+              the footer, darkened just under the ridge — which is what
+              lets the whole descent be one colour while still reading
+              as land at dusk. The footer below is that navy too, so
+              iOS's bottom toolbar finally matches the band it sits
+              under. */}
           <Path
             d="M0 120 V86 C 280 18, 720 18, 1000 86 V120 Z"
-            fill={LANDING_WELL}
+            fill={COLORS.navy}
+          />
+          <Path
+            d="M0 120 V86 C 280 18, 720 18, 1000 86 V120 Z"
+            fill="url(#land)"
           />
           {/* The trail, carrying on over the hill — dashed like the
               unwalked road in the quest line, because the page's last
@@ -337,7 +357,7 @@ const styles = StyleSheet.create({
     boxShadow: '0 0 16px 10px rgba(9,12,19,0.55)',
   },
   summit: {
-    backgroundColor: LANDING_WELL,
+    backgroundColor: COLORS.navy,
     alignItems: 'center',
     gap: SPACING.lg,
     paddingBottom: SPACING.xl,
