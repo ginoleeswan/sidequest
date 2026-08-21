@@ -64,14 +64,21 @@ export const SEAM_GLYPHS = [
  * Hand-placed, not random — a random scatter of six things is nearly
  * always worse than a chosen one. The centres are spread almost evenly
  * along the run, then nudged a few percent so the row does not read as
- * a toolbar; sizes alternate large and small; tilts alternate
- * direction and stay inside ten degrees, which is "set down by hand"
- * rather than "falling over".
+ * a toolbar. The sizes are a hierarchy, not a jitter: one hero at the
+ * left anchor (the controller, the pile's emblem), a second lead
+ * two-thirds along (the cartridge), mid-weights between them and small
+ * accents in the gaps — the big-small rhythm a shelf of real things
+ * has, instead of seven objects politely the same size. Tilts
+ * alternate direction and stay inside fifteen degrees, which is "set
+ * down by hand" rather than "falling over".
  *
  * `sit` is the fraction of each object BELOW the lit edge — its
- * planted base. Between a fifth and two fifths: enough below the line
- * that the object is slotted into the card rather than balanced on
- * it, and enough above that the silhouette is unmistakable. (Two
+ * planted base. Between a quarter and about two fifths: enough below
+ * the line that the object is slotted into the card rather than
+ * balanced on it, and enough above that the silhouette is
+ * unmistakable. The ceiling is structural too — the base may never
+ * reach through the 34pt card face, so the biggest objects sit
+ * proportionally deeper without ever poking out the bottom. (Two
  * failed versions bracket this: cut at four fifths the shapes were
  * nameless fragments; sunk to nine tenths they were icons in a band,
  * nowhere near the seam.)
@@ -92,20 +99,20 @@ export interface SeamGlyphPlacement {
 }
 
 export const SEAM_SCATTER_WIDE: SeamGlyphPlacement[] = [
-  { glyph: 0, at: 0.04, size: 46, sit: 0.3, tilt: -6 },
-  { glyph: 4, at: 0.2, size: 26, sit: 0.22, tilt: 8 },
-  { glyph: 2, at: 0.36, size: 40, sit: 0.38, tilt: 0 },
-  { glyph: 5, at: 0.51, size: 24, sit: 0.2, tilt: -8 },
-  { glyph: 3, at: 0.66, size: 38, sit: 0.32, tilt: 5 },
-  { glyph: 1, at: 0.83, size: 30, sit: 0.26, tilt: -5 },
-  { glyph: 0, at: 0.97, size: 26, sit: 0.36, tilt: 9 },
+  { glyph: 0, at: 0.05, size: 76, sit: 0.38, tilt: -7 },
+  { glyph: 4, at: 0.21, size: 30, sit: 0.3, tilt: 12 },
+  { glyph: 2, at: 0.35, size: 56, sit: 0.42, tilt: 0 },
+  { glyph: 5, at: 0.475, size: 28, sit: 0.26, tilt: -9 },
+  { glyph: 3, at: 0.62, size: 60, sit: 0.34, tilt: 6 },
+  { glyph: 1, at: 0.78, size: 38, sit: 0.3, tilt: -6 },
+  { glyph: 0, at: 0.94, size: 34, sit: 0.36, tilt: 14 },
 ];
 
 /** A phone gets the three that read fastest, spaced for its own run. */
 export const SEAM_SCATTER_NARROW: SeamGlyphPlacement[] = [
-  { glyph: 0, at: 0.12, size: 40, sit: 0.3, tilt: -6 },
-  { glyph: 2, at: 0.5, size: 34, sit: 0.38, tilt: 4 },
-  { glyph: 3, at: 0.87, size: 32, sit: 0.26, tilt: 7 },
+  { glyph: 0, at: 0.14, size: 60, sit: 0.36, tilt: -6 },
+  { glyph: 2, at: 0.5, size: 44, sit: 0.4, tilt: 4 },
+  { glyph: 3, at: 0.86, size: 48, sit: 0.3, tilt: 8 },
 ];
 
 /** Below this width the narrow set is used. */

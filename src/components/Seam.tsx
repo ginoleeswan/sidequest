@@ -59,10 +59,10 @@ const LIP_HEIGHT = 18;
  * seam's layout box is unchanged, which is what lets the objects
  * overlap the outgoing section the way the memcard overlaps its band.
  *
- * Just past the tallest crown: 46pt sitting three tenths deep leaves
- * 33pt exposed.
+ * Just past the tallest crown: the 76pt hero sitting 0.38 deep leaves
+ * 47pt exposed.
  */
-const GLYPH_RISE = 38;
+const GLYPH_RISE = 50;
 
 /**
  * How far the chamfer cuts in, in real pixels.
@@ -90,7 +90,7 @@ const LIP = 'rgba(255,255,255,0.11)';
  * curved crown faces the light more directly than a flat edge, and at
  * the lip's own strength a short curved stroke simply vanished.
  */
-const CROWN = 'rgba(255,255,255,0.28)';
+const CROWN = 'rgba(255,255,255,0.34)';
 /**
  * The silhouettes' body: the app's shadow tone, not the band's colour.
  *
