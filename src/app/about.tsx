@@ -21,7 +21,7 @@ import { HowItWorks } from '@/components/HowItWorks';
 import { LandingShelf } from '@/components/LandingShelf';
 import { LandingTake } from '@/components/LandingTake';
 import { LandingTry } from '@/components/LandingTry';
-import { Memcard } from '@/components/Memcard';
+import { MemcardBuild } from '@/components/MemcardBuild';
 import { QuestLine, QuestMark } from '@/components/QuestLine';
 import { LandingProof } from '@/components/LandingProof';
 import { Drift } from '@/components/Drift';
@@ -185,15 +185,24 @@ function Band({
   scale,
   tone = 'ground',
   style,
+  raise = false,
   children,
 }: {
   scale: LandingScale;
   tone?: 'ground' | 'well';
   style?: StyleProp<ViewStyle>;
+  /**
+   * Paint above the next band, so a child can sit on the lip between
+   * the two. Later siblings win by default; this reverses it for the
+   * band whose content deliberately leans over the edge.
+   */
+  raise?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <View style={tone === 'well' ? styles.well : undefined}>
+    <View
+      style={[tone === 'well' ? styles.well : undefined, raise && styles.raise]}
+    >
       <View
         style={[
           styles.measure,
@@ -541,14 +550,16 @@ export default function AboutScreen() {
             style={[styles.card, scale.wide && styles.cardWide]}
           >
             <QuestMark id="memcard" />
+            {/* The covers fly in from the reader's side and become the
+                blocks — the product-film build, with the games as the
+                pieces. It replaces the tilt entrance: a thing being
+                assembled does not also need to arrive crooked. */}
             <Drift distance={-22} testID="memcard-drift">
-              <Rise from="tilt">
-                <Memcard
-                  card={sampleCard(games)}
-                  maxWidth={scale.wide ? 460 : 320}
-                  assemble
-                />
-              </Rise>
+              <MemcardBuild
+                card={sampleCard(games)}
+                games={games ?? []}
+                maxWidth={scale.wide ? 460 : 320}
+              />
             </Drift>
             <View style={scale.wide ? styles.cardCopy : undefined}>
               <Words
@@ -576,7 +587,7 @@ export default function AboutScreen() {
             because "it is just a link" is this product's proudest fact
             and was being said in a footnote. */}
         <WhenNear placeholder={<View style={styles.takeRoom} />}>
-          <Band tone="well" scale={scale}>
+          <Band tone="well" scale={scale} raise>
             <QuestMark id="take" />
             <LandingTake scale={scale} />
           </Band>
@@ -692,6 +703,7 @@ const styles = StyleSheet.create({
    * asymmetric column layout only works at one.
    */
   well: { backgroundColor: LANDING_WELL },
+  raise: { zIndex: 2 },
   measure: {
     width: '100%',
     maxWidth: LANDING_MEASURE,

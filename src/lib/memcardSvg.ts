@@ -21,7 +21,7 @@ const CARD = '#1D2431';
 const SHELL = '#0E121A';
 
 /** Twelve columns, one per month; blocks stack upward within a month. */
-const GRID = {
+export const GRID = {
   x: 700,
   y: 190,
   width: 420,
@@ -32,6 +32,28 @@ const GRID = {
 
 /** Names on the card, before it stops being a card and starts being a list. */
 const NAMED = 8;
+
+/**
+ * Where a block sits, in the card's own 1200x630 space.
+ *
+ * Exported for the landing page's build animation, which flies each
+ * game's cover in from the viewer and lands it exactly here — the
+ * cover shrinking into the block it becomes. One source of geometry,
+ * so the flight can never land beside its own slot.
+ */
+export function blockSlot(
+  month: number,
+  row: number
+): { x: number; y: number; width: number; height: number } {
+  const cellW = GRID.width / GRID.columns;
+  const cellH = GRID.height / GRID.rows;
+  return {
+    x: GRID.x + month * cellW + 2,
+    y: GRID.y + (GRID.rows - 1 - row) * cellH + 2,
+    width: cellW - 4,
+    height: cellH - 4,
+  };
+}
 
 const escape = (text: string) =>
   text

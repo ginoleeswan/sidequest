@@ -30,11 +30,18 @@ export function Memcard({
   card,
   maxWidth,
   assemble = false,
+  progress,
 }: {
   card: MemcardModel;
   maxWidth?: number;
   /** Build the card in front of the reader when it enters the viewport. */
   assemble?: boolean;
+  /**
+   * Externally driven build state, 0..1. MemcardBuild flies covers in
+   * and advances this as each one lands, so the block appears at the
+   * instant its cover reaches the slot. Overrides `assemble`.
+   */
+  progress?: number;
 }) {
   const { width: windowWidth } = useWindowDimensions();
   const width = Math.min(maxWidth ?? CARD_WIDTH, windowWidth - 32, CARD_WIDTH);
@@ -70,7 +77,7 @@ export function Memcard({
       accessibilityLabel={`${card.year}: ${card.headline}`}
     >
       <SvgXml
-        xml={memcardSvg(card, { progress: step / STEPS })}
+        xml={memcardSvg(card, { progress: progress ?? step / STEPS })}
         width={width}
         height={height}
       />

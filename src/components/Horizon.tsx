@@ -55,14 +55,14 @@ export function Horizon() {
               {
                 translateY: rise.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [64, 0],
+                  outputRange: [110, 0],
                 }),
               },
             ],
           },
         ]}
       >
-        <Mark size={54} />
+        <Mark size={96} />
       </Animated.View>
 
       {/* The hill, painted over the Mark's feet. */}
@@ -114,10 +114,10 @@ const styles = StyleSheet.create({
     // The deep band above continues behind the hill, so the crest reads
     // against it rather than against a seam.
     backgroundColor: LANDING_WELL,
-    paddingTop: 44,
+    paddingTop: 56,
     overflow: 'hidden',
   },
-  mark: { alignItems: 'center', marginBottom: -14 },
+  mark: { alignItems: 'center', marginBottom: -26, zIndex: 1 },
   hill: { marginTop: 0 },
   word: {
     ...TYPE.micro,

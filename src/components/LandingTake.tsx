@@ -121,7 +121,11 @@ export function LandingTake({ scale }: { scale: LandingScale }) {
 
       {/* The app in the hand, drawn by the app. */}
       {lead && (
-        <Rise from="lift" delay={180} style={styles.phoneSlot}>
+        <Rise
+          from="lift"
+          delay={180}
+          style={[styles.phoneSlot, scale.wide && styles.phoneSlotWide]}
+        >
           <View style={styles.phone}>
             <View style={styles.notch} />
             <Text style={styles.phoneEyebrow}>TONIGHT · 90 MINUTES</Text>
@@ -182,7 +186,21 @@ const styles = StyleSheet.create({
   badgeBigLive: { color: COLORS.navy },
   footnote: { ...TYPE.caption, marginTop: SPACING.lg },
 
-  phoneSlot: { alignItems: 'center' },
+  /**
+   * On the lip. The phone hangs a third of itself past the band's
+   * bottom edge into the next section — an object standing across the
+   * boundary reads as a thing in the world, where one floating mid-band
+   * reads as a figure in a document. The band above carries `raise` so
+   * this paints over the closing band rather than under it.
+   */
+  phoneSlot: { alignItems: 'center', marginBottom: -130, zIndex: 1 },
+  /**
+   * Wide layouts centre the phone against the copy column, whose height
+   * sets the band's — so the negative margin that works in the stacked
+   * layout moves nothing here. A transform is paint-space, not layout:
+   * it carries the phone across the boundary without the band noticing.
+   */
+  phoneSlotWide: { marginBottom: 0, transform: [{ translateY: 170 }] },
   phone: {
     width: 250,
     borderRadius: 36,
