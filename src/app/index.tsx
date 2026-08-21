@@ -43,6 +43,8 @@ import { GameInfoCard } from '@/components/GameInfoCard';
 import { GameTile } from '@/components/GameTile';
 import { Message } from '@/components/Message';
 import { PageTitle } from '@/components/PageTitle';
+import { Screen } from '@/components/Screen';
+import { TAB_BAR_HEIGHT } from '@/components/TabBar';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { PromptBand } from '@/components/PromptBand';
 import { RecentShelf } from '@/components/RecentShelf';
@@ -470,6 +472,7 @@ export default function HomeScreen() {
       <FlatList
         // numColumns is immutable per instance; remount on change.
         key={`grid-${columns}`}
+        style={styles.listNative}
         data={padToRows(games, columns)}
         numColumns={columns}
         columnWrapperStyle={styles.gridRow}
@@ -497,6 +500,9 @@ export default function HomeScreen() {
         contentContainerStyle={[
           styles.gridContent,
           !isExpanded && { paddingTop: headerHeight },
+          Platform.OS !== 'web' && {
+            paddingBottom: TAB_BAR_HEIGHT + insets.bottom,
+          },
         ]}
       />
     </FadeInView>
@@ -536,7 +542,7 @@ export default function HomeScreen() {
                     <SkeletonGrid columns={columns} />
                   )
                 ) : isHome ? (
-                  <View style={styles.homeScroll}>
+                  <Screen style={styles.homeScroll}>
                     <FadeInView>
                       <View style={styles.stageBleedWide}>
                         <HomeStage
@@ -608,7 +614,7 @@ export default function HomeScreen() {
                       <InstallPrompt />
                     </View>
                     <SiteFooter inset={SPACING.xl} />
-                  </View>
+                  </Screen>
                 ) : (
                   grid
                 ))}
@@ -654,7 +660,7 @@ export default function HomeScreen() {
         >
           {status ??
             (isHome ? (
-              <View
+              <Screen
                 style={[
                   styles.compactHome,
                   stage.length === 0 && { paddingTop: headerHeight },
@@ -734,10 +740,11 @@ export default function HomeScreen() {
                   </View>
                 </View>
                 <SiteFooter />
-              </View>
+              </Screen>
             ) : searching ? (
               <FlatList
                 data={games}
+                style={styles.listNative}
                 keyExtractor={(item) => String(item.id)}
                 renderItem={({ item }) => <GameInfoCard game={item} />}
                 keyboardShouldPersistTaps="handled"
@@ -750,6 +757,9 @@ export default function HomeScreen() {
                 contentContainerStyle={[
                   styles.list,
                   { paddingTop: headerHeight },
+                  Platform.OS !== 'web' && {
+                    paddingBottom: TAB_BAR_HEIGHT + insets.bottom,
+                  },
                 ]}
               />
             ) : (
@@ -962,6 +972,10 @@ const styles = StyleSheet.create({
   },
 
   list: { flexGrow: 1, paddingHorizontal: GUTTER },
+  // Web: the document scrolls, so the lists must not claim a viewport of
+  // their own. Native: without flex a list sizes to its content and never
+  // scrolls.
+  listNative: Platform.OS === 'web' ? {} : { flex: 1 },
 });
 
 /**

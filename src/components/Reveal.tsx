@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, View } from 'react-native';
+import { Animated, Platform, StyleSheet, View } from 'react-native';
 
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -71,11 +71,13 @@ export function Reveal({ pending, skeleton, children }: Props) {
   }, [pending, progress, reduced]);
 
   // Loading: the bones hold the page open on their own.
-  if (phase === 'bones') return <View>{skeleton}</View>;
+  if (phase === 'bones') return <View style={styles.native}>{skeleton}</View>;
 
   return (
-    <View>
-      <Animated.View style={{ opacity: progress }}>{children}</Animated.View>
+    <View style={styles.native}>
+      <Animated.View style={[styles.native, { opacity: progress }]}>
+        {children}
+      </Animated.View>
       {phase === 'crossfade' && (
         <Animated.View
           style={[
@@ -95,3 +97,12 @@ export function Reveal({ pending, skeleton, children }: Props) {
     </View>
   );
 }
+
+/**
+ * Web leaves both wrappers unstyled — the document scrolls, and a flexed
+ * height would clip the page at the viewport. Native flexes them so a
+ * list inside gets a bounded viewport to scroll within.
+ */
+const styles = StyleSheet.create({
+  native: Platform.OS === 'web' ? {} : { flex: 1 },
+});

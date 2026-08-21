@@ -10,6 +10,7 @@ import { BackButton } from '@/components/BackButton';
 import { GameTile } from '@/components/GameTile';
 import { Message } from '@/components/Message';
 import { PageTitle } from '@/components/PageTitle';
+import { Screen } from '@/components/Screen';
 import { RouteError } from '@/components/RouteError';
 import { SectionHeader } from '@/components/SectionHeader';
 import { SiteFooter } from '@/components/SiteFooter';
@@ -76,64 +77,71 @@ export default function ByCreatorScreen() {
         </View>
       )}
 
-      <View
-        style={[
-          styles.inner,
-          {
-            paddingTop: isExpanded
-              ? SPACING.xl * 1.5
-              : insets.top + SPACING.xl * 2,
-          },
-        ]}
+      <Screen
+        onEndReached={() => {
+          if (list.hasNextPage && !list.isFetchingNextPage)
+            list.fetchNextPage();
+        }}
       >
-        <SectionHeader
-          title={name}
-          eyebrow={kind === 'developer' ? 'DEVELOPER' : 'PUBLISHER'}
-        />
-        {list.data?.pages[0]?.count ? (
-          <Text style={styles.count}>
-            {list.data.pages[0].count.toLocaleString()} games, newest first
-          </Text>
-        ) : null}
+        <View
+          style={[
+            styles.inner,
+            {
+              paddingTop: isExpanded
+                ? SPACING.xl * 1.5
+                : insets.top + SPACING.xl * 2,
+            },
+          ]}
+        >
+          <SectionHeader
+            title={name}
+            eyebrow={kind === 'developer' ? 'DEVELOPER' : 'PUBLISHER'}
+          />
+          {list.data?.pages[0]?.count ? (
+            <Text style={styles.count}>
+              {list.data.pages[0].count.toLocaleString()} games, newest first
+            </Text>
+          ) : null}
 
-        {list.error ? (
-          <Message
-            icon="cloud-offline-outline"
-            title="Couldn’t load that catalogue"
-            detail={friendlyError(list.error)}
-          />
-        ) : list.isPending ? (
-          <SkeletonGrid columns={columns} />
-        ) : games.length === 0 ? (
-          <Message
-            icon="game-controller-outline"
-            title="Nothing here"
-            detail="RAWG has no games filed under this one."
-            actionLabel="Back to browsing"
-            onAction={() => router.push('/')}
-          />
-        ) : (
-          <FlatList
-            key={`grid-${columns}`}
-            data={games}
-            numColumns={columns}
-            scrollEnabled={false}
-            columnWrapperStyle={styles.gridRow}
-            keyExtractor={(game) => String(game.id)}
-            renderItem={({ item }) => (
-              <View style={styles.cell}>
-                <GameTile game={item} />
-              </View>
-            )}
-            onEndReached={() => {
-              if (list.hasNextPage && !list.isFetchingNextPage)
-                list.fetchNextPage();
-            }}
-            onEndReachedThreshold={1.2}
-          />
-        )}
-      </View>
-      <SiteFooter />
+          {list.error ? (
+            <Message
+              icon="cloud-offline-outline"
+              title="Couldn’t load that catalogue"
+              detail={friendlyError(list.error)}
+            />
+          ) : list.isPending ? (
+            <SkeletonGrid columns={columns} />
+          ) : games.length === 0 ? (
+            <Message
+              icon="game-controller-outline"
+              title="Nothing here"
+              detail="RAWG has no games filed under this one."
+              actionLabel="Back to browsing"
+              onAction={() => router.push('/')}
+            />
+          ) : (
+            <FlatList
+              key={`grid-${columns}`}
+              data={games}
+              numColumns={columns}
+              scrollEnabled={false}
+              columnWrapperStyle={styles.gridRow}
+              keyExtractor={(game) => String(game.id)}
+              renderItem={({ item }) => (
+                <View style={styles.cell}>
+                  <GameTile game={item} />
+                </View>
+              )}
+              onEndReached={() => {
+                if (list.hasNextPage && !list.isFetchingNextPage)
+                  list.fetchNextPage();
+              }}
+              onEndReachedThreshold={1.2}
+            />
+          )}
+        </View>
+        <SiteFooter />
+      </Screen>
     </Textured>
   );
 }

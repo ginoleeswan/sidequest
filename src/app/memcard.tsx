@@ -10,6 +10,7 @@ import { Chip } from '@/components/Chip';
 import { LandingMemcard } from '@/components/LandingMemcard';
 import { Message } from '@/components/Message';
 import { PageTitle } from '@/components/PageTitle';
+import { Screen } from '@/components/Screen';
 import { RouteError } from '@/components/RouteError';
 import { SectionHeader } from '@/components/SectionHeader';
 import { SiteFooter } from '@/components/SiteFooter';
@@ -135,46 +136,47 @@ export default function MemcardScreen() {
         </View>
       )}
 
-      <View
-        style={[
-          styles.inner,
-          {
-            paddingTop: isExpanded
-              ? SPACING.xl * 1.5
-              : insets.top + SPACING.xl * 2,
-          },
-        ]}
-      >
-        <SectionHeader title="Your Memcard" eyebrow={`${shown}`} />
-        <Text style={styles.lede}>
-          One block per game you finished. Not how much you played — what you
-          saw the end of.
-        </Text>
+      <Screen>
+        <View
+          style={[
+            styles.inner,
+            {
+              paddingTop: isExpanded
+                ? SPACING.xl * 1.5
+                : insets.top + SPACING.xl * 2,
+            },
+          ]}
+        >
+          <SectionHeader title="Your Memcard" eyebrow={`${shown}`} />
+          <Text style={styles.lede}>
+            One block per game you finished. Not how much you played — what you
+            saw the end of.
+          </Text>
 
-        {years.length > 1 && (
-          <View style={styles.years}>
-            {years.map((option) => (
-              <Chip
-                key={option}
-                title={String(option)}
-                selected={option === shown}
-                onPress={() => setYear(option)}
-              />
-            ))}
-          </View>
-        )}
+          {years.length > 1 && (
+            <View style={styles.years}>
+              {years.map((option) => (
+                <Chip
+                  key={option}
+                  title={String(option)}
+                  selected={option === shown}
+                  onPress={() => setYear(option)}
+                />
+              ))}
+            </View>
+          )}
 
-        {card.count === 0 ? (
-          <Message
-            icon="albums-outline"
-            title="No credits rolled yet"
-            detail="Finish a game and it takes a block here. One short game is all it takes."
-            actionLabel="Find something short"
-            onAction={() => router.push('/plan')}
-          />
-        ) : (
-          <>
-            {/* The save-slot card, not the share image.
+          {card.count === 0 ? (
+            <Message
+              icon="albums-outline"
+              title="No credits rolled yet"
+              detail="Finish a game and it takes a block here. One short game is all it takes."
+              actionLabel="Find something short"
+              onAction={() => router.push('/plan')}
+            />
+          ) : (
+            <>
+              {/* The save-slot card, not the share image.
                 What gets posted is 1200x630 with its metadata down the
                 left — the right shape for a link preview and the wrong
                 one to look at, which on a phone rendered as small print
@@ -183,100 +185,101 @@ export default function MemcardScreen() {
                 finished something keeps that game's cover as its save
                 icon. Same object, two stages; shareMemcard still
                 rasterises the social layout. */}
-            <LandingMemcard
-              card={card}
-              width={cardWidth}
-              landed={card.blocks.length}
-              images={card.blocks.map(
-                (block) => byId.get(block.id)?.background_image ?? undefined
-              )}
-            />
-            <View style={styles.stats}>
-              <SectionHeader title="How the year is going" />
-              <Text style={styles.verdict}>{stats.verdict}</Text>
-              <View style={styles.statRow}>
-                <Stat value={String(stats.added)} label="saved this year" />
-                <Stat
-                  value={String(stats.finished)}
-                  label="finished"
-                  accent={stats.finished > 0}
-                />
-                {stats.medianLength > 0 && (
-                  <Stat
-                    value={`${Math.round(stats.medianLength)}h`}
-                    label="typical length"
-                  />
+              <LandingMemcard
+                card={card}
+                width={cardWidth}
+                landed={card.blocks.length}
+                images={card.blocks.map(
+                  (block) => byId.get(block.id)?.background_image ?? undefined
                 )}
-                {stats.longestGap > 14 && (
+              />
+              <View style={styles.stats}>
+                <SectionHeader title="How the year is going" />
+                <Text style={styles.verdict}>{stats.verdict}</Text>
+                <View style={styles.statRow}>
+                  <Stat value={String(stats.added)} label="saved this year" />
                   <Stat
-                    value={`${stats.longestGap}d`}
-                    label="longest quiet spell"
+                    value={String(stats.finished)}
+                    label="finished"
+                    accent={stats.finished > 0}
                   />
-                )}
-                {stats.measuredMinutes > 0 && (
-                  <Stat
-                    value={formatMinutes(stats.measuredMinutes)}
-                    label="timed here"
-                    accent
-                  />
-                )}
-                {totalDrops(drops) > 0 && (
-                  <Stat
-                    value={String(totalDrops(drops))}
-                    label="let go, guilt-free"
-                  />
+                  {stats.medianLength > 0 && (
+                    <Stat
+                      value={`${Math.round(stats.medianLength)}h`}
+                      label="typical length"
+                    />
+                  )}
+                  {stats.longestGap > 14 && (
+                    <Stat
+                      value={`${stats.longestGap}d`}
+                      label="longest quiet spell"
+                    />
+                  )}
+                  {stats.measuredMinutes > 0 && (
+                    <Stat
+                      value={formatMinutes(stats.measuredMinutes)}
+                      label="timed here"
+                      accent
+                    />
+                  )}
+                  {totalDrops(drops) > 0 && (
+                    <Stat
+                      value={String(totalDrops(drops))}
+                      label="let go, guilt-free"
+                    />
+                  )}
+                </View>
+                {dropInsight(drops) && (
+                  <Text style={styles.insight}>{dropInsight(drops)}</Text>
                 )}
               </View>
-              {dropInsight(drops) && (
-                <Text style={styles.insight}>{dropInsight(drops)}</Text>
+
+              {Platform.OS === 'web' && (
+                <Pressable
+                  onPress={save}
+                  disabled={busy}
+                  style={[styles.save, busy && styles.saveBusy]}
+                  accessibilityRole="button"
+                >
+                  <Ionicons
+                    name="share-outline"
+                    size={16}
+                    color={COLORS.darkGrey}
+                  />
+                  <Text style={styles.saveText}>
+                    {busy ? 'Drawing…' : 'Save or share this card'}
+                  </Text>
+                </Pressable>
               )}
-            </View>
 
-            {Platform.OS === 'web' && (
-              <Pressable
-                onPress={save}
-                disabled={busy}
-                style={[styles.save, busy && styles.saveBusy]}
-                accessibilityRole="button"
-              >
-                <Ionicons
-                  name="share-outline"
-                  size={16}
-                  color={COLORS.darkGrey}
-                />
-                <Text style={styles.saveText}>
-                  {busy ? 'Drawing…' : 'Save or share this card'}
-                </Text>
-              </Pressable>
-            )}
-
-            {/* Second, and quieter than the share. Posting the card is
+              {/* Second, and quieter than the share. Posting the card is
                 what most people came for; filing the year is what the
                 few who keep a calendar will be glad of. */}
-            {Platform.OS === 'web' && (
-              <Pressable
-                onPress={addToCalendar}
-                style={styles.calendar}
-                accessibilityRole="button"
-              >
-                <Ionicons
-                  name="calendar-outline"
-                  size={16}
-                  color={COLORS.lightGrey}
-                />
-                <Text style={styles.calendarText}>
-                  Add these to my calendar
-                </Text>
-              </Pressable>
-            )}
-            <Text style={styles.calendarNote}>
-              Downloads a file Google Calendar, Apple Calendar and Outlook can
-              all open. Nothing is sent anywhere.
-            </Text>
-          </>
-        )}
-      </View>
-      <SiteFooter />
+              {Platform.OS === 'web' && (
+                <Pressable
+                  onPress={addToCalendar}
+                  style={styles.calendar}
+                  accessibilityRole="button"
+                >
+                  <Ionicons
+                    name="calendar-outline"
+                    size={16}
+                    color={COLORS.lightGrey}
+                  />
+                  <Text style={styles.calendarText}>
+                    Add these to my calendar
+                  </Text>
+                </Pressable>
+              )}
+              <Text style={styles.calendarNote}>
+                Downloads a file Google Calendar, Apple Calendar and Outlook can
+                all open. Nothing is sent anywhere.
+              </Text>
+            </>
+          )}
+        </View>
+        <SiteFooter />
+      </Screen>
     </Textured>
   );
 }
