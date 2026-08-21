@@ -19,6 +19,7 @@ import { FeatureIndex } from '@/components/FeatureIndex';
 import { HowItWorks } from '@/components/HowItWorks';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { LandingShelf } from '@/components/LandingShelf';
+import { LandingTry } from '@/components/LandingTry';
 import { Memcard } from '@/components/Memcard';
 import { LandingProof } from '@/components/LandingProof';
 import { Drift } from '@/components/Drift';
@@ -38,7 +39,6 @@ import type { Game, Paged } from '@/api/types';
 import type { Memcard as MemcardModel } from '@/lib/memcard';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useCountUp } from '@/hooks/useCountUp';
-import { drift, useScrollTravel } from '@/hooks/useScrollTravel';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { COLORS } from '@/styles/colors';
@@ -398,6 +398,18 @@ export default function AboutScreen() {
           </Band>
         </WhenNear>
 
+        {/* The problem is stated above. This is the reader's own copy of
+            it, answered — the app's real scheduler, on real games, in a
+            band, before anybody has been asked for anything. It goes
+            here rather than lower down because a page that argues for
+            six sections and only then lets you touch something has the
+            order backwards. */}
+        <WhenNear placeholder={<View style={styles.tryRoom} />}>
+          <Band scale={scale}>
+            <LandingTry scale={scale} />
+          </Band>
+        </WhenNear>
+
         {/* The problem is stated above; this is the answer, before any
             of the detail. Somebody deciding whether to bother needs to
             know what will be asked of them, and three numbered steps is
@@ -717,6 +729,7 @@ const styles = StyleSheet.create({
 
   // the pile
   shelfRoom: { height: 420 },
+  tryRoom: { height: 620 },
   pile: { gap: SPACING.lg },
   pileBody: { maxWidth: 620, marginBottom: SPACING.md },
 
