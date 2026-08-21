@@ -1,23 +1,31 @@
 import {
+  _setBackendForTests,
   readJson,
   readVersioned,
   writeFailureMessage,
   writeJson,
 } from '../storage';
 
-const original = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
-
+/**
+ * Stubs go through the storage layer's own seam. These tests used to
+ * define `globalThis.localStorage`, which under jest — where the app
+ * runs its native code paths — is a global nothing reads: the suite
+ * kept passing while asserting into a void the day the adapter landed.
+ * An "unavailable" store is a backend that throws, same as production.
+ */
 function useStore(impl: Partial<Storage> | undefined) {
-  Object.defineProperty(globalThis, 'localStorage', {
-    configurable: true,
-    value: impl,
+  _setBackendForTests({
+    getItem: (k) => {
+      if (!impl?.getItem) throw new Error('unavailable');
+      return impl.getItem(k);
+    },
+    setItem: (k, v) => {
+      if (!impl?.setItem) throw new Error('unavailable');
+      impl.setItem(k, v);
+    },
+    removeItem: (k) => impl?.removeItem?.(k),
   });
 }
-
-afterEach(() => {
-  if (original) Object.defineProperty(globalThis, 'localStorage', original);
-  else useStore(undefined);
-});
 
 describe('readJson', () => {
   it('returns the stored value', () => {

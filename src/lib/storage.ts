@@ -10,8 +10,101 @@
  * not do is assume success.
  */
 
+import { Platform } from 'react-native';
+
 export type WriteResult =
   { ok: true } | { ok: false; reason: 'full' | 'unavailable'; error: unknown };
+
+/**
+ * The storage the platform actually has.
+ *
+ * The whole file was written against `localStorage`, which native does
+ * not have — so on a phone every read fell back and every write
+ * reported `unavailable`, and the app ran perfectly while saving
+ * nothing. The one honest description of that state is "data loss with
+ * good manners".
+ *
+ * Native uses expo-sqlite's key-value store through its synchronous
+ * API, which is what lets every call site in the app stay exactly as
+ * it was: the reads at first render and the write-and-report contract
+ * both assume synchrony, and an async layer here would have meant
+ * rewriting the library, the durations, the drops and the query
+ * persister at once. SQLite's sync bindings are the rare case where
+ * the easy path and the correct one agree.
+ *
+ * If the native module cannot load — a test runner, a mis-built
+ * binary — the fallback is a Map: the session works, writes report
+ * honestly through the same channel, and nothing crashes at import
+ * time. Tests exercise exactly this path, which keeps their
+ * clean-start behaviour by construction.
+ */
+export interface KVBackend {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem?(key: string): void;
+}
+
+function memoryBackend(): KVBackend {
+  const map = new Map<string, string>();
+  return {
+    getItem: (key) => map.get(key) ?? null,
+    setItem: (key, value) => void map.set(key, value),
+    removeItem: (key) => void map.delete(key),
+  };
+}
+
+function nativeBackend(): KVBackend {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- platform-conditional module
+    const store = require('expo-sqlite/kv-store').default;
+    // Touch the sync path once so a broken binding fails HERE, where
+    // the fallback exists, rather than mid-session on a save.
+    store.getItemSync('sidequest.storage.probe');
+    return {
+      getItem: (key) => store.getItemSync(key),
+      setItem: (key, value) => store.setItemSync(key, value),
+      removeItem: (key) => void store.removeItemSync(key),
+    };
+  } catch {
+    return memoryBackend();
+  }
+}
+
+function platformBackend(): KVBackend {
+  if (Platform.OS === 'web')
+    return {
+      getItem: (key) => globalThis.localStorage?.getItem(key) ?? null,
+      setItem: (key, value) => {
+        const store = globalThis.localStorage;
+        if (!store) throw new Error('localStorage unavailable');
+        store.setItem(key, value);
+      },
+      removeItem: (key) => globalThis.localStorage?.removeItem(key),
+    };
+  return nativeBackend();
+}
+
+let backend: KVBackend = platformBackend();
+
+/**
+ * The test seam, and nothing else.
+ *
+ * Tests seed a library before mounting and inspect what a press wrote,
+ * and they must do it through the same object production writes to —
+ * a test that stubs `localStorage` while the app is on SQLite is
+ * asserting into a void, which is exactly how this file's native
+ * rewrite broke five suites at once. Swapping the backend is the
+ * supported way in; production code must never call this.
+ */
+export function _setBackendForTests(next: KVBackend): void {
+  backend = next;
+}
+
+export const kv: Required<KVBackend> = {
+  getItem: (key) => backend.getItem(key),
+  setItem: (key, value) => backend.setItem(key, value),
+  removeItem: (key) => backend.removeItem?.(key),
+};
 
 /**
  * Browsers disagree on how a quota failure presents: some throw
@@ -45,7 +138,7 @@ export function readVersioned<T>(
   fallback: T,
   migrations: { from: string; migrate: (value: unknown) => T | null }[] = []
 ): T {
-  const current = globalThis.localStorage?.getItem(key);
+  const current = kv.getItem(key);
   if (current != null) return readJson<T>(key, fallback);
 
   for (const { from, migrate } of migrations) {
@@ -65,7 +158,7 @@ export function readVersioned<T>(
 
 export function readJson<T>(key: string, fallback: T): T {
   try {
-    const raw = globalThis.localStorage?.getItem(key);
+    const raw = kv.getItem(key);
     return raw != null ? (JSON.parse(raw) as T) : fallback;
   } catch {
     // Unreadable or corrupt: start clean rather than crash on boot.
@@ -75,9 +168,7 @@ export function readJson<T>(key: string, fallback: T): T {
 
 export function writeJson(key: string, value: unknown): WriteResult {
   try {
-    const store = globalThis.localStorage;
-    if (!store) return { ok: false, reason: 'unavailable', error: undefined };
-    store.setItem(key, JSON.stringify(value));
+    kv.setItem(key, JSON.stringify(value));
     return { ok: true };
   } catch (error) {
     return {

@@ -1,5 +1,6 @@
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
 import type { PersistedClient } from '@tanstack/react-query-persist-client';
+import { kv } from '@/lib/storage';
 
 /**
  * Keeps the last answers RAWG gave, across sessions.
@@ -29,7 +30,13 @@ export const MAX_AGE = 24 * 60 * 60 * 1000;
 const MAX_BYTES = 1_000_000;
 
 export const persister = createSyncStoragePersister({
-  storage: globalThis.localStorage,
+  /**
+   * The platform's synchronous store, not localStorage by name — on
+   * native this is SQLite's key-value table, and without it the query
+   * cache (the shelves, the lengths, everything RAWG answered) was
+   * re-fetched from a cold start every single launch.
+   */
+  storage: kv,
   key: KEY,
   throttleTime: 2000,
   serialize: (client: PersistedClient) => {
