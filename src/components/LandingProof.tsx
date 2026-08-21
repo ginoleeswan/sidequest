@@ -26,9 +26,12 @@ export function LandingProof({
   kind,
   game,
   width,
+  hue = COLORS.accent,
 }: {
   kind: 'length' | 'tonight' | 'drop';
   game?: Game;
+  /** The beat's own colour; the evidence speaks in it too. */
+  hue?: string;
   /**
    * How much room there is, in pixels.
    *
@@ -63,8 +66,10 @@ export function LandingProof({
         />
         <View style={styles.body}>
           <View style={styles.eyebrowRow}>
-            <Ionicons name="moon" size={12} color={COLORS.accent} />
-            <Text style={styles.eyebrow}>TONIGHT · 90 MINUTES</Text>
+            <Ionicons name="moon" size={12} color={hue} />
+            <Text style={[styles.eyebrow, { color: hue }]}>
+              TONIGHT · 90 MINUTES
+            </Text>
           </View>
           <Text style={styles.title} numberOfLines={1}>
             Finish {game.name}
@@ -88,7 +93,9 @@ export function LandingProof({
    */
   return (
     <View style={[styles.frame, styles.bar, wide && styles.barWide, { width }]}>
-      <Text style={styles.prompt}>Why this one? Optional.</Text>
+      <Text style={[styles.prompt, { color: hue }]}>
+        Why this one? Optional.
+      </Text>
       <View style={styles.reasons}>
         {DROP_REASONS.map((reason) => (
           <Chip key={reason.key} title={reason.label} quiet />
@@ -122,7 +129,7 @@ const styles = StyleSheet.create({
   },
   body: { flex: 1, gap: 2 },
   eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  eyebrow: { ...TYPE.tag, color: COLORS.accent },
+  eyebrow: { ...TYPE.tag },
   title: { ...TYPE.h3, color: COLORS.white },
   reason: { ...TYPE.caption },
   bar: {
@@ -135,6 +142,6 @@ const styles = StyleSheet.create({
     maxWidth: 520,
   },
   barWide: { padding: SPACING.lg },
-  prompt: { ...TYPE.tag, color: COLORS.mediumGrey },
+  prompt: { ...TYPE.tag },
   reasons: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
 });

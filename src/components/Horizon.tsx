@@ -121,7 +121,9 @@ const styles = StyleSheet.create({
   hill: { marginTop: 0 },
   word: {
     ...TYPE.micro,
-    color: COLORS.accent,
+    // Mint, not amber: on this page amber is time and mint is
+    // finishing, and this is the finish line.
+    color: COLORS.mint,
     textAlign: 'center',
     backgroundColor: COLORS.navy,
     paddingBottom: 10,

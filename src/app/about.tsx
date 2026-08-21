@@ -103,19 +103,28 @@ function sampleCard(games: Game[] | undefined): MemcardModel {
   };
 }
 
+/**
+ * Each beat owns a colour as well as a claim: amber for time, violet
+ * for the evening, coral for letting go. The marker, the lead's key
+ * word and the evidence all speak in it, so the three ideas stop
+ * being three paragraphs and start being three places.
+ */
 const BEATS = [
   {
     kind: 'length' as const,
+    hue: COLORS.accent,
     lead: 'It knows how long things take.',
     body: 'Real lengths, from players who finished — not store-page guesses. On every tile, in amber, before you tap anything.',
   },
   {
     kind: 'tonight' as const,
+    hue: COLORS.violet,
     lead: 'It picks what fits tonight.',
     body: 'Ninety minutes on a Tuesday is not three hours on a Saturday. Sidequest does the arithmetic and names one game.',
   },
   {
     kind: 'drop' as const,
+    hue: COLORS.coral,
     lead: 'It lets you put things down.',
     body: 'Most of a backlog will never be played, and saying so is what makes the rest enjoyable. It asks why — only so the shelves can learn.',
   },
@@ -513,6 +522,7 @@ export default function AboutScreen() {
                       kind={beat.kind}
                       game={games?.[index + 2]}
                       width={scale.column}
+                      hue={beat.hue}
                     />
                   </Rise>
                 </Drift>
@@ -658,12 +668,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'flex-start',
     gap: SPACING.sm,
-    paddingVertical: 15,
-    paddingHorizontal: SPACING.xl,
+    paddingVertical: 18,
+    paddingHorizontal: SPACING.xl + 6,
     borderRadius: RADIUS.lg,
     backgroundColor: COLORS.accent,
+    /**
+     * The hard-offset edge every arcade button has. A flat pill is a
+     * link wearing a background; four pixels of darker amber under it
+     * is a thing with a travel, which is what makes people want to
+     * press it. RN 0.81 ships boxShadow cross-platform.
+     */
+    boxShadow: '0 4px 0 #B87A16',
   },
-  ctaLabel: { ...TYPE.label, color: COLORS.navy },
+  ctaLabel: { ...TYPE.label, fontSize: 16, color: COLORS.navy },
 
   /**
    * Bands, not hairlines.
@@ -737,7 +754,7 @@ const styles = StyleSheet.create({
   // A marker in the margin above the line, not a number in a circle.
   // Three beats need to read as an ordered argument; this is the
   // cheapest way to say so without a device.
-  beatIndex: { ...TYPE.tag, color: COLORS.accent },
+  beatIndex: { ...TYPE.tag },
   beatBody: { maxWidth: 520 },
   beatProofWide: { flex: 1, justifyContent: 'center' },
   beatProofOuter: { alignItems: 'flex-end' },

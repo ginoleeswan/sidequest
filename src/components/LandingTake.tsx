@@ -72,13 +72,6 @@ export function LandingTake({ scale }: { scale: LandingScale }) {
           style={[styles.lead, scale.lead]}
           delay={60}
         />
-        <Rise delay={140}>
-          <Text style={[styles.body, scale.body]}>
-            Sidequest lives at a URL. Put it on your home screen and it opens
-            full-screen, works offline, and keeps your library on your device.
-          </Text>
-        </Rise>
-
         <Rise delay={220}>
           <View style={styles.badges}>
             {/* The two honest "store badges" this product can have. */}
@@ -120,7 +113,8 @@ export function LandingTake({ scale }: { scale: LandingScale }) {
         </Rise>
         <Rise delay={300}>
           <Text style={styles.footnote}>
-            Or do neither. It is a link — it works wherever a browser does.
+            Full-screen, offline, your library on your device. Or do neither —
+            it is a link.
           </Text>
         </Rise>
       </View>
@@ -169,7 +163,6 @@ const styles = StyleSheet.create({
   copyWide: { flex: 1 },
   eyebrow: { ...TYPE.micro, color: COLORS.accent },
   lead: { color: COLORS.white, marginTop: SPACING.sm },
-  body: { maxWidth: 480, marginTop: SPACING.md },
   badges: { gap: SPACING.md, marginTop: SPACING.xl, alignSelf: 'flex-start' },
   badge: {
     flexDirection: 'row',
