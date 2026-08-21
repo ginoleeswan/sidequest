@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Rise } from './Rise';
+import type { LandingScale } from '@/styles/landing';
 import { COLORS } from '@/styles/colors';
 import { SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
@@ -39,14 +40,17 @@ const STEPS = [
   },
 ];
 
-export function HowItWorks({ inset, wide }: { inset: number; wide: boolean }) {
+/** Draws no band of its own: it is placed inside one. */
+export function HowItWorks({ scale }: { scale: LandingScale }) {
   return (
-    <View style={[styles.section, { paddingHorizontal: inset }]}>
-      <Rise>
+    <View style={styles.section}>
+      <Rise from="mask">
         <Text style={styles.eyebrow}>All of it takes about a minute</Text>
-        <Text style={styles.heading}>How it works</Text>
       </Rise>
-      <View style={[styles.steps, wide && styles.stepsWide]}>
+      <Rise from="mask" delay={70}>
+        <Text style={[styles.heading, scale.lead]}>How it works</Text>
+      </Rise>
+      <View style={[styles.steps, scale.wide && styles.stepsWide]}>
         {STEPS.map((step, index) => (
           <Rise key={step.title} delay={index * 110} style={styles.stepSlot}>
             <View style={styles.step}>
@@ -65,11 +69,13 @@ export function HowItWorks({ inset, wide }: { inset: number; wide: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  section: { paddingVertical: SPACING.xl * 1.6, gap: SPACING.lg },
+  section: { gap: SPACING.sm },
   eyebrow: { ...TYPE.micro, color: COLORS.accent },
-  heading: { ...TYPE.title, color: COLORS.white, marginTop: 4 },
+  heading: { color: COLORS.white, marginBottom: SPACING.xl },
+  // The steps sit further apart than the app's row gap: at this heading
+  // size a 20px gutter reads as three things touching.
   steps: { gap: SPACING.lg },
-  stepsWide: { flexDirection: 'row', gap: SPACING.xl },
+  stepsWide: { flexDirection: 'row', gap: SPACING.xl * 1.6 },
   stepSlot: { flex: 1 },
   step: {
     gap: SPACING.xs + 1,
@@ -87,6 +93,6 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xs,
   },
   number: { ...TYPE.tag, color: COLORS.mediumGrey },
-  title: { ...TYPE.h3, color: COLORS.white },
-  body: { ...TYPE.body, color: COLORS.mediumGrey, maxWidth: 340 },
+  title: { ...TYPE.h1, color: COLORS.white },
+  body: { ...TYPE.body, color: COLORS.mediumGrey, maxWidth: 340, marginTop: 2 },
 });

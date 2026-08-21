@@ -25,16 +25,27 @@ import { TYPE } from '@/styles/typography';
 export function LandingProof({
   kind,
   game,
+  width,
 }: {
   kind: 'length' | 'tonight' | 'drop';
   game?: Game;
+  /**
+   * How much room there is, in pixels.
+   *
+   * These were drawn at the size a shelf draws them, which made sense
+   * as "the real component, not a picture of it" and made no sense at
+   * all optically: a 210px tile alone in a 500px column beside a claim
+   * set at forty points is a stamp in a field, and the field is what
+   * anybody notices. Evidence is told its measure and fills it.
+   */
+  width: number;
 }) {
+  const wide = width > 340;
   if (kind === 'length') {
     if (!game) return null;
-    // The real tile, at the size a shelf draws it.
     return (
       <View style={styles.frame}>
-        <GameTile game={game} width={210} />
+        <GameTile game={game} width={Math.min(width, 460)} />
       </View>
     );
   }
@@ -42,10 +53,12 @@ export function LandingProof({
   if (kind === 'tonight') {
     if (!game) return null;
     return (
-      <View style={[styles.frame, styles.card]}>
+      <View
+        style={[styles.frame, styles.card, wide && styles.cardWide, { width }]}
+      >
         <CoverImage
           uri={game.background_image}
-          style={styles.art}
+          style={[styles.art, wide && styles.artWide]}
           size="thumb"
         />
         <View style={styles.body}>
@@ -64,17 +77,29 @@ export function LandingProof({
     );
   }
 
+  /**
+   * The drop bar as the app draws it, prompt included.
+   *
+   * Four bare chips floating in half a row read as leftover UI: there
+   * was nothing to say what they were for, and nothing holding them
+   * together, so they had no more presence than a caption. The real
+   * thing is a bar with a question on it, and the question is the part
+   * that makes the point.
+   */
   return (
-    <View style={[styles.frame, styles.reasons]}>
-      {DROP_REASONS.map((reason) => (
-        <Chip key={reason.key} title={reason.label} quiet />
-      ))}
+    <View style={[styles.frame, styles.bar, wide && styles.barWide, { width }]}>
+      <Text style={styles.prompt}>Why this one? Optional.</Text>
+      <View style={styles.reasons}>
+        {DROP_REASONS.map((reason) => (
+          <Chip key={reason.key} title={reason.label} quiet />
+        ))}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  frame: { marginTop: SPACING.lg, alignSelf: 'flex-start' },
+  frame: { alignSelf: 'flex-start' },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -84,8 +109,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.stroke,
     backgroundColor: COLORS.raised,
-    maxWidth: 380,
+    maxWidth: 520,
   },
+  cardWide: { padding: SPACING.lg, gap: SPACING.lg },
+  artWide: { width: 104, height: 70 },
   art: {
     width: 74,
     height: 50,
@@ -98,10 +125,16 @@ const styles = StyleSheet.create({
   eyebrow: { ...TYPE.tag, color: COLORS.accent },
   title: { ...TYPE.h3, color: COLORS.white },
   reason: { ...TYPE.caption },
-  reasons: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.sm,
-    maxWidth: 400,
+  bar: {
+    gap: SPACING.md,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.stroke,
+    backgroundColor: COLORS.raised,
+    maxWidth: 520,
   },
+  barWide: { padding: SPACING.lg },
+  prompt: { ...TYPE.tag, color: COLORS.mediumGrey },
+  reasons: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
 });
