@@ -1,5 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
-import { Animated, Platform, View, type ViewStyle } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  Platform,
+  View,
+  type LayoutChangeEvent,
+  type ViewStyle,
+} from 'react-native';
 
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -63,6 +69,39 @@ export function useInView(
 }
 
 /**
+ * How a thing arrives.
+ *
+ * A page where every section fades up by twenty-two pixels has one idea
+ * about motion, repeated until it stops registering as motion at all —
+ * which is exactly what a reader means when they say the animations are
+ * all the same. These are six, and they are assigned by what the thing
+ * *is*, not for variety's sake:
+ *
+ * - `below`   body copy and lists: the neutral one, still the default.
+ * - `left` / `right` content that already sits on that side of a split,
+ *           so the direction carries the layout's own logic.
+ * - `mask`   a curtain, for headlines. No fade — the words climb out of
+ *            a clipped edge, which is how type is meant to arrive and is
+ *            the one entrance nobody mistakes for a fade.
+ * - `lift`   artwork and cards: a shallow scale up, as if picked off the
+ *            page. Wrong for text (it blurs during the tween) and right
+ *            for anything with a frame.
+ * - `tilt`   the one showpiece object per page, straightening as it
+ *            lands. Used once. Twice would be a gimmick.
+ */
+export type Entrance = 'below' | 'left' | 'right' | 'mask' | 'lift' | 'tilt';
+
+/** A curtain travels further and slower than a nudge does. */
+const SPAN: Record<Entrance, number> = {
+  below: DURATION.entrance * 0.62,
+  left: DURATION.entrance * 0.62,
+  right: DURATION.entrance * 0.62,
+  mask: DURATION.entrance * 0.85,
+  lift: DURATION.entrance * 0.72,
+  tilt: DURATION.entrance,
+};
+
+/**
  * A section arriving as it is reached.
  *
  * The landing page opened with a staggered masthead and then went
@@ -70,11 +109,6 @@ export function useInView(
  * a page that is alive and then delivers a document. This is the same
  * curve the rest of the app decelerates on, so a reveal here and a
  * screen arriving elsewhere feel like one hand.
- *
- * `from` exists because a page whose every section rises from the
- * bottom is a page with one idea about motion. Content that sits on the
- * left should enter from the left — the direction carries the layout's
- * own logic rather than fighting it.
  */
 export function Rise({
   children,
@@ -83,19 +117,32 @@ export function Rise({
   style,
 }: {
   children: React.ReactNode;
-  from?: 'below' | 'left' | 'right';
+  from?: Entrance;
   delay?: number;
   style?: ViewStyle;
 }) {
   const reduced = useReducedMotion();
   const [ref, seen] = useInView();
   const enter = useAnimatedValue(reduced ? 1 : 0);
+  /**
+   * The curtain needs to know how tall the thing behind it is. Nothing
+   * else does, so nothing else pays for the layout pass.
+   */
+  const [height, setHeight] = useState(0);
+  const measure = useCallback(
+    (event: LayoutChangeEvent) => setHeight(event.nativeEvent.layout.height),
+    []
+  );
+  const masking = from === 'mask';
 
   useEffect(() => {
     if (reduced || !seen) return;
+    // A curtain with nothing measured behind it would slide zero pixels
+    // and read as a hard cut, so it waits for its one layout pass.
+    if (masking && height === 0) return;
     const animation = Animated.timing(enter, {
       toValue: 1,
-      duration: DURATION.entrance,
+      duration: SPAN[from],
       delay,
       easing: EASING.standard,
       /**
@@ -112,24 +159,51 @@ export function Rise({
     });
     animation.start();
     return () => animation.stop();
-  }, [enter, seen, delay, reduced]);
+  }, [enter, seen, delay, reduced, from, masking, height]);
 
-  const travel = enter.interpolate({
-    inputRange: [0, 1],
-    outputRange:
-      from === 'below' ? [22, 0] : from === 'left' ? [-26, 0] : [26, 0],
-  });
+  const to = (outputRange: number[]) =>
+    enter.interpolate({ inputRange: [0, 1], outputRange });
+
+  if (masking) {
+    return (
+      <View ref={ref} style={style}>
+        <View style={{ overflow: 'hidden' }}>
+          <Animated.View
+            onLayout={measure}
+            style={{
+              transform: [{ translateY: to([height || 40, 0]) }],
+            }}
+          >
+            {children}
+          </Animated.View>
+        </View>
+      </View>
+    );
+  }
+
+  const transform =
+    from === 'left'
+      ? [{ translateX: to([-26, 0]) }]
+      : from === 'right'
+        ? [{ translateX: to([26, 0]) }]
+        : from === 'lift'
+          ? [{ translateY: to([18, 0]) }, { scale: to([0.94, 1]) }]
+          : from === 'tilt'
+            ? [
+                { translateY: to([26, 0]) },
+                { scale: to([0.96, 1]) },
+                {
+                  rotate: enter.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['-3.5deg', '0deg'],
+                  }),
+                },
+              ]
+            : [{ translateY: to([22, 0]) }];
 
   return (
     <View ref={ref} style={style}>
-      <Animated.View
-        style={{
-          opacity: enter,
-          transform: [
-            from === 'below' ? { translateY: travel } : { translateX: travel },
-          ],
-        }}
-      >
+      <Animated.View style={{ opacity: enter, transform }}>
         {children}
       </Animated.View>
     </View>

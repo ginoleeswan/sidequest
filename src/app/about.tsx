@@ -8,14 +8,17 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  useWindowDimensions,
   View,
   type TextStyle,
   type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { FeatureIndex } from '@/components/FeatureIndex';
 import { HowItWorks } from '@/components/HowItWorks';
+import { InstallPrompt } from '@/components/InstallPrompt';
+import { LandingShelf } from '@/components/LandingShelf';
+import { Memcard } from '@/components/Memcard';
 import { LandingProof } from '@/components/LandingProof';
 import { Rise, useInView } from '@/components/Rise';
 import { LandingWall } from '@/components/LandingWall';
@@ -24,12 +27,12 @@ import { PageTitle } from '@/components/PageTitle';
 import { RouteError } from '@/components/RouteError';
 import { ScaleButton } from '@/components/ScaleButton';
 import { SiteFooter } from '@/components/SiteFooter';
-import { GrainScrim, Textured } from '@/components/Textured';
+import { Textured } from '@/components/Textured';
 import { WhenNear } from '@/components/WhenNear';
-import { YearBlocks } from '@/components/YearBlocks';
 import { queryKeys } from '@/api/queryClient';
 import { getTrendingGames } from '@/api/rawg';
 import type { Game, Paged } from '@/api/types';
+import type { Memcard as MemcardModel } from '@/lib/memcard';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useCountUp } from '@/hooks/useCountUp';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
@@ -53,8 +56,39 @@ import { OVER_IMAGE, TYPE } from '@/styles/typography';
  * mattered most; the order and the scale here are the argument.
  */
 
-/** A plausible year, for the card that has no data of its own to show. */
-const SAMPLE_YEAR = [1, 0, 2, 1, 0, 1, 3, 2, 4, 2, 1, 3];
+/**
+ * A year's card, built from whatever games the wall happened to load.
+ *
+ * The alternative was a hand-drawn mock-up of the card, which would be
+ * a picture of a feature rather than the feature — and would quietly
+ * rot the first time the real one changed. This is the app's own
+ * renderer, given the app's own shape of data.
+ */
+const FINISHED_MONTHS = [0, 2, 3, 5, 6, 8, 9, 11];
+const FINISHED_HOURS = [11, 34, 8, 62, 17, 26, 9, 41];
+
+function sampleCard(games: Game[] | undefined): MemcardModel {
+  const blocks = FINISHED_MONTHS.map((month, index) => ({
+    id: games?.[index]?.id ?? index,
+    name: games?.[index]?.name ?? 'A game you finished',
+    hours: FINISHED_HOURS[index],
+    month,
+  }));
+  const hours = FINISHED_HOURS.reduce((sum, value) => sum + value, 0);
+  const longest = blocks.reduce((best, block) =>
+    best.hours >= block.hours ? best : block
+  );
+
+  return {
+    year: 2025,
+    count: blocks.length,
+    hours,
+    blocks,
+    longest,
+    headline: 'Eight games. Two hundred and eight hours.',
+    subhead: 'A good year for finishing things.',
+  };
+}
 
 const BEATS = [
   {
@@ -100,10 +134,16 @@ function Sum({
   return (
     <View ref={ref} style={style}>
       <Text style={styles.sumLead}>The average backlog is</Text>
-      <Text style={[styles.sumFigure, figure]}>
-        {Math.round(hours)}
-        <Text style={[styles.sumUnit, unit]}>h</Text>
-      </Text>
+      {/* The unit is a sibling on the baseline, not a nested Text.
+          Nested, it inherited the figure's tracking — and the figure is
+          tracked at minus three percent, which on a 21px glyph is a
+          collision rather than a style. It also stopped being a shrunken
+          digit and became a word, because "900h" is a stopwatch reading
+          and this is a sentence about somebody's life. */}
+      <View style={styles.sumLine}>
+        <Text style={[styles.sumFigure, figure]}>{Math.round(hours)}</Text>
+        <Text style={[styles.sumUnit, unit]}>hours</Text>
+      </View>
     </View>
   );
 }
@@ -111,7 +151,6 @@ function Sum({
 export default function AboutScreen() {
   const router = useRouter();
   const { isExpanded, width } = useBreakpoint();
-  const { height } = useWindowDimensions();
   const safe = useSafeAreaInsets();
   const reduced = useReducedMotion();
   const enter = useAnimatedValue(reduced ? 1 : 0);
@@ -163,13 +202,15 @@ export default function AboutScreen() {
    * itself. This is the single most persuasive thing on the page, so it
    * gets the room.
    */
-  const sum = Math.round(Math.min(Math.max(width * 0.15, 84), 196));
+  const sum = Math.round(Math.min(Math.max(width * 0.17, 96), 196));
   const figure = {
     fontSize: sum,
     lineHeight: Math.round(sum * 0.92),
-    letterSpacing: Math.round(sum * -0.055),
+    // Was minus five and a half percent, which closed "900" up until the
+    // nine and the first zero shared a stroke.
+    letterSpacing: Math.round(sum * -0.03),
   };
-  const unit = { fontSize: Math.round(sum * 0.42) };
+  const unit = { fontSize: Math.round(sum * 0.22), letterSpacing: 0 };
 
   const masthead = {
     fontSize: display,
@@ -210,28 +251,17 @@ export default function AboutScreen() {
           artwork reaching the top of the screen; the copy clears the
           status bar on its own instead. */}
       <ScrollView contentContainerStyle={styles.scroll}>
-        <View
-          style={[
-            styles.masthead,
-            { minHeight: Math.max(Math.round(height * 0.94), 560) },
-          ]}
-        >
+        {/* Sized off the width, not the viewport height.
+            `useWindowDimensions().height` is 0 through the static render
+            and never emits again on its own, so a 94%-of-viewport hero
+            resolved to its 560px floor at every size on the page as
+            shipped — measured identical at 390x844 and 1440x900. Width
+            is known (the whole desktop layout keys off it), and a poster
+            hero pinned to a real number is steadier on iOS anyway, where
+            a vh-shaped box grows by a toolbar's worth the moment
+            anybody scrolls. */}
+        <View style={[styles.masthead, isExpanded && styles.mastheadWide]}>
           <LandingWall columns={isExpanded ? 7 : 4} />
-          {/* The page's first pixels, in exactly the colour iOS Safari
-              paints its status bar.
-
-              While the toolbar is expanded that strip belongs to the
-              browser, not the document, so artwork cannot be drawn into
-              it — but a seam between two dark blues is only a seam
-              because they are two. Landing the hero on the theme colour
-              and dissolving out of it makes the bar read as the top of
-              the picture rather than a slab above it. */}
-          <LinearGradient
-            colors={[COLORS.navy, COLORS.navy, 'rgba(39,47,63,0)']}
-            locations={[0, 0.45, 1]}
-            style={[styles.statusMatch, { height: safe.top + SPACING.xl }]}
-            pointerEvents="none"
-          />
           {/* Heavy where the words are, open at the top right, so the
                 pile is visible without ever competing with the line it
                 exists to prove. */}
@@ -246,6 +276,27 @@ export default function AboutScreen() {
             start={{ x: 0.75, y: 0 }}
             end={{ x: 0.15, y: 1 }}
             style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+          {/* The page's first pixels, in exactly the colour iOS Safari
+              paints its status bar.
+
+              While the toolbar is expanded that strip belongs to the
+              browser, not the document, so artwork cannot be drawn into
+              it — but a seam between two dark blues is only a seam
+              because they are two. Landing the hero on the theme colour
+              and dissolving out of it makes the bar read as the top of
+              the picture rather than a slab above it.
+
+              It sits AFTER the scrim, which is the whole trick. Behind
+              it the top row measured rgb(47,56,75) against a status bar
+              of rgb(39,47,63) — the scrim is an absolute fill and was
+              laying its lightest corner straight over the one band that
+              had to match exactly. */}
+          <LinearGradient
+            colors={[COLORS.navy, COLORS.navy, 'rgba(39,47,63,0)']}
+            locations={[0, 0.5, 1]}
+            style={[styles.statusMatch, { height: safe.top + SPACING.xl * 2 }]}
             pointerEvents="none"
           />
           <View
@@ -289,7 +340,7 @@ export default function AboutScreen() {
                 figure={figure}
                 unit={unit}
               />
-              <Rise from="right" delay={160} style={styles.sumTailSlot}>
+              <Rise from="right" delay={220} style={styles.sumTailSlot}>
                 <Text
                   style={[styles.sumTail, isExpanded && styles.sumTailWide]}
                 >
@@ -308,6 +359,29 @@ export default function AboutScreen() {
             the plainest way to say it. */}
         <HowItWorks inset={inset} wide={isExpanded} />
 
+        {/* Volume, which none of the single objects below can show.
+            The row runs off the right edge on purpose. */}
+        <WhenNear placeholder={<View style={styles.shelfRoom} />}>
+          <View style={[styles.pile, { paddingHorizontal: inset }]}>
+            <Rise from="mask">
+              <Text style={styles.pileLead}>
+                Bring the whole pile with you.
+              </Text>
+            </Rise>
+            <Rise delay={90}>
+              <Text style={styles.pileBody}>
+                Paste a Steam profile and everything you own arrives with the
+                hours already on it. Or hand it a CSV from wherever you have
+                been keeping the list. Nothing has to be typed twice.
+              </Text>
+            </Rise>
+            <LandingShelf
+              games={(games ?? []).slice(0, isExpanded ? 8 : 5)}
+              width={isExpanded ? 190 : 150}
+            />
+          </View>
+        </WhenNear>
+
         {BEATS.map((beat, index) => (
           <View
             key={beat.lead}
@@ -321,44 +395,80 @@ export default function AboutScreen() {
               isExpanded && index % 2 === 1 && styles.beatFlipped,
             ]}
           >
-            <Rise
-              from={isExpanded ? (index % 2 === 1 ? 'right' : 'left') : 'below'}
-              style={isExpanded ? styles.beatLeadWide : undefined}
-            >
-              <Text style={styles.beatLead}>{beat.lead}</Text>
-            </Rise>
-            <View style={isExpanded ? styles.beatBodyWide : undefined}>
+            {/* The claim and its sentence, together.
+                They were in separate columns, which is what left every
+                beat with a short line marooned beside half a screen of
+                nothing: a heading's column is only as tall as the
+                heading, and the row's height came from the other side.
+                A lead belongs with its own body; what belongs opposite
+                is the evidence. */}
+            <View style={isExpanded ? styles.beatCopyWide : styles.beatCopy}>
+              <Rise
+                // Wide: from the side the column already sits on, so
+                // the direction carries the layout. Narrow: a curtain,
+                // because there is no side for it to come from.
+                from={
+                  isExpanded ? (index % 2 === 1 ? 'right' : 'left') : 'mask'
+                }
+              >
+                <View style={styles.beatHead}>
+                  <Text style={styles.beatIndex}>{`0${index + 1}`}</Text>
+                  <Text style={styles.beatLead}>{beat.lead}</Text>
+                </View>
+              </Rise>
               <Rise delay={90}>
                 <Text style={styles.beatBody}>{beat.body}</Text>
               </Rise>
-              {/* The app's own components, fed real data: a claim with
-                  the thing itself under it beats a claim with an icon
-                  over it. */}
-              <Rise delay={200}>
+            </View>
+            {/* The app's own components, fed real data: a claim with
+                the thing itself beside it beats a claim with an icon
+                over it. */}
+            <View style={isExpanded ? styles.beatProofWide : undefined}>
+              <Rise from="lift" delay={200}>
                 <LandingProof kind={beat.kind} game={games?.[index + 2]} />
               </Rise>
             </View>
           </View>
         ))}
 
-        {/* The app's own object, at the size it deserves. */}
-        <View style={[styles.band, styles.card, { paddingHorizontal: inset }]}>
-          <Rise>
-            <View style={styles.cardFrame}>
-              <GrainScrim style={StyleSheet.absoluteFill} />
-              <YearBlocks
-                months={SAMPLE_YEAR}
-                landed={null}
-                fill
-                size={isExpanded ? 26 : 17}
+        {/* The one showpiece, and the only thing on the page that
+            arrives crooked and straightens. Used once: a second `tilt`
+            further down would turn a signature into a mannerism. */}
+        <WhenNear placeholder={<View style={styles.cardRoom} />}>
+          <View
+            style={[
+              styles.band,
+              styles.card,
+              { paddingHorizontal: inset },
+              isExpanded && styles.cardWide,
+            ]}
+          >
+            <Rise from="tilt">
+              <Memcard
+                card={sampleCard(games)}
+                maxWidth={isExpanded ? 420 : 320}
               />
+            </Rise>
+            <View style={isExpanded ? styles.cardCopy : undefined}>
+              <Rise from="mask">
+                <Text style={styles.cardLead}>
+                  And something to show for the year.
+                </Text>
+              </Rise>
+              <Rise delay={120}>
+                <Text style={styles.cardCaption}>
+                  Every set of credits you reach becomes a block on a card — one
+                  per month, sized by how long it took. At the end of the year
+                  it is a picture of what you actually played, and it shares as
+                  a single link with no account attached to it.
+                </Text>
+              </Rise>
             </View>
-          </Rise>
-          <Text style={styles.cardCaption}>
-            A year of finishing things. One block for every set of credits you
-            actually reach.
-          </Text>
-        </View>
+          </View>
+        </WhenNear>
+
+        {/* The long tail, ranked below everything argued above it. */}
+        <FeatureIndex inset={inset} wide={isExpanded} />
 
         <View
           style={[
@@ -368,7 +478,7 @@ export default function AboutScreen() {
           ]}
         >
           <View style={isExpanded ? styles.plainCopy : undefined}>
-            <Rise from={isExpanded ? 'left' : 'below'}>
+            <Rise from={isExpanded ? 'left' : 'mask'}>
               <Text style={styles.plainLead}>No account. No tracking.</Text>
             </Rise>
             <Text style={styles.plainBody}>
@@ -381,6 +491,15 @@ export default function AboutScreen() {
               An independent project, not affiliated with any platform,
               publisher or store. Open source at ginoleeswan/sidequest.
             </Text>
+            {/* The one honest answer to "put the artwork behind the
+                browser's own toolbar": in Safari that strip is chrome
+                and the page cannot draw into it — but on a home screen
+                the chrome is gone and it does, edge to edge. This is
+                where saying so belongs, and it says nothing at all on a
+                desktop that cannot install anything. */}
+            <View style={styles.install}>
+              <InstallPrompt />
+            </View>
           </View>
           <View style={[styles.closeCta, isExpanded && styles.closeCtaWide]}>
             {open}
@@ -405,7 +524,12 @@ const styles = StyleSheet.create({
   },
 
   // masthead
-  masthead: { justifyContent: 'flex-end', overflow: 'hidden' },
+  masthead: {
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
+    minHeight: 620,
+  },
+  mastheadWide: { minHeight: 760 },
   statusMatch: { position: 'absolute', top: 0, left: 0, right: 0 },
   mastheadCopy: { paddingBottom: SPACING.xl * 2 },
   lockup: {
@@ -469,12 +593,18 @@ const styles = StyleSheet.create({
   sumTailSlot: { flex: 1 },
   sumTailWide: { flex: 1, maxWidth: 560 },
   sumLead: { ...TYPE.micro, color: COLORS.mediumGrey },
-  sumFigure: {
-    ...TYPE.numeral,
-    color: COLORS.accent,
+  sumLine: {
+    flexDirection: 'row',
+    // On the baseline, so the word sits on the numeral's feet rather
+    // than floating in the middle of its height.
+    alignItems: 'baseline',
+    gap: SPACING.sm + 2,
     marginVertical: SPACING.sm,
   },
-  sumUnit: { ...TYPE.numeral, fontSize: 48, color: COLORS.accent },
+  sumFigure: { ...TYPE.numeral, color: COLORS.accent },
+  // Grey, not amber. Two amber weights in one line is two things
+  // shouting; the number is the thing worth shouting.
+  sumUnit: { ...TYPE.title, color: COLORS.lightGrey },
   sumTail: {
     ...TYPE.body,
     fontSize: 17,
@@ -484,7 +614,7 @@ const styles = StyleSheet.create({
   },
 
   // the three beats
-  beat: { paddingVertical: SPACING.xl, gap: SPACING.md },
+  beat: { paddingVertical: SPACING.xl * 1.5, gap: SPACING.lg },
   beatWide: {
     flexDirection: 'row',
     // Tops aligned, not centres. Centred against a tall column the lead
@@ -495,8 +625,14 @@ const styles = StyleSheet.create({
     gap: SPACING.xl * 2,
   },
   beatFlipped: { flexDirection: 'row-reverse' },
-  beatLead: { ...TYPE.title, color: COLORS.white, maxWidth: 420 },
-  beatLeadWide: { flex: 1.1 },
+  beatCopy: { gap: SPACING.md },
+  beatCopyWide: { flex: 1, gap: SPACING.md, maxWidth: 520 },
+  beatHead: { gap: SPACING.sm },
+  // A marker in the margin above the line, not a number in a circle.
+  // Three beats need to read as an ordered argument; this is the
+  // cheapest way to say so without a device.
+  beatIndex: { ...TYPE.tag, color: COLORS.accent },
+  beatLead: { ...TYPE.title, color: COLORS.white, maxWidth: 460 },
   beatBody: {
     ...TYPE.body,
     fontSize: 16,
@@ -504,28 +640,45 @@ const styles = StyleSheet.create({
     color: COLORS.mediumGrey,
     maxWidth: 480,
   },
-  beatBodyWide: { flex: 1 },
+  beatProofWide: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // the pile
+  shelfRoom: { height: 420 },
+  pile: { paddingVertical: SPACING.xl * 2, gap: SPACING.md },
+  pileLead: { ...TYPE.title, color: COLORS.white, maxWidth: 460 },
+  pileBody: {
+    ...TYPE.body,
+    fontSize: 16,
+    lineHeight: 26,
+    color: COLORS.mediumGrey,
+    maxWidth: 540,
+    marginBottom: SPACING.md,
+  },
 
   // the card
+  cardRoom: { height: 460 },
   card: {
     paddingVertical: SPACING.xl * 2,
     alignItems: 'center',
-    gap: SPACING.lg,
+    gap: SPACING.xl,
   },
-  cardFrame: {
-    padding: SPACING.lg,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.strokeStrong,
-    // A shade under the band it now sits on. Navy on navy would have
-    // been an object vanishing into the ground it was placed on.
-    backgroundColor: '#1F2634',
-    overflow: 'hidden',
+  cardWide: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: SPACING.xl * 2,
   },
+  cardCopy: { flex: 1, maxWidth: 440, gap: SPACING.sm },
+  cardLead: { ...TYPE.title, color: COLORS.white },
   cardCaption: {
     ...TYPE.caption,
-    textAlign: 'center',
-    maxWidth: 380,
+    fontSize: 16,
+    lineHeight: 26,
+    maxWidth: 440,
   },
 
   // the plain truth
@@ -537,6 +690,7 @@ const styles = StyleSheet.create({
     gap: SPACING.xl * 2,
   },
   plainCopy: { flex: 1, gap: SPACING.md },
+  install: { marginTop: SPACING.sm, alignSelf: 'flex-start' },
   closeCtaWide: { marginTop: 0, flexShrink: 0 },
   plainLead: { ...TYPE.title, color: COLORS.white },
   plainBody: {

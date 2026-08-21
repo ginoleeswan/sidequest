@@ -74,6 +74,7 @@ export default function Root({ children }: PropsWithChildren) {
           content="https://sidequest-bice-nu.vercel.app/og.png?v=2"
         />
         <style dangerouslySetInnerHTML={{ __html: css }} />
+        <script dangerouslySetInnerHTML={{ __html: startAtTheTop }} />
         <script dangerouslySetInnerHTML={{ __html: registerServiceWorker }} />
       </head>
       <body>
@@ -87,6 +88,28 @@ export default function Root({ children }: PropsWithChildren) {
     </html>
   );
 }
+
+/**
+ * Refreshing shows the top of the page.
+ *
+ * This was a React effect, and an effect is too late: the browser has
+ * already decided where to put the scroll by the time the app hydrates,
+ * and setting `scrollRestoration` then only governs the NEXT load. iOS
+ * Safari is worse than that — it restores again after the load event,
+ * once late images have settled the layout — so a single scrollTo at
+ * hydration gets quietly undone.
+ *
+ * Head script, before first paint, plus the two moments Safari reaches
+ * back in: `load`, and `pageshow` for the back-forward cache.
+ */
+const startAtTheTop = `
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  window.scrollTo(0, 0);
+  addEventListener('load', function () { window.scrollTo(0, 0); });
+  addEventListener('pageshow', function (e) {
+    if (e.persisted) window.scrollTo(0, 0);
+  });
+`;
 
 /**
  * Registers the worker after load, so it never competes with the first
@@ -136,6 +159,14 @@ const css = `
   html, body {
     margin: 0;
     min-height: 100%;
+    /*
+     * No rubber band at the top. Overscrolling above the first pixel
+     * exposes the canvas behind the document, which is the one place
+     * the hero's artwork is supposed to run right up to the browser's
+     * own chrome. contain rather than none, so pull-to-refresh
+     * survives.
+     */
+    overscroll-behavior-y: contain;
   }
   #root {
     display: flex;
