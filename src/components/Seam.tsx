@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
-import Svg, { ClipPath, Defs, G, Path, Rect } from 'react-native-svg';
+import Svg, { G, Path, Rect } from 'react-native-svg';
 
 import {
   GLYPH_BOX,
@@ -47,22 +47,30 @@ export type SeamVariant = 'lip' | 'card' | 'glyphs';
 
 /** How tall a card edge is. */
 const HEIGHT = 34;
+/**
+ * The wavy seam's face is deeper than a card edge, and the number is
+ * derived, not felt: the wave's trough sits at WAVE_MID + WAVE_AMP,
+ * and the biggest object's lower half hangs another 36pt below its
+ * centre on that trough, plus a little rotation headroom. Shallower
+ * faces sliced the bottoms off the biggest shapes at the viewBox —
+ * the exact clipping bug this component has now hit from every
+ * direction once.
+ */
+const GLYPH_FACE = 68;
 /** A plain lip needs no body — only the line and a little air under it. */
 const LIP_HEIGHT = 18;
 /**
- * How far the skyline rises ABOVE the seam's box.
+ * How far the pile rises ABOVE the seam's box.
  *
- * The crowns live at negative y, and an SVG clips to its viewBox — an
- * earlier version drew exactly the half below the line and silently
- * threw the rest away. So the drawing surface is taller than the seam
- * and hangs upward into the section above via a negative margin; the
- * seam's layout box is unchanged, which is what lets the objects
- * overlap the outgoing section the way the memcard overlaps its band.
+ * The shapes live at negative y, and an SVG clips to its viewBox — an
+ * earlier version silently threw away everything above the box. The
+ * drawing surface is taller than the seam and hangs upward via a
+ * negative margin; the seam's layout box is unchanged.
  *
- * Just past the tallest crown: the 76pt hero sitting 0.38 deep leaves
- * 47pt exposed.
+ * Half the tallest shape above the wave's highest crest, plus tilt
+ * headroom — the mirror of GLYPH_FACE's arithmetic below the wave.
  */
-const GLYPH_RISE = 50;
+const GLYPH_RISE = 52;
 
 /**
  * How far the chamfer cuts in, in real pixels.
@@ -86,26 +94,22 @@ const PIN_H = 13;
 /** The lit lip. One line, and the only thing every seam has. */
 const LIP = 'rgba(255,255,255,0.11)';
 /**
- * The same light on the skyline's crowns, caught a little harder — a
- * curved crown faces the light more directly than a flat edge, and at
- * the lip's own strength a short curved stroke simply vanished.
+ * The pile's one material: a flat mid grey, between the palette's
+ * mediumGrey and darkGrey. Light enough to read as objects against
+ * both grounds, quiet enough not to fight the section headings above.
  */
-const CROWN = 'rgba(255,255,255,0.34)';
+const FLAT = '#6B7385';
+
 /**
- * The silhouettes' body: the app's shadow tone, not the band's colour.
- *
- * The first pass filled them with the band itself so the bases would
- * merge invisibly — principled, and invisible all over: the two bands
- * this seam sits between are nine RGB units apart, so a band-coloured
- * shape against the other band simply is not there, and all that
- * survived was a row of hairline outlines hovering near a line. An
- * object resting on a lit edge at dusk is DARKER than both grounds —
- * it is in its own shadow. One deep tone, the same family as every
- * other shadow in the app, makes the shapes solid against the section
- * above and leaves a quiet planted base visible below the line, which
- * reads as the slot it is sitting in.
+ * The decorated seam's edge is a wave — a horizon with a swell in it,
+ * and the pile rides it. Gentle on purpose: one and a bit crests on a
+ * phone, three on a monitor, amplitude a third of the seam's height.
+ * The straight seams stay straight; this is the one that plays.
  */
-const SILHOUETTE = '#151B27';
+const WAVE_AMP = 9;
+const WAVE_MID = 13;
+const WAVE_LENGTH = 520;
+const WAVE_STEP = 12;
 
 export interface SeamProps {
   /**
@@ -149,23 +153,44 @@ export function Seam({
   };
 
   const glyphs = variant === 'glyphs';
-  // The skyline seam is a card edge — same height, same chamfer. Its
-  // extra room is above the line, not below it.
-  const height = variant === 'lip' ? LIP_HEIGHT : HEIGHT;
+  const height = glyphs ? GLYPH_FACE : variant === 'lip' ? LIP_HEIGHT : HEIGHT;
   const right = index % 2 === 0;
-  // A plain lip has no corner to cut: it is a line, not an object.
-  const cut = variant === 'lip' ? 0 : Math.min(CUT, Math.round(W / 7));
+  // Only the card variant cuts a corner. The lip is a line; the wavy
+  // seam's whole top edge is already the special thing.
+  const cut = variant === 'card' ? Math.min(CUT, Math.round(W / 7)) : 0;
 
-  const face = right
-    ? `M0 0 H${W - cut} L${W} ${cut} V${height} H0 Z`
-    : `M${cut} 0 H${W} V${height} H0 V${cut} Z`;
+  /**
+   * The wavy edge, as a polyline.
+   *
+   * A sine sampled every few points — at this amplitude the segments
+   * are invisible and the arithmetic stays legible, which matters
+   * because the same function has to answer two questions: where the
+   * edge is, and where each object's centre sits on it.
+   */
+  const waveY = (x: number) =>
+    WAVE_MID + WAVE_AMP * Math.sin((x / WAVE_LENGTH) * Math.PI * 2 + 0.6);
+  let wavePoints = '';
+  if (glyphs && W > 0) {
+    const pts: string[] = [];
+    for (let x = 0; x <= W; x += WAVE_STEP)
+      pts.push(`${x} ${waveY(x).toFixed(1)}`);
+    pts.push(`${W} ${waveY(W).toFixed(1)}`);
+    wavePoints = pts.join(' L');
+  }
 
-  // The lit edge follows the flat part of the top, then rides the
-  // diagonal down. Light catches a lip; it does not catch the void the
-  // chamfer opens up.
-  const lipPath = right
-    ? `M0 1 H${W - cut} L${W} ${cut + 1}`
-    : `M${W} 1 H${cut} L0 ${cut + 1}`;
+  const face = glyphs
+    ? `M${wavePoints} V${height} H0 Z`
+    : right
+      ? `M0 0 H${W - cut} L${W} ${cut} V${height} H0 Z`
+      : `M${cut} 0 H${W} V${height} H0 V${cut} Z`;
+
+  // The lit edge rides whatever the top edge is — the flat run and
+  // the chamfer's diagonal, or the wave, crest to trough.
+  const lipPath = glyphs
+    ? `M${wavePoints}`
+    : right
+      ? `M0 1 H${W - cut} L${W} ${cut + 1}`
+      : `M${W} 1 H${cut} L0 ${cut + 1}`;
 
   const strip = PINS * PIN_W + (PINS - 1) * PIN_GAP;
   // On the flat side, inset a corner radius past the chamfer so the
@@ -173,51 +198,38 @@ export function Seam({
   const pinX = right ? cut + 18 : W - cut - 18 - strip;
 
   /**
-   * The skyline.
+   * The pile, riding the wave.
    *
-   * The pile's belongings sit on the lit edge the way the Mark sits on
-   * the horizon at the foot of this same page — dark shapes on a line
-   * of light. Three decisions carry the whole thing:
+   * Flat light-grey shapes, whole and uncut, each one's centre pinned
+   * to the wave at its own position — so the row bobs with the swell
+   * instead of standing on a rule. Half of every object is above the
+   * edge against one ground and half below it against the other,
+   * which only works because the shapes are a third colour: earlier
+   * versions tried to play the two near-identical grounds against
+   * each other and were invisible. The even-odd rule keeps the disc's
+   * spindle and the cartridge's window open, so whichever ground is
+   * behind that part of the shape shows straight through.
    *
-   * Solid, in shadow. Each object is one deep tone against both
-   * grounds — darker than the sky above the line and darker than the
-   * card below it, the way a thing on a lit edge at dusk is darker
-   * than everything behind it. The even-odd rule keeps the disc's
-   * spindle and the cartridge's window open, and through them you see
-   * whichever section is behind that part of the shape — the one
-   * genuine piece of negative space, spent where it is legible.
-   *
-   * The lip hides behind them. The line of light is drawn first and
-   * the silhouettes over it, so it reads as passing behind each object
-   * — which is how an edge and a thing resting on it actually occlude.
-   *
-   * The light only catches the crowns. Each outline is stroked in the
-   * lip's own white, clipped to above the line: the same light that
-   * makes every other seam makes this one, just interrupted by what is
-   * sitting on it. Below the line there is no stroke at all — a line
-   * around the base would cut the object back off the card.
+   * Each shape rotates about its own centre — tilt about a corner
+   * swung the big ones off their spot on the wave.
    */
   const rise = glyphs ? GLYPH_RISE : 0;
-  const crownClip = `seam-crowns-${index}`;
   const placed = glyphs
     ? W >= SEAM_GLYPH_NARROW
       ? SEAM_SCATTER_WIDE
       : SEAM_SCATTER_NARROW
     : [];
-  const scatter = placed.map(({ at, size, sit, tilt }) => {
+  const scatter = placed.map(({ at, size, tilt }) => {
     const scale = size / GLYPH_BOX;
-    // Centres spread along the flat run only — never the chamfer,
-    // which would cut an object twice and read as a mistake.
-    const runStart = right ? 26 : cut + 26;
-    const run = Math.max(W - cut - 52, 1);
-    const x = runStart + at * run - size / 2;
-    // `sit` of the object below the line, the rest above it.
-    const y = -(1 - sit) * size;
+    const runStart = 26;
+    const run = Math.max(W - 52, 1);
+    const cx = runStart + at * run;
+    const cy = waveY(cx);
+    const half = GLYPH_BOX / 2;
     return {
-      transform: `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${tilt}) scale(${scale.toFixed(3)})`,
-      // One constant visual weight: a hairline scaled with a 24pt
-      // object and a 46pt one is two different hairlines.
-      stroke: 1.5 / scale,
+      transform:
+        `translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${tilt}) ` +
+        `scale(${scale.toFixed(3)}) translate(${-half} ${-half})`,
     };
   });
 
@@ -236,49 +248,22 @@ export function Seam({
           viewBox={`0 ${-rise} ${W} ${height + rise}`}
           style={rise > 0 ? svgRise : undefined}
         >
-          {glyphs && (
-            <Defs>
-              {/* Above the line only: where the light is allowed. */}
-              <ClipPath id={crownClip}>
-                <Rect x={0} y={-rise} width={W} height={rise + 1.5} />
-              </ClipPath>
-            </Defs>
-          )}
-
           <Path d={face} fill={color} />
 
-          {/* The line of light, before the skyline, so it passes
-              behind each object rather than through it. */}
+          {/* The line of light, before the pile, so their planted feet
+              stand in front of it. */}
           <Path d={lipPath} stroke={LIP} strokeWidth={1.5} fill="none" />
 
-          {/* The silhouettes, in the band's own colour: bases merge
-              into the card, crowns rise into the section above. */}
+          {/* The pile: flat, whole, standing on the seam. */}
           {scatter.map(({ transform }, i) => (
-            <G key={`shape-${i}`} transform={transform}>
+            <G key={`pile-${i}`} transform={transform}>
               <Path
                 d={SEAM_GLYPHS[placed[i].glyph]}
-                fill={SILHOUETTE}
+                fill={FLAT}
                 fillRule="evenodd"
               />
             </G>
           ))}
-
-          {/* The light catching the crowns — and nothing below. */}
-          {glyphs && (
-            <G clipPath={`url(#${crownClip})`}>
-              {scatter.map(({ transform, stroke }, i) => (
-                <G key={`crown-${i}`} transform={transform}>
-                  <Path
-                    d={SEAM_GLYPHS[placed[i].glyph]}
-                    fill="none"
-                    stroke={CROWN}
-                    strokeWidth={stroke}
-                    strokeLinejoin="round"
-                  />
-                </G>
-              ))}
-            </G>
-          )}
 
           {variant === 'card' &&
             Array.from({ length: PINS }, (_, pin) => (

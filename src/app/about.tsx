@@ -497,7 +497,15 @@ export default function AboutScreen() {
 
         {/* Volume, which none of the single objects below can show.
             The row runs off the right edge on purpose. */}
-        <WhenNear placeholder={<View style={styles.shelfRoom} />}>
+        {/* Raised like the memcard band, and for the same reason: the
+            gutter trail is drawn over the page, and this band's wavy
+            seam stands game pieces in the gutter. The trail passes
+            behind the whole band — the same reading it already has at
+            the memcard — instead of slicing through a controller. */}
+        <WhenNear
+          placeholder={<View style={styles.shelfRoom} />}
+          style={styles.raise}
+        >
           {/* Not a Band: the copy sits in the measured column, but the
               marquee runs edge to edge. A horizontally moving row that
               stops at the column's edge is a window with a frame; one
@@ -509,7 +517,16 @@ export default function AboutScreen() {
                 own furniture — a pad, a disc, a cartridge, a life —
                 is what the edge is cut out of. It works because the
                 three seams above it were plain. */}
-            <Seam color={LANDING_WELL} index={3} variant="glyphs" />
+            {/* `behind` matters doubly here: everything above the
+                wave inside the seam's box shows it, and without it the
+                well's own ground filled that area — a hard straight
+                step floating above the wavy edge. */}
+            <Seam
+              color={LANDING_WELL}
+              behind={LANDING_GROUND}
+              index={3}
+              variant="glyphs"
+            />
             <View
               style={[
                 styles.measure,
@@ -715,7 +732,7 @@ export default function AboutScreen() {
 
         {/* Padded to land on the same column the bands use, so the
             footer's first letter sits under everything above it. */}
-        <SiteFooter pad={footerPad} />
+        <SiteFooter pad={footerPad} mascot={false} />
 
         {/* Above the bands, under nothing: the gutter it lives in has
             no text to cover. */}

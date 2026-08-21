@@ -50,7 +50,14 @@ import { TYPE } from '@/styles/typography';
  */
 const padFor = (width: number) => (width < 420 ? 14 : SPACING.lg);
 const GAP = 8;
-const headerFor = (width: number) => (width < 420 ? 64 : 78);
+/**
+ * Header height. Sized so the label-and-year lockup keeps clear air
+ * above and below when vertically centred — at 78 the eyebrow's box
+ * touched the year's cap height and the pair read as one cramped
+ * word. Everything downstream (slot rows, flight paths, card height)
+ * derives from this, so the grid moves down with it.
+ */
+const headerFor = (width: number) => (width < 420 ? 72 : 88);
 
 /**
  * Three, four or six — never a number that leaves a ragged last row.
@@ -209,9 +216,11 @@ export function LandingMemcard({
         style={[styles.inner, { paddingHorizontal: pad, paddingBottom: pad }]}
       >
         <View style={[styles.header, { height: header }]}>
-          <View>
+          <View style={styles.lockup}>
             <Text style={styles.label}>MEMORY CARD</Text>
-            <Text style={styles.year}>{card.year}</Text>
+            <Text style={[styles.year, header < 80 && styles.yearTight]}>
+              {card.year}
+            </Text>
           </View>
           {/* The scoreboard: counts up as the covers land. Smaller
               where the header is, so "8 GAMES · 207 HOURS" does not
@@ -440,9 +449,19 @@ const styles = StyleSheet.create({
   header: {
     // height comes from headerFor(width)
     flexDirection: 'row',
-    alignItems: 'center',
+    // Bottom-aligned, not centred: the year and the scoreboard share
+    // the header's floor, so the two read as one line of information
+    // with the spare air above them — where the card's notch and
+    // grooves already live — instead of two blocks floating at
+    // different heights.
+    alignItems: 'flex-end',
     justifyContent: 'space-between',
+    paddingBottom: 12,
   },
+  // Air between the eyebrow and the year: without it the label's
+  // descender box sat on the numeral's cap and the lockup read as one
+  // cramped word.
+  lockup: { gap: 4 },
   label: {
     ...TYPE.micro,
     fontSize: 10,
@@ -453,9 +472,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Noah-Black',
     fontSize: 34,
     letterSpacing: -1,
+    lineHeight: 36,
     color: COLORS.white,
   },
-  score: { ...TYPE.tag, color: COLORS.mediumGrey },
+  yearTight: { fontSize: 30, lineHeight: 32 },
+  // Nudged up to the year's baseline rather than its descender box.
+  score: { ...TYPE.tag, color: COLORS.mediumGrey, marginBottom: 7 },
   scoreTight: { fontSize: 9, letterSpacing: 0.5 },
   scoreNumber: { color: COLORS.accent },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
