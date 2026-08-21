@@ -16,9 +16,10 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FeatureIndex } from '@/components/FeatureIndex';
+import { Horizon } from '@/components/Horizon';
 import { HowItWorks } from '@/components/HowItWorks';
-import { InstallPrompt } from '@/components/InstallPrompt';
 import { LandingShelf } from '@/components/LandingShelf';
+import { LandingTake } from '@/components/LandingTake';
 import { LandingTry } from '@/components/LandingTry';
 import { Memcard } from '@/components/Memcard';
 import { QuestLine, QuestMark } from '@/components/QuestLine';
@@ -106,7 +107,7 @@ const BEATS = [
   {
     kind: 'length' as const,
     lead: 'It knows how long things take.',
-    body: 'Every game carries a real length, from the people who have finished it — not a guess, and not a store page. It is on every tile, in amber, before you tap anything.',
+    body: 'Real lengths, from players who finished — not store-page guesses. On every tile, in amber, before you tap anything.',
   },
   {
     kind: 'tonight' as const,
@@ -116,7 +117,7 @@ const BEATS = [
   {
     kind: 'drop' as const,
     lead: 'It lets you put things down.',
-    body: 'Most of a backlog is never going to be played, and saying so out loud is the only thing that makes the rest enjoyable. It asks why, and only so the shelves can learn something.',
+    body: 'Most of a backlog will never be played, and saying so is what makes the rest enjoyable. It asks why — only so the shelves can learn.',
   },
 ];
 
@@ -392,9 +393,8 @@ export default function AboutScreen() {
             />
             <Rise from="right" delay={220} style={styles.sumTailSlot}>
               <Text style={[styles.sumTail, scale.body]}>
-                and the average week has about six in it. That is fifteen years
-                of evenings, which is not a to-do list — it is a fantasy about a
-                different life.
+                and the average week has about six. That is fifteen years of
+                evenings — not a to-do list, a fantasy.
               </Text>
             </Rise>
           </Band>
@@ -433,9 +433,8 @@ export default function AboutScreen() {
             />
             <Rise delay={90}>
               <Text style={[styles.pileBody, scale.body]}>
-                Paste a Steam profile and everything you own arrives with the
-                hours already on it. Or hand it a CSV from wherever you have
-                been keeping the list. Nothing has to be typed twice.
+                Paste a Steam profile and everything you own arrives, hours
+                included. Or hand it a CSV. Nothing is typed twice.
               </Text>
             </Rise>
             <LandingShelf
@@ -548,10 +547,9 @@ export default function AboutScreen() {
               />
               <Rise delay={120}>
                 <Text style={[styles.cardCaption, scale.body]}>
-                  Every set of credits you reach becomes a block on a card — one
-                  per month, sized by how long it took. At the end of the year
-                  it is a picture of what you actually played, and it shares as
-                  a single link with no account attached to it.
+                  Every set of credits becomes a block, month by month. By
+                  December it is a picture of what you actually played — and it
+                  shares as one link, no account attached.
                 </Text>
               </Rise>
             </View>
@@ -564,6 +562,16 @@ export default function AboutScreen() {
           <FeatureIndex scale={scale} />
         </Band>
 
+        {/* Where to get it, given the ceremony a store launch gets —
+            because "it is just a link" is this product's proudest fact
+            and was being said in a footnote. */}
+        <WhenNear placeholder={<View style={styles.takeRoom} />}>
+          <Band tone="well" scale={scale}>
+            <QuestMark id="take" />
+            <LandingTake scale={scale} />
+          </Band>
+        </WhenNear>
+
         <Band scale={scale} style={scale.wide && styles.plainWide}>
           <View style={scale.wide ? styles.plainCopy : styles.plainStack}>
             <QuestMark id="close" />
@@ -572,29 +580,23 @@ export default function AboutScreen() {
               style={[styles.lead, scale.lead]}
             />
             <Text style={[styles.plainBody, scale.body]}>
-              Your library lives in your browser and goes nowhere. There is
-              nothing to sign up for, nothing to cancel, and nobody selling what
-              you play. Game data comes from RAWG; lengths come from IGDB and
-              from you.
+              Your library lives in your browser and goes nowhere. Nothing to
+              sign up for, nothing to cancel, nobody selling what you play.
             </Text>
             <Text style={[styles.plainBody, scale.body]}>
-              An independent project, not affiliated with any platform,
-              publisher or store. Open source at ginoleeswan/sidequest.
+              An independent project, affiliated with nobody. Game data from
+              RAWG; lengths from IGDB and from you. Open source at
+              ginoleeswan/sidequest.
             </Text>
-            {/* The one honest answer to "put the artwork behind the
-                browser's own toolbar": in Safari that strip is chrome
-                and the page cannot draw into it — but on a home screen
-                the chrome is gone and it does, edge to edge. It says
-                nothing at all on a desktop that cannot install
-                anything. */}
-            <View style={styles.install}>
-              <InstallPrompt />
-            </View>
           </View>
           <View style={[styles.closeCta, scale.wide && styles.closeCtaWide]}>
             {open}
           </View>
         </Band>
+
+        {/* The trail ends at a place, not a line: the footer's ground
+            rises as a hill and the Mark climbs up to stand on it. */}
+        <Horizon />
 
         {/* Padded to land on the same column the bands use, so the
             footer's first letter sits under everything above it. */}
@@ -744,6 +746,7 @@ const styles = StyleSheet.create({
   // the pile
   shelfRoom: { height: 420 },
   tryRoom: { height: 620 },
+  takeRoom: { height: 560 },
   pile: { gap: SPACING.lg },
   pileBody: { maxWidth: 620, marginBottom: SPACING.md },
 
@@ -768,7 +771,6 @@ const styles = StyleSheet.create({
   },
   plainStack: { gap: SPACING.md },
   plainCopy: { flex: 1, gap: SPACING.md },
-  install: { marginTop: SPACING.sm, alignSelf: 'flex-start' },
   closeCtaWide: { marginTop: 0, flexShrink: 0 },
   plainBody: { maxWidth: 560 },
   closeCta: { marginTop: SPACING.lg },

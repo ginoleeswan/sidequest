@@ -172,16 +172,8 @@ export function LandingTry({ scale }: { scale: LandingScale }) {
 
       {dropped.length > 0 && (
         <Text style={styles.footnote}>
-          The dim ones are not a failure. Knowing which they are is the point —
-          and at{' '}
-          {pace === 20
-            ? 'twenty'
-            : pace === 10
-              ? 'ten'
-              : pace === 5
-                ? 'five'
-                : 'two'}{' '}
-          hours a week, that is simply what the arithmetic says.
+          The dim ones are not failures — knowing which they are is the point.
+          At {pace} hours a week, that is just arithmetic.
         </Text>
       )}
     </View>
