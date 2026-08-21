@@ -1,20 +1,18 @@
 import type { Game } from '@/api/types';
 import { clearRecent, readRecent, rememberGame } from '../recent';
+import { _setBackendForTests } from '../storage';
 
 const KEY = 'sidequest.recent.v1';
 let store: Record<string, string>;
 
 beforeAll(() => {
   store = {};
-  Object.defineProperty(globalThis, 'localStorage', {
-    configurable: true,
-    value: {
-      getItem: (k: string) => store[k] ?? null,
-      setItem: (k: string, v: string) => {
-        store[k] = v;
-      },
-      removeItem: (k: string) => delete store[k],
+  _setBackendForTests({
+    getItem: (k: string) => store[k] ?? null,
+    setItem: (k: string, v: string) => {
+      store[k] = v;
     },
+    removeItem: (k: string) => delete store[k],
   });
 });
 beforeEach(() => {

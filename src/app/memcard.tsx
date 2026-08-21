@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,6 +10,7 @@ import { Chip } from '@/components/Chip';
 import { LandingMemcard } from '@/components/LandingMemcard';
 import { Message } from '@/components/Message';
 import { PageTitle } from '@/components/PageTitle';
+import { Screen } from '@/components/Screen';
 import { RouteError } from '@/components/RouteError';
 import { SectionHeader } from '@/components/SectionHeader';
 import { SiteFooter } from '@/components/SiteFooter';
@@ -23,7 +24,9 @@ import { dropInsight, readDrops, totalDrops } from '@/lib/drops';
 import { buildMemcard, memcardYears } from '@/lib/memcard';
 import { formatMinutes } from '@/lib/sessions';
 import { yearStats } from '@/lib/yearStats';
+import { celebrate } from '@/lib/haptics';
 import { buildIcs, downloadIcs, memcardEvents } from '@/lib/ics';
+import { insertEvents } from '@/lib/nativeCalendar';
 import { shareMemcard } from '@/lib/memcardImage';
 import { COLORS } from '@/styles/colors';
 import { GUTTER, LAYOUT, RADIUS, SPACING } from '@/styles/theme';
@@ -45,6 +48,8 @@ export default function MemcardScreen() {
   const { durationOf } = useDurations();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
+  /** What view-shot rasterises on native: the on-screen card itself. */
+  const shotRef = useRef<View>(null);
 
   const all = useMemo(() => Object.values(entries), [entries]);
   const years = useMemo(() => memcardYears(all), [all]);
@@ -89,31 +94,67 @@ export default function MemcardScreen() {
    * all — and both would mean this app growing the account and backend
    * it promises not to have. Every calendar worth the name opens one.
    */
-  const addToCalendar = () => {
+  const addToCalendar = async () => {
     const events = memcardEvents(all, (game) => durationOf(game).hours, shown);
-    downloadIcs(
-      buildIcs(events, {
-        name: `Sidequest ${shown}`,
-        now: new Date(),
-      }),
-      `sidequest-${shown}.ics`
-    );
-    toast(
-      events.length === 1
-        ? 'One finish, ready for your calendar'
-        : `${events.length} finishes, ready for your calendar`,
-      'calendar-outline'
-    );
+    if (Platform.OS === 'web') {
+      downloadIcs(
+        buildIcs(events, {
+          name: `Sidequest ${shown}`,
+          now: new Date(),
+        }),
+        `sidequest-${shown}.ics`
+      );
+      toast(
+        events.length === 1
+          ? 'One finish, ready for your calendar'
+          : `${events.length} finishes, ready for your calendar`,
+        'calendar-outline'
+      );
+      return;
+    }
+    // Installed, the device's calendar store is one permission away — no
+    // file hand-off, and still no account: see nativeCalendar.
+    try {
+      await insertEvents(events);
+      toast(
+        events.length === 1
+          ? 'One finish, filed in your calendar'
+          : `${events.length} finishes, filed in your calendar`,
+        'calendar-outline'
+      );
+    } catch (error) {
+      toast(
+        error instanceof Error ? error.message : "Couldn't reach your calendar",
+        'alert-circle'
+      );
+    }
   };
 
   const save = async () => {
     setBusy(true);
     try {
-      const how = await shareMemcard(card);
-      toast(
-        how === 'shared' ? 'Card shared' : 'Card saved to your downloads',
-        'image'
-      );
+      if (Platform.OS === 'web') {
+        const how = await shareMemcard(card);
+        toast(
+          how === 'shared' ? 'Card shared' : 'Card saved to your downloads',
+          'image'
+        );
+      } else {
+        // The share image is the card on screen, captured as pixels —
+        // no DOM, no canvas, so the web rasteriser can't run here.
+        const { captureRef } = await import('react-native-view-shot');
+        const uri = await captureRef(shotRef, { format: 'png', quality: 1 });
+        const Sharing = await import('expo-sharing');
+        if (!(await Sharing.isAvailableAsync())) {
+          throw new Error('Sharing is not available on this device');
+        }
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/png',
+          dialogTitle: `Your ${shown} on Sidequest`,
+        });
+        celebrate();
+        toast('Card shared', 'image');
+      }
     } catch (error) {
       toast(
         error instanceof Error ? error.message : 'The card could not be made',
@@ -135,46 +176,47 @@ export default function MemcardScreen() {
         </View>
       )}
 
-      <View
-        style={[
-          styles.inner,
-          {
-            paddingTop: isExpanded
-              ? SPACING.xl * 1.5
-              : insets.top + SPACING.xl * 2,
-          },
-        ]}
-      >
-        <SectionHeader title="Your Memcard" eyebrow={`${shown}`} />
-        <Text style={styles.lede}>
-          One block per game you finished. Not how much you played — what you
-          saw the end of.
-        </Text>
+      <Screen>
+        <View
+          style={[
+            styles.inner,
+            {
+              paddingTop: isExpanded
+                ? SPACING.xl * 1.5
+                : insets.top + SPACING.xl * 2,
+            },
+          ]}
+        >
+          <SectionHeader title="Your Memcard" eyebrow={`${shown}`} />
+          <Text style={styles.lede}>
+            One block per game you finished. Not how much you played — what you
+            saw the end of.
+          </Text>
 
-        {years.length > 1 && (
-          <View style={styles.years}>
-            {years.map((option) => (
-              <Chip
-                key={option}
-                title={String(option)}
-                selected={option === shown}
-                onPress={() => setYear(option)}
-              />
-            ))}
-          </View>
-        )}
+          {years.length > 1 && (
+            <View style={styles.years}>
+              {years.map((option) => (
+                <Chip
+                  key={option}
+                  title={String(option)}
+                  selected={option === shown}
+                  onPress={() => setYear(option)}
+                />
+              ))}
+            </View>
+          )}
 
-        {card.count === 0 ? (
-          <Message
-            icon="albums-outline"
-            title="No credits rolled yet"
-            detail="Finish a game and it takes a block here. One short game is all it takes."
-            actionLabel="Find something short"
-            onAction={() => router.push('/plan')}
-          />
-        ) : (
-          <>
-            {/* The save-slot card, not the share image.
+          {card.count === 0 ? (
+            <Message
+              icon="albums-outline"
+              title="No credits rolled yet"
+              detail="Finish a game and it takes a block here. One short game is all it takes."
+              actionLabel="Find something short"
+              onAction={() => router.push('/plan')}
+            />
+          ) : (
+            <>
+              {/* The save-slot card, not the share image.
                 What gets posted is 1200x630 with its metadata down the
                 left — the right shape for a link preview and the wrong
                 one to look at, which on a phone rendered as small print
@@ -183,56 +225,57 @@ export default function MemcardScreen() {
                 finished something keeps that game's cover as its save
                 icon. Same object, two stages; shareMemcard still
                 rasterises the social layout. */}
-            <LandingMemcard
-              card={card}
-              width={cardWidth}
-              landed={card.blocks.length}
-              images={card.blocks.map(
-                (block) => byId.get(block.id)?.background_image ?? undefined
-              )}
-            />
-            <View style={styles.stats}>
-              <SectionHeader title="How the year is going" />
-              <Text style={styles.verdict}>{stats.verdict}</Text>
-              <View style={styles.statRow}>
-                <Stat value={String(stats.added)} label="saved this year" />
-                <Stat
-                  value={String(stats.finished)}
-                  label="finished"
-                  accent={stats.finished > 0}
+              <View ref={shotRef} collapsable={false}>
+                <LandingMemcard
+                  card={card}
+                  width={cardWidth}
+                  landed={card.blocks.length}
+                  images={card.blocks.map(
+                    (block) => byId.get(block.id)?.background_image ?? undefined
+                  )}
                 />
-                {stats.medianLength > 0 && (
+              </View>
+              <View style={styles.stats}>
+                <SectionHeader title="How the year is going" />
+                <Text style={styles.verdict}>{stats.verdict}</Text>
+                <View style={styles.statRow}>
+                  <Stat value={String(stats.added)} label="saved this year" />
                   <Stat
-                    value={`${Math.round(stats.medianLength)}h`}
-                    label="typical length"
+                    value={String(stats.finished)}
+                    label="finished"
+                    accent={stats.finished > 0}
                   />
-                )}
-                {stats.longestGap > 14 && (
-                  <Stat
-                    value={`${stats.longestGap}d`}
-                    label="longest quiet spell"
-                  />
-                )}
-                {stats.measuredMinutes > 0 && (
-                  <Stat
-                    value={formatMinutes(stats.measuredMinutes)}
-                    label="timed here"
-                    accent
-                  />
-                )}
-                {totalDrops(drops) > 0 && (
-                  <Stat
-                    value={String(totalDrops(drops))}
-                    label="let go, guilt-free"
-                  />
+                  {stats.medianLength > 0 && (
+                    <Stat
+                      value={`${Math.round(stats.medianLength)}h`}
+                      label="typical length"
+                    />
+                  )}
+                  {stats.longestGap > 14 && (
+                    <Stat
+                      value={`${stats.longestGap}d`}
+                      label="longest quiet spell"
+                    />
+                  )}
+                  {stats.measuredMinutes > 0 && (
+                    <Stat
+                      value={formatMinutes(stats.measuredMinutes)}
+                      label="timed here"
+                      accent
+                    />
+                  )}
+                  {totalDrops(drops) > 0 && (
+                    <Stat
+                      value={String(totalDrops(drops))}
+                      label="let go, guilt-free"
+                    />
+                  )}
+                </View>
+                {dropInsight(drops) && (
+                  <Text style={styles.insight}>{dropInsight(drops)}</Text>
                 )}
               </View>
-              {dropInsight(drops) && (
-                <Text style={styles.insight}>{dropInsight(drops)}</Text>
-              )}
-            </View>
 
-            {Platform.OS === 'web' && (
               <Pressable
                 onPress={save}
                 disabled={busy}
@@ -248,12 +291,10 @@ export default function MemcardScreen() {
                   {busy ? 'Drawing…' : 'Save or share this card'}
                 </Text>
               </Pressable>
-            )}
 
-            {/* Second, and quieter than the share. Posting the card is
+              {/* Second, and quieter than the share. Posting the card is
                 what most people came for; filing the year is what the
                 few who keep a calendar will be glad of. */}
-            {Platform.OS === 'web' && (
               <Pressable
                 onPress={addToCalendar}
                 style={styles.calendar}
@@ -268,15 +309,16 @@ export default function MemcardScreen() {
                   Add these to my calendar
                 </Text>
               </Pressable>
-            )}
-            <Text style={styles.calendarNote}>
-              Downloads a file Google Calendar, Apple Calendar and Outlook can
-              all open. Nothing is sent anywhere.
-            </Text>
-          </>
-        )}
-      </View>
-      <SiteFooter />
+              <Text style={styles.calendarNote}>
+                {Platform.OS === 'web'
+                  ? 'Downloads a file Google Calendar, Apple Calendar and Outlook can all open. Nothing is sent anywhere.'
+                  : 'Filed into a calendar of their own on this device — one checkbox to hide, one deletion to undo. Nothing is sent anywhere.'}
+              </Text>
+            </>
+          )}
+        </View>
+        <SiteFooter />
+      </Screen>
     </Textured>
   );
 }

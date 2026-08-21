@@ -18,6 +18,7 @@ import { BackButton } from '@/components/BackButton';
 import { Chip } from '@/components/Chip';
 import { Message } from '@/components/Message';
 import { PageTitle } from '@/components/PageTitle';
+import { Screen } from '@/components/Screen';
 import { RouteError } from '@/components/RouteError';
 import { SectionHeader } from '@/components/SectionHeader';
 import { SiteFooter } from '@/components/SiteFooter';
@@ -313,55 +314,57 @@ export default function ImportScreen() {
         </View>
       )}
 
-      <View
-        style={[
-          styles.inner,
-          {
-            paddingTop: isExpanded
-              ? SPACING.xl * 1.5
-              : insets.top + SPACING.xl * 2,
-          },
-        ]}
-      >
-        <SectionHeader
-          title="Your Steam library"
-          eyebrow={
-            snapshot
-              ? `${snapshot.gameCount.toLocaleString()} games · ${snapshot.name}`
-              : undefined
-          }
-        />
-        <Text style={styles.lede}>
-          Bring in the ones you might actually play. Sidequest keeps the hours
-          you have already put in, so the plan counts what is left rather than
-          starting you at zero.
-        </Text>
-        {body()}
-      </View>
-
-      {picked.size > 0 && (
+      <Screen>
         <View
-          style={[styles.bar, { paddingBottom: insets.bottom + SPACING.md }]}
+          style={[
+            styles.inner,
+            {
+              paddingTop: isExpanded
+                ? SPACING.xl * 1.5
+                : insets.top + SPACING.xl * 2,
+            },
+          ]}
         >
-          <Pressable
-            onPress={runImport}
-            disabled={progress != null}
-            style={[styles.import, progress != null && styles.importBusy]}
-            accessibilityRole="button"
-          >
-            {progress ? (
-              <Text style={styles.importText}>
-                Matching {progress.done} of {progress.total}…
-              </Text>
-            ) : (
-              <Text style={styles.importText}>
-                Import {picked.size} {picked.size === 1 ? 'game' : 'games'}
-              </Text>
-            )}
-          </Pressable>
+          <SectionHeader
+            title="Your Steam library"
+            eyebrow={
+              snapshot
+                ? `${snapshot.gameCount.toLocaleString()} games · ${snapshot.name}`
+                : undefined
+            }
+          />
+          <Text style={styles.lede}>
+            Bring in the ones you might actually play. Sidequest keeps the hours
+            you have already put in, so the plan counts what is left rather than
+            starting you at zero.
+          </Text>
+          {body()}
         </View>
-      )}
-      <SiteFooter />
+
+        {picked.size > 0 && (
+          <View
+            style={[styles.bar, { paddingBottom: insets.bottom + SPACING.md }]}
+          >
+            <Pressable
+              onPress={runImport}
+              disabled={progress != null}
+              style={[styles.import, progress != null && styles.importBusy]}
+              accessibilityRole="button"
+            >
+              {progress ? (
+                <Text style={styles.importText}>
+                  Matching {progress.done} of {progress.total}…
+                </Text>
+              ) : (
+                <Text style={styles.importText}>
+                  Import {picked.size} {picked.size === 1 ? 'game' : 'games'}
+                </Text>
+              )}
+            </Pressable>
+          </View>
+        )}
+        <SiteFooter />
+      </Screen>
     </Textured>
   );
 }

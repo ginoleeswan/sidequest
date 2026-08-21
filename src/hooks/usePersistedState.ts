@@ -1,9 +1,11 @@
 import { useCallback, useState } from 'react';
 
 import { useHydrated } from './useHydrated';
+import { kv } from '@/lib/storage';
 
 /**
- * useState that survives reloads via localStorage (memory-only elsewhere).
+ * useState that survives reloads via the platform's store — localStorage
+ * on web, SQLite's key-value store on iOS and Android.
  *
  * The stored value is withheld until hydration is done, so the first
  * client render matches the pre-rendered HTML, which was generated with
@@ -15,7 +17,7 @@ export function usePersistedState<T>(
 ): [T, (value: T) => void] {
   const [value, setValue] = useState<T>(() => {
     try {
-      const raw = globalThis.localStorage?.getItem(key);
+      const raw = kv.getItem(key);
       return raw != null ? (JSON.parse(raw) as T) : initial;
     } catch {
       return initial;
@@ -26,7 +28,7 @@ export function usePersistedState<T>(
     (next: T) => {
       setValue(next);
       try {
-        globalThis.localStorage?.setItem(key, JSON.stringify(next));
+        kv.setItem(key, JSON.stringify(next));
       } catch {
         // Storage unavailable - in-memory state still works.
       }

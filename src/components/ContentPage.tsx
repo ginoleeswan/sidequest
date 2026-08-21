@@ -3,6 +3,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppHeader } from './AppHeader';
 import { PageTitle } from './PageTitle';
+import { Screen } from './Screen';
 import { BackButton } from './BackButton';
 import { SiteFooter } from './SiteFooter';
 import { Textured } from './Textured';
@@ -38,27 +39,29 @@ export function ContentPage({
           <BackButton />
         </View>
       )}
-      <View
-        style={[
-          styles.scroll,
-          {
-            paddingTop: isExpanded
-              ? SPACING.xl * 1.5
-              : insets.top + SPACING.xl * 2.5,
-            paddingBottom: SPACING.xl * 1.5,
-          },
-        ]}
-      >
-        <View style={styles.inner}>
-          <View style={styles.accent} />
-          <Text style={TYPE.display}>{title}</Text>
-          {updated ? (
-            <Text style={styles.updated}>Last updated {updated}</Text>
-          ) : null}
-          <View style={styles.body}>{children}</View>
+      <Screen>
+        <View
+          style={[
+            styles.scroll,
+            {
+              paddingTop: isExpanded
+                ? SPACING.xl * 1.5
+                : insets.top + SPACING.xl * 2.5,
+              paddingBottom: SPACING.xl * 1.5,
+            },
+          ]}
+        >
+          <View style={styles.inner}>
+            <View style={styles.accent} />
+            <Text style={TYPE.display}>{title}</Text>
+            {updated ? (
+              <Text style={styles.updated}>Last updated {updated}</Text>
+            ) : null}
+            <View style={styles.body}>{children}</View>
+          </View>
         </View>
-      </View>
-      <SiteFooter />
+        <SiteFooter />
+      </Screen>
     </Textured>
   );
 }

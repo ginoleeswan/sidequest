@@ -2,6 +2,7 @@ import { act, render, renderHook, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
 import { DurationsProvider, useDurations } from '../durations';
+import { _setBackendForTests } from '../storage';
 
 /** The provider on its own, for the hooks that only need the value. */
 const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -13,19 +14,16 @@ let store: Record<string, string> = {};
 let failWrites = false;
 
 beforeAll(() => {
-  Object.defineProperty(globalThis, 'localStorage', {
-    configurable: true,
-    value: {
-      getItem: (k: string) => store[k] ?? null,
-      setItem: (k: string, v: string) => {
-        if (failWrites)
-          throw Object.assign(new Error('full'), {
-            name: 'QuotaExceededError',
-          });
-        store[k] = v;
-      },
-      removeItem: (k: string) => delete store[k],
+  _setBackendForTests({
+    getItem: (k: string) => store[k] ?? null,
+    setItem: (k: string, v: string) => {
+      if (failWrites)
+        throw Object.assign(new Error('full'), {
+          name: 'QuotaExceededError',
+        });
+      store[k] = v;
     },
+    removeItem: (k: string) => delete store[k],
   });
 });
 

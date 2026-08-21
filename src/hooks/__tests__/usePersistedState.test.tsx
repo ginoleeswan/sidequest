@@ -3,17 +3,15 @@ import { Text } from 'react-native';
 
 import { useHydrated } from '../useHydrated';
 import { usePersistedState } from '../usePersistedState';
+import { _setBackendForTests } from '@/lib/storage';
 
 const store: Record<string, string> = {};
 
 beforeAll(() => {
-  Object.defineProperty(globalThis, 'localStorage', {
-    configurable: true,
-    value: {
-      getItem: (k: string) => store[k] ?? null,
-      setItem: (k: string, v: string) => {
-        store[k] = v;
-      },
+  _setBackendForTests({
+    getItem: (k: string) => store[k] ?? null,
+    setItem: (k: string, v: string) => {
+      store[k] = v;
     },
   });
 });

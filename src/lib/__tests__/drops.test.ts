@@ -1,21 +1,21 @@
 import { dropInsight, readDrops, recordDrop, totalDrops } from '../drops';
+import { _setBackendForTests } from '../storage';
 
+// A fresh backend per test, through the storage layer's own seam: under
+// jest the app runs its native code paths, where localStorage is a global
+// nothing reads.
 let store: Record<string, string>;
-beforeAll(() => {
+beforeEach(() => {
   store = {};
-  Object.defineProperty(globalThis, 'localStorage', {
-    configurable: true,
-    value: {
-      getItem: (k: string) => store[k] ?? null,
-      setItem: (k: string, v: string) => {
-        store[k] = v;
-      },
-      removeItem: (k: string) => delete store[k],
+  _setBackendForTests({
+    getItem: (k) => store[k] ?? null,
+    setItem: (k, v) => {
+      store[k] = v;
+    },
+    removeItem: (k) => {
+      delete store[k];
     },
   });
-});
-beforeEach(() => {
-  for (const k of Object.keys(store)) delete store[k];
 });
 
 /**

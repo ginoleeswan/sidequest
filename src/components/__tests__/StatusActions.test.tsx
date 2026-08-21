@@ -7,19 +7,17 @@ import { ToastProvider } from '../Toast';
 import type { Game } from '@/api/types';
 import { DurationsProvider } from '@/lib/durations';
 import { LibraryProvider } from '@/lib/library';
+import { _setBackendForTests } from '@/lib/storage';
 
 let store: Record<string, string> = {};
 
 beforeAll(() => {
-  Object.defineProperty(globalThis, 'localStorage', {
-    configurable: true,
-    value: {
-      getItem: (k: string) => store[k] ?? null,
-      setItem: (k: string, v: string) => {
-        store[k] = v;
-      },
-      removeItem: (k: string) => delete store[k],
+  _setBackendForTests({
+    getItem: (k: string) => store[k] ?? null,
+    setItem: (k: string, v: string) => {
+      store[k] = v;
     },
+    removeItem: (k: string) => delete store[k],
   });
 });
 

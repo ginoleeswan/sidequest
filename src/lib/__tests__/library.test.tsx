@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react-native';
 
 import { LibraryProvider, useLibrary } from '../library';
+import { useFakeStorage } from '@/test-utils';
 import type { Game } from '@/api/types';
 
 const game = (id: number, name = `Game ${id}`): Game =>
@@ -24,7 +25,9 @@ function setup() {
 
 describe('LibraryProvider', () => {
   beforeEach(() => {
-    globalThis.localStorage?.clear?.();
+    // A fresh backend per test: under jest the app is on its native
+    // storage path, where there is no localStorage to clear.
+    useFakeStorage();
   });
 
   it('starts empty', async () => {
@@ -114,7 +117,9 @@ describe('LibraryProvider', () => {
     });
     const transfer = source.result.current.exportJson();
 
-    globalThis.localStorage?.clear?.();
+    // A fresh backend per test: under jest the app is on its native
+    // storage path, where there is no localStorage to clear.
+    useFakeStorage();
     const target = await setup();
     let added = 0;
     await act(async () => {

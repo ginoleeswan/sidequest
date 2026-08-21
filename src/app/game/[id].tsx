@@ -27,6 +27,7 @@ import { GameCard } from '@/components/GameCard';
 import { Message } from '@/components/Message';
 import { Commitment } from '@/components/Commitment';
 import { PageTitle } from '@/components/PageTitle';
+import { Screen } from '@/components/Screen';
 import { PersonalNote } from '@/components/PersonalNote';
 import { SessionTimer } from '@/components/SessionTimer';
 import { rememberGame } from '@/lib/recent';
@@ -560,47 +561,49 @@ export default function GameInfoScreen() {
           </View>
         )}
 
-        <View style={{ paddingBottom: SPACING.xl * 1.5 }}>
-          {isExpanded ? (
-            <View style={styles.expandedInner}>
-              {deskHero}
-              <Animated.View style={[styles.twoColumn, { opacity }]}>
-                <View style={styles.columnMain}>
+        <Screen>
+          <View style={{ paddingBottom: SPACING.xl * 1.5 }}>
+            {isExpanded ? (
+              <View style={styles.expandedInner}>
+                {deskHero}
+                <Animated.View style={[styles.twoColumn, { opacity }]}>
+                  <View style={styles.columnMain}>
+                    {genres}
+                    {yourTake}
+                    {about}
+                    {ratingsBreakdown}
+                  </View>
+                  <View style={styles.columnRail}>
+                    {details}
+                    {community}
+                    {links}
+                    {tags}
+                  </View>
+                </Animated.View>
+                {/* media escapes the column: full-bleed rails, gutter-aligned */}
+                <Animated.View style={{ opacity }}>{media}</Animated.View>
+              </View>
+            ) : (
+              <>
+                {hero}
+                {controls}
+                <Animated.View style={[styles.compactBody, { opacity }]}>
                   {genres}
                   {yourTake}
                   {about}
                   {ratingsBreakdown}
-                </View>
-                <View style={styles.columnRail}>
-                  {details}
+                  {media}
                   {community}
                   {links}
+                  {details}
                   {tags}
-                </View>
-              </Animated.View>
-              {/* media escapes the column: full-bleed rails, gutter-aligned */}
-              <Animated.View style={{ opacity }}>{media}</Animated.View>
-            </View>
-          ) : (
-            <>
-              {hero}
-              {controls}
-              <Animated.View style={[styles.compactBody, { opacity }]}>
-                {genres}
-                {yourTake}
-                {about}
-                {ratingsBreakdown}
-                {media}
-                {community}
-                {links}
-                {details}
-                {tags}
-              </Animated.View>
-            </>
-          )}
-        </View>
+                </Animated.View>
+              </>
+            )}
+          </View>
 
-        <SiteFooter />
+          <SiteFooter />
+        </Screen>
         <DurationSheet
           game={editingLength ? game : null}
           duration={editingLength ? durationOf(game) : null}

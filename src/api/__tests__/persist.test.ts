@@ -1,5 +1,3 @@
-import { useFakeStorage } from '@/test-utils';
-
 const KEY = 'sidequest.query-cache.v1';
 
 /**
@@ -13,7 +11,24 @@ describe('the query cache persister', () => {
   beforeEach(() => {
     jest.resetModules();
     jest.useFakeTimers();
-    store = useFakeStorage();
+    // Installed fresh, after the reset, and directly on the storage
+    // module rather than through test-utils: the fake backend must
+    // land in the same registry the re-required persister will import
+    // from, and test-utils drags the render harness (and its jest
+    // hooks) in with it, which cannot load inside a test.
+    const storage =
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require('@/lib/storage') as typeof import('@/lib/storage');
+    store = {};
+    storage._setBackendForTests({
+      getItem: (k) => store[k] ?? null,
+      setItem: (k, v) => {
+        store[k] = v;
+      },
+      removeItem: (k) => {
+        delete store[k];
+      },
+    });
   });
   afterEach(() => jest.useRealTimers());
 
@@ -23,8 +38,8 @@ describe('the query cache persister', () => {
     await Promise.resolve();
   };
 
-  // require, not import(): the module reads globalThis.localStorage at
-  // module scope, so it has to load after the fake storage is installed.
+  // require, not import(): the module captures the storage adapter at
+  // module scope, so it has to load after the fake backend is installed.
   const load = () =>
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     (require('../persist') as typeof import('../persist')).persister;

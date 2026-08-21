@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ToastProvider } from '@/components/Toast';
 import { DurationsProvider } from '@/lib/durations';
 import { LibraryProvider } from '@/lib/library';
+import { _setBackendForTests } from '@/lib/storage';
 
 /**
  * Renders a component inside the providers the app always gives it.
@@ -46,21 +47,26 @@ export function renderApp(ui: React.ReactElement) {
 }
 
 /**
- * A localStorage stand-in the tests can seed and inspect.
+ * A storage stand-in the tests can seed and inspect.
+ *
+ * Installed through the storage layer's own test seam rather than by
+ * stubbing `localStorage`: under jest the app runs its NATIVE code
+ * paths, where localStorage does not exist and the real store is
+ * SQLite. Seeding the global the app no longer reads would make every
+ * assertion here pass against nothing.
  *
  * Returns the backing object: assign to it to seed a library before
  * mounting, read from it to assert a write actually landed.
  */
 export function useFakeStorage(): Record<string, string> {
   const store: Record<string, string> = {};
-  Object.defineProperty(globalThis, 'localStorage', {
-    configurable: true,
-    value: {
-      getItem: (k: string) => store[k] ?? null,
-      setItem: (k: string, v: string) => {
-        store[k] = v;
-      },
-      removeItem: (k: string) => delete store[k],
+  _setBackendForTests({
+    getItem: (k: string) => store[k] ?? null,
+    setItem: (k: string, v: string) => {
+      store[k] = v;
+    },
+    removeItem: (k: string) => {
+      delete store[k];
     },
   });
   return store;

@@ -6,6 +6,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { BackButton } from '@/components/BackButton';
 import { Message } from '@/components/Message';
 import { PageTitle } from '@/components/PageTitle';
+import { Screen } from '@/components/Screen';
 import { RouteError } from '@/components/RouteError';
 import { SectionHeader } from '@/components/SectionHeader';
 import { SiteFooter } from '@/components/SiteFooter';
@@ -48,52 +49,54 @@ export default function SharedPlanScreen() {
         </View>
       )}
 
-      <View
-        style={[
-          styles.inner,
-          {
-            paddingTop: isExpanded
-              ? SPACING.xl * 1.5
-              : insets.top + SPACING.xl * 2,
-          },
-        ]}
-      >
-        {!plan ? (
-          <Message
-            icon="link-outline"
-            title={
-              hydrated ? 'That link has no plan in it' : 'Reading the link…'
-            }
-            detail="Plans travel in the link itself, so a truncated one cannot be recovered. Ask for it again."
-            actionLabel="Make your own"
-            onAction={() => router.push('/plan')}
-          />
-        ) : (
-          <>
-            <SectionHeader title="A plan" eyebrow="SHARED WITH YOU" />
-            <Text style={styles.summary}>{sharedSummary(plan)}</Text>
+      <Screen>
+        <View
+          style={[
+            styles.inner,
+            {
+              paddingTop: isExpanded
+                ? SPACING.xl * 1.5
+                : insets.top + SPACING.xl * 2,
+            },
+          ]}
+        >
+          {!plan ? (
+            <Message
+              icon="link-outline"
+              title={
+                hydrated ? 'That link has no plan in it' : 'Reading the link…'
+              }
+              detail="Plans travel in the link itself, so a truncated one cannot be recovered. Ask for it again."
+              actionLabel="Make your own"
+              onAction={() => router.push('/plan')}
+            />
+          ) : (
+            <>
+              <SectionHeader title="A plan" eyebrow="SHARED WITH YOU" />
+              <Text style={styles.summary}>{sharedSummary(plan)}</Text>
 
-            <View style={styles.list}>
-              {plan.games.map((game, index) => (
-                <View key={`${game.name}-${index}`} style={styles.row}>
-                  <Text style={styles.rank}>{index + 1}</Text>
-                  <Text style={styles.name} numberOfLines={1}>
-                    {game.name}
-                  </Text>
-                  <Text style={styles.hours}>{formatHours(game.hours)}</Text>
-                </View>
-              ))}
-            </View>
+              <View style={styles.list}>
+                {plan.games.map((game, index) => (
+                  <View key={`${game.name}-${index}`} style={styles.row}>
+                    <Text style={styles.rank}>{index + 1}</Text>
+                    <Text style={styles.name} numberOfLines={1}>
+                      {game.name}
+                    </Text>
+                    <Text style={styles.hours}>{formatHours(game.hours)}</Text>
+                  </View>
+                ))}
+              </View>
 
-            <Text style={styles.note}>
-              Nothing here is stored anywhere — this plan lives in the link.
-              Build your own and Sidequest will tell you what you can actually
-              finish.
-            </Text>
-          </>
-        )}
-      </View>
-      <SiteFooter />
+              <Text style={styles.note}>
+                Nothing here is stored anywhere — this plan lives in the link.
+                Build your own and Sidequest will tell you what you can actually
+                finish.
+              </Text>
+            </>
+          )}
+        </View>
+        <SiteFooter />
+      </Screen>
     </Textured>
   );
 }

@@ -10,9 +10,11 @@
     "userInterfaceStyle": "dark",
     "backgroundColor": "#333D51",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.glstudio.sidequest"
     },
     "android": {
+      "package": "com.glstudio.sidequest",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#333D51"
@@ -35,7 +37,15 @@
         }
       ],
       "expo-status-bar",
-      "expo-video"
+      "expo-video",
+      "expo-sqlite",
+      "expo-sharing",
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Sidequest files your planned evenings and finished games into a calendar of its own, on this device."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

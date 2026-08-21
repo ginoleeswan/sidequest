@@ -21,6 +21,7 @@ import { SiteFooter } from '@/components/SiteFooter';
 import { GameTile } from '@/components/GameTile';
 import { Message } from '@/components/Message';
 import { PageTitle } from '@/components/PageTitle';
+import { Screen } from '@/components/Screen';
 import { SectionHeader } from '@/components/SectionHeader';
 import { Textured } from '@/components/Textured';
 import { useToast } from '@/components/Toast';
@@ -212,189 +213,191 @@ export default function LibraryScreen() {
         </View>
       )}
 
-      <FadeInView style={styles.container}>
-        <View
-          style={[
-            styles.inner,
-            {
-              paddingTop: isExpanded
-                ? SPACING.xl * 1.5
-                : insets.top + SPACING.xl * 2,
-            },
-          ]}
-        >
-          <SectionHeader
-            title="My Library"
-            eyebrow={
-              count > 0
-                ? `${count} ${count === 1 ? 'game' : 'games'}`
-                : undefined
-            }
-            actionLabel={count > 0 ? 'Plan my backlog →' : undefined}
-            onAction={count > 0 ? () => router.push('/plan') : undefined}
-          />
-          {count > 0 && (
-            <View style={styles.stats}>
-              <Stat
-                value={String(stats.waiting + stats.playing)}
-                label="still to play"
-              />
-              <Stat
-                value={formatHours(stats.hoursAhead)}
-                label="ahead of you"
-              />
-              <Stat
-                value={String(stats.finished)}
-                label="finished"
-                accent={stats.finished > 0}
-              />
-              {stats.hoursFinished > 0 && (
+      <Screen>
+        <FadeInView style={styles.container}>
+          <View
+            style={[
+              styles.inner,
+              {
+                paddingTop: isExpanded
+                  ? SPACING.xl * 1.5
+                  : insets.top + SPACING.xl * 2,
+              },
+            ]}
+          >
+            <SectionHeader
+              title="My Library"
+              eyebrow={
+                count > 0
+                  ? `${count} ${count === 1 ? 'game' : 'games'}`
+                  : undefined
+              }
+              actionLabel={count > 0 ? 'Plan my backlog →' : undefined}
+              onAction={count > 0 ? () => router.push('/plan') : undefined}
+            />
+            {count > 0 && (
+              <View style={styles.stats}>
                 <Stat
-                  value={formatHours(stats.hoursFinished)}
-                  label="credits rolled"
-                  accent
+                  value={String(stats.waiting + stats.playing)}
+                  label="still to play"
                 />
-              )}
-            </View>
-          )}
+                <Stat
+                  value={formatHours(stats.hoursAhead)}
+                  label="ahead of you"
+                />
+                <Stat
+                  value={String(stats.finished)}
+                  label="finished"
+                  accent={stats.finished > 0}
+                />
+                {stats.hoursFinished > 0 && (
+                  <Stat
+                    value={formatHours(stats.hoursFinished)}
+                    label="credits rolled"
+                    accent
+                  />
+                )}
+              </View>
+            )}
 
-          {/* Two chips rather than two full-width bars.
+            {/* Two chips rather than two full-width bars.
               Before the first game you passed four stats, two banners,
               three tabs, four sort options and two more links — fifteen
               controls ahead of the thing the page is for. These two are
               worth keeping up here because they act on what the numbers
               above just told you; the transfer links are not, and have
               gone to the foot. */}
-          {(count > 3 || stats.finished > 0) && (
-            <View style={styles.quickRow}>
-              {count > 3 && (
-                <Chip
-                  title="Backlog amnesty"
-                  iconName="sparkles"
-                  iconType="ionicon"
-                  onPress={() => router.push('/tidy')}
-                />
-              )}
-              {stats.finished > 0 && (
-                <Chip
-                  title="Your Memcard"
-                  iconName="albums"
-                  iconType="ionicon"
-                  onPress={() => router.push('/memcard')}
-                />
-              )}
-            </View>
-          )}
+            {(count > 3 || stats.finished > 0) && (
+              <View style={styles.quickRow}>
+                {count > 3 && (
+                  <Chip
+                    title="Backlog amnesty"
+                    iconName="sparkles"
+                    iconType="ionicon"
+                    onPress={() => router.push('/tidy')}
+                  />
+                )}
+                {stats.finished > 0 && (
+                  <Chip
+                    title="Your Memcard"
+                    iconName="albums"
+                    iconType="ionicon"
+                    onPress={() => router.push('/memcard')}
+                  />
+                )}
+              </View>
+            )}
 
-          <View style={styles.tabs}>
-            {TABS.map((status) => (
-              <Chip
-                key={status}
-                title={STATUS_META[status].label}
-                selected={tab === status}
-                onPress={() => setTab(status)}
-              />
-            ))}
-          </View>
-
-          {tags.length > 0 && (
-            <View style={styles.shelfRow}>
-              <Chip
-                title="All shelves"
-                selected={shelf == null}
-                onPress={() => setShelf(null)}
-              />
-              {tags.map((tag) => (
+            <View style={styles.tabs}>
+              {TABS.map((status) => (
                 <Chip
-                  key={tag}
-                  title={tag}
-                  selected={shelf === tag}
-                  onPress={() => setShelf(shelf === tag ? null : tag)}
+                  key={status}
+                  title={STATUS_META[status].label}
+                  selected={tab === status}
+                  onPress={() => setTab(status)}
                 />
               ))}
             </View>
-          )}
 
-          {games.length > 1 && (
-            <View style={styles.sortRow}>
-              <Text style={styles.sortLabel}>Sort</Text>
-              {(Object.keys(SORT_LABELS) as LibrarySort[]).map((option) => (
-                <Pressable
-                  key={option}
-                  onPress={() => setSort(option)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: sort === option }}
-                >
-                  <Text
-                    style={[
-                      styles.sortOption,
-                      sort === option && styles.sortOptionOn,
-                    ]}
+            {tags.length > 0 && (
+              <View style={styles.shelfRow}>
+                <Chip
+                  title="All shelves"
+                  selected={shelf == null}
+                  onPress={() => setShelf(null)}
+                />
+                {tags.map((tag) => (
+                  <Chip
+                    key={tag}
+                    title={tag}
+                    selected={shelf === tag}
+                    onPress={() => setShelf(shelf === tag ? null : tag)}
+                  />
+                ))}
+              </View>
+            )}
+
+            {games.length > 1 && (
+              <View style={styles.sortRow}>
+                <Text style={styles.sortLabel}>Sort</Text>
+                {(Object.keys(SORT_LABELS) as LibrarySort[]).map((option) => (
+                  <Pressable
+                    key={option}
+                    onPress={() => setSort(option)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: sort === option }}
                   >
-                    {SORT_LABELS[option]}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          )}
+                    <Text
+                      style={[
+                        styles.sortOption,
+                        sort === option && styles.sortOptionOn,
+                      ]}
+                    >
+                      {SORT_LABELS[option]}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
 
-          {games.length === 0 ? (
-            <View style={styles.emptyFrame}>
-              <Message
-                icon="library-outline"
-                title={EMPTY_COPY[tab].title}
-                detail={EMPTY_COPY[tab].detail}
-              />
-            </View>
-          ) : (
-            <View
-              style={[
-                styles.gridContent,
-                { paddingBottom: insets.bottom + 40 },
-              ]}
-            >
-              {chunk(padToRows(games, columns), columns).map((row, r) => (
-                <View key={r} style={styles.gridRow}>
-                  {row.map((item, i) =>
-                    isSpacer(item) ? (
-                      <View key={`s-${r}-${i}`} style={styles.gridSpacer} />
-                    ) : (
-                      <GameTile key={item.id} game={item} />
-                    )
-                  )}
-                </View>
-              ))}
-            </View>
-          )}
+            {games.length === 0 ? (
+              <View style={styles.emptyFrame}>
+                <Message
+                  icon="library-outline"
+                  title={EMPTY_COPY[tab].title}
+                  detail={EMPTY_COPY[tab].detail}
+                />
+              </View>
+            ) : (
+              <View
+                style={[
+                  styles.gridContent,
+                  { paddingBottom: insets.bottom + 40 },
+                ]}
+              >
+                {chunk(padToRows(games, columns), columns).map((row, r) => (
+                  <View key={r} style={styles.gridRow}>
+                    {row.map((item, i) =>
+                      isSpacer(item) ? (
+                        <View key={`s-${r}-${i}`} style={styles.gridSpacer} />
+                      ) : (
+                        <GameTile key={item.id} game={item} />
+                      )
+                    )}
+                  </View>
+                ))}
+              </View>
+            )}
 
-          {/* Moving a library in or out is housekeeping, not the reason
+            {/* Moving a library in or out is housekeeping, not the reason
               anyone opened this page. */}
-          <View style={styles.transferRow}>
-            {count > 0 && (
-              <Pressable onPress={copyLibrary} style={styles.transferLink}>
+            <View style={styles.transferRow}>
+              {count > 0 && (
+                <Pressable onPress={copyLibrary} style={styles.transferLink}>
+                  <Ionicons
+                    name="copy-outline"
+                    size={13}
+                    color={COLORS.mediumGrey}
+                  />
+                  <Text style={styles.transferText}>Copy library</Text>
+                </Pressable>
+              )}
+              <Pressable
+                onPress={() => setImportOpen(true)}
+                style={styles.transferLink}
+              >
                 <Ionicons
-                  name="copy-outline"
+                  name="download-outline"
                   size={13}
                   color={COLORS.mediumGrey}
                 />
-                <Text style={styles.transferText}>Copy library</Text>
+                <Text style={styles.transferText}>Import</Text>
               </Pressable>
-            )}
-            <Pressable
-              onPress={() => setImportOpen(true)}
-              style={styles.transferLink}
-            >
-              <Ionicons
-                name="download-outline"
-                size={13}
-                color={COLORS.mediumGrey}
-              />
-              <Text style={styles.transferText}>Import</Text>
-            </Pressable>
+            </View>
           </View>
-        </View>
-      </FadeInView>
-      <SiteFooter />
+        </FadeInView>
+        <SiteFooter />
+      </Screen>
 
       <Modal
         visible={importOpen}

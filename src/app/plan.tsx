@@ -17,6 +17,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import { Message } from '@/components/Message';
 import { PageTitle } from '@/components/PageTitle';
+import { Screen } from '@/components/Screen';
 import { SectionHeader } from '@/components/SectionHeader';
 import { SteamConnect } from '@/components/SteamConnect';
 import { WeekView } from '@/components/WeekView';
@@ -356,378 +357,382 @@ export default function PlanScreen() {
         </View>
       )}
 
-      <View style={{ paddingBottom: SPACING.xl * 1.5 }}>
-        <FadeInView>
-          <View
-            style={[
-              styles.inner,
-              isExpanded && styles.innerWide,
-              {
-                paddingTop: isExpanded
-                  ? SPACING.xl * 1.5
-                  : insets.top + SPACING.xl * 2,
-              },
-            ]}
-          >
-            <SectionHeader
-              title="The Plan"
-              eyebrow={empty ? undefined : `${entries.length} in your queue`}
-            />
-
-            {empty ? (
-              <Message
-                icon="map-outline"
-                title="Nothing to plan yet"
-                detail="Save games to your library — Want to play or Playing — and the plan builds itself."
-                actionLabel="Find games"
-                onAction={() => router.push('/')}
+      <Screen>
+        <View style={{ paddingBottom: SPACING.xl * 1.5 }}>
+          <FadeInView>
+            <View
+              style={[
+                styles.inner,
+                isExpanded && styles.innerWide,
+                {
+                  paddingTop: isExpanded
+                    ? SPACING.xl * 1.5
+                    : insets.top + SPACING.xl * 2,
+                },
+              ]}
+            >
+              <SectionHeader
+                title="The Plan"
+                eyebrow={empty ? undefined : `${entries.length} in your queue`}
               />
-            ) : (
-              <View style={isExpanded ? styles.columns : styles.stack}>
-                <View style={isExpanded ? styles.colLeft : styles.stack}>
-                  <Alerts alerts={alerts} />
 
-                  {/* the answer, first */}
-                  <View style={styles.verdict}>
-                    <View style={styles.verdictBar} />
-                    <Text style={styles.verdictTitle}>
-                      {schedule.scheduled.length === 0
-                        ? 'This window is too tight'
-                        : allFit
-                          ? 'You can finish all of it'
-                          : `${schedule.scheduled.length} of these will get done`}
-                    </Text>
-                    {schedule.scheduled.length > 0 && lastFinish ? (
-                      <View style={styles.verdictStats}>
-                        <View style={styles.vStat}>
-                          <Text style={styles.vStatValue}>
-                            {schedule.scheduled.length}
-                            <Text style={styles.vStatDim}>
-                              /{entries.length}
+              {empty ? (
+                <Message
+                  icon="map-outline"
+                  title="Nothing to plan yet"
+                  detail="Save games to your library — Want to play or Playing — and the plan builds itself."
+                  actionLabel="Find games"
+                  onAction={() => router.push('/')}
+                />
+              ) : (
+                <View style={isExpanded ? styles.columns : styles.stack}>
+                  <View style={isExpanded ? styles.colLeft : styles.stack}>
+                    <Alerts alerts={alerts} />
+
+                    {/* the answer, first */}
+                    <View style={styles.verdict}>
+                      <View style={styles.verdictBar} />
+                      <Text style={styles.verdictTitle}>
+                        {schedule.scheduled.length === 0
+                          ? 'This window is too tight'
+                          : allFit
+                            ? 'You can finish all of it'
+                            : `${schedule.scheduled.length} of these will get done`}
+                      </Text>
+                      {schedule.scheduled.length > 0 && lastFinish ? (
+                        <View style={styles.verdictStats}>
+                          <View style={styles.vStat}>
+                            <Text style={styles.vStatValue}>
+                              {schedule.scheduled.length}
+                              <Text style={styles.vStatDim}>
+                                /{entries.length}
+                              </Text>
                             </Text>
-                          </Text>
-                          <Text style={styles.vStatLabel}>games fit</Text>
+                            <Text style={styles.vStatLabel}>games fit</Text>
+                          </View>
+                          <View style={styles.vStat}>
+                            <Text style={styles.vStatValue}>
+                              ~{Math.round(schedule.totalHours)}h
+                            </Text>
+                            <Text style={styles.vStatLabel}>of play</Text>
+                          </View>
+                          <View style={styles.vStat}>
+                            <Text style={styles.vStatValue}>
+                              {finishDate(lastFinish)}
+                            </Text>
+                            <Text style={styles.vStatLabel}>last credits</Text>
+                          </View>
                         </View>
-                        <View style={styles.vStat}>
-                          <Text style={styles.vStatValue}>
-                            ~{Math.round(schedule.totalHours)}h
-                          </Text>
-                          <Text style={styles.vStatLabel}>of play</Text>
-                        </View>
-                        <View style={styles.vStat}>
-                          <Text style={styles.vStatValue}>
-                            {finishDate(lastFinish)}
-                          </Text>
-                          <Text style={styles.vStatLabel}>last credits</Text>
-                        </View>
-                      </View>
-                    ) : (
-                      <Text style={styles.verdictDetail}>
-                        Give it more time or a wider window — or let a few of
-                        these go. That’s allowed.
-                      </Text>
-                    )}
+                      ) : (
+                        <Text style={styles.verdictDetail}>
+                          Give it more time or a wider window — or let a few of
+                          these go. That’s allowed.
+                        </Text>
+                      )}
 
-                    {schedule.costOfPins > 0 && (
-                      <Text style={styles.pinCost}>
-                        Keeping what you marked must-play costs you{' '}
-                        {schedule.costOfPins} other{' '}
-                        {schedule.costOfPins === 1 ? 'game' : 'games'} in this
-                        window. Worth it, probably.
-                      </Text>
-                    )}
+                      {schedule.costOfPins > 0 && (
+                        <Text style={styles.pinCost}>
+                          Keeping what you marked must-play costs you{' '}
+                          {schedule.costOfPins} other{' '}
+                          {schedule.costOfPins === 1 ? 'game' : 'games'} in this
+                          window. Worth it, probably.
+                        </Text>
+                      )}
 
-                    {/* the whole setup is one sentence */}
-                    <Text style={styles.sentence}>
-                      I play about
-                      <InlineValue
-                        label={
-                          PACE_OPTIONS.includes(pace)
-                            ? `${pace}h`
-                            : `${pace}h · Steam`
-                        }
-                        hint="Hours per week"
-                        onPress={() => setPace(cycle(PACE_OPTIONS, pace))}
-                      />
-                      a week, and I want these done
-                      <InlineValue
-                        label={
-                          WINDOW_OPTIONS.find((o) => o.weeks === windowWeeks)
-                            ?.label ?? 'whenever'
-                        }
-                        hint="Finish window"
-                        onPress={() =>
-                          setWindowWeeks(
-                            cycle(
-                              WINDOW_OPTIONS.map((o) => o.weeks),
-                              windowWeeks
+                      {/* the whole setup is one sentence */}
+                      <Text style={styles.sentence}>
+                        I play about
+                        <InlineValue
+                          label={
+                            PACE_OPTIONS.includes(pace)
+                              ? `${pace}h`
+                              : `${pace}h · Steam`
+                          }
+                          hint="Hours per week"
+                          onPress={() => setPace(cycle(PACE_OPTIONS, pace))}
+                        />
+                        a week, and I want these done
+                        <InlineValue
+                          label={
+                            WINDOW_OPTIONS.find((o) => o.weeks === windowWeeks)
+                              ?.label ?? 'whenever'
+                          }
+                          hint="Finish window"
+                          onPress={() =>
+                            setWindowWeeks(
+                              cycle(
+                                WINDOW_OPTIONS.map((o) => o.weeks),
+                                windowWeeks
+                              )
                             )
-                          )
-                        }
-                      />
-                    </Text>
+                          }
+                        />
+                      </Text>
 
-                    {schedule.scheduled.length > 0 && (
+                      {schedule.scheduled.length > 0 && (
+                        <Text
+                          style={styles.steamLink}
+                          accessibilityRole="button"
+                          accessibilityLabel="Copy a link to this plan"
+                          suppressHighlighting
+                          onPress={async () => {
+                            // The plan travels in the link: no account, no
+                            // server, no copy of anyone's library anywhere.
+                            // Native has no location at all, so the
+                            // link degrades to a path rather than throwing.
+                            const origin = globalThis.location?.origin ?? '';
+                            const link = `${origin}/shared?p=${encodePlan({
+                              pace,
+                              games: schedule.scheduled.map((item) => ({
+                                name: item.name,
+                                hours: item.hours,
+                              })),
+                            })}`;
+                            try {
+                              await navigator.clipboard?.writeText(link);
+                              toast('Plan link copied', 'link');
+                            } catch {
+                              toast(
+                                'Copy failed — your browser blocked clipboard access',
+                                'alert-circle'
+                              );
+                            }
+                          }}
+                        >
+                          Share this plan →
+                        </Text>
+                      )}
+
                       <Text
                         style={styles.steamLink}
+                        onPress={() => setSteamOpen((open) => !open)}
                         accessibilityRole="button"
-                        accessibilityLabel="Copy a link to this plan"
                         suppressHighlighting
-                        onPress={async () => {
-                          // The plan travels in the link: no account, no
-                          // server, no copy of anyone's library anywhere.
-                          // Native has no location at all, so the
-                          // link degrades to a path rather than throwing.
-                          const origin = globalThis.location?.origin ?? '';
-                          const link = `${origin}/shared?p=${encodePlan({
-                            pace,
-                            games: schedule.scheduled.map((item) => ({
-                              name: item.name,
-                              hours: item.hours,
-                            })),
-                          })}`;
-                          try {
-                            await navigator.clipboard?.writeText(link);
-                            toast('Plan link copied', 'link');
-                          } catch {
-                            toast(
-                              'Copy failed — your browser blocked clipboard access',
-                              'alert-circle'
-                            );
-                          }
-                        }}
                       >
-                        Share this plan →
+                        {steamOpen
+                          ? 'Hide Steam'
+                          : 'Not sure? Measure your real pace with Steam →'}
                       </Text>
+                    </View>
+
+                    {steamOpen && (
+                      <SteamConnect
+                        onUsePace={(measured) => {
+                          setPace(measured);
+                          setSteamOpen(false);
+                        }}
+                        onImport={() => router.push('/import')}
+                      />
                     )}
 
-                    <Text
-                      style={styles.steamLink}
-                      onPress={() => setSteamOpen((open) => !open)}
-                      accessibilityRole="button"
-                      suppressHighlighting
-                    >
-                      {steamOpen
-                        ? 'Hide Steam'
-                        : 'Not sure? Measure your real pace with Steam →'}
-                    </Text>
-                  </View>
-
-                  {steamOpen && (
-                    <SteamConnect
-                      onUsePace={(measured) => {
-                        setPace(measured);
-                        setSteamOpen(false);
-                      }}
-                      onImport={() => router.push('/import')}
-                    />
-                  )}
-
-                  {/* tonight */}
-                  {tonightPick && (
-                    <Pressable
-                      style={styles.tonight}
-                      onPress={() => router.push(`/game/${tonightPick.id}`)}
-                    >
-                      {/* The picture, not a stamp of one.
+                    {/* tonight */}
+                    {tonightPick && (
+                      <Pressable
+                        style={styles.tonight}
+                        onPress={() => router.push(`/game/${tonightPick.id}`)}
+                      >
+                        {/* The picture, not a stamp of one.
                           This card is the answer the page exists to give
                           and it was a paragraph with a 96px thumbnail
                           beside it, on a screen with no other image on
                           it. The home stage already established what an
                           answer looks like here; this borrows it. */}
-                      <CoverImage
-                        uri={gamesById.get(tonightPick.id)?.background_image}
-                        style={StyleSheet.absoluteFill}
-                        size="hero"
-                        iconSize={32}
-                      />
-                      <LinearGradient
-                        colors={[
-                          'rgba(39,47,63,0.15)',
-                          'rgba(39,47,63,0.72)',
-                          'rgba(39,47,63,0.95)',
-                        ]}
-                        locations={[0, 0.55, 1]}
-                        style={StyleSheet.absoluteFill}
-                        pointerEvents="none"
-                      />
-                      <View style={styles.tonightBody}>
-                        <View style={styles.tonightHead}>
-                          <Ionicons
-                            name="moon"
-                            size={13}
-                            color={COLORS.violet}
-                          />
-                          <Text style={styles.tonightEyebrow}>TONIGHT</Text>
-                        </View>
-                        <Text style={[styles.sentence, styles.onArt]}>
-                          I have
-                          <InlineValue
-                            label={
-                              sessionMinutes >= 60
-                                ? `${sessionMinutes / 60}h`
-                                : `${sessionMinutes}m`
-                            }
-                            hint="Session length"
-                            onPress={() =>
-                              setSession(cycle(SESSION_OPTIONS, sessionMinutes))
-                            }
-                          />
-                          → {tonightVerb}{' '}
-                          <Text style={styles.tonightName}>
-                            {tonightPick.name}
+                        <CoverImage
+                          uri={gamesById.get(tonightPick.id)?.background_image}
+                          style={StyleSheet.absoluteFill}
+                          size="hero"
+                          iconSize={32}
+                        />
+                        <LinearGradient
+                          colors={[
+                            'rgba(39,47,63,0.15)',
+                            'rgba(39,47,63,0.72)',
+                            'rgba(39,47,63,0.95)',
+                          ]}
+                          locations={[0, 0.55, 1]}
+                          style={StyleSheet.absoluteFill}
+                          pointerEvents="none"
+                        />
+                        <View style={styles.tonightBody}>
+                          <View style={styles.tonightHead}>
+                            <Ionicons
+                              name="moon"
+                              size={13}
+                              color={COLORS.violet}
+                            />
+                            <Text style={styles.tonightEyebrow}>TONIGHT</Text>
+                          </View>
+                          <Text style={[styles.sentence, styles.onArt]}>
+                            I have
+                            <InlineValue
+                              label={
+                                sessionMinutes >= 60
+                                  ? `${sessionMinutes / 60}h`
+                                  : `${sessionMinutes}m`
+                              }
+                              hint="Session length"
+                              onPress={() =>
+                                setSession(
+                                  cycle(SESSION_OPTIONS, sessionMinutes)
+                                )
+                              }
+                            />
+                            → {tonightVerb}{' '}
+                            <Text style={styles.tonightName}>
+                              {tonightPick.name}
+                            </Text>
                           </Text>
+                          <Text style={styles.tonightWhy}>
+                            {tonight.finishable
+                              ? 'You can see the credits tonight.'
+                              : tonight.continueGame
+                                ? 'Chip away at it — progress counts.'
+                                : 'The shortest thing you’ve saved.'}
+                          </Text>
+                        </View>
+                      </Pressable>
+                    )}
+                  </View>
+
+                  <View style={isExpanded ? styles.colRight : styles.stack}>
+                    {/* the route */}
+                    {schedule.scheduled.length > 0 && (
+                      <View style={styles.section}>
+                        <SectionHeader
+                          title="This week"
+                          eyebrow="THE NEXT SEVEN EVENINGS"
+                        />
+                        <WeekView
+                          scheduled={schedule.scheduled}
+                          now={now}
+                          leadId={tonightPick?.id}
+                        />
+                      </View>
+                    )}
+
+                    {schedule.scheduled.length > 0 && (
+                      <View style={styles.section}>
+                        <SectionHeader title="Your route" />
+                        <Text style={styles.routeNote}>
+                          Quick wins first — momentum is the strategy.
+                          {correctionCount > 0
+                            ? `  ${correctionCount} ${
+                                correctionCount === 1
+                                  ? 'length is'
+                                  : 'lengths are'
+                              } yours, and the plan trusts those over the estimates.`
+                            : '  Tap any length to correct it.'}
                         </Text>
-                        <Text style={styles.tonightWhy}>
-                          {tonight.finishable
-                            ? 'You can see the credits tonight.'
-                            : tonight.continueGame
-                              ? 'Chip away at it — progress counts.'
-                              : 'The shortest thing you’ve saved.'}
+                        <View>
+                          {schedule.scheduled.map((item, index) => (
+                            <QuestRow
+                              key={item.id}
+                              item={item}
+                              index={index}
+                              isLast={index === schedule.scheduled.length - 1}
+                              maxHours={maxRouteHours}
+                              game={gamesById.get(item.id)}
+                              entry={entriesById.get(item.id)}
+                              onPress={() => router.push(`/game/${item.id}`)}
+                              onEditLength={() => {
+                                const target = gamesById.get(item.id);
+                                if (target) setEditing(target);
+                              }}
+                            />
+                          ))}
+                        </View>
+                      </View>
+                    )}
+
+                    {/* the honest part */}
+                    {schedule.dropped.length > 0 && (
+                      <View style={styles.section}>
+                        <SectionHeader
+                          title="Side quests — for later"
+                          eyebrow={`${schedule.dropped.length} games`}
+                        />
+                        <Text style={styles.droppedNote}>
+                          At {pace}h a week these need more room than the window
+                          has. They’ll still be here.
                         </Text>
+                        <View style={styles.rows}>
+                          {schedule.dropped.map((item) => (
+                            <Pressable
+                              key={item.id}
+                              style={[styles.row, styles.rowMuted]}
+                              onPress={() => router.push(`/game/${item.id}`)}
+                            >
+                              <CoverImage
+                                uri={gamesById.get(item.id)?.background_image}
+                                style={styles.rowThumb}
+                                size="thumb"
+                                iconSize={16}
+                              />
+                              <View style={styles.rowBody}>
+                                <Text style={styles.rowTitle} numberOfLines={1}>
+                                  {item.name}
+                                </Text>
+                                <Text style={styles.rowMeta}>
+                                  {item.hours > 0
+                                    ? `needs ~${Math.round(item.hours)}h`
+                                    : 'length unknown'}
+                                </Text>
+                              </View>
+                            </Pressable>
+                          ))}
+                        </View>
                       </View>
-                    </Pressable>
-                  )}
+                    )}
+
+                    {unknown.length > 0 && (
+                      <View style={styles.section}>
+                        <SectionHeader
+                          title="Length unknown"
+                          eyebrow={`${unknown.length} games`}
+                        />
+                        <Text style={styles.droppedNote}>
+                          Nobody has reported how long these take. Tell the plan
+                          and it can place them.
+                        </Text>
+                        <View style={styles.rows}>
+                          {unknown.map((entry) => (
+                            <Pressable
+                              key={entry.game.id}
+                              style={styles.row}
+                              onPress={() => setEditing(entry.game)}
+                            >
+                              <CoverImage
+                                uri={entry.game.background_image}
+                                style={styles.rowThumb}
+                                size="thumb"
+                                iconSize={16}
+                              />
+                              <View style={styles.rowBody}>
+                                <Text style={styles.rowTitle} numberOfLines={1}>
+                                  {entry.game.name}
+                                </Text>
+                                <Text style={styles.rowAction}>
+                                  Set how long it takes →
+                                </Text>
+                              </View>
+                            </Pressable>
+                          ))}
+                        </View>
+                      </View>
+                    )}
+                  </View>
                 </View>
-
-                <View style={isExpanded ? styles.colRight : styles.stack}>
-                  {/* the route */}
-                  {schedule.scheduled.length > 0 && (
-                    <View style={styles.section}>
-                      <SectionHeader
-                        title="This week"
-                        eyebrow="THE NEXT SEVEN EVENINGS"
-                      />
-                      <WeekView
-                        scheduled={schedule.scheduled}
-                        now={now}
-                        leadId={tonightPick?.id}
-                      />
-                    </View>
-                  )}
-
-                  {schedule.scheduled.length > 0 && (
-                    <View style={styles.section}>
-                      <SectionHeader title="Your route" />
-                      <Text style={styles.routeNote}>
-                        Quick wins first — momentum is the strategy.
-                        {correctionCount > 0
-                          ? `  ${correctionCount} ${
-                              correctionCount === 1
-                                ? 'length is'
-                                : 'lengths are'
-                            } yours, and the plan trusts those over the estimates.`
-                          : '  Tap any length to correct it.'}
-                      </Text>
-                      <View>
-                        {schedule.scheduled.map((item, index) => (
-                          <QuestRow
-                            key={item.id}
-                            item={item}
-                            index={index}
-                            isLast={index === schedule.scheduled.length - 1}
-                            maxHours={maxRouteHours}
-                            game={gamesById.get(item.id)}
-                            entry={entriesById.get(item.id)}
-                            onPress={() => router.push(`/game/${item.id}`)}
-                            onEditLength={() => {
-                              const target = gamesById.get(item.id);
-                              if (target) setEditing(target);
-                            }}
-                          />
-                        ))}
-                      </View>
-                    </View>
-                  )}
-
-                  {/* the honest part */}
-                  {schedule.dropped.length > 0 && (
-                    <View style={styles.section}>
-                      <SectionHeader
-                        title="Side quests — for later"
-                        eyebrow={`${schedule.dropped.length} games`}
-                      />
-                      <Text style={styles.droppedNote}>
-                        At {pace}h a week these need more room than the window
-                        has. They’ll still be here.
-                      </Text>
-                      <View style={styles.rows}>
-                        {schedule.dropped.map((item) => (
-                          <Pressable
-                            key={item.id}
-                            style={[styles.row, styles.rowMuted]}
-                            onPress={() => router.push(`/game/${item.id}`)}
-                          >
-                            <CoverImage
-                              uri={gamesById.get(item.id)?.background_image}
-                              style={styles.rowThumb}
-                              size="thumb"
-                              iconSize={16}
-                            />
-                            <View style={styles.rowBody}>
-                              <Text style={styles.rowTitle} numberOfLines={1}>
-                                {item.name}
-                              </Text>
-                              <Text style={styles.rowMeta}>
-                                {item.hours > 0
-                                  ? `needs ~${Math.round(item.hours)}h`
-                                  : 'length unknown'}
-                              </Text>
-                            </View>
-                          </Pressable>
-                        ))}
-                      </View>
-                    </View>
-                  )}
-
-                  {unknown.length > 0 && (
-                    <View style={styles.section}>
-                      <SectionHeader
-                        title="Length unknown"
-                        eyebrow={`${unknown.length} games`}
-                      />
-                      <Text style={styles.droppedNote}>
-                        Nobody has reported how long these take. Tell the plan
-                        and it can place them.
-                      </Text>
-                      <View style={styles.rows}>
-                        {unknown.map((entry) => (
-                          <Pressable
-                            key={entry.game.id}
-                            style={styles.row}
-                            onPress={() => setEditing(entry.game)}
-                          >
-                            <CoverImage
-                              uri={entry.game.background_image}
-                              style={styles.rowThumb}
-                              size="thumb"
-                              iconSize={16}
-                            />
-                            <View style={styles.rowBody}>
-                              <Text style={styles.rowTitle} numberOfLines={1}>
-                                {entry.game.name}
-                              </Text>
-                              <Text style={styles.rowAction}>
-                                Set how long it takes →
-                              </Text>
-                            </View>
-                          </Pressable>
-                        ))}
-                      </View>
-                    </View>
-                  )}
-                </View>
-              </View>
-            )}
-          </View>
-        </FadeInView>
-      </View>
-      <DurationSheet
-        game={editing}
-        duration={editing ? durationOf(editing) : null}
-        onClose={() => setEditing(null)}
-      />
-      <SiteFooter />
+              )}
+            </View>
+          </FadeInView>
+        </View>
+        <DurationSheet
+          game={editing}
+          duration={editing ? durationOf(editing) : null}
+          onClose={() => setEditing(null)}
+        />
+        <SiteFooter />
+      </Screen>
     </Textured>
   );
 }
