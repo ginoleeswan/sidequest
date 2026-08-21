@@ -159,7 +159,7 @@ export function Horizon({ onStart }: { onStart?: () => void }) {
               {
                 translateY: rise.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [150, 0],
+                  outputRange: [190, 0],
                 }),
               },
             ],
@@ -169,7 +169,7 @@ export function Horizon({ onStart }: { onStart?: () => void }) {
       >
         {/* Constructs itself as it rises — outline, shaft, ball,
             fills — so the page's last drawing is being drawn. */}
-        <MarkDraw size={118} play={seen} />
+        <MarkDraw size={148} play={seen} />
       </Animated.View>
 
       {/* The hill, painted over the Mark's feet. */}
@@ -244,7 +244,14 @@ const styles = StyleSheet.create({
   },
   sky: { position: 'absolute', top: 0, left: 0 },
   twinkle: { position: 'absolute', backgroundColor: COLORS.white },
-  mark: { alignItems: 'center', marginBottom: -34, zIndex: 1 },
+  /**
+   * The base kisses the crest instead of sinking behind it. The hill's
+   * apex sits eighteen units into its own box; minus fourteen leaves
+   * the plinth's whole silhouette above the ridge line, standing ON
+   * the lip — planted, not buried. The rise still starts from far
+   * enough down that the hill hides all of it at first.
+   */
+  mark: { alignItems: 'center', marginBottom: -14, zIndex: 1 },
   hill: { marginTop: 0 },
   summit: {
     backgroundColor: COLORS.navy,

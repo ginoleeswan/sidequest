@@ -90,7 +90,6 @@ export function SiteFooter({ inset = 0, pad = SPACING.lg }: Props) {
       >
         <Text
           style={styles.watermark}
-          numberOfLines={1}
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
         >
