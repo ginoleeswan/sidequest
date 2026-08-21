@@ -9,7 +9,7 @@ import Svg, {
   Stop,
 } from 'react-native-svg';
 
-import { Mark } from './Mark';
+import { MarkDraw } from './MarkDraw';
 import { Rise, useInView } from './Rise';
 import { ScaleButton } from './ScaleButton';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
@@ -167,7 +167,9 @@ export function Horizon({ onStart }: { onStart?: () => void }) {
         ]}
         pointerEvents="none"
       >
-        <Mark size={118} />
+        {/* Constructs itself as it rises — outline, shaft, ball,
+            fills — so the page's last drawing is being drawn. */}
+        <MarkDraw size={118} play={seen} />
       </Animated.View>
 
       {/* The hill, painted over the Mark's feet. */}

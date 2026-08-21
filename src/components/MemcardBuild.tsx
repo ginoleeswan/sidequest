@@ -1,17 +1,27 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, View, useWindowDimensions } from 'react-native';
+import {
+  Animated,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 
 import { CoverImage } from './CoverImage';
-import { Memcard } from './Memcard';
+import {
+  LandingMemcard,
+  landingCardHeight,
+  landingSlot,
+} from './LandingMemcard';
 import { useInView } from './Rise';
 import type { Game } from '@/api/types';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import type { Memcard as MemcardModel } from '@/lib/memcard';
-import { blockSlot, CARD_HEIGHT, CARD_WIDTH } from '@/lib/memcardSvg';
 import { COLORS } from '@/styles/colors';
 import { EASING } from '@/styles/motion';
-import { RADIUS } from '@/styles/theme';
+import { RADIUS, SPACING } from '@/styles/theme';
+import { TYPE } from '@/styles/typography';
 
 /**
  * The memcard, assembled out of the games themselves.
@@ -19,24 +29,21 @@ import { RADIUS } from '@/styles/theme';
  * The product-film build: pieces arrive from the viewer's side of the
  * glass — big, close, slightly askew — fly into the screen, shrink to
  * scale and slot home, and only when the last one lands does the stamp
- * come down. Except the pieces here are not abstract shards; they are
- * the covers of the games, and each one lands exactly on the month it
- * became a block in. A cover turning into a block on a memory card is
- * the whole product in one gesture, and nobody needs it explained.
+ * come down. The pieces are the games' covers with their names on
+ * them, and each lands exactly on the month it became a block in. A
+ * cover turning into a block on a memory card is the whole product in
+ * one gesture.
  *
- * Built with perspective transforms and one choreographed timeline,
- * which is the same technique those films use — perspective, easing
- * and order, not a 3D engine. Every flight reads its landing spot from
- * the card's own geometry (`blockSlot`), so a flier cannot land beside
- * its slot; and the block appears at the instant its cover reaches it,
- * because the same counter drives both.
+ * Paced to be watched, not glimpsed: each flight takes a second, the
+ * next launches half a second later, and the flier carries the game's
+ * name in a caption bar, because the moment only means something if
+ * you recognise what is landing. The block pops on the card's own
+ * spring at the instant the flier retires — one counter drives both,
+ * so they cannot disagree.
  */
 
-/** How long one cover's flight takes. */
-const FLIGHT = 640;
-/** The gap between one launch and the next. */
-const LAUNCH_EVERY = 300;
-/** The card's own entrance, before anything flies. */
+const FLIGHT = 1050;
+const LAUNCH_EVERY = 560;
 const SETTLE = 450;
 
 export function MemcardBuild({
@@ -49,10 +56,8 @@ export function MemcardBuild({
   maxWidth?: number;
 }) {
   const { width: windowWidth } = useWindowDimensions();
-  // The same sizing Memcard uses, replicated so overlay and card agree.
-  const width = Math.min(maxWidth ?? CARD_WIDTH, windowWidth - 32, CARD_WIDTH);
-  const height = (width / CARD_WIDTH) * CARD_HEIGHT;
-  const s = width / CARD_WIDTH;
+  const width = Math.min(maxWidth ?? 1000, windowWidth - 32);
+  const height = landingCardHeight(width);
 
   const reduced = useReducedMotion();
   const [ref, seen] = useInView('-15%');
@@ -63,7 +68,6 @@ export function MemcardBuild({
   const flights = card.blocks.map((block, index) => ({
     block,
     image: games[index]?.background_image,
-    /** Which row this block occupies among its month's earlier ones. */
     row: card.blocks
       .slice(0, index)
       .filter((other) => other.month === block.month).length,
@@ -78,8 +82,6 @@ export function MemcardBuild({
       useNativeDriver: false,
     });
     entrance.start();
-    // One landing per flight: the counter that fills the card is the
-    // same one that retires the flier, so they can never disagree.
     for (let i = 1; i <= flights.length; i++) {
       timers.current.push(
         setTimeout(() => setLanded(i), SETTLE + (i - 1) * LAUNCH_EVERY + FLIGHT)
@@ -94,11 +96,7 @@ export function MemcardBuild({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reduced, seen, settle]);
 
-  const progress = reduced
-    ? 1
-    : landed === 0
-      ? 0
-      : (card.blocks[landed - 1].month + 1) / 12;
+  const shown = reduced ? card.blocks.length : landed;
 
   return (
     <View ref={ref} style={{ width, height }}>
@@ -115,7 +113,7 @@ export function MemcardBuild({
           ],
         }}
       >
-        <Memcard card={card} maxWidth={width} progress={progress} />
+        <LandingMemcard card={card} width={width} landed={shown} />
       </Animated.View>
 
       {/* The pieces, flying past the reader into their slots. */}
@@ -126,9 +124,9 @@ export function MemcardBuild({
             <Flier
               key={flight.block.id}
               image={flight.image}
+              name={flight.block.name}
               index={index}
-              slot={blockSlot(flight.block.month, flight.row)}
-              scale={s}
+              slot={landingSlot(width, flight.block.month, flight.row)}
               width={width}
               height={height}
             />
@@ -139,22 +137,22 @@ export function MemcardBuild({
 }
 
 /**
- * One cover's flight: launched huge on the viewer's side, tilted like
- * something picked up, easing into the screen until it is the size of
- * the block it becomes.
+ * One cover's flight: launched huge on the viewer's side with its name
+ * on a caption bar, tilted like something picked up, easing into the
+ * screen until it is the size of the block it becomes.
  */
 function Flier({
   image,
+  name,
   index,
   slot,
-  scale,
   width,
   height,
 }: {
   image: string;
+  name: string;
   index: number;
-  slot: { x: number; y: number; width: number; height: number };
-  scale: number;
+  slot: { x: number; y: number; size: number };
   width: number;
   height: number;
 }) {
@@ -172,24 +170,20 @@ function Flier({
     return () => animation.stop();
   }, [flight, index]);
 
-  // The flier is drawn at a readable card size and shrinks to the slot.
-  const flierW = Math.max(width * 0.34, 150);
-  const flierH = flierW * 0.62;
+  const flierW = Math.min(Math.max(width * 0.4, 190), 300);
+  const flierH = flierW * 0.72;
 
-  const target = {
-    x: (slot.x + slot.width / 2) * scale,
-    y: (slot.y + slot.height / 2) * scale,
-  };
-  // Launch positions fan out around the centre, alternating sides, so
-  // consecutive flights do not trace the same line.
   const side = index % 2 === 0 ? -1 : 1;
   const start = {
-    x: width / 2 + side * width * 0.18 + (index % 3) * 24,
-    y: height * 0.42 - (index % 4) * 30,
+    x: width / 2 + side * width * 0.2 + (index % 3) * 26,
+    y: height * 0.4 - (index % 4) * 34,
   };
 
-  const between = (from: number, to: number) =>
-    flight.interpolate({ inputRange: [0, 1], outputRange: [from, to] });
+  const at = (stops: [number, number][], out: number[]) =>
+    flight.interpolate({
+      inputRange: stops.map(([t]) => t),
+      outputRange: out,
+    });
 
   return (
     <Animated.View
@@ -198,37 +192,59 @@ function Flier({
         styles.flier,
         {
           width: flierW,
-          height: flierH,
           left: -flierW / 2,
           top: -flierH / 2,
           opacity: flight.interpolate({
-            // In fast, out at the instant of landing — the amber block
-            // appears underneath as this disappears on top of it.
-            inputRange: [0, 0.12, 0.9, 1],
+            inputRange: [0, 0.1, 0.93, 1],
             outputRange: [0, 1, 1, 0],
           }),
           transform: [
             { perspective: 900 },
-            { translateX: between(start.x, target.x) },
-            { translateY: between(start.y, target.y) },
-            { scale: between(2.1, (slot.width * scale) / flierW) },
+            {
+              translateX: flight.interpolate({
+                inputRange: [0, 1],
+                outputRange: [start.x, slot.x],
+              }),
+            },
+            {
+              // A dip before settling, so the landing reads as a
+              // touch-down rather than an arrival at coordinates.
+              translateY: flight.interpolate({
+                inputRange: [0, 0.72, 1],
+                outputRange: [start.y, slot.y - 26, slot.y],
+              }),
+            },
+            {
+              scale: flight.interpolate({
+                inputRange: [0, 1],
+                outputRange: [2, slot.size / flierW],
+              }),
+            },
             {
               rotateZ: flight.interpolate({
                 inputRange: [0, 1],
-                outputRange: [`${side * 9}deg`, '0deg'],
+                outputRange: [`${side * 8}deg`, '0deg'],
               }),
             },
             {
               rotateX: flight.interpolate({
                 inputRange: [0, 1],
-                outputRange: ['24deg', '0deg'],
+                outputRange: ['26deg', '0deg'],
               }),
             },
           ],
         },
       ]}
     >
-      <CoverImage uri={image} style={styles.art} size="thumb" />
+      <CoverImage
+        uri={image}
+        style={[styles.art, { height: flierW * 0.58 }]}
+        size="thumb"
+      />
+      {/* The name, so the viewer knows WHAT just became a block. */}
+      <Text style={styles.name} numberOfLines={1}>
+        {name}
+      </Text>
     </Animated.View>
   );
 }
@@ -239,9 +255,15 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.sm,
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.35)',
-    backgroundColor: COLORS.navy,
+    backgroundColor: '#161C27',
     overflow: 'hidden',
-    boxShadow: '0 18px 40px rgba(0,0,0,0.45)',
+    boxShadow: '0 18px 40px rgba(0,0,0,0.5)',
   },
-  art: { width: '100%', height: '100%' },
+  art: { width: '100%' },
+  name: {
+    ...TYPE.h3,
+    color: COLORS.white,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm + 2,
+  },
 });

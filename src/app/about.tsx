@@ -262,7 +262,7 @@ export default function AboutScreen() {
    * with four heading sizes and no hierarchy.
    */
   const scale = useMemo(() => landingScale(width), [width]);
-  const { inset, figure, unit } = scale;
+  const { inset, air, figure, unit } = scale;
   /**
    * The footer draws its own full-width band, so it cannot sit inside
    * one. Padding it by the gutter plus whatever the column is inset
@@ -442,23 +442,38 @@ export default function AboutScreen() {
         {/* Volume, which none of the single objects below can show.
             The row runs off the right edge on purpose. */}
         <WhenNear placeholder={<View style={styles.shelfRoom} />}>
-          <Band tone="well" scale={scale} style={styles.pile}>
-            <QuestMark id="pile" />
-            <Words
-              text="Bring the whole pile."
-              style={[styles.lead, scale.lead]}
-            />
-            <Rise delay={90}>
-              <Text style={[styles.pileBody, scale.body]}>
-                Paste a Steam profile and everything arrives, hours included. Or
-                hand it a CSV.
-              </Text>
-            </Rise>
-            <LandingShelf
-              games={(games ?? []).slice(0, scale.wide ? 6 : 5)}
-              width={scale.wide ? 232 : 150}
-            />
-          </Band>
+          {/* Not a Band: the copy sits in the measured column, but the
+              marquee runs edge to edge. A horizontally moving row that
+              stops at the column's edge is a window with a frame; one
+              that runs under both edges of the screen is a world going
+              past. */}
+          <View style={styles.well}>
+            <View
+              style={[
+                styles.measure,
+                styles.pile,
+                { paddingHorizontal: inset, paddingTop: air },
+              ]}
+            >
+              <QuestMark id="pile" />
+              <Words
+                text="Bring the whole pile."
+                style={[styles.lead, scale.lead]}
+              />
+              <Rise delay={90}>
+                <Text style={[styles.pileBody, scale.body]}>
+                  Paste a Steam profile and everything arrives, hours included.
+                  Or hand it a CSV.
+                </Text>
+              </Rise>
+            </View>
+            <View style={{ paddingBottom: air, paddingTop: SPACING.lg }}>
+              <LandingShelf
+                games={(games ?? []).slice(0, scale.wide ? 6 : 5)}
+                width={scale.wide ? 232 : 150}
+              />
+            </View>
+          </View>
         </WhenNear>
 
         {/* All three beats in one band, divided by rules rather than by

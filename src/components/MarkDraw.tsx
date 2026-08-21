@@ -60,12 +60,19 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const AnimatedG = Animated.createAnimatedComponent(G);
 
-export function MarkDraw({ size = 26 }: { size?: number }) {
+export function MarkDraw({
+  size = 26,
+  play = true,
+}: {
+  size?: number;
+  /** Hold the construction until the moment it should be watched. */
+  play?: boolean;
+}) {
   const reduced = useReducedMotion();
   const draw = useAnimatedValue(0);
 
   useEffect(() => {
-    if (reduced) return;
+    if (reduced || !play) return;
     const animation = Animated.timing(draw, {
       toValue: 1,
       duration: 1500,
@@ -74,7 +81,7 @@ export function MarkDraw({ size = 26 }: { size?: number }) {
     });
     animation.start();
     return () => animation.stop();
-  }, [draw, reduced]);
+  }, [draw, reduced, play]);
 
   // Somebody who asked for less motion gets the finished drawing.
   if (reduced) return <Mark size={size} />;

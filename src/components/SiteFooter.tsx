@@ -1,3 +1,4 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -73,53 +74,61 @@ export function SiteFooter({ inset = 0, pad = SPACING.lg }: Props) {
   const router = useRouter();
 
   return (
-    <View
-      style={[
-        styles.band,
-        inset > 0 && { marginHorizontal: -inset },
-        { paddingBottom: insets.bottom + SPACING.lg },
-      ]}
-    >
-      <Text
-        style={styles.watermark}
-        numberOfLines={1}
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
+    <View style={inset > 0 ? { marginHorizontal: -inset } : undefined}>
+      {/* The page's ground eases into the footer's navy instead of
+          meeting it on a line — the same weld the top of every page
+          gets against the browser's chrome, at the other end of the
+          scroll. Transparent-to-navy, so it works over any ground a
+          page happens to end on. */}
+      <LinearGradient
+        colors={['rgba(39,47,63,0)', COLORS.navy]}
+        style={styles.weld}
+        pointerEvents="none"
+      />
+      <View
+        style={[styles.band, { paddingBottom: insets.bottom + SPACING.lg }]}
       >
-        SIDEQUEST
-      </Text>
-      <View style={[styles.inner, { paddingHorizontal: pad }]}>
-        <View style={styles.topRow}>
-          <View style={styles.brand}>
-            <Text style={styles.wordmark}>Sidequest</Text>
-            <Text style={styles.tagline}>
-              Know what you can actually finish.
-            </Text>
-            <Text style={styles.pitch}>
-              Backlog triage for people with more games than time. No account,
-              no tracking — your library lives on this device.
-            </Text>
-            {/* The page that makes the case for the product was filed
+        <Text
+          style={styles.watermark}
+          numberOfLines={1}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
+          SIDEQUEST
+        </Text>
+        <View style={[styles.inner, { paddingHorizontal: pad }]}>
+          <View style={styles.topRow}>
+            <View style={styles.brand}>
+              <Text style={styles.wordmark}>Sidequest</Text>
+              <Text style={styles.tagline}>
+                Know what you can actually finish.
+              </Text>
+              <Text style={styles.pitch}>
+                Backlog triage for people with more games than time. No account,
+                no tracking — your library lives on this device.
+              </Text>
+              {/* The page that makes the case for the product was filed
                 under Legal, between the terms and the privacy policy.
                 It belongs with the sentence it expands on. */}
-            <Pressable
-              onPress={() => router.push('/about')}
-              accessibilityRole="link"
-            >
-              <Text style={styles.pitchLink}>What Sidequest is →</Text>
-            </Pressable>
+              <Pressable
+                onPress={() => router.push('/about')}
+                accessibilityRole="link"
+              >
+                <Text style={styles.pitchLink}>What Sidequest is →</Text>
+              </Pressable>
+            </View>
+            <View style={styles.cols}>
+              <LinkColumn heading="Explore" links={EXPLORE} />
+              <LinkColumn heading="Legal" links={LEGAL} />
+            </View>
           </View>
-          <View style={styles.cols}>
-            <LinkColumn heading="Explore" links={EXPLORE} />
-            <LinkColumn heading="Legal" links={LEGAL} />
+
+          <View style={styles.rule} />
+
+          <View style={styles.bottomRow}>
+            <Text style={styles.fineprint}>Game data by RAWG</Text>
+            <Text style={styles.fineprint}>Built for the backlog</Text>
           </View>
-        </View>
-
-        <View style={styles.rule} />
-
-        <View style={styles.bottomRow}>
-          <Text style={styles.fineprint}>Game data by RAWG</Text>
-          <Text style={styles.fineprint}>Built for the backlog</Text>
         </View>
       </View>
     </View>
@@ -127,6 +136,7 @@ export function SiteFooter({ inset = 0, pad = SPACING.lg }: Props) {
 }
 
 const styles = StyleSheet.create({
+  weld: { height: 64, marginBottom: -1 },
   band: {
     marginTop: 'auto',
     backgroundColor: COLORS.navy,
