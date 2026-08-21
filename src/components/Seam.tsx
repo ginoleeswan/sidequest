@@ -193,9 +193,10 @@ export function Seam({
       : `M${W} 1 H${cut} L0 ${cut + 1}`;
 
   const strip = PINS * PIN_W + (PINS - 1) * PIN_GAP;
-  // On the flat side, inset a corner radius past the chamfer so the
-  // pins and the cut never crowd each other.
-  const pinX = right ? cut + 18 : W - cut - 18 - strip;
+  // On the flat side, a fixed step in from the WINDOW edge. They were
+  // inset past the chamfer's width — sixty-two points in, which read
+  // as floating rather than as a strip on the card's edge.
+  const pinX = right ? 24 : W - 24 - strip;
 
   /**
    * The pile, riding the wave.

@@ -50,16 +50,22 @@ import { TYPE } from '@/styles/typography';
  * faint, and adrift among the stars, riding the scene's one breathing
  * clock at offset phases. The quiet joke is the page's whole argument:
  * the games you let go of become stars to look at, not weights to
- * carry. Kept clear of the centre, where the Mark stands.
+ * carry. Kept clear of the centre, where the Mark stands, and sized
+ * like a night sky is: two bright near things, a scatter of middle
+ * ones, and small far ones — eight shapes across four sizes, where
+ * five near-equals read as a pattern, not a depth.
  *
  * [glyph, left%, top, size, tilt, drift direction]
  */
 const FLOATERS: [number, `${number}%`, number, number, number, 1 | -1][] = [
-  [0, '7%', 46, 22, -10, 1],
-  [2, '24%', 108, 17, 8, -1],
-  [3, '52%', 14, 16, -6, 1],
-  [5, '71%', 92, 15, -8, -1],
-  [1, '87%', 46, 19, 12, 1],
+  [0, '6%', 44, 26, -10, 1],
+  [4, '16%', 118, 13, 14, -1],
+  [2, '25%', 96, 19, 8, -1],
+  [5, '34%', 30, 14, -8, 1],
+  [3, '52%', 12, 17, -6, 1],
+  [1, '68%', 108, 15, 10, -1],
+  [5, '78%', 44, 12, -12, -1],
+  [0, '88%', 84, 22, 12, 1],
 ];
 
 export function Horizon({ onStart }: { onStart?: () => void }) {
@@ -133,6 +139,16 @@ export function Horizon({ onStart }: { onStart?: () => void }) {
               {
                 left,
                 top,
+                // Every third one also breathes in brightness, on the
+                // same clock the drift rides — a sky that twinkles as
+                // well as swims, without a second animation running.
+                opacity:
+                  reduced || index % 3 !== 0
+                    ? 1
+                    : breathe.interpolate({
+                        inputRange: [0, 0.5, 1],
+                        outputRange: [0.55, 1, 0.55],
+                      }),
                 transform: [
                   { rotate: `${tilt}deg` },
                   {
@@ -140,7 +156,7 @@ export function Horizon({ onStart }: { onStart?: () => void }) {
                       ? 0
                       : breathe.interpolate({
                           inputRange: [0, 1],
-                          outputRange: [0, dir * 5],
+                          outputRange: [0, dir * 6],
                         }),
                   },
                 ],
@@ -266,17 +282,15 @@ export function Horizon({ onStart }: { onStart?: () => void }) {
 const styles = StyleSheet.create({
   scene: {
     /**
-     * The sky is the page's own navy, so the scene begins without a
-     * seam — and the land below the crest is the deep well, which is
-     * also the footer's ground. That one choice is the whole ending:
-     * dusk holds the light, the ridge the Mark stands on is the last
-     * line on the page, and everything past it is one deep surface
-     * running to the end of the document. It used to be the other way
-     * up — a well sky over a navy hill, then a second transition into
-     * a well footer — which was a landscape lit from below and two
-     * goodbyes in a row.
+     * No background at all: the sky IS the page's grained ground,
+     * running uninterrupted from the section above. Painted navy it
+     * was the right colour and the wrong surface — a flat patch in a
+     * grained page, which is exactly the seam this scene exists not
+     * to have. The land below the crest stays the deep well, which is
+     * also the footer's ground: the ridge the Mark stands on is the
+     * page's last transition, and everything past it is one deep
+     * surface to the end of the document.
      */
-    backgroundColor: COLORS.navy,
     overflow: 'hidden',
   },
   skyzone: { height: 260 },

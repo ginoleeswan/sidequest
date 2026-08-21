@@ -444,7 +444,14 @@ const styles = StyleSheet.create({
   // The shell SVG carries the surface, stroke and notch; the View
   // carries only the soft shadow (which hugs the rect — close enough
   // for a diffuse glow) and the content box.
-  card: { boxShadow: '0 24px 60px rgba(0,0,0,0.45)', borderRadius: RADIUS.md },
+  /**
+   * No box shadow, deliberately. The View is a rectangle and the shell
+   * is not — a rect shadow ghosted through the notch cutout as a dark
+   * corner floating behind the cut, which read as a rendering bug on
+   * every band the card sits on. The landed slots carry their own
+   * glow; the card does not need a second one.
+   */
+  card: { borderRadius: RADIUS.md },
   inner: { flex: 1, paddingTop: 0 },
   header: {
     // height comes from headerFor(width)

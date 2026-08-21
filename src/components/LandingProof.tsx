@@ -165,12 +165,28 @@ export function LandingProof({
       </View>
 
       {dropped && (
-        <View style={styles.reasons}>
-          {DROP_REASONS.map((reason) => (
-            <Text key={reason.key} style={styles.reason}>
-              {reason.label}
-            </Text>
-          ))}
+        <View style={styles.amnesty}>
+          {/* These are the app's actual drop reasons — the excuses the
+              tidy screen lets you file a game under. As bare grey words
+              they read as a caption that lost its image; as stamped
+              coral tags under a LET GO stamp they read as what they
+              are: the permission slips. */}
+          <Text style={styles.amnestyLead}>ANY OF THESE COUNT</Text>
+          <View style={styles.reasons}>
+            {DROP_REASONS.map((reason, at) => (
+              <View
+                key={reason.key}
+                style={[
+                  styles.reason,
+                  {
+                    transform: [{ rotate: `${at % 2 === 0 ? -1.5 : 1.5}deg` }],
+                  },
+                ]}
+              >
+                <Text style={styles.reasonWord}>{reason.label}</Text>
+              </View>
+            ))}
+          </View>
         </View>
       )}
     </View>
@@ -255,6 +271,20 @@ const styles = StyleSheet.create({
     letterSpacing: 4,
   },
 
-  reasons: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.md },
-  reason: { ...TYPE.caption, fontSize: 13 },
+  amnesty: { gap: SPACING.sm },
+  amnestyLead: {
+    ...TYPE.micro,
+    color: COLORS.coral,
+    opacity: 0.85,
+  },
+  reasons: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
+  reason: {
+    borderWidth: 1.5,
+    borderColor: 'rgba(248,113,104,0.45)',
+    backgroundColor: 'rgba(248,113,104,0.08)',
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: SPACING.sm + 2,
+  },
+  reasonWord: { ...TYPE.tag, fontSize: 12, color: COLORS.coral },
 });

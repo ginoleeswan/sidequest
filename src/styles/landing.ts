@@ -113,7 +113,14 @@ export function landingScale(width: number): LandingScale {
    * At 196 it was the largest thing here and still looked like a
    * headline; a quarter of the window makes it the event it is.
    */
-  const sum = clamp(width * 0.235, 118, 300);
+  /**
+   * The 900. It was clamped no lower than 118 and at that size on a
+   * phone it stopped being a number and became a wall — the eye read
+   * "big" and skipped the digits. Ninety-two points is still four
+   * times the body face: unmistakably the loudest thing in the band,
+   * and small enough to be read as a quantity.
+   */
+  const sum = clamp(width * 0.2, 92, 300);
 
   const inset = wide ? 60 : 20;
   /** Matches `beatWide`'s gap. */

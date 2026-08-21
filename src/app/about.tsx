@@ -23,8 +23,8 @@ import { LandingTake } from '@/components/LandingTake';
 import { LandingTry } from '@/components/LandingTry';
 import { MemcardBuild } from '@/components/MemcardBuild';
 import { QuestLine, QuestMark } from '@/components/QuestLine';
-import { LandingProof } from '@/components/LandingProof';
 import { Drift } from '@/components/Drift';
+import { BeatDeck } from '@/components/BeatDeck';
 import { Seam, type SeamVariant } from '@/components/Seam';
 import { Rise, useInView } from '@/components/Rise';
 import { Words } from '@/components/Words';
@@ -105,33 +105,6 @@ function sampleCard(games: Game[] | undefined): MemcardModel {
 }
 
 /**
- * Each beat owns a colour as well as a claim: amber for time, violet
- * for the evening, coral for letting go. The marker, the lead's key
- * word and the evidence all speak in it, so the three ideas stop
- * being three paragraphs and start being three places.
- */
-const BEATS = [
-  {
-    kind: 'length' as const,
-    hue: COLORS.accent,
-    lead: 'It knows how long things take.',
-    body: 'Real lengths from players who finished, on every tile — before you tap.',
-  },
-  {
-    kind: 'tonight' as const,
-    hue: COLORS.violet,
-    lead: 'It picks what fits tonight.',
-    body: 'A Tuesday is not a Saturday. It does the arithmetic and names one game.',
-  },
-  {
-    kind: 'drop' as const,
-    hue: COLORS.coral,
-    lead: 'It lets you put things down.',
-    body: 'Most of the pile will never be played. Saying so is the fun part.',
-  },
-];
-
-/**
  * The number, counted rather than printed.
  *
  * It owns its own ref, which is the whole reason it is a component: the
@@ -190,7 +163,7 @@ function Band({
   style,
   raise = false,
   seam,
-  behind = LANDING_GROUND,
+  behind = 'transparent',
   seamVariant = 'lip',
   children,
 }: {
@@ -532,12 +505,7 @@ export default function AboutScreen() {
                 wave inside the seam's box shows it, and without it the
                 well's own ground filled that area — a hard straight
                 step floating above the wavy edge. */}
-            <Seam
-              color={LANDING_WELL}
-              behind={LANDING_GROUND}
-              index={3}
-              variant="glyphs"
-            />
+            <Seam color={LANDING_WELL} index={3} variant="glyphs" />
             <View
               style={[
                 styles.measure,
@@ -571,83 +539,16 @@ export default function AboutScreen() {
           </View>
         </WhenNear>
 
-        {/* All three beats in one band, divided by rules rather than by
-            background. Three separate bands gave each claim its own
-            slab of ground and its own sixty pixels of padding top and
-            bottom, which is what made the middle of the page read as
-            one long grey corridor. */}
-        <Band scale={scale} seam={4} behind={LANDING_WELL} style={styles.beats}>
-          {BEATS.map((beat, index) => (
-            <View
-              key={beat.lead}
-              style={[
-                styles.beat,
-                index > 0 && styles.beatRuled,
-                scale.wide && styles.beatWide,
-                // Every other one turned around. Three identical
-                // two-column splits stacked is a table; alternating them
-                // is what makes a reader's eye travel down a page.
-                scale.wide && index % 2 === 1 && styles.beatFlipped,
-              ]}
-            >
-              <QuestMark id={`beat-${index}`} />
-              {/* The claim and its sentence, together. A lead belongs
-                  with its own body; what belongs opposite is the
-                  evidence. */}
-              <View style={scale.wide ? styles.beatCopyWide : styles.beatCopy}>
-                <View style={styles.beatHead}>
-                  <Rise from={scale.wide && index % 2 === 1 ? 'right' : 'left'}>
-                    <Text style={styles.beatIndex}>{`0${index + 1}`}</Text>
-                  </Rise>
-                  <Words
-                    text={beat.lead}
-                    style={[styles.lead, scale.leadColumn]}
-                    delay={90}
-                  />
-                </View>
-                <Rise delay={90}>
-                  <Text style={[styles.beatBody, scale.body]}>{beat.body}</Text>
-                </Rise>
-              </View>
-              {/* The app's own components, fed real data: a claim with
-                  the thing itself beside it beats a claim with an icon
-                  over it. */}
-              {/* Pinned to the page's outer edge, not centred in its
-                  half. A 320px object floating in the middle of a 500px
-                  column has grey on both sides of it and looks like it
-                  was dropped there; against the edge it looks placed. */}
-              <View
-                style={
-                  scale.wide
-                    ? [
-                        styles.beatProofWide,
-                        index % 2 === 1
-                          ? styles.beatProofFlipped
-                          : styles.beatProofOuter,
-                      ]
-                    : undefined
-                }
-              >
-                {/* Lags the copy beside it for the whole time the row
-                    is on screen, so a beat has depth rather than just an
-                    arrival. */}
-                <Drift
-                  distance={scale.wide ? 30 : 14}
-                  testID={`beat-proof-${index}`}
-                >
-                  <Rise from="lift" delay={200}>
-                    <LandingProof
-                      kind={beat.kind}
-                      game={games?.[index + 2]}
-                      width={scale.column}
-                      hue={beat.hue}
-                    />
-                  </Rise>
-                </Drift>
-              </View>
-            </View>
-          ))}
-        </Band>
+        {/* The three beats, as a swipeable deck of coloured panels —
+            one idea per card, the next peeking in from the edge, the
+            same live evidence the old rows carried. The section keeps
+            the ordinary lip seam: the panels are the event. */}
+        <View style={styles.deckSection}>
+          <Seam color={LANDING_GROUND} behind={LANDING_WELL} index={4} />
+          <View style={styles.deckBody}>
+            <BeatDeck scale={scale} games={games} />
+          </View>
+        </View>
 
         {/* The one showpiece, and the only thing on the page that
             arrives crooked and straightens. Used once: a second `tilt`
@@ -721,7 +622,13 @@ export default function AboutScreen() {
           scale={scale}
           seam={8}
           behind={LANDING_WELL}
-          style={scale.wide && styles.plainWide}
+          style={[
+            // The phone above deliberately hangs over this band's
+            // seam; the headline needs to start below its overhang,
+            // not under its home indicator.
+            styles.plainRoom,
+            scale.wide && styles.plainWide,
+          ]}
         >
           <View style={scale.wide ? styles.plainCopy : styles.plainStack}>
             <QuestMark id="close" />
@@ -871,7 +778,7 @@ const styles = StyleSheet.create({
    * sentence in half — the number and its meaning read as two
    * exhibits.
    */
-  sumTall: { paddingVertical: 0, gap: SPACING.md },
+  sumTall: { paddingTop: 0, paddingBottom: SPACING.lg, gap: SPACING.md },
   sumWide: {
     flexDirection: 'row',
     // On the number's baseline side rather than its centre: a 196px
@@ -895,39 +802,28 @@ const styles = StyleSheet.create({
   // Grey, not amber. Two amber weights in one line is two things
   // shouting; the number is the thing worth shouting.
   sumUnit: { ...TYPE.title, color: COLORS.lightGrey },
-  sumTail: { color: COLORS.mediumGrey, maxWidth: 520 },
+  // A short measure: two lines that nearly span the phone read as a
+  // paragraph, and this is a verdict.
+  sumTail: { color: COLORS.mediumGrey, maxWidth: 340 },
   sumKicker: {
     fontFamily: 'Noah-Bold',
     color: COLORS.white,
-    maxWidth: 520,
+    maxWidth: 340,
     marginTop: 2,
     paddingBottom: 6,
   },
 
+  deckSection: { backgroundColor: LANDING_GROUND },
+  plainRoom: { paddingTop: SPACING.xl * 2.5 },
+  deckBody: { paddingTop: SPACING.xl, paddingBottom: SPACING.xl * 1.5 },
+
   // the three beats
-  beats: { gap: 0 },
-  beat: { paddingVertical: SPACING.xl * 1.4, gap: SPACING.lg },
   // A hairline between claims instead of a change of ground. Three
   // bands for three sentences is what turned the middle of the page
   // into a corridor.
-  beatRuled: { borderTopWidth: 1, borderTopColor: COLORS.stroke },
-  beatWide: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xl * 2,
-  },
-  beatFlipped: { flexDirection: 'row-reverse' },
-  beatCopy: { gap: SPACING.md },
-  beatCopyWide: { flex: 1, gap: SPACING.lg, justifyContent: 'center' },
-  beatHead: { gap: SPACING.sm },
   // A marker in the margin above the line, not a number in a circle.
   // Three beats need to read as an ordered argument; this is the
   // cheapest way to say so without a device.
-  beatIndex: { ...TYPE.tag },
-  beatBody: { maxWidth: 520 },
-  beatProofWide: { flex: 1, justifyContent: 'center' },
-  beatProofOuter: { alignItems: 'flex-end' },
-  beatProofFlipped: { alignItems: 'flex-start' },
 
   // the pile
   shelfRoom: { height: 420 },
