@@ -146,8 +146,10 @@ export function landingScale(width: number): LandingScale {
     },
     body: {
       ...TYPE.body,
-      fontSize: wide ? 18 : 17,
-      lineHeight: wide ? 30 : 28,
+      // A reading size, not a UI size. Seventeen is right for a
+      // settings screen; a landing page is read at arm's length.
+      fontSize: wide ? 20 : 18,
+      lineHeight: wide ? 33 : 30,
       color: COLORS.mediumGrey,
     },
     figure: {

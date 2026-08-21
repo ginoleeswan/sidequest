@@ -180,11 +180,11 @@ const styles = StyleSheet.create({
     minWidth: 300,
   },
   badgeLive: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
-  badgeSmall: { ...TYPE.caption, fontSize: 12 },
+  badgeSmall: { ...TYPE.caption, fontSize: 13 },
   badgeSmallLive: { color: 'rgba(39,47,63,0.7)' },
   badgeBig: { ...TYPE.h2, color: COLORS.white },
   badgeBigLive: { color: COLORS.navy },
-  footnote: { ...TYPE.caption, marginTop: SPACING.lg },
+  footnote: { ...TYPE.caption, fontSize: 15, marginTop: SPACING.lg },
 
   /**
    * On the lip. The phone hangs a third of itself past the band's

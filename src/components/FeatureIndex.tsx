@@ -26,51 +26,51 @@ import { TYPE } from '@/styles/typography';
 const ENTRIES = [
   {
     title: 'Import from Steam',
-    body: 'Your owned games and the hours already on them, from one profile link.',
+    body: 'Your whole Steam library, hours included, from one link.',
   },
   {
     title: 'Import a list',
-    body: 'A CSV from wherever you have been keeping one. Names are enough.',
+    body: 'A CSV from anywhere. Names are enough.',
   },
   {
     title: 'The week, not just tonight',
-    body: 'Seven evenings, filled in order. Tonight is only the first of them.',
+    body: 'Seven evenings, filled in order.',
   },
   {
     title: 'Weekend mode',
-    body: 'Saturday afternoon is not a Tuesday, and it does not get planned like one.',
+    body: 'Saturday is not a Tuesday. It plans differently.',
   },
   {
     title: 'Deadlines',
-    body: 'A sequel you want to be ready for, counted back from, in weeks you actually have.',
+    body: 'Ready for the sequel, counted back in real weeks.',
   },
   {
     title: 'Play sessions',
-    body: 'Start a timer. What it learns about your pace replaces the crowd’s estimate.',
+    body: 'A timer that learns your pace.',
   },
   {
     title: 'Your own lengths',
-    body: 'Every estimate is editable. Yours wins over anybody else’s, permanently.',
+    body: 'Every estimate is editable. Yours wins.',
   },
   {
     title: 'Notes and tags',
-    body: 'Why you shelved it, in your words, on the tile — so future you knows.',
+    body: 'Why you shelved it, so future you knows.',
   },
   {
     title: 'Collections',
-    body: 'Shelves you name yourself, for the ways a backlog is actually organised.',
+    body: 'Shelves you name yourself.',
   },
   {
     title: 'Sequel alerts',
-    body: 'When something you finished gets a follow-up, it appears where you finished it.',
+    body: 'A follow-up appears where you finished the original.',
   },
   {
     title: 'Search everything',
-    body: 'Command-K anywhere: every game, every shelf, every screen, one keystroke.',
+    body: 'Command-K anywhere. Everything, one keystroke.',
   },
   {
     title: 'Works offline',
-    body: 'Add it to your home screen and your library opens with no connection at all.',
+    body: 'On your home screen, no connection needed.',
   },
 ];
 
@@ -143,6 +143,6 @@ const styles = StyleSheet.create({
     minWidth: 20,
   },
   copy: { flex: 1, gap: 3 },
-  title: { ...TYPE.h2, color: COLORS.white },
-  body: { ...TYPE.caption, lineHeight: 21 },
+  title: { ...TYPE.h1, color: COLORS.white },
+  body: { ...TYPE.caption, fontSize: 15, lineHeight: 23 },
 });

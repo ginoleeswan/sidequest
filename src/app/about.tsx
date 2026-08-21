@@ -114,19 +114,19 @@ const BEATS = [
     kind: 'length' as const,
     hue: COLORS.accent,
     lead: 'It knows how long things take.',
-    body: 'Real lengths, from players who finished — not store-page guesses. On every tile, in amber, before you tap anything.',
+    body: 'Real lengths from players who finished, on every tile — before you tap.',
   },
   {
     kind: 'tonight' as const,
     hue: COLORS.violet,
     lead: 'It picks what fits tonight.',
-    body: 'Ninety minutes on a Tuesday is not three hours on a Saturday. Sidequest does the arithmetic and names one game.',
+    body: 'A Tuesday is not a Saturday. It does the arithmetic and names one game.',
   },
   {
     kind: 'drop' as const,
     hue: COLORS.coral,
     lead: 'It lets you put things down.',
-    body: 'Most of a backlog will never be played, and saying so is what makes the rest enjoyable. It asks why — only so the shelves can learn.',
+    body: 'Most of a backlog will never be played. Saying so is the fun part.',
   },
 ];
 
@@ -391,8 +391,8 @@ export default function AboutScreen() {
               Know what you can actually finish.
             </Animated.Text>
             <Animated.Text style={[styles.standfirst, step(0.2, 0.75)]}>
-              Forty games waiting. Three you will actually see the end of.
-              Sidequest works out which three.
+              Forty games waiting. Three you will finish. Sidequest works out
+              which three.
             </Animated.Text>
             <Animated.View style={step(0.32, 0.9)}>{open}</Animated.View>
           </View>
@@ -411,8 +411,7 @@ export default function AboutScreen() {
             />
             <Rise from="right" delay={220} style={styles.sumTailSlot}>
               <Text style={[styles.sumTail, scale.body]}>
-                and the average week has about six. That is fifteen years of
-                evenings — not a to-do list, a fantasy.
+                and the average week has about six. Fifteen years of evenings.
               </Text>
             </Rise>
           </Band>
@@ -451,8 +450,8 @@ export default function AboutScreen() {
             />
             <Rise delay={90}>
               <Text style={[styles.pileBody, scale.body]}>
-                Paste a Steam profile and everything you own arrives, hours
-                included. Or hand it a CSV. Nothing is typed twice.
+                Paste a Steam profile and everything arrives, hours included. Or
+                hand it a CSV.
               </Text>
             </Rise>
             <LandingShelf
@@ -544,36 +543,30 @@ export default function AboutScreen() {
             arrives crooked and straightens. Used once: a second `tilt`
             further down would turn a signature into a mannerism. */}
         <WhenNear placeholder={<View style={styles.cardRoom} />}>
-          <Band
-            tone="well"
-            scale={scale}
-            style={[styles.card, scale.wide && styles.cardWide]}
-          >
+          <Band tone="well" scale={scale} style={styles.card}>
             <QuestMark id="memcard" />
+            <Words
+              text="And something to show for the year."
+              style={[styles.lead, scale.lead]}
+            />
             {/* The covers fly in from the reader's side and become the
                 blocks — the product-film build, with the games as the
-                pieces. It replaces the tilt entrance: a thing being
-                assembled does not also need to arrive crooked. */}
+                pieces. At the full width of the column, because a
+                showpiece drawn at a third of its stage is a thumbnail
+                of itself: the build IS the explanation, so it gets the
+                whole screen and the caption shrinks to one line. */}
             <Drift distance={-22} testID="memcard-drift">
               <MemcardBuild
                 card={sampleCard(games)}
                 games={games ?? []}
-                maxWidth={scale.wide ? 460 : 320}
+                maxWidth={scale.wide ? 1000 : 640}
               />
             </Drift>
-            <View style={scale.wide ? styles.cardCopy : undefined}>
-              <Words
-                text="And something to show for the year."
-                style={[styles.lead, scale.leadColumn]}
-              />
-              <Rise delay={120}>
-                <Text style={[styles.cardCaption, scale.body]}>
-                  Every set of credits becomes a block, month by month. By
-                  December it is a picture of what you actually played — and it
-                  shares as one link, no account attached.
-                </Text>
-              </Rise>
-            </View>
+            <Rise delay={120}>
+              <Text style={[styles.cardCaption, scale.body]}>
+                Shares as one link. No account attached.
+              </Text>
+            </Rise>
           </Band>
         </WhenNear>
 
@@ -605,9 +598,7 @@ export default function AboutScreen() {
               sign up for, nothing to cancel, nobody selling what you play.
             </Text>
             <Text style={[styles.plainBody, scale.body]}>
-              An independent project, affiliated with nobody. Game data from
-              RAWG; lengths from IGDB and from you. Open source at
-              ginoleeswan/sidequest.
+              Independent and open source. Data from RAWG and IGDB.
             </Text>
           </View>
           <View style={[styles.closeCta, scale.wide && styles.closeCtaWide]}>
@@ -782,14 +773,7 @@ const styles = StyleSheet.create({
   // the card
   cardRoom: { height: 460 },
   card: { alignItems: 'center', gap: SPACING.xl },
-  cardWide: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: SPACING.xl * 2,
-  },
-  cardCopy: { flex: 1, gap: SPACING.md },
-  cardCaption: { maxWidth: 520 },
+  cardCaption: { textAlign: 'center' },
 
   // the plain truth
   plainWide: {

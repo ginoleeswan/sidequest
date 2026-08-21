@@ -356,6 +356,8 @@ const styles = StyleSheet.create({
   hours: { ...TYPE.tag, marginTop: 2 },
   footnote: {
     ...TYPE.caption,
+    fontSize: 15,
+    lineHeight: 23,
     marginTop: SPACING.lg,
     maxWidth: 560,
   },

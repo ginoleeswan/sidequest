@@ -28,19 +28,19 @@ const STEPS = [
     icon: 'bookmark' as const,
     hue: COLORS.accent,
     title: 'Save what catches your eye',
-    body: 'Anything at all. Sidequest looks up how long each one takes while you browse.',
+    body: 'Sidequest looks up how long each takes while you browse.',
   },
   {
     icon: 'moon' as const,
     hue: COLORS.violet,
     title: 'Say how much you play',
-    body: 'One number, in hours a week. Change it whenever the answer changes.',
+    body: 'One number, in hours a week.',
   },
   {
     icon: 'checkmark-circle' as const,
     hue: COLORS.mint,
     title: 'Get one game, not forty',
-    body: 'It names what you can finish, in the order to play it, and what to let go.',
+    body: 'What you can finish, in order — and what to let go.',
   },
 ];
 
@@ -101,5 +101,12 @@ const styles = StyleSheet.create({
   },
   number: { ...TYPE.tag, color: COLORS.mediumGrey },
   title: { ...TYPE.h1, color: COLORS.white },
-  body: { ...TYPE.body, color: COLORS.mediumGrey, maxWidth: 340, marginTop: 2 },
+  body: {
+    ...TYPE.body,
+    fontSize: 16,
+    lineHeight: 25,
+    color: COLORS.mediumGrey,
+    maxWidth: 340,
+    marginTop: 2,
+  },
 });
