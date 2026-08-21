@@ -39,7 +39,13 @@
       "expo-status-bar",
       "expo-video",
       "expo-sqlite",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Sidequest files your planned evenings and finished games into a calendar of its own, on this device."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

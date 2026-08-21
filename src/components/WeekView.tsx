@@ -3,6 +3,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useToast } from '@/components/Toast';
 import { buildIcs, downloadIcs, planEvents } from '@/lib/ics';
+import { insertEvents } from '@/lib/nativeCalendar';
 import type { ScheduledItem } from '@/lib/scheduler';
 import { formatHours } from '@/lib/duration';
 import { eveningLabel, planWeek, type PlannedEvening } from '@/lib/week';
@@ -83,18 +84,37 @@ export function WeekView({
    * in someone's calendar is not the same gesture as showing them a
    * free Tuesday here.
    */
-  const putInCalendar = () => {
+  const putInCalendar = async () => {
     const events = planEvents(week);
-    downloadIcs(
-      buildIcs(events, { name: 'Sidequest — this week', now: new Date() }),
-      'sidequest-week.ics'
-    );
-    toast(
-      events.length === 1
-        ? 'One evening, ready for your calendar'
-        : `${events.length} evenings, ready for your calendar`,
-      'calendar-outline'
-    );
+    if (Platform.OS === 'web') {
+      downloadIcs(
+        buildIcs(events, { name: 'Sidequest — this week', now: new Date() }),
+        'sidequest-week.ics'
+      );
+      toast(
+        events.length === 1
+          ? 'One evening, ready for your calendar'
+          : `${events.length} evenings, ready for your calendar`,
+        'calendar-outline'
+      );
+      return;
+    }
+    // Installed, the events go straight into the device's calendar
+    // store — no file hand-off, still no account: see nativeCalendar.
+    try {
+      await insertEvents(events);
+      toast(
+        events.length === 1
+          ? 'One evening, filed in your calendar'
+          : `${events.length} evenings, filed in your calendar`,
+        'calendar-outline'
+      );
+    } catch (error) {
+      toast(
+        error instanceof Error ? error.message : "Couldn't reach your calendar",
+        'alert-circle'
+      );
+    }
   };
 
   return (
@@ -143,23 +163,15 @@ export function WeekView({
           with it. Text-and-icon rather than a button, because a second
           filled control here would compete with the plan's own
           actions. */}
-      {Platform.OS === 'web' && (
-        <Pressable
-          onPress={putInCalendar}
-          style={styles.toCalendar}
-          accessibilityRole="button"
-          accessibilityLabel="Add this week to your calendar"
-        >
-          <Ionicons
-            name="calendar-outline"
-            size={14}
-            color={COLORS.mediumGrey}
-          />
-          <Text style={styles.toCalendarText}>
-            Put this week in my calendar
-          </Text>
-        </Pressable>
-      )}
+      <Pressable
+        onPress={putInCalendar}
+        style={styles.toCalendar}
+        accessibilityRole="button"
+        accessibilityLabel="Add this week to your calendar"
+      >
+        <Ionicons name="calendar-outline" size={14} color={COLORS.mediumGrey} />
+        <Text style={styles.toCalendarText}>Put this week in my calendar</Text>
+      </Pressable>
     </View>
   );
 }

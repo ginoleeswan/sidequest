@@ -20,6 +20,7 @@ import { useCountUp } from '@/hooks/useCountUp';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { formatHours } from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
+import { celebrate } from '@/lib/haptics';
 import { useLibrary } from '@/lib/library';
 import { libraryStats } from '@/lib/libraryStats';
 import { blocksByMonth, buildMemcard } from '@/lib/memcard';
@@ -59,6 +60,8 @@ export function FinishCelebration({
       rise.setValue(0);
       return;
     }
+    // The moment lands in the hand as well as on screen.
+    celebrate();
     if (reduced) {
       // The moment still lands; it just doesn't travel to get here.
       rise.setValue(1);

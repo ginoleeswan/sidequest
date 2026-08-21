@@ -3,6 +3,7 @@ import { router, usePathname } from 'expo-router';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { tickle } from '@/lib/haptics';
 import { COLORS } from '@/styles/colors';
 
 /** The bar's own height, above the home-indicator inset. */
@@ -64,7 +65,10 @@ export function TabBar() {
           <Pressable
             key={tab.href}
             style={styles.item}
-            onPress={() => router.navigate(tab.href)}
+            onPress={() => {
+              tickle();
+              router.navigate(tab.href);
+            }}
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
             accessibilityLabel={tab.label}

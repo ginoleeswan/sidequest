@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -24,7 +24,9 @@ import { dropInsight, readDrops, totalDrops } from '@/lib/drops';
 import { buildMemcard, memcardYears } from '@/lib/memcard';
 import { formatMinutes } from '@/lib/sessions';
 import { yearStats } from '@/lib/yearStats';
+import { celebrate } from '@/lib/haptics';
 import { buildIcs, downloadIcs, memcardEvents } from '@/lib/ics';
+import { insertEvents } from '@/lib/nativeCalendar';
 import { shareMemcard } from '@/lib/memcardImage';
 import { COLORS } from '@/styles/colors';
 import { GUTTER, LAYOUT, RADIUS, SPACING } from '@/styles/theme';
@@ -46,6 +48,8 @@ export default function MemcardScreen() {
   const { durationOf } = useDurations();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
+  /** What view-shot rasterises on native: the on-screen card itself. */
+  const shotRef = useRef<View>(null);
 
   const all = useMemo(() => Object.values(entries), [entries]);
   const years = useMemo(() => memcardYears(all), [all]);
@@ -90,31 +94,67 @@ export default function MemcardScreen() {
    * all — and both would mean this app growing the account and backend
    * it promises not to have. Every calendar worth the name opens one.
    */
-  const addToCalendar = () => {
+  const addToCalendar = async () => {
     const events = memcardEvents(all, (game) => durationOf(game).hours, shown);
-    downloadIcs(
-      buildIcs(events, {
-        name: `Sidequest ${shown}`,
-        now: new Date(),
-      }),
-      `sidequest-${shown}.ics`
-    );
-    toast(
-      events.length === 1
-        ? 'One finish, ready for your calendar'
-        : `${events.length} finishes, ready for your calendar`,
-      'calendar-outline'
-    );
+    if (Platform.OS === 'web') {
+      downloadIcs(
+        buildIcs(events, {
+          name: `Sidequest ${shown}`,
+          now: new Date(),
+        }),
+        `sidequest-${shown}.ics`
+      );
+      toast(
+        events.length === 1
+          ? 'One finish, ready for your calendar'
+          : `${events.length} finishes, ready for your calendar`,
+        'calendar-outline'
+      );
+      return;
+    }
+    // Installed, the device's calendar store is one permission away — no
+    // file hand-off, and still no account: see nativeCalendar.
+    try {
+      await insertEvents(events);
+      toast(
+        events.length === 1
+          ? 'One finish, filed in your calendar'
+          : `${events.length} finishes, filed in your calendar`,
+        'calendar-outline'
+      );
+    } catch (error) {
+      toast(
+        error instanceof Error ? error.message : "Couldn't reach your calendar",
+        'alert-circle'
+      );
+    }
   };
 
   const save = async () => {
     setBusy(true);
     try {
-      const how = await shareMemcard(card);
-      toast(
-        how === 'shared' ? 'Card shared' : 'Card saved to your downloads',
-        'image'
-      );
+      if (Platform.OS === 'web') {
+        const how = await shareMemcard(card);
+        toast(
+          how === 'shared' ? 'Card shared' : 'Card saved to your downloads',
+          'image'
+        );
+      } else {
+        // The share image is the card on screen, captured as pixels —
+        // no DOM, no canvas, so the web rasteriser can't run here.
+        const { captureRef } = await import('react-native-view-shot');
+        const uri = await captureRef(shotRef, { format: 'png', quality: 1 });
+        const Sharing = await import('expo-sharing');
+        if (!(await Sharing.isAvailableAsync())) {
+          throw new Error('Sharing is not available on this device');
+        }
+        await Sharing.shareAsync(uri, {
+          mimeType: 'image/png',
+          dialogTitle: `Your ${shown} on Sidequest`,
+        });
+        celebrate();
+        toast('Card shared', 'image');
+      }
     } catch (error) {
       toast(
         error instanceof Error ? error.message : 'The card could not be made',
@@ -185,14 +225,16 @@ export default function MemcardScreen() {
                 finished something keeps that game's cover as its save
                 icon. Same object, two stages; shareMemcard still
                 rasterises the social layout. */}
-              <LandingMemcard
-                card={card}
-                width={cardWidth}
-                landed={card.blocks.length}
-                images={card.blocks.map(
-                  (block) => byId.get(block.id)?.background_image ?? undefined
-                )}
-              />
+              <View ref={shotRef} collapsable={false}>
+                <LandingMemcard
+                  card={card}
+                  width={cardWidth}
+                  landed={card.blocks.length}
+                  images={card.blocks.map(
+                    (block) => byId.get(block.id)?.background_image ?? undefined
+                  )}
+                />
+              </View>
               <View style={styles.stats}>
                 <SectionHeader title="How the year is going" />
                 <Text style={styles.verdict}>{stats.verdict}</Text>
@@ -234,46 +276,43 @@ export default function MemcardScreen() {
                 )}
               </View>
 
-              {Platform.OS === 'web' && (
-                <Pressable
-                  onPress={save}
-                  disabled={busy}
-                  style={[styles.save, busy && styles.saveBusy]}
-                  accessibilityRole="button"
-                >
-                  <Ionicons
-                    name="share-outline"
-                    size={16}
-                    color={COLORS.darkGrey}
-                  />
-                  <Text style={styles.saveText}>
-                    {busy ? 'Drawing…' : 'Save or share this card'}
-                  </Text>
-                </Pressable>
-              )}
+              <Pressable
+                onPress={save}
+                disabled={busy}
+                style={[styles.save, busy && styles.saveBusy]}
+                accessibilityRole="button"
+              >
+                <Ionicons
+                  name="share-outline"
+                  size={16}
+                  color={COLORS.darkGrey}
+                />
+                <Text style={styles.saveText}>
+                  {busy ? 'Drawing…' : 'Save or share this card'}
+                </Text>
+              </Pressable>
 
               {/* Second, and quieter than the share. Posting the card is
                 what most people came for; filing the year is what the
                 few who keep a calendar will be glad of. */}
-              {Platform.OS === 'web' && (
-                <Pressable
-                  onPress={addToCalendar}
-                  style={styles.calendar}
-                  accessibilityRole="button"
-                >
-                  <Ionicons
-                    name="calendar-outline"
-                    size={16}
-                    color={COLORS.lightGrey}
-                  />
-                  <Text style={styles.calendarText}>
-                    Add these to my calendar
-                  </Text>
-                </Pressable>
-              )}
+              <Pressable
+                onPress={addToCalendar}
+                style={styles.calendar}
+                accessibilityRole="button"
+              >
+                <Ionicons
+                  name="calendar-outline"
+                  size={16}
+                  color={COLORS.lightGrey}
+                />
+                <Text style={styles.calendarText}>
+                  Add these to my calendar
+                </Text>
+              </Pressable>
               <Text style={styles.calendarNote}>
-                Downloads a file Google Calendar, Apple Calendar and Outlook can
-                all open. Nothing is sent anywhere.
+                {Platform.OS === 'web'
+                  ? 'Downloads a file Google Calendar, Apple Calendar and Outlook can all open. Nothing is sent anywhere.'
+                  : 'Filed into a calendar of their own on this device — one checkbox to hide, one deletion to undo. Nothing is sent anywhere.'}
               </Text>
             </>
           )}
