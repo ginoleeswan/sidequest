@@ -10,9 +10,8 @@ import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { DROP_REASONS } from '@/lib/drops';
 import { COLORS } from '@/styles/colors';
-import { EASING } from '@/styles/motion';
 import { RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { OVER_IMAGE, TYPE } from '@/styles/typography';
 
 /**
  * The evidence beside each beat, as three staged objects.
@@ -97,10 +96,14 @@ export function LandingProof({
   return (
     <View ref={ref} style={[styles.frame, { width }]}>
       <View style={[styles.card, dropped && styles.cardDropped]}>
+        {/* Hero-sized, because this IS a hero: the card runs the full
+            column. It requested the 100px row-thumbnail derivative and
+            stretched it eight times over — measured on a phone as the
+            blur it was. */}
         <CoverImage
           uri={game.background_image}
           style={styles.art}
-          size="thumb"
+          size="hero"
         />
         {/* Letting go is drawn, not described: the art goes out. */}
         {dropped && <View style={styles.grey} />}
@@ -142,13 +145,13 @@ export function LandingProof({
         {kind === 'length' && (
           <Animated.View style={[styles.figureSlot, stamp]}>
             <Text style={[styles.figure, { color: hue }]}>{hours}</Text>
-            <Text style={[styles.figureUnit, { color: hue }]}>HOURS</Text>
+            <Text style={styles.figureUnit}>HOURS</Text>
           </Animated.View>
         )}
         {kind === 'tonight' && (
           <Animated.View style={[styles.figureSlot, stamp]}>
             <Text style={[styles.figure, { color: hue }]}>90</Text>
-            <Text style={[styles.figureUnit, { color: hue }]}>MINUTES</Text>
+            <Text style={styles.figureUnit}>MINUTES</Text>
           </Animated.View>
         )}
         {dropped && (
@@ -222,13 +225,18 @@ const styles = StyleSheet.create({
     lineHeight: 68,
     letterSpacing: -3,
     textAlign: 'right',
+    // The number sits on whatever the artwork happens to be; the
+    // app's over-image shadow is what keeps it legible on a pale sky.
+    ...OVER_IMAGE.heading,
   },
   figureUnit: {
     ...TYPE.tag,
-    fontSize: 11,
+    fontSize: 12,
     letterSpacing: 3,
     textAlign: 'right',
-    marginTop: 2,
+    marginTop: 3,
+    color: COLORS.white,
+    ...OVER_IMAGE.body,
   },
 
   stamp: {

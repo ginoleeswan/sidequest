@@ -330,7 +330,7 @@ function Slot({
           ]}
         >
           {save.image ? (
-            <CoverImage uri={save.image} style={styles.saveArt} size="thumb" />
+            <CoverImage uri={save.image} style={styles.saveArt} size="tile" />
           ) : (
             <View style={[styles.saveArt, styles.saveBare]} />
           )}

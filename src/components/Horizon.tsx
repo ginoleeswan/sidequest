@@ -16,6 +16,7 @@ import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { COLORS } from '@/styles/colors';
 import { DURATION, EASING } from '@/styles/motion';
+import { SEAM_GLYPHS } from './SeamGlyphs';
 import { LANDING_WELL } from '@/styles/landing';
 import { RADIUS, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
@@ -54,6 +55,27 @@ const STARS: [number, number, number, number][] = [
 
 /** Which stars breathe, and how far apart their clocks start. */
 const TWINKLE = [0, 4, 8];
+
+/**
+ * The constellation: the pile's own shapes, up in the sky.
+ *
+ * The dusk had ten dots and nothing else, and the space above the
+ * ridge read as empty rather than as night. These are the same flat
+ * game shapes that ride the wavy seam earlier on the page — small,
+ * faint, and adrift among the stars, riding the scene's one breathing
+ * clock at offset phases. The quiet joke is the page's whole argument:
+ * the games you let go of become stars to look at, not weights to
+ * carry. Kept clear of the centre, where the Mark stands.
+ *
+ * [glyph, left%, top, size, tilt, drift direction]
+ */
+const FLOATERS: [number, `${number}%`, number, number, number, 1 | -1][] = [
+  [0, '7%', 46, 22, -10, 1],
+  [2, '24%', 108, 17, 8, -1],
+  [3, '52%', 14, 16, -6, 1],
+  [5, '71%', 92, 15, -8, -1],
+  [1, '87%', 46, 19, 12, 1],
+];
 
 export function Horizon({ onStart }: { onStart?: () => void }) {
   const reduced = useReducedMotion();
@@ -152,6 +174,42 @@ export function Horizon({ onStart }: { onStart?: () => void }) {
               />
             );
           })}
+
+        {FLOATERS.map(([glyph, left, top, size, tilt, dir], index) => (
+          <Animated.View
+            key={`float-${index}`}
+            style={[
+              styles.floater,
+              {
+                left,
+                top,
+                transform: [
+                  { rotate: `${tilt}deg` },
+                  {
+                    translateY: reduced
+                      ? 0
+                      : breathe.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, dir * 5],
+                        }),
+                  },
+                ],
+              },
+            ]}
+          >
+            <Svg width={size} height={size} viewBox="0 0 24 24">
+              <Path
+                d={SEAM_GLYPHS[glyph]}
+                fill={
+                  index % 2 === 0
+                    ? 'rgba(255,255,255,0.15)'
+                    : 'rgba(242,169,59,0.2)'
+                }
+                fillRule="evenodd"
+              />
+            </Svg>
+          </Animated.View>
+        ))}
 
         <Svg
           width="100%"
@@ -273,6 +331,7 @@ const styles = StyleSheet.create({
   },
   skyzone: { height: 260 },
   twinkle: { position: 'absolute', backgroundColor: COLORS.white },
+  floater: { position: 'absolute' },
   hill: { position: 'absolute', bottom: 0, left: 0 },
   /**
    * Placed by coordinate: the hill's apex sits 18 units above its own

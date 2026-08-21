@@ -466,8 +466,19 @@ export default function AboutScreen() {
               unit={unit}
             />
             <Rise from="right" delay={220} style={styles.sumTailSlot}>
+              {/* Two sentences, not a dangling clause. The tail used to
+                  continue the figure's sentence — "and the average week
+                  has about six" — which reads if your eye arrives from
+                  the number and dangles if it arrives anywhere else,
+                  which on a phone it does. And the point of the whole
+                  band is the second line, so it is the one set in
+                  white: the number is the evidence, fifteen years is
+                  the argument. */}
               <Text style={[styles.sumTail, scale.body]}>
-                and the average week has about six. Fifteen years of evenings.
+                The average week has about six.
+              </Text>
+              <Text style={[styles.sumKicker, scale.body]}>
+                That’s fifteen years of evenings.
               </Text>
             </Rise>
           </Band>
@@ -531,7 +542,12 @@ export default function AboutScreen() {
               style={[
                 styles.measure,
                 styles.pile,
-                { paddingHorizontal: inset, paddingTop: air },
+                /* Half the band's usual air. The wavy seam above is 68
+                   points of drawn transition with the pile riding it —
+                   it already IS the section's opening breath, and the
+                   full step on top of it left the heading floating in
+                   a hole twice the size of the one above the seam. */
+                { paddingHorizontal: inset, paddingTop: Math.round(air * 0.5) },
               ]}
             >
               <QuestMark id="pile" />
@@ -848,7 +864,14 @@ const styles = StyleSheet.create({
   // the sum
   sumRoom: { height: 320 },
   // A number this size needs a room, not a strip.
-  sumTall: { paddingVertical: 0, gap: SPACING.lg },
+  /**
+   * The phone stack, spaced as one thought: eyebrow, figure, verdict,
+   * with the band's own air only above and below the group. The gap
+   * between figure and tail was the full large step, which cut the
+   * sentence in half — the number and its meaning read as two
+   * exhibits.
+   */
+  sumTall: { paddingVertical: 0, gap: SPACING.md },
   sumWide: {
     flexDirection: 'row',
     // On the number's baseline side rather than its centre: a 196px
@@ -872,7 +895,14 @@ const styles = StyleSheet.create({
   // Grey, not amber. Two amber weights in one line is two things
   // shouting; the number is the thing worth shouting.
   sumUnit: { ...TYPE.title, color: COLORS.lightGrey },
-  sumTail: { color: COLORS.lightGrey, maxWidth: 520, paddingBottom: 6 },
+  sumTail: { color: COLORS.mediumGrey, maxWidth: 520 },
+  sumKicker: {
+    fontFamily: 'Noah-Bold',
+    color: COLORS.white,
+    maxWidth: 520,
+    marginTop: 2,
+    paddingBottom: 6,
+  },
 
   // the three beats
   beats: { gap: 0 },

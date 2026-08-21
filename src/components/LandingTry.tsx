@@ -40,22 +40,22 @@ import { TYPE } from '@/styles/typography';
  * say plainly what is being asked.
  */
 /**
- * The four honest answers, each with the life it belongs to.
+ * The four honest answers, each named after a life rather than a number.
  *
- * Bare numbers made this a question for people who already think about
- * their week in hours — which is nobody. "2h" is an abstraction; "now
- * and then" is a Tuesday somebody recognises. The captions are
- * deliberately drawn from different lives rather than one: a sixth
- * former, someone off a late shift, a parent after bedtime, and a week
- * where the house is empty. The number stays, because the number is
- * what the scheduler runs on and hiding it would make the answer feel
- * like a guess.
+ * "2h" was the headline and the life was the caption, which asks the
+ * reader to translate their week into hours before they can answer —
+ * the one piece of arithmetic this product promises to do for them.
+ * Flipped, the chip asks a question anyone can answer on sight: which
+ * of these is your week? A parent recognises "after bedtime" faster
+ * than any number, a student "school nights", a nine-to-fiver "after
+ * work". The hours stay, small, because the scheduler runs on them and
+ * hiding the number would make the answer feel like a guess.
  */
 const PACES: { hours: number; life: string }[] = [
-  { hours: 2, life: 'now and then' },
-  { hours: 5, life: 'after work' },
-  { hours: 10, life: 'most evenings' },
-  { hours: 20, life: 'a proper run' },
+  { hours: 2, life: 'After bedtime' },
+  { hours: 5, life: 'School nights' },
+  { hours: 10, life: 'After work' },
+  { hours: 20, life: 'Free weekends' },
 ];
 
 /**
@@ -146,14 +146,14 @@ export function LandingTry({ scale }: { scale: LandingScale }) {
                 onPress={() => setPace(hours)}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: on }}
-                accessibilityLabel={`${hours} hours a week — ${life}`}
+                accessibilityLabel={`${life} — about ${hours} hours a week`}
                 style={[styles.pace, on && styles.paceOn]}
               >
-                <Text style={[styles.paceNumber, on && styles.paceNumberOn]}>
-                  {hours}h
-                </Text>
                 <Text style={[styles.paceLife, on && styles.paceLifeOn]}>
                   {life}
+                </Text>
+                <Text style={[styles.paceNumber, on && styles.paceNumberOn]}>
+                  ≈{hours}h a week
                 </Text>
               </Pressable>
             );
@@ -378,21 +378,23 @@ const styles = StyleSheet.create({
     borderColor: COLORS.accent,
     boxShadow: '0 4px 0 #B87A16',
   },
-  paceNumber: {
-    fontFamily: 'Noah-Black',
-    fontSize: 21,
-    letterSpacing: -0.5,
-    color: COLORS.lightGrey,
-  },
-  paceNumberOn: { color: COLORS.navy },
   paceLife: {
+    fontFamily: 'Noah-Black',
+    fontSize: 17,
+    letterSpacing: -0.2,
+    color: COLORS.lightGrey,
+    textAlign: 'center',
+  },
+  paceLifeOn: { color: COLORS.navy },
+  paceNumber: {
     ...TYPE.micro,
+    fontSize: 11,
     color: COLORS.mediumGrey,
     textAlign: 'center',
   },
   // Dark on amber rather than the grey, which on the selected chip
   // fell to about 2:1 and vanished.
-  paceLifeOn: { color: 'rgba(23,29,41,0.78)' },
+  paceNumberOn: { color: 'rgba(23,29,41,0.78)' },
   everyone: {
     ...TYPE.p,
     color: COLORS.mediumGrey,

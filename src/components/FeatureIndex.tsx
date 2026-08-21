@@ -8,18 +8,18 @@ import { SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 /**
- * Everything else it does, set like a magazine's contents page.
+ * Everything else it does, as a sheet of stickers.
  *
- * The first version was twelve numbered rows with hairline rules and a
- * one-line body each — accurate, complete, and the most boring thing
- * on the page. An index is a reference; this is an advert, and what an
- * advert needs from a list is the sensation of plenty. So the bodies
- * are gone and the titles are set big, black and flowing, each with a
- * dot from the page's own colour cast — the way a magazine runs its
- * contents across a spread rather than down a margin. Twelve bold
- * names wrapping like a paragraph say "there is a lot in this box"
- * faster than twelve explanations ever did; the explanations live in
- * the app, one tap away.
+ * This has been a numbered index (accurate and boring) and a paragraph
+ * of bold names with coloured dots (better, still a list wearing
+ * jewellery). A pile of extras is not a list — it is a pile, and the
+ * honest fun way to draw a pile of small good things is the way a
+ * lunchbox draws them: stickers. Each name is a chip in one of the
+ * page's cast colours, tinted and bordered in its own hue, set down at
+ * a slight hand tilt that alternates so no two neighbours lean the
+ * same way. Twelve stickers say "there is a lot in this box" the way
+ * twelve bold words never quite did, and the explanations still live
+ * in the app, one tap away.
  */
 const ENTRIES = [
   'Steam import',
@@ -39,6 +39,8 @@ const ENTRIES = [
 
 /** The cast, dealt in order — no two neighbours share a colour. */
 const HUES = [COLORS.accent, COLORS.violet, COLORS.mint, COLORS.coral];
+/** Small and alternating: set down by hand, not falling over. */
+const TILTS = [-2, 1.5, -1, 2];
 
 export function FeatureIndex({ scale }: { scale: LandingScale }) {
   return (
@@ -52,24 +54,36 @@ export function FeatureIndex({ scale }: { scale: LandingScale }) {
         delay={80}
       />
       <View style={styles.flow}>
-        {ENTRIES.map((title, index) => (
-          <Rise key={title} from="lift" delay={index * 55}>
-            <View style={styles.item}>
+        {ENTRIES.map((title, index) => {
+          const hue = HUES[index % HUES.length];
+          // A hand lays stickers down askew, and no two the same way.
+          const tilt = TILTS[index % TILTS.length];
+          return (
+            <Rise key={title} from="lift" delay={index * 55}>
               <View
                 style={[
-                  styles.dot,
-                  { backgroundColor: HUES[index % HUES.length] },
+                  styles.sticker,
+                  {
+                    borderColor: hue,
+                    backgroundColor: `${hue}1F`,
+                    transform: [{ rotate: `${tilt}deg` }],
+                  },
                 ]}
-              />
-              <Text
-                style={[styles.title, scale.wide && styles.titleWide]}
-                numberOfLines={1}
               >
-                {title}
-              </Text>
-            </View>
-          </Rise>
-        ))}
+                <Text
+                  style={[
+                    styles.title,
+                    { color: hue },
+                    scale.wide && styles.titleWide,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {title}
+                </Text>
+              </View>
+            </Rise>
+          );
+        })}
       </View>
     </View>
   );
@@ -83,19 +97,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
-    columnGap: SPACING.xl + 6,
-    rowGap: SPACING.lg + 2,
-    // A paragraph of names wants a ragged edge, not a grid.
+    columnGap: SPACING.md,
+    rowGap: SPACING.md + 4,
+    // A sheet of stickers wants a ragged edge, not a grid.
     maxWidth: 1000,
   },
-  item: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md - 3 },
-  dot: { width: 12, height: 12, borderRadius: 6 },
+  sticker: {
+    borderWidth: 2,
+    borderRadius: 999,
+    paddingVertical: SPACING.sm + 2,
+    paddingHorizontal: SPACING.lg,
+  },
   title: {
     fontFamily: 'Noah-Black',
-    fontSize: 24,
-    lineHeight: 30,
-    letterSpacing: -0.5,
-    color: COLORS.white,
+    fontSize: 18,
+    lineHeight: 22,
+    letterSpacing: -0.2,
   },
-  titleWide: { fontSize: 34, lineHeight: 42, letterSpacing: -1 },
+  titleWide: { fontSize: 22, lineHeight: 26, letterSpacing: -0.4 },
 });

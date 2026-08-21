@@ -243,7 +243,7 @@ function Flier({
       <CoverImage
         uri={image}
         style={[styles.art, { height: flierW * 0.58 }]}
-        size="thumb"
+        size="tile"
       />
       {/* The name, so the viewer knows WHAT just became a block. */}
       <Text style={styles.name} numberOfLines={1}>
