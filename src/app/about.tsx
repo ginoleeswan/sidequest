@@ -382,7 +382,7 @@ export default function AboutScreen() {
                   and have nowhere to go back to; the ones who came from
                   the footer have a browser button and the mark below. */}
             <Animated.View style={[styles.lockup, step(0, 0.35)]}>
-              <MarkDraw size={26} />
+              <MarkDraw size={40} />
               <Text style={styles.word}>SIDEQUEST</Text>
             </Animated.View>
             <Animated.Text
@@ -558,30 +558,38 @@ export default function AboutScreen() {
             arrives crooked and straightens. Used once: a second `tilt`
             further down would turn a signature into a mannerism. */}
         <WhenNear placeholder={<View style={styles.cardRoom} />}>
-          <Band tone="well" scale={scale} style={styles.card}>
+          <Band tone="well" scale={scale} style={styles.card} raise>
             <QuestMark id="memcard" />
             <Words
               text="And something to show for the year."
               style={[styles.lead, scale.lead]}
             />
-            {/* The covers fly in from the reader's side and become the
-                blocks — the product-film build, with the games as the
-                pieces. At the full width of the column, because a
-                showpiece drawn at a third of its stage is a thumbnail
-                of itself: the build IS the explanation, so it gets the
-                whole screen and the caption shrinks to one line. */}
-            <Drift distance={-22} testID="memcard-drift">
-              <MemcardBuild
-                card={sampleCard(games)}
-                games={games ?? []}
-                maxWidth={scale.wide ? 1000 : 640}
-              />
-            </Drift>
+            {/* Caption above the card so the card can be last, and so
+                it can hang over the seam. */}
             <Rise delay={120}>
               <Text style={[styles.cardCaption, scale.body]}>
                 Shares as one link. No account attached.
               </Text>
             </Rise>
+            {/* The covers fly in from the reader's side and become the
+                blocks — the product-film build, with the games as the
+                pieces. At the full width of the column, because a
+                showpiece drawn at a third of its stage is a thumbnail
+                of itself.
+
+                And hanging over the band's bottom edge, because the
+                page's biggest object should not sit politely inside its
+                box: an object crossing the seam is what tells a reader
+                the sections are one page rather than a stack. */}
+            <Drift distance={-22} testID="memcard-drift">
+              <View style={styles.cardStage}>
+                <MemcardBuild
+                  card={sampleCard(games)}
+                  games={games ?? []}
+                  maxWidth={scale.wide ? 1000 : 640}
+                />
+              </View>
+            </Drift>
           </Band>
         </WhenNear>
 
@@ -660,7 +668,14 @@ const styles = StyleSheet.create({
     gap: SPACING.sm + 2,
     marginBottom: SPACING.xl,
   },
-  word: { ...TYPE.h1, color: COLORS.lightGrey },
+  // The lockup is the page's first object; at nav size it read as
+  // chrome that had wandered onto a poster.
+  word: {
+    ...TYPE.h1,
+    fontSize: 26,
+    letterSpacing: 2,
+    color: COLORS.lightGrey,
+  },
   headline: {
     fontFamily: 'Noah-Black',
     ...OVER_IMAGE.heading,
@@ -674,11 +689,11 @@ const styles = StyleSheet.create({
     // The step between the masthead and the body. Straight from a
     // hundred points to seventeen is a cliff, and the eye reads a cliff
     // as two unrelated things rather than as one thought continuing.
-    fontSize: 21,
-    lineHeight: 31,
+    fontSize: 24,
+    lineHeight: 35,
     color: COLORS.lightGrey,
-    maxWidth: 520,
-    marginBottom: SPACING.xl,
+    maxWidth: 600,
+    marginBottom: SPACING.xl + 6,
   },
   cta: {
     flexDirection: 'row',
@@ -788,6 +803,8 @@ const styles = StyleSheet.create({
   // the card
   cardRoom: { height: 460 },
   card: { alignItems: 'center', gap: SPACING.xl },
+  // The showpiece hangs a third of itself past the band's bottom edge.
+  cardStage: { marginBottom: -110, zIndex: 1 },
   cardCaption: { textAlign: 'center' },
 
   // the plain truth
