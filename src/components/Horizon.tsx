@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import Svg, {
-  Circle,
   Defs,
   Ellipse,
   Path,
@@ -36,25 +35,11 @@ import { TYPE } from '@/styles/typography';
  * number, because a static export renders once and a page must not
  * disagree with itself between server and client. Three of them
  * breathe on slow, offset clocks — the only ambient motion in the
- * scene, and enough to make the sky a sky.
+ * scene, and enough to make the sky a sky. The dot-stars this scene
+ * opened with are gone: at two pixels they read as dust on the screen,
+ * not as night, and the constellation of game shapes says "sky" better
+ * with five objects than the dots said it with ten.
  */
-
-/** [x, y, r, opacity] in the sky's 1000x150 space. */
-const STARS: [number, number, number, number][] = [
-  [88, 38, 1.6, 0.5],
-  [176, 96, 1.1, 0.3],
-  [268, 22, 1.4, 0.4],
-  [370, 70, 1.1, 0.28],
-  [498, 30, 1.8, 0.55],
-  [590, 88, 1.1, 0.3],
-  [668, 48, 1.4, 0.4],
-  [760, 18, 1.1, 0.32],
-  [842, 76, 1.6, 0.45],
-  [930, 40, 1.1, 0.3],
-];
-
-/** Which stars breathe, and how far apart their clocks start. */
-const TWINKLE = [0, 4, 8];
 
 /**
  * The constellation: the pile's own shapes, up in the sky.
@@ -138,42 +123,7 @@ export function Horizon({ onStart }: { onStart?: () => void }) {
             </RadialGradient>
           </Defs>
           <Ellipse cx="500" cy="260" rx="430" ry="200" fill="url(#dusk)" />
-          {STARS.map(([x, y, r, o], index) => (
-            <Circle
-              key={`${x}-${y}`}
-              cx={x}
-              cy={y}
-              r={r}
-              fill={index % 3 === 0 ? COLORS.accent : COLORS.white}
-              opacity={o}
-            />
-          ))}
         </Svg>
-        {/* Three of the stars, breathing over the static field. */}
-        {!reduced &&
-          TWINKLE.map((slot, index) => {
-            const [x, y, r] = STARS[slot];
-            return (
-              <Animated.View
-                key={slot}
-                style={[
-                  styles.twinkle,
-                  {
-                    left: `${x / 10}%`,
-                    top: y,
-                    width: r * 4,
-                    height: r * 4,
-                    borderRadius: r * 2,
-                    opacity: breathe.interpolate({
-                      inputRange: [0, 0.5, 1],
-                      outputRange:
-                        index % 2 === 0 ? [0.1, 0.6, 0.1] : [0.55, 0.15, 0.55],
-                    }),
-                  },
-                ]}
-              />
-            );
-          })}
 
         {FLOATERS.map(([glyph, left, top, size, tilt, dir], index) => (
           <Animated.View
@@ -202,8 +152,8 @@ export function Horizon({ onStart }: { onStart?: () => void }) {
                 d={SEAM_GLYPHS[glyph]}
                 fill={
                   index % 2 === 0
-                    ? 'rgba(255,255,255,0.15)'
-                    : 'rgba(242,169,59,0.2)'
+                    ? 'rgba(255,255,255,0.2)'
+                    : 'rgba(242,169,59,0.26)'
                 }
                 fillRule="evenodd"
               />
@@ -330,7 +280,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   skyzone: { height: 260 },
-  twinkle: { position: 'absolute', backgroundColor: COLORS.white },
   floater: { position: 'absolute' },
   hill: { position: 'absolute', bottom: 0, left: 0 },
   /**

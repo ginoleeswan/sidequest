@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -51,11 +52,15 @@ import { TYPE } from '@/styles/typography';
  * work". The hours stay, small, because the scheduler runs on them and
  * hiding the number would make the answer feel like a guess.
  */
-const PACES: { hours: number; life: string }[] = [
-  { hours: 2, life: 'After bedtime' },
-  { hours: 5, life: 'School nights' },
-  { hours: 10, life: 'After work' },
-  { hours: 20, life: 'Free weekends' },
+const PACES: {
+  hours: number;
+  life: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}[] = [
+  { hours: 2, life: 'After bedtime', icon: 'moon' },
+  { hours: 5, life: 'School nights', icon: 'school' },
+  { hours: 10, life: 'After work', icon: 'briefcase' },
+  { hours: 20, life: 'Free weekends', icon: 'sunny' },
 ];
 
 /**
@@ -138,7 +143,7 @@ export function LandingTry({ scale }: { scale: LandingScale }) {
 
       <Rise delay={140}>
         <View style={styles.paces}>
-          {PACES.map(({ hours, life }) => {
+          {PACES.map(({ hours, life, icon }) => {
             const on = hours === pace;
             return (
               <Pressable
@@ -149,11 +154,20 @@ export function LandingTry({ scale }: { scale: LandingScale }) {
                 accessibilityLabel={`${life} — about ${hours} hours a week`}
                 style={[styles.pace, on && styles.paceOn]}
               >
+                {/* The icon says the life before the word does — a
+                    moon is read faster than "after bedtime" — and the
+                    hours drop to a bare ≈Nh, because "a week" was said
+                    once above and did not need saying four times. */}
+                <Ionicons
+                  name={icon}
+                  size={20}
+                  color={on ? COLORS.navy : COLORS.mediumGrey}
+                />
                 <Text style={[styles.paceLife, on && styles.paceLifeOn]}>
                   {life}
                 </Text>
                 <Text style={[styles.paceNumber, on && styles.paceNumberOn]}>
-                  ≈{hours}h a week
+                  ≈{hours}h
                 </Text>
               </Pressable>
             );
@@ -366,7 +380,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     flexBasis: 128,
     alignItems: 'center',
-    gap: 1,
+    gap: 3,
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.md,
     borderRadius: RADIUS.lg,

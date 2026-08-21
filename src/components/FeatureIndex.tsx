@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Rise } from './Rise';
@@ -21,26 +22,26 @@ import { TYPE } from '@/styles/typography';
  * twelve bold words never quite did, and the explanations still live
  * in the app, one tap away.
  */
-const ENTRIES = [
-  'Steam import',
-  'CSV import',
-  'The week view',
-  'Calendar export',
-  'Weekend mode',
-  'Deadlines',
-  'Play sessions',
-  'Your own lengths',
-  'Notes & tags',
-  'Collections',
-  'Sequel alerts',
-  'Search everything',
-  'Works offline',
+const ENTRIES: { title: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { title: 'Steam import', icon: 'logo-steam' },
+  { title: 'CSV import', icon: 'document-text' },
+  { title: 'The week view', icon: 'calendar' },
+  { title: 'Calendar export', icon: 'share-outline' },
+  { title: 'Weekend mode', icon: 'sunny' },
+  { title: 'Deadlines', icon: 'flag' },
+  { title: 'Play sessions', icon: 'stopwatch' },
+  { title: 'Your own lengths', icon: 'pencil' },
+  { title: 'Notes & tags', icon: 'pricetag' },
+  { title: 'Collections', icon: 'albums' },
+  { title: 'Sequel alerts', icon: 'notifications' },
+  { title: 'Search everything', icon: 'search' },
+  { title: 'Works offline', icon: 'cloud-offline-outline' },
 ];
 
 /** The cast, dealt in order — no two neighbours share a colour. */
 const HUES = [COLORS.accent, COLORS.violet, COLORS.mint, COLORS.coral];
-/** Small and alternating: set down by hand, not falling over. */
-const TILTS = [-2, 1.5, -1, 2];
+/** Alternating and uneven: set down by hand, not falling over. */
+const TILTS = [-3, 2, -1.5, 3, -2, 1];
 
 export function FeatureIndex({ scale }: { scale: LandingScale }) {
   return (
@@ -54,22 +55,26 @@ export function FeatureIndex({ scale }: { scale: LandingScale }) {
         delay={80}
       />
       <View style={styles.flow}>
-        {ENTRIES.map((title, index) => {
+        {ENTRIES.map(({ title, icon }, index) => {
           const hue = HUES[index % HUES.length];
           // A hand lays stickers down askew, and no two the same way.
           const tilt = TILTS[index % TILTS.length];
           return (
             <Rise key={title} from="lift" delay={index * 55}>
+              {/* A die-cut sticker: pale outer edge, tinted face, the
+                  feature's own glyph leading its name. The pale edge is
+                  the whole trick — a colour-on-colour pill is a tag; a
+                  pill with the white cut around it is a sticker. */}
               <View
                 style={[
                   styles.sticker,
                   {
-                    borderColor: hue,
-                    backgroundColor: `${hue}1F`,
+                    backgroundColor: `${hue}29`,
                     transform: [{ rotate: `${tilt}deg` }],
                   },
                 ]}
               >
+                <Ionicons name={icon} size={scale.wide ? 20 : 17} color={hue} />
                 <Text
                   style={[
                     styles.title,
@@ -103,10 +108,18 @@ const styles = StyleSheet.create({
     maxWidth: 1000,
   },
   sticker: {
-    borderWidth: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    // The die-cut edge: pale, and thicker than any hairline in the
+    // app, because it is imitating paper rather than drawing a line.
+    borderWidth: 2.5,
+    borderColor: 'rgba(233,235,242,0.9)',
     borderRadius: 999,
     paddingVertical: SPACING.sm + 2,
-    paddingHorizontal: SPACING.lg,
+    paddingHorizontal: SPACING.lg - 2,
+    // Lifted a touch off the page, as a laid-down sticker is.
+    boxShadow: '0 3px 10px rgba(9,12,19,0.35)',
   },
   title: {
     fontFamily: 'Noah-Black',
