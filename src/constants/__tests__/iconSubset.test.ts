@@ -41,7 +41,10 @@ function sources(dir: string): string[] {
  *
  * Add to this only for a word the app genuinely never draws as an icon.
  */
-const NOT_ICONS = new Set(['resize', 'radio', 'filter']);
+// Strings the scanner matches that are not icon usages: a DOM event, an
+// ARIA role, a CSS property, and a seam variant that happens to share a
+// name with Ionicons' credit-card glyph.
+const NOT_ICONS = new Set(['resize', 'radio', 'filter', 'card']);
 
 const used = new Set<string>();
 for (const file of sources(SRC)) {

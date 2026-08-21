@@ -42,13 +42,22 @@ export function Alerts({ alerts }: { alerts: Alert[] }) {
           style={[styles.card, alert.kind === 'at-risk' && styles.cardWarn]}
         >
           <View style={styles.head}>
-            <Ionicons
-              name={ICON[alert.kind]}
-              size={14}
-              color={
-                alert.kind === 'at-risk' ? COLORS.accent : COLORS.mediumGrey
-              }
-            />
+            {/* The icon sits on the first line's optical centre, not at
+                the top of the text block. Flush to the block's top it
+                floated in the leading above the cap line — measured 12
+                points high, and unmistakable once the message wrapped
+                to two lines. The box is one line tall and centres its
+                own contents, so it stays right if the type scale
+                changes. */}
+            <View style={styles.headIcon}>
+              <Ionicons
+                name={ICON[alert.kind]}
+                size={ICON_SIZE}
+                color={
+                  alert.kind === 'at-risk' ? COLORS.accent : COLORS.mediumGrey
+                }
+              />
+            </View>
             <Text style={styles.message}>{alert.message}</Text>
           </View>
 
@@ -93,6 +102,9 @@ export function Alerts({ alerts }: { alerts: Alert[] }) {
   );
 }
 
+/** One size for the leading icon, shared by the icon and the indent. */
+const ICON_SIZE = 14;
+
 const styles = StyleSheet.create({
   list: { gap: SPACING.sm },
   card: {
@@ -105,6 +117,12 @@ const styles = StyleSheet.create({
   },
   cardWarn: { borderColor: 'rgba(245,165,36,0.45)' },
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm },
+  headIcon: {
+    width: ICON_SIZE,
+    height: TYPE.p.lineHeight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   message: {
     ...TYPE.p,
     color: COLORS.lightGrey,
@@ -113,7 +131,11 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     gap: SPACING.lg,
-    paddingLeft: SPACING.lg + 2,
+    // A hanging indent, derived rather than guessed: the actions line
+    // up under the message, so the offset is exactly the icon and the
+    // gap beside it. It was a hand-picked 22, which happened to be
+    // right until either of those two numbers moved.
+    paddingLeft: ICON_SIZE + SPACING.sm,
   },
   action: {
     ...TYPE.labelTiny,

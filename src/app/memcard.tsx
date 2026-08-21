@@ -373,10 +373,21 @@ const styles = StyleSheet.create({
   statRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: SPACING.xl,
+    gap: SPACING.lg,
     marginTop: SPACING.xs,
   },
-  stat: { gap: 2 },
+  /**
+   * Even columns, not content-sized cells.
+   *
+   * Sized to their contents these made a ragged strip — "0 / SAVED THIS
+   * YEAR" is three times the width of "8 / FINISHED", so no two numbers
+   * in the row lined up with anything, and the wrap fell in a different
+   * place at every count. A fixed basis with no growth makes it a grid
+   * at any width and leaves the leftover space at the right, where a
+   * grid's leftover space belongs, instead of stretching whichever
+   * stats happen to land on the last row.
+   */
+  stat: { gap: 2, flexBasis: 132, flexGrow: 0 },
   statValue: {
     ...TYPE.h3,
     color: COLORS.white,

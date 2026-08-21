@@ -25,7 +25,7 @@ import { MemcardBuild } from '@/components/MemcardBuild';
 import { QuestLine, QuestMark } from '@/components/QuestLine';
 import { LandingProof } from '@/components/LandingProof';
 import { Drift } from '@/components/Drift';
-import { Seam } from '@/components/Seam';
+import { Seam, type SeamVariant } from '@/components/Seam';
 import { Rise, useInView } from '@/components/Rise';
 import { Words } from '@/components/Words';
 import { LandingWall } from '@/components/LandingWall';
@@ -191,7 +191,7 @@ function Band({
   raise = false,
   seam,
   behind = LANDING_GROUND,
-  seamPins = true,
+  seamVariant = 'lip',
   children,
 }: {
   scale: LandingScale;
@@ -211,8 +211,14 @@ function Band({
   seam?: number;
   /** The colour above, which the chamfer cuts away to reveal. */
   behind?: string;
-  /** Off where something else already sits on this lip. */
-  seamPins?: boolean;
+  /**
+   * How loud this seam is.
+   *
+   * Default is the quiet lit lip. `card` is a chapter break and
+   * belongs only where the page changes subject; `glyphs` is used
+   * exactly once.
+   */
+  seamVariant?: SeamVariant;
   children: React.ReactNode;
 }) {
   const ground = tone === 'well' ? LANDING_WELL : LANDING_GROUND;
@@ -221,7 +227,12 @@ function Band({
       style={[tone === 'well' ? styles.well : undefined, raise && styles.raise]}
     >
       {seam != null && (
-        <Seam color={ground} behind={behind} index={seam} pins={seamPins} />
+        <Seam
+          color={ground}
+          behind={behind}
+          index={seam}
+          variant={seamVariant}
+        />
       )}
       <View
         style={[
@@ -446,6 +457,7 @@ export default function AboutScreen() {
             style={scale.wide ? styles.sumWide : styles.sumTall}
             raise
             seam={0}
+            seamVariant="card"
           >
             <QuestMark id="sum" />
             <Sum
@@ -492,7 +504,12 @@ export default function AboutScreen() {
               that runs under both edges of the screen is a world going
               past. */}
           <View style={styles.well}>
-            <Seam color={LANDING_WELL} index={3} />
+            {/* The one decorated seam on the page. It belongs to the
+                band about bringing your whole pile in, so the pile's
+                own furniture — a pad, a disc, a cartridge, a life —
+                is what the edge is cut out of. It works because the
+                three seams above it were plain. */}
+            <Seam color={LANDING_WELL} index={3} variant="glyphs" />
             <View
               style={[
                 styles.measure,
@@ -612,7 +629,7 @@ export default function AboutScreen() {
             style={styles.card}
             raise
             seam={5}
-            seamPins={false}
+            seamVariant="card"
           >
             <QuestMark id="memcard" />
             <Words
@@ -649,7 +666,7 @@ export default function AboutScreen() {
         </WhenNear>
 
         {/* The long tail, ranked below everything argued above it. */}
-        <Band scale={scale} seam={6} behind={LANDING_WELL} seamPins={false}>
+        <Band scale={scale} seam={6} behind={LANDING_WELL}>
           <QuestMark id="index" />
           <FeatureIndex scale={scale} />
         </Band>
@@ -661,7 +678,7 @@ export default function AboutScreen() {
           placeholder={<View style={styles.takeRoom} />}
           style={styles.raise}
         >
-          <Band tone="well" scale={scale} raise seam={7}>
+          <Band tone="well" scale={scale} raise seam={7} seamVariant="card">
             <QuestMark id="take" />
             <LandingTake scale={scale} />
           </Band>

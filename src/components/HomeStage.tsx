@@ -156,6 +156,18 @@ function Slide({
     fontSize,
     lineHeight: Math.round(fontSize * 1.02),
     letterSpacing: fontSize > 46 ? -1.6 : -0.9,
+    /**
+     * Room for the last line's descenders.
+     *
+     * The leading is deliberately tighter than the em box — display
+     * type set at a body face's line height looks loose — but a 1.02
+     * line box ends above the face's own descender, so the tail of a
+     * "g" in the last line was sliced flat: measured, the text block
+     * clipped 8px of itself at 68pt. Padding under the block gives the
+     * final line its descender back without loosening the leading
+     * between lines, which is the whole point of setting it tight.
+     */
+    paddingBottom: Math.ceil(fontSize * 0.16),
   };
 
   useEffect(() => {

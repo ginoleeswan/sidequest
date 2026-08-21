@@ -23,35 +23,48 @@ export function SectionHeader({
   const [hovered, setHovered] = useState(false);
 
   return (
-    <View style={styles.row}>
-      <View style={styles.titles}>
-        {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
+    <View style={styles.header}>
+      {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
+      {/* The action shares a row with the TITLE, not with the title and
+          its eyebrow together. Set against the pair it was aligned to
+          the bottom of a two-line block, which put it 10.5pt below the
+          title's baseline on every shelf in the app — measured, and
+          visible once you know: "View all" floated under its heading
+          rather than sitting beside it. Nothing but the title is on
+          this line now, so both are single lines and can genuinely
+          share a baseline. */}
+      <View style={styles.row}>
         <Text style={styles.title}>{title}</Text>
+        {actionLabel && onAction ? (
+          <Pressable
+            onPress={onAction}
+            onHoverIn={() => setHovered(true)}
+            onHoverOut={() => setHovered(false)}
+            hitSlop={8}
+          >
+            <Text style={[styles.action, hovered && styles.actionHovered]}>
+              {actionLabel}
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
-      {actionLabel && onAction ? (
-        <Pressable
-          onPress={onAction}
-          onHoverIn={() => setHovered(true)}
-          onHoverOut={() => setHovered(false)}
-          hitSlop={8}
-        >
-          <Text style={[styles.action, hovered && styles.actionHovered]}>
-            {actionLabel}
-          </Text>
-        </Pressable>
-      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  header: { gap: 2 },
   row: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    // A shared baseline, not flush bottoms. Two texts at different
+    // sizes with their boxes bottom-aligned do not read as being on the
+    // same line, because the larger one's descender space pushes its
+    // baseline up; that is what the hand-tuned three points of padding
+    // under the action was compensating for, badly.
+    alignItems: 'baseline',
     justifyContent: 'space-between',
     gap: SPACING.md,
   },
-  titles: { gap: 2, flexShrink: 1 },
   eyebrow: {
     ...TYPE.micro,
     color: COLORS.mediumGrey,
@@ -59,11 +72,11 @@ const styles = StyleSheet.create({
   title: {
     ...TYPE.h2,
     color: COLORS.lightGrey,
+    flexShrink: 1,
   },
   action: {
     ...TYPE.labelTiny,
     color: COLORS.mediumGrey,
-    paddingBottom: 3,
   },
   actionHovered: { color: COLORS.blue },
 });
