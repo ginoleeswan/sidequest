@@ -43,11 +43,19 @@ function sources(dir) {
   });
 }
 
+// Names that look like glyphs but are not icon usages — shared with
+// the subset test, so the scan and the check can never disagree.
+const notIcons = new Set(
+  readFileSync(join(ROOT, 'src/constants/notIcons.ts'), 'utf8')
+    .match(/'([a-z-]+)'/g)
+    .map((m) => m.slice(1, -1))
+);
+
 const used = new Set();
 for (const file of sources(join(ROOT, 'src'))) {
   const text = readFileSync(file, 'utf8');
   for (const [, name] of text.matchAll(/['"`]([a-z][a-z0-9-]{2,})['"`]/g)) {
-    if (name in glyphMap) used.add(name);
+    if (name in glyphMap && !notIcons.has(name)) used.add(name);
   }
 }
 

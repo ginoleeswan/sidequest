@@ -10,9 +10,8 @@ import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { DROP_REASONS } from '@/lib/drops';
 import { COLORS } from '@/styles/colors';
-import { EASING } from '@/styles/motion';
 import { RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { OVER_IMAGE, TYPE } from '@/styles/typography';
 
 /**
  * The evidence beside each beat, as three staged objects.
@@ -97,10 +96,14 @@ export function LandingProof({
   return (
     <View ref={ref} style={[styles.frame, { width }]}>
       <View style={[styles.card, dropped && styles.cardDropped]}>
+        {/* Hero-sized, because this IS a hero: the card runs the full
+            column. It requested the 100px row-thumbnail derivative and
+            stretched it eight times over — measured on a phone as the
+            blur it was. */}
         <CoverImage
           uri={game.background_image}
           style={styles.art}
-          size="thumb"
+          size="hero"
         />
         {/* Letting go is drawn, not described: the art goes out. */}
         {dropped && <View style={styles.grey} />}
@@ -142,13 +145,13 @@ export function LandingProof({
         {kind === 'length' && (
           <Animated.View style={[styles.figureSlot, stamp]}>
             <Text style={[styles.figure, { color: hue }]}>{hours}</Text>
-            <Text style={[styles.figureUnit, { color: hue }]}>HOURS</Text>
+            <Text style={styles.figureUnit}>HOURS</Text>
           </Animated.View>
         )}
         {kind === 'tonight' && (
           <Animated.View style={[styles.figureSlot, stamp]}>
             <Text style={[styles.figure, { color: hue }]}>90</Text>
-            <Text style={[styles.figureUnit, { color: hue }]}>MINUTES</Text>
+            <Text style={styles.figureUnit}>MINUTES</Text>
           </Animated.View>
         )}
         {dropped && (
@@ -162,12 +165,28 @@ export function LandingProof({
       </View>
 
       {dropped && (
-        <View style={styles.reasons}>
-          {DROP_REASONS.map((reason) => (
-            <Text key={reason.key} style={styles.reason}>
-              {reason.label}
-            </Text>
-          ))}
+        <View style={styles.amnesty}>
+          {/* These are the app's actual drop reasons — the excuses the
+              tidy screen lets you file a game under. As bare grey words
+              they read as a caption that lost its image; as stamped
+              coral tags under a LET GO stamp they read as what they
+              are: the permission slips. */}
+          <Text style={styles.amnestyLead}>ANY OF THESE COUNT</Text>
+          <View style={styles.reasons}>
+            {DROP_REASONS.map((reason, at) => (
+              <View
+                key={reason.key}
+                style={[
+                  styles.reason,
+                  {
+                    transform: [{ rotate: `${at % 2 === 0 ? -1.5 : 1.5}deg` }],
+                  },
+                ]}
+              >
+                <Text style={styles.reasonWord}>{reason.label}</Text>
+              </View>
+            ))}
+          </View>
         </View>
       )}
     </View>
@@ -222,13 +241,18 @@ const styles = StyleSheet.create({
     lineHeight: 68,
     letterSpacing: -3,
     textAlign: 'right',
+    // The number sits on whatever the artwork happens to be; the
+    // app's over-image shadow is what keeps it legible on a pale sky.
+    ...OVER_IMAGE.heading,
   },
   figureUnit: {
     ...TYPE.tag,
-    fontSize: 11,
+    fontSize: 12,
     letterSpacing: 3,
     textAlign: 'right',
-    marginTop: 2,
+    marginTop: 3,
+    color: COLORS.white,
+    ...OVER_IMAGE.body,
   },
 
   stamp: {
@@ -247,6 +271,20 @@ const styles = StyleSheet.create({
     letterSpacing: 4,
   },
 
-  reasons: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.md },
-  reason: { ...TYPE.caption, fontSize: 13 },
+  amnesty: { gap: SPACING.sm },
+  amnestyLead: {
+    ...TYPE.micro,
+    color: COLORS.coral,
+    opacity: 0.85,
+  },
+  reasons: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
+  reason: {
+    borderWidth: 1.5,
+    borderColor: 'rgba(248,113,104,0.45)',
+    backgroundColor: 'rgba(248,113,104,0.08)',
+    borderRadius: 8,
+    paddingVertical: 4,
+    paddingHorizontal: SPACING.sm + 2,
+  },
+  reasonWord: { ...TYPE.tag, fontSize: 12, color: COLORS.coral },
 });

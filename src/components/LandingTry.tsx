@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -39,7 +40,28 @@ import { TYPE } from '@/styles/typography';
  * space here is four options wide. Four numbers are one tap each and
  * say plainly what is being asked.
  */
-const PACES = [2, 5, 10, 20];
+/**
+ * The four honest answers, each named after a life rather than a number.
+ *
+ * "2h" was the headline and the life was the caption, which asks the
+ * reader to translate their week into hours before they can answer —
+ * the one piece of arithmetic this product promises to do for them.
+ * Flipped, the chip asks a question anyone can answer on sight: which
+ * of these is your week? A parent recognises "after bedtime" faster
+ * than any number, a student "school nights", a nine-to-fiver "after
+ * work". The hours stay, small, because the scheduler runs on them and
+ * hiding the number would make the answer feel like a guess.
+ */
+const PACES: {
+  hours: number;
+  life: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}[] = [
+  { hours: 2, life: 'After bedtime', icon: 'moon' },
+  { hours: 5, life: 'School nights', icon: 'school' },
+  { hours: 10, life: 'After work', icon: 'briefcase' },
+  { hours: 20, life: 'Free weekends', icon: 'sunny' },
+];
 
 /**
  * How far out to plan.
@@ -121,7 +143,7 @@ export function LandingTry({ scale }: { scale: LandingScale }) {
 
       <Rise delay={140}>
         <View style={styles.paces}>
-          {PACES.map((hours) => {
+          {PACES.map(({ hours, life, icon }) => {
             const on = hours === pace;
             return (
               <Pressable
@@ -129,17 +151,40 @@ export function LandingTry({ scale }: { scale: LandingScale }) {
                 onPress={() => setPace(hours)}
                 accessibilityRole="radio"
                 accessibilityState={{ selected: on }}
-                accessibilityLabel={`${hours} hours a week`}
+                accessibilityLabel={`${life} — about ${hours} hours a week`}
                 style={[styles.pace, on && styles.paceOn]}
               >
+                {/* The icon says the life before the word does — a
+                    moon is read faster than "after bedtime" — and the
+                    hours drop to a bare ≈Nh, because "a week" was said
+                    once above and did not need saying four times. */}
+                <Ionicons
+                  name={icon}
+                  size={20}
+                  color={on ? COLORS.navy : COLORS.mediumGrey}
+                />
+                <Text style={[styles.paceLife, on && styles.paceLifeOn]}>
+                  {life}
+                </Text>
                 <Text style={[styles.paceNumber, on && styles.paceNumberOn]}>
-                  {hours}h
+                  ≈{hours}h
                 </Text>
               </Pressable>
             );
           })}
-          <Text style={styles.paceUnit}>a week</Text>
         </View>
+      </Rise>
+
+      {/* Said once, plainly, because the page's biggest unspoken
+          objection is "this is for people with more free time than
+          me". The arithmetic does not care whose week it is, and that
+          is the reassurance — not a promise that everyone will finish
+          a lot. */}
+      <Rise delay={170}>
+        <Text style={styles.everyone}>
+          A week is a week — school, shifts, work, kids, retirement. The
+          arithmetic is the same; only the number changes.
+        </Text>
       </Rise>
 
       <Rise delay={200}>
@@ -310,9 +355,16 @@ const styles = StyleSheet.create({
   lead: { color: COLORS.white, maxWidth: 900 },
   paces: {
     flexDirection: 'row',
-    alignItems: 'center',
+    // Wraps, because the chips grew a caption and stopped fitting. Four
+    // labelled chips are wider than a 390pt phone, and a row that
+    // overflows does not look full — it looks like two of the four
+    // answers are missing, which on the page's one control is the worst
+    // possible thing to imply.
+    flexWrap: 'wrap',
+    alignItems: 'stretch',
     gap: SPACING.md,
     marginTop: SPACING.xl,
+    maxWidth: 620,
   },
   /**
    * A control the section is built around should look like one. These
@@ -321,8 +373,16 @@ const styles = StyleSheet.create({
    * because tapping them is the whole point of the band.
    */
   pace: {
+    // A basis, not a width: the chips share whatever room there is,
+    // which makes them two-by-two on a phone and four across on a
+    // laptop, all identical in size at either. Four chips of four
+    // different widths — one per caption length — read as a jumble.
+    flexGrow: 1,
+    flexBasis: 128,
+    alignItems: 'center',
+    gap: 3,
     paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg + 2,
+    paddingHorizontal: SPACING.md,
     borderRadius: RADIUS.lg,
     borderWidth: 2,
     borderColor: COLORS.strokeStrong,
@@ -332,14 +392,29 @@ const styles = StyleSheet.create({
     borderColor: COLORS.accent,
     boxShadow: '0 4px 0 #B87A16',
   },
-  paceNumber: {
+  paceLife: {
     fontFamily: 'Noah-Black',
-    fontSize: 21,
-    letterSpacing: -0.5,
+    fontSize: 17,
+    letterSpacing: -0.2,
     color: COLORS.lightGrey,
+    textAlign: 'center',
   },
-  paceNumberOn: { color: COLORS.navy },
-  paceUnit: { ...TYPE.caption, fontSize: 15, marginLeft: SPACING.sm },
+  paceLifeOn: { color: COLORS.navy },
+  paceNumber: {
+    ...TYPE.micro,
+    fontSize: 11,
+    color: COLORS.mediumGrey,
+    textAlign: 'center',
+  },
+  // Dark on amber rather than the grey, which on the selected chip
+  // fell to about 2:1 and vanished.
+  paceNumberOn: { color: 'rgba(23,29,41,0.78)' },
+  everyone: {
+    ...TYPE.p,
+    color: COLORS.mediumGrey,
+    maxWidth: 560,
+    marginTop: SPACING.md,
+  },
   verdict: { marginTop: SPACING.lg, maxWidth: 620, color: COLORS.lightGrey },
   count: { color: COLORS.accent, fontFamily: 'Noah-Black' },
   /**

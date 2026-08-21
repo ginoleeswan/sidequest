@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Platform, View } from 'react-native';
+import { Platform, View, type StyleProp, type ViewStyle } from 'react-native';
 
 /**
  * Holds a section's place until it is nearly on screen, then renders it.
@@ -25,10 +25,21 @@ const MARGIN = '100% 0px';
 interface Props {
   /** Occupies the exact space the children will. */
   placeholder: React.ReactNode;
+  /**
+   * Style for the wrapper this puts around its children.
+   *
+   * It exists for z-order. A section whose content hangs over the edge
+   * of the next one raises itself, and that raise is invisible from
+   * outside if a plain wrapper sits between it and its siblings: the
+   * wrapper is what the page actually stacks, so it has to carry the
+   * z-index. Found the hard way, when a drawn section seam painted
+   * straight through the memcard's overhang.
+   */
+  style?: StyleProp<ViewStyle>;
   children: React.ReactNode;
 }
 
-export function WhenNear({ placeholder, children }: Props) {
+export function WhenNear({ placeholder, style, children }: Props) {
   const [near, setNear] = useState(Platform.OS !== 'web');
   const ref = useRef<View | null>(null);
 
@@ -50,5 +61,9 @@ export function WhenNear({ placeholder, children }: Props) {
     return () => observer.disconnect();
   }, [near]);
 
-  return <View ref={ref}>{near ? children : placeholder}</View>;
+  return (
+    <View ref={ref} style={style}>
+      {near ? children : placeholder}
+    </View>
+  );
 }

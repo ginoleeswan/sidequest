@@ -83,12 +83,14 @@ export function LandingTake({ scale }: { scale: LandingScale }) {
           <View style={styles.badges}>
             {/* The two honest "store badges" this product can have. */}
             <View style={styles.badge}>
-              <Ionicons
-                name="share-outline"
-                size={28}
-                color={COLORS.lightGrey}
-              />
-              <View>
+              <View style={styles.badgePlate}>
+                <Ionicons
+                  name="share-outline"
+                  size={24}
+                  color={COLORS.lightGrey}
+                />
+              </View>
+              <View style={styles.badgeBody}>
                 <Text style={styles.badgeSmall}>On iPhone & iPad</Text>
                 <Text style={styles.badgeBig}>Share → Add to Home Screen</Text>
               </View>
@@ -100,12 +102,14 @@ export function LandingTake({ scale }: { scale: LandingScale }) {
               accessibilityRole={event ? 'button' : undefined}
               accessibilityLabel="Install Sidequest"
             >
-              <Ionicons
-                name="download-outline"
-                size={28}
-                color={event ? COLORS.navy : COLORS.lightGrey}
-              />
-              <View>
+              <View style={[styles.badgePlate, event && styles.badgePlateLive]}>
+                <Ionicons
+                  name="download-outline"
+                  size={24}
+                  color={event ? COLORS.navy : COLORS.lightGrey}
+                />
+              </View>
+              <View style={styles.badgeBody}>
                 <Text
                   style={[styles.badgeSmall, event && styles.badgeSmallLive]}
                 >
@@ -273,7 +277,19 @@ const styles = StyleSheet.create({
   copyWide: { flex: 1 },
   eyebrow: { ...TYPE.micro, color: COLORS.accent },
   lead: { color: COLORS.white, marginTop: SPACING.sm },
-  badges: { gap: SPACING.md, marginTop: SPACING.xl, alignSelf: 'flex-start' },
+  /**
+   * Stretch, not flex-start: at their natural width the two cards
+   * ended a third of the way across the column, and everything to
+   * their right read as a hole. Rows that span the column, with an
+   * icon plate anchoring the left end and the copy beside it, read as
+   * a list of two ways in rather than two lost buttons.
+   */
+  badges: {
+    gap: SPACING.md,
+    marginTop: SPACING.xl,
+    alignSelf: 'stretch',
+    maxWidth: 560,
+  },
   /**
    * These are the section's controls and sat at half the weight of the
    * phone beside them. Bigger box, thicker rule, bigger type — a row
@@ -282,14 +298,23 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.lg,
-    paddingVertical: SPACING.lg,
-    paddingHorizontal: SPACING.lg + 4,
+    gap: SPACING.md,
+    paddingVertical: SPACING.md + 2,
+    paddingHorizontal: SPACING.md + 2,
     borderRadius: RADIUS.md,
     borderWidth: 2,
     borderColor: COLORS.strokeStrong,
-    minWidth: 330,
   },
+  badgePlate: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.07)',
+  },
+  badgePlateLive: { backgroundColor: 'rgba(39,47,63,0.16)' },
+  badgeBody: { flex: 1, gap: 1 },
   badgeLive: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
   badgeSmall: { ...TYPE.caption, fontSize: 14 },
   badgeSmallLive: { color: 'rgba(39,47,63,0.7)' },

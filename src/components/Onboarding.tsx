@@ -64,7 +64,7 @@ function CoverWall({ games }: { games: Game[] }) {
       ))}
       {/* The words are the subject; the wall arrives out of them. */}
       <LinearGradient
-        colors={[COLORS.darkGrey, 'rgba(51,61,81,0.65)', 'rgba(51,61,81,0)']}
+        colors={[COLORS.navy, 'rgba(39,47,63,0.65)', 'rgba(39,47,63,0)']}
         locations={[0, 0.35, 1]}
         start={{ x: 0, y: 0.5 }}
         end={{ x: 1, y: 0.5 }}
@@ -373,7 +373,17 @@ export function Onboarding() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: COLORS.darkGrey,
+    /**
+     * The same ground as every other screen, exactly.
+     *
+     * This was darkGrey — one step lighter than the app's navy — and
+     * onboarding was the only page on it. The iOS toolbar takes its
+     * colour from the page, so the first screen anyone ever sees was
+     * also the only one where the browser chrome and the page did not
+     * match. The welcome mat cannot be the one tile laid in the wrong
+     * colour.
+     */
+    backgroundColor: COLORS.navy,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',

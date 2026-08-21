@@ -6,6 +6,22 @@ import IoniconsGlyphs from '@expo/vector-icons/build/vendor/react-native-vector-
 import { SUBSET_ICONS } from '../iconSubset';
 
 /**
+ * Quoted words that are Ionicons names and are not icons.
+ *
+ * The scan is deliberately blunt — any quoted lowercase word that
+ * matches a glyph name counts — because a false positive costs one
+ * unused glyph and a false negative ships a blank box. That trade is
+ * right, but the glyph map is a thousand ordinary English words, so it
+ * collides with the rest of the platform's vocabulary: "resize" is a
+ * DOM event, "radio" is an ARIA role, "filter" is a CSS property. The honest fix is to name the
+ * collisions rather than to ship glyphs nothing draws, or to contort
+ * the source around a regex in a test.
+ *
+ * Add to this only for a word the app genuinely never draws as an icon.
+ */
+import { NOT_ICONS as NOT_ICON_LIST } from '../notIcons';
+
+/**
  * The app ships a cut-down Ionicons — a few dozen glyphs out of ~1,300,
  * 9 KB instead of 381. The cut is generated from the source by
  * scripts/subset-icons.mjs, so the danger is not the subset being wrong
@@ -27,21 +43,7 @@ function sources(dir: string): string[] {
   });
 }
 
-/**
- * Quoted words that are Ionicons names and are not icons.
- *
- * The scan is deliberately blunt — any quoted lowercase word that
- * matches a glyph name counts — because a false positive costs one
- * unused glyph and a false negative ships a blank box. That trade is
- * right, but the glyph map is a thousand ordinary English words, so it
- * collides with the rest of the platform's vocabulary: "resize" is a
- * DOM event, "radio" is an ARIA role, "filter" is a CSS property. The honest fix is to name the
- * collisions rather than to ship glyphs nothing draws, or to contort
- * the source around a regex in a test.
- *
- * Add to this only for a word the app genuinely never draws as an icon.
- */
-const NOT_ICONS = new Set(['resize', 'radio', 'filter']);
+const NOT_ICONS = new Set<string>(NOT_ICON_LIST);
 
 const used = new Set<string>();
 for (const file of sources(SRC)) {

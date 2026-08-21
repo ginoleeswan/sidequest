@@ -37,7 +37,7 @@ import {
   type LibrarySort,
 } from '@/lib/libraryStats';
 import { COLORS } from '@/styles/colors';
-import { LAYOUT, SPACING } from '@/styles/theme';
+import { GUTTER, LAYOUT, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 const TABS: LibraryStatus[] = ['wishlist', 'playing', 'finished'];
@@ -450,7 +450,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: LAYOUT.maxExpandedWidth,
     alignSelf: 'center',
-    paddingHorizontal: SPACING.xl,
+    paddingHorizontal: GUTTER,
     gap: SPACING.md,
     paddingBottom: SPACING.xl * 1.5,
   },

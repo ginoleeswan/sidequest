@@ -1,15 +1,19 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import Svg, { Path, Rect } from 'react-native-svg';
+import { useState } from 'react';
 import {
   useWindowDimensions,
   Pressable,
   StyleSheet,
   Text,
   View,
+  type LayoutChangeEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Mark } from './Mark';
 import { COLORS } from '@/styles/colors';
+import { LANDING_WELL } from '@/styles/landing';
 import { LAYOUT, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
@@ -17,6 +21,7 @@ const EXPLORE = [
   { label: 'Home', href: '/' },
   { label: 'My Library', href: '/library' },
   { label: 'The Plan', href: '/plan' },
+  { label: 'About', href: '/about' },
 ] as const;
 
 const LEGAL = [
@@ -48,6 +53,105 @@ function LinkColumn({
   );
 }
 
+/**
+ * The shoreline: the footer's leading edge, as a wave.
+ *
+ * The page's decorated seam taught the footer its trick. The band used
+ * to arrive on a sixty-four point gradient and a hairline — a fade,
+ * which is what a transition looks like when nobody drew one. Now the
+ * footer is a body of deeper water and the page meets it at a drawn
+ * waterline: the same gentle swell as the pile's seam, one lit lip
+ * along the crest, and the Mark bobbing behind it — in the water, not
+ * on a label — the way Duolingo's owl peeks over the hill into their
+ * footer. The mascot sits out on the landing page, where the horizon
+ * section above has already given the Mark its real scene.
+ */
+const SHORE_H = 64;
+const SHORE_AMP = 10;
+const SHORE_MID = 30;
+const SHORE_LENGTH = 560;
+
+function Shore({ mascot }: { mascot: boolean }) {
+  const [W, setW] = useState(0);
+  const onLayout = (event: LayoutChangeEvent) => {
+    const measured = Math.round(event.nativeEvent.layout.width);
+    if (measured > 0 && measured !== W) setW(measured);
+  };
+  const waveY = (x: number) =>
+    SHORE_MID + SHORE_AMP * Math.sin((x / SHORE_LENGTH) * Math.PI * 2 + 2.1);
+  let wave = '';
+  if (W > 0) {
+    const pts: string[] = [];
+    for (let x = 0; x <= W; x += 12) pts.push(`${x} ${waveY(x).toFixed(1)}`);
+    pts.push(`${W} ${waveY(W).toFixed(1)}`);
+    wave = pts.join(' L');
+  }
+  // Two thirds along, clear of both the watermark's corner and the
+  // brand block below.
+  const markX = Math.round(W * 0.68);
+
+  return (
+    <View style={styles.shore} onLayout={onLayout} pointerEvents="none">
+      {W > 0 && (
+        <>
+          {/* Behind the water on purpose: the wave is drawn after and
+              covers the Mark's base, so it peeks over the line. */}
+          {mascot && (
+            <View
+              style={[styles.bob, { left: markX - 16, top: waveY(markX) - 24 }]}
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+            >
+              <Mark size={32} />
+            </View>
+          )}
+          <Svg width="100%" height={SHORE_H} viewBox={`0 0 ${W} ${SHORE_H}`}>
+            <Path d={`M${wave} V${SHORE_H} H0 Z`} fill={LANDING_WELL} />
+            <Path
+              d={`M${wave}`}
+              stroke="rgba(255,255,255,0.11)"
+              strokeWidth={1.5}
+              fill="none"
+            />
+          </Svg>
+        </>
+      )}
+    </View>
+  );
+}
+
+/**
+ * The contact strip, one last time.
+ *
+ * The landing page's chapter seams carry a memory card's gold pins on
+ * their leading edge; the footer carries the same strip at the END of
+ * the page — the card's connector, where the thing plugs in. It is
+ * the only ornament the footer gets, which is what lets it read as a
+ * signature rather than a decoration.
+ */
+function Pins() {
+  const PIN_W = 6;
+  const PIN_H = 11;
+  const GAP = 4;
+  const COUNT = 7;
+  const width = COUNT * PIN_W + (COUNT - 1) * GAP;
+  return (
+    <Svg width={width} height={PIN_H} accessibilityElementsHidden>
+      {Array.from({ length: COUNT }, (_, pin) => (
+        <Rect
+          key={pin}
+          x={pin * (PIN_W + GAP)}
+          y={0}
+          width={PIN_W}
+          height={PIN_H}
+          rx={1.5}
+          fill="rgba(242,169,59,0.38)"
+        />
+      ))}
+    </Svg>
+  );
+}
+
 interface Props {
   /**
    * The parent's horizontal padding. The band bleeds across it with
@@ -66,6 +170,18 @@ interface Props {
    * of the screen and the right-hand fine print ran off the edge.
    */
   pad?: number;
+  /**
+   * The Mark bobbing behind the waterline. Off on the landing page,
+   * whose horizon section already gives the Mark its real scene.
+   */
+  mascot?: boolean;
+  /**
+   * The waterline itself. Off on the landing page too: there the
+   * horizon's hill IS the transition — its ridge drops onto the same
+   * deep ground the footer sits on, and a second wave under a hill
+   * would be two goodbyes in a row.
+   */
+  shore?: boolean;
 }
 
 /**
@@ -75,9 +191,13 @@ interface Props {
  * continuing rather than the texture falling off a cliff. The grain ends
  * on purpose, at the hairline.
  */
-export function SiteFooter({ inset = 0, pad = SPACING.lg }: Props) {
+export function SiteFooter({
+  inset = 0,
+  pad = SPACING.lg,
+  mascot = true,
+  shore = true,
+}: Props) {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const { width } = useWindowDimensions();
   /**
    * The ghost wordmark, sized to its stage. Fixed at 128 it overflowed
@@ -88,16 +208,7 @@ export function SiteFooter({ inset = 0, pad = SPACING.lg }: Props) {
 
   return (
     <View style={inset > 0 ? { marginHorizontal: -inset } : undefined}>
-      {/* The page's ground eases into the footer's navy instead of
-          meeting it on a line — the same weld the top of every page
-          gets against the browser's chrome, at the other end of the
-          scroll. Transparent-to-navy, so it works over any ground a
-          page happens to end on. */}
-      <LinearGradient
-        colors={['rgba(39,47,63,0)', COLORS.navy]}
-        style={styles.weld}
-        pointerEvents="none"
-      />
+      {shore && <Shore mascot={mascot} />}
       <View
         style={[styles.band, { paddingBottom: insets.bottom + SPACING.lg }]}
       >
@@ -109,25 +220,22 @@ export function SiteFooter({ inset = 0, pad = SPACING.lg }: Props) {
           SIDEQUEST
         </Text>
         <View style={[styles.inner, { paddingHorizontal: pad }]}>
+          <Pins />
           <View style={styles.topRow}>
             <View style={styles.brand}>
-              <Text style={styles.wordmark}>Sidequest</Text>
+              <View style={styles.lockup}>
+                <Mark size={26} />
+                <Text style={styles.wordmark}>Sidequest</Text>
+              </View>
+              {/* The claim, said once, at claim size — and nothing
+                  else. This block used to restate the product three
+                  times: wordmark, tagline, then a pitch paragraph and
+                  a link expanding on the pitch. A footer is a sign-off,
+                  not a second landing page; one sentence, said well,
+                  and the case itself lives behind About. */}
               <Text style={styles.tagline}>
-                Know what you can actually finish.
+                Know what you can{'\n'}actually finish.
               </Text>
-              <Text style={styles.pitch}>
-                Backlog triage for people with more games than time. No account,
-                no tracking — your library lives on this device.
-              </Text>
-              {/* The page that makes the case for the product was filed
-                under Legal, between the terms and the privacy policy.
-                It belongs with the sentence it expands on. */}
-              <Pressable
-                onPress={() => router.push('/about')}
-                accessibilityRole="link"
-              >
-                <Text style={styles.pitchLink}>What Sidequest is →</Text>
-              </Pressable>
             </View>
             <View style={styles.cols}>
               <LinkColumn heading="Explore" links={EXPLORE} />
@@ -138,7 +246,7 @@ export function SiteFooter({ inset = 0, pad = SPACING.lg }: Props) {
           <View style={styles.rule} />
 
           <View style={styles.bottomRow}>
-            <Text style={styles.fineprint}>Game data by RAWG</Text>
+            <Text style={styles.fineprint}>Game data by RAWG · IGDB</Text>
             <Text style={styles.fineprint}>Built for the backlog</Text>
           </View>
         </View>
@@ -148,12 +256,14 @@ export function SiteFooter({ inset = 0, pad = SPACING.lg }: Props) {
 }
 
 const styles = StyleSheet.create({
-  weld: { height: 64, marginBottom: -1 },
+  shore: { height: SHORE_H, marginBottom: -1 },
+  bob: { position: 'absolute' },
   band: {
     marginTop: 'auto',
-    backgroundColor: COLORS.navy,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.stroke,
+    // The well tone, one step below the page: the footer is deeper
+    // water, which is what lets its waterline read on pages whose own
+    // ground is the same navy the footer used to share.
+    backgroundColor: LANDING_WELL,
     overflow: 'hidden',
   },
   // A ghost of the wordmark, barely-there, anchoring the band's depth
@@ -170,8 +280,10 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: LAYOUT.maxExpandedWidth,
     alignSelf: 'center',
-    paddingTop: SPACING.xl + 6,
-    gap: SPACING.lg,
+    // A terminus gets to breathe: this is the page's last block, and
+    // cramped final margins read as running out of paper.
+    paddingTop: SPACING.xl + 8,
+    gap: SPACING.xl,
   },
   topRow: {
     flexDirection: 'row',
@@ -180,24 +292,21 @@ const styles = StyleSheet.create({
     rowGap: SPACING.xl,
     columnGap: SPACING.xl * 2,
   },
-  brand: { gap: SPACING.xs + 2, maxWidth: 360 },
+  brand: { gap: SPACING.sm + 2, maxWidth: 380 },
+  lockup: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm + 2 },
   wordmark: {
-    ...TYPE.h2,
+    fontFamily: 'Noah-Black',
+    fontSize: 20,
+    letterSpacing: 0.5,
     color: COLORS.white,
   },
   tagline: {
-    ...TYPE.labelSmall,
+    fontFamily: 'Noah-Black',
+    fontSize: 27,
+    lineHeight: 33,
+    letterSpacing: -0.4,
     color: COLORS.lightGrey,
-  },
-  pitchLink: {
-    ...TYPE.labelSmall,
-    color: COLORS.lightGrey,
-    marginTop: SPACING.sm + 2,
-  },
-  pitch: {
-    ...TYPE.caption,
-    color: COLORS.mediumGrey,
-    marginTop: 2,
+    marginTop: SPACING.xs,
   },
   cols: {
     flexDirection: 'row',
@@ -205,11 +314,11 @@ const styles = StyleSheet.create({
     rowGap: SPACING.lg,
     flexWrap: 'wrap',
   },
-  col: { gap: SPACING.sm + 2, minWidth: 96 },
+  col: { gap: SPACING.sm + 4, minWidth: 104 },
   colHeading: {
     ...TYPE.micro,
     color: COLORS.mediumGrey,
-    marginBottom: 2,
+    marginBottom: SPACING.xs,
   },
   link: {
     ...TYPE.labelSmall,

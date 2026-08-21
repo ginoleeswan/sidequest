@@ -1,6 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useToast } from '@/components/Toast';
+import { buildIcs, downloadIcs, planEvents } from '@/lib/ics';
 import type { ScheduledItem } from '@/lib/scheduler';
 import { formatHours } from '@/lib/duration';
 import { eveningLabel, planWeek, type PlannedEvening } from '@/lib/week';
@@ -66,8 +68,34 @@ export function WeekView({
   /** Tonight's pick, so the first evening agrees with the card above. */
   leadId?: number;
 }) {
+  const toast = useToast();
   const week = planWeek(scheduled, now, 7, leadId);
   if (week.every((evening) => evening.games.length === 0)) return null;
+
+  /**
+   * The week, moved somewhere it can actually interrupt you.
+   *
+   * This column is the app's best answer and its weakest position: it
+   * is right, and it is on a page nobody has open on a Tuesday at
+   * eight. One event per planned evening, at eight, running as long as
+   * the games in it — floating local time, so it stays "your evening"
+   * if you travel, and skipping free nights, because filing "nothing"
+   * in someone's calendar is not the same gesture as showing them a
+   * free Tuesday here.
+   */
+  const putInCalendar = () => {
+    const events = planEvents(week);
+    downloadIcs(
+      buildIcs(events, { name: 'Sidequest — this week', now: new Date() }),
+      'sidequest-week.ics'
+    );
+    toast(
+      events.length === 1
+        ? 'One evening, ready for your calendar'
+        : `${events.length} evenings, ready for your calendar`,
+      'calendar-outline'
+    );
+  };
 
   return (
     <View style={styles.week}>
@@ -110,12 +138,45 @@ export function WeekView({
           </View>
         );
       })}
+
+      {/* Quiet, and last: the plan is the thing, this is what you do
+          with it. Text-and-icon rather than a button, because a second
+          filled control here would compete with the plan's own
+          actions. */}
+      {Platform.OS === 'web' && (
+        <Pressable
+          onPress={putInCalendar}
+          style={styles.toCalendar}
+          accessibilityRole="button"
+          accessibilityLabel="Add this week to your calendar"
+        >
+          <Ionicons
+            name="calendar-outline"
+            size={14}
+            color={COLORS.mediumGrey}
+          />
+          <Text style={styles.toCalendarText}>
+            Put this week in my calendar
+          </Text>
+        </Pressable>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   week: { gap: SPACING.sm },
+  toCalendar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    paddingVertical: SPACING.sm,
+    alignSelf: 'flex-start',
+  },
+  toCalendarText: {
+    ...TYPE.labelSmall,
+    color: COLORS.mediumGrey,
+  },
   run: {
     gap: 3,
     padding: SPACING.md,

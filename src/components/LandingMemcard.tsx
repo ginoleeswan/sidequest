@@ -41,24 +41,68 @@ import { TYPE } from '@/styles/typography';
  * themselves rather than a bar chart of them. Six months to a row
  * where there is width for it, three on a phone.
  */
-const PAD = SPACING.lg;
+/**
+ * The card's own margin, tightened where there is nothing to spare.
+ *
+ * A 24pt border is right on a 900pt card and is a tenth of the width
+ * of a 280pt one. Narrow cards give the padding back to the slots,
+ * which is where the game art actually is.
+ */
+const padFor = (width: number) => (width < 420 ? 14 : SPACING.lg);
 const GAP = 8;
-const HEADER = 78;
+/**
+ * Header height. Sized so the label-and-year lockup keeps clear air
+ * above and below when vertically centred — at 78 the eyebrow's box
+ * touched the year's cap height and the pair read as one cramped
+ * word. Everything downstream (slot rows, flight paths, card height)
+ * derives from this, so the grid moves down with it.
+ */
+const headerFor = (width: number) => (width < 420 ? 72 : 88);
 
-const columnsFor = (width: number) => (width > 700 ? 6 : 3);
+/**
+ * Three, four or six — never a number that leaves a ragged last row.
+ *
+ * Twelve months divide by all three, so every tier fills its rows
+ * exactly and the card stays a rectangle of slots rather than a grid
+ * with a gap in the corner.
+ *
+ * The middle tier exists because the jump straight from three to six
+ * was measured and it was ugly: at a 660px card the three-column
+ * layout gave 201px slots and a card 718 tall — a memory card as tall
+ * as a poster — and four pixels later, at 704, it snapped to 107px
+ * slots and 264 tall. Nothing between a phone and a laptop looked
+ * like the same object.
+ */
+/**
+ * Four, at every width.
+ *
+ * Twelve months in four columns is three rows, and three rows of
+ * four is the only arrangement that gives the object a memory card's
+ * proportions instead of a spreadsheet's. Measured: six columns made
+ * the card 900x308 on a laptop — 2.9 to 1, nearly twice as wide as
+ * the thing it is drawn to look like — and three made it 350x412 on
+ * a phone, taller than it is wide. Four lands between 1.3 and 1.6
+ * from 320 all the way to 1440, which is a memory card everywhere
+ * rather than a letterbox in one place and a paperback in another.
+ *
+ * It also makes every slot bigger, which is the point: the covers are
+ * the content, and at six across they were postage stamps.
+ */
+const columnsFor = (_width: number) => 4;
 
 export function landingSlot(
   width: number,
   month: number
 ): { x: number; y: number; w: number; h: number } {
   const columns = columnsFor(width);
-  const w = (width - PAD * 2 - GAP * (columns - 1)) / columns;
+  const pad = padFor(width);
+  const w = (width - pad * 2 - GAP * (columns - 1)) / columns;
   const h = w * 0.74;
   const col = month % columns;
   const row = Math.floor(month / columns);
   return {
-    x: PAD + col * (w + GAP) + w / 2,
-    y: HEADER + row * (h + GAP) + h / 2,
+    x: pad + col * (w + GAP) + w / 2,
+    y: headerFor(width) + row * (h + GAP) + h / 2,
     w,
     h,
   };
@@ -66,9 +110,10 @@ export function landingSlot(
 
 export function landingCardHeight(width: number): number {
   const columns = columnsFor(width);
-  const rows = 12 / columns;
-  const w = (width - PAD * 2 - GAP * (columns - 1)) / columns;
-  return HEADER + rows * (w * 0.74 + GAP) - GAP + PAD;
+  const pad = padFor(width);
+  const rows = Math.ceil(12 / columns);
+  const w = (width - pad * 2 - GAP * (columns - 1)) / columns;
+  return headerFor(width) + rows * (w * 0.74 + GAP) - GAP + pad;
 }
 
 /**
@@ -99,7 +144,9 @@ export function LandingMemcard({
   images?: (string | undefined)[];
 }) {
   const columns = columnsFor(width);
-  const slotW = (width - PAD * 2 - GAP * (columns - 1)) / columns;
+  const pad = padFor(width);
+  const header = headerFor(width);
+  const slotW = (width - pad * 2 - GAP * (columns - 1)) / columns;
   const slotH = slotW * 0.74;
   const done = landed >= card.blocks.length;
   const hours = card.blocks
@@ -165,14 +212,20 @@ export function LandingMemcard({
           />
         ))}
       </Svg>
-      <View style={styles.inner}>
-        <View style={styles.header}>
-          <View>
+      <View
+        style={[styles.inner, { paddingHorizontal: pad, paddingBottom: pad }]}
+      >
+        <View style={[styles.header, { height: header }]}>
+          <View style={styles.lockup}>
             <Text style={styles.label}>MEMORY CARD</Text>
-            <Text style={styles.year}>{card.year}</Text>
+            <Text style={[styles.year, header < 80 && styles.yearTight]}>
+              {card.year}
+            </Text>
           </View>
-          {/* The scoreboard: counts up as the covers land. */}
-          <Text style={styles.score}>
+          {/* The scoreboard: counts up as the covers land. Smaller
+              where the header is, so "8 GAMES · 207 HOURS" does not
+              crowd the year it belongs to on a 280pt card. */}
+          <Text style={[styles.score, header < 70 && styles.scoreTight]}>
             <Text style={styles.scoreNumber}>{landed}</Text> GAMES ·{' '}
             <Text style={styles.scoreNumber}>{Math.round(hours)}</Text> HOURS
           </Text>
@@ -191,7 +244,7 @@ export function LandingMemcard({
         </View>
       </View>
 
-      {done && <Stamp />}
+      {done && <Stamp width={width} />}
     </View>
   );
 }
@@ -213,6 +266,19 @@ function Slot({
   initial: string;
   save?: { image?: string; hours: number; extra: number };
 }) {
+  /**
+   * A small slot gets small furniture.
+   *
+   * The month chip and the hours chip were fixed at 10 and 11 point
+   * with fixed padding, which is right on a 137pt slot and takes up
+   * most of a 57pt one — measured at 320, the two chips filled the
+   * slot and left the cover art peeking out between them. They are
+   * annotations on a picture; they have to stay smaller than it.
+   */
+  const tight = h < 62;
+  const chip = tight ? 8 : 10;
+  const hoursSize = tight ? 9 : 11;
+  const inset = tight ? 3 : 5;
   const reduced = useReducedMotion();
   const on = save !== undefined;
   const pop = useAnimatedValue(on ? 1 : 0);
@@ -237,7 +303,16 @@ function Slot({
 
   return (
     <View style={[styles.slot, { width: w, height: h }]}>
-      {!on && <Text style={styles.slotInitial}>{initial}</Text>}
+      {!on && (
+        <Text
+          style={[
+            styles.slotInitial,
+            tight && { fontSize: Math.round(h * 0.4) },
+          ]}
+        >
+          {initial}
+        </Text>
+      )}
       {on && (
         <Animated.View
           style={[
@@ -255,15 +330,31 @@ function Slot({
           ]}
         >
           {save.image ? (
-            <CoverImage uri={save.image} style={styles.saveArt} size="thumb" />
+            <CoverImage uri={save.image} style={styles.saveArt} size="tile" />
           ) : (
             <View style={[styles.saveArt, styles.saveBare]} />
           )}
-          <View style={styles.saveMonth}>
-            <Text style={styles.saveMonthWord}>{initial}</Text>
+          <View
+            style={[
+              styles.saveMonth,
+              { top: inset, left: inset, paddingHorizontal: tight ? 3 : 5 },
+            ]}
+          >
+            <Text style={[styles.saveMonthWord, { fontSize: chip }]}>
+              {initial}
+            </Text>
           </View>
-          <View style={styles.saveHours}>
-            <Text style={styles.saveHoursWord}>
+          <View
+            style={[
+              styles.saveHours,
+              {
+                bottom: inset,
+                right: inset,
+                paddingHorizontal: tight ? 4 : 6,
+              },
+            ]}
+          >
+            <Text style={[styles.saveHoursWord, { fontSize: hoursSize }]}>
               {Math.round(save.hours)}h{save.extra > 0 ? ` +${save.extra}` : ''}
             </Text>
           </View>
@@ -274,7 +365,16 @@ function Slot({
 }
 
 /** ROLL CREDITS, thumped down askew once the year is in. */
-function Stamp() {
+function Stamp({ width }: { width: number }) {
+  /**
+   * Sized to the card it is stamped on.
+   *
+   * Fixed at nineteen point it ran off both edges of a 280pt card —
+   * a rubber stamp bigger than the document. Proportional, floored so
+   * it never becomes a whisper and capped so it never becomes the
+   * subject.
+   */
+  const size = Math.round(Math.min(Math.max(width * 0.052, 12), 21));
   const reduced = useReducedMotion();
   const thump = useAnimatedValue(reduced ? 1 : 0);
 
@@ -295,6 +395,22 @@ function Stamp() {
       style={[
         styles.stamp,
         {
+          /**
+           * Off the bottom-right corner, not on the bottom edge.
+           *
+           * Sitting on the edge it landed squarely on the last slot's
+           * hours — the same mistake as covering January, one row
+           * down. Hung off the corner it overlaps a triangle of the
+           * card and nothing that is a number, and it reads more
+           * like a stamp for it: a stamp goes half off the paper.
+           */
+          right: size < 15 ? -10 : -16,
+          bottom: size < 15 ? -16 : -24,
+          borderWidth: size < 15 ? 2 : 3,
+          paddingVertical: size < 15 ? 4 : 7,
+          paddingHorizontal: size < 15 ? 9 : 14,
+        },
+        {
           opacity: thump.interpolate({
             inputRange: [0, 0.25, 1],
             outputRange: [0, 1, 1],
@@ -312,7 +428,14 @@ function Stamp() {
       ]}
       pointerEvents="none"
     >
-      <Text style={styles.stampWord}>ROLL CREDITS</Text>
+      <Text
+        style={[
+          styles.stampWord,
+          { fontSize: size, letterSpacing: size * 0.13 },
+        ]}
+      >
+        ROLL CREDITS
+      </Text>
     </Animated.View>
   );
 }
@@ -321,14 +444,31 @@ const styles = StyleSheet.create({
   // The shell SVG carries the surface, stroke and notch; the View
   // carries only the soft shadow (which hugs the rect — close enough
   // for a diffuse glow) and the content box.
-  card: { boxShadow: '0 24px 60px rgba(0,0,0,0.45)', borderRadius: RADIUS.md },
-  inner: { flex: 1, padding: PAD, paddingTop: 0 },
+  /**
+   * No box shadow, deliberately. The View is a rectangle and the shell
+   * is not — a rect shadow ghosted through the notch cutout as a dark
+   * corner floating behind the cut, which read as a rendering bug on
+   * every band the card sits on. The landed slots carry their own
+   * glow; the card does not need a second one.
+   */
+  card: { borderRadius: RADIUS.md },
+  inner: { flex: 1, paddingTop: 0 },
   header: {
-    height: HEADER,
+    // height comes from headerFor(width)
     flexDirection: 'row',
-    alignItems: 'center',
+    // Bottom-aligned, not centred: the year and the scoreboard share
+    // the header's floor, so the two read as one line of information
+    // with the spare air above them — where the card's notch and
+    // grooves already live — instead of two blocks floating at
+    // different heights.
+    alignItems: 'flex-end',
     justifyContent: 'space-between',
+    paddingBottom: 12,
   },
+  // Air between the eyebrow and the year: without it the label's
+  // descender box sat on the numeral's cap and the lockup read as one
+  // cramped word.
+  lockup: { gap: 4 },
   label: {
     ...TYPE.micro,
     fontSize: 10,
@@ -339,9 +479,13 @@ const styles = StyleSheet.create({
     fontFamily: 'Noah-Black',
     fontSize: 34,
     letterSpacing: -1,
+    lineHeight: 36,
     color: COLORS.white,
   },
-  score: { ...TYPE.tag, color: COLORS.mediumGrey },
+  yearTight: { fontSize: 30, lineHeight: 32 },
+  // Nudged up to the year's baseline rather than its descender box.
+  score: { ...TYPE.tag, color: COLORS.mediumGrey, marginBottom: 7 },
+  scoreTight: { fontSize: 9, letterSpacing: 0.5 },
   scoreNumber: { color: COLORS.accent },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
   slot: {
@@ -390,7 +534,7 @@ const styles = StyleSheet.create({
   saveHoursWord: { ...TYPE.tag, fontSize: 11, color: COLORS.accent },
   stamp: {
     position: 'absolute',
-    right: PAD + 4,
+    // right comes from padFor(width)
     /**
      * On the card's bottom lip, half off the shell.
      *
@@ -402,7 +546,6 @@ const styles = StyleSheet.create({
      * a document but it may not black out the record, so it moves to
      * the edge, where it straddles the shell instead of covering it.
      */
-    bottom: -21,
     borderWidth: 3,
     borderColor: COLORS.accent,
     borderRadius: 8,

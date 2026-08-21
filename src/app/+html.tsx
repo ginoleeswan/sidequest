@@ -128,14 +128,16 @@ const registerServiceWorker = `
 const css = `
   html, body {
     /*
-     * The canvas is the FOOTER's colour, not the page's. Every page ends
-     * in a flat navy SiteFooter band, and the document ends with it - so
-     * wherever iOS Safari paints past the document (under the toolbar,
-     * during overscroll) it reads as the footer continuing. The grain
-     * texture lives in the app tree and ends, on purpose, at the
-     * footer's hairline. (COLORS.navy)
+     * The canvas is split: the top half is the page's navy, the bottom
+     * half the footer's deeper well. iOS Safari shows the canvas
+     * wherever it paints past the document - above the page on a
+     * downward rubber-band, below it on an upward one - and those are
+     * two different colours now that the footer is deeper water than
+     * the page. A hard 50% stop, not a fade: only the extremes are
+     * ever visible. (COLORS.navy over LANDING_WELL)
      */
     background-color: #272F3F;
+    background-image: linear-gradient(#272F3F 50%, #1E2532 50%);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     /* Stop iOS Safari inflating text on rotation. */

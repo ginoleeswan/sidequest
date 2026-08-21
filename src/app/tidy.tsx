@@ -26,7 +26,7 @@ import {
   type LibraryStatus,
 } from '@/lib/library';
 import { COLORS } from '@/styles/colors';
-import { LAYOUT, RADIUS, SPACING } from '@/styles/theme';
+import { GUTTER, LAYOUT, RADIUS, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 /**
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: LAYOUT.maxContentWidth,
     alignSelf: 'center',
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: GUTTER,
     paddingBottom: SPACING.xl * 3,
     gap: SPACING.md,
   },

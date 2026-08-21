@@ -23,8 +23,9 @@ import { LandingTake } from '@/components/LandingTake';
 import { LandingTry } from '@/components/LandingTry';
 import { MemcardBuild } from '@/components/MemcardBuild';
 import { QuestLine, QuestMark } from '@/components/QuestLine';
-import { LandingProof } from '@/components/LandingProof';
 import { Drift } from '@/components/Drift';
+import { BeatDeck } from '@/components/BeatDeck';
+import { Seam, type SeamVariant } from '@/components/Seam';
 import { Rise, useInView } from '@/components/Rise';
 import { Words } from '@/components/Words';
 import { LandingWall } from '@/components/LandingWall';
@@ -104,33 +105,6 @@ function sampleCard(games: Game[] | undefined): MemcardModel {
 }
 
 /**
- * Each beat owns a colour as well as a claim: amber for time, violet
- * for the evening, coral for letting go. The marker, the lead's key
- * word and the evidence all speak in it, so the three ideas stop
- * being three paragraphs and start being three places.
- */
-const BEATS = [
-  {
-    kind: 'length' as const,
-    hue: COLORS.accent,
-    lead: 'It knows how long things take.',
-    body: 'Real lengths from players who finished, on every tile — before you tap.',
-  },
-  {
-    kind: 'tonight' as const,
-    hue: COLORS.violet,
-    lead: 'It picks what fits tonight.',
-    body: 'A Tuesday is not a Saturday. It does the arithmetic and names one game.',
-  },
-  {
-    kind: 'drop' as const,
-    hue: COLORS.coral,
-    lead: 'It lets you put things down.',
-    body: 'Most of the pile will never be played. Saying so is the fun part.',
-  },
-];
-
-/**
  * The number, counted rather than printed.
  *
  * It owns its own ref, which is the whole reason it is a component: the
@@ -188,6 +162,8 @@ function Band({
   tone = 'ground',
   style,
   raise = false,
+  seam,
+  seamVariant = 'lip',
   children,
 }: {
   scale: LandingScale;
@@ -199,20 +175,53 @@ function Band({
    * band whose content deliberately leans over the edge.
    */
   raise?: boolean;
+  /**
+   * Which seam down the page this band's leading edge is. Given, the
+   * band arrives on a drawn memory-card edge instead of a flat colour
+   * change; the number alternates which corner is chamfered.
+   */
+  seam?: number;
+  /**
+   * How loud this seam is.
+   *
+   * Default is the quiet lit lip. `card` is a chapter break and
+   * belongs only where the page changes subject; `glyphs` is used
+   * exactly once.
+   */
+  seamVariant?: SeamVariant;
   children: React.ReactNode;
 }) {
+  /**
+   * The seam sits ABOVE the band's own paint, not inside it.
+   *
+   * When it lived inside the well View, the well's background filled
+   * the whole seam box — including the chamfer's cut corner — so the
+   * card edge degraded to two floating hairlines over a uniform well.
+   * Out here the seam's face is the only well at that height: the cut
+   * corner is genuinely cut, and through it you see the page's grained
+   * ground, which is what "behind the card" actually looks like on
+   * this page. Ground bands paint no face at all — they are
+   * transparent themselves, so their seams are just the line.
+   */
   return (
-    <View
-      style={[tone === 'well' ? styles.well : undefined, raise && styles.raise]}
-    >
-      <View
-        style={[
-          styles.measure,
-          { paddingHorizontal: scale.inset, paddingVertical: scale.air },
-          style,
-        ]}
-      >
-        {children}
+    <View style={raise && styles.raise}>
+      {seam != null && (
+        <Seam
+          color={tone === 'well' ? LANDING_WELL : 'transparent'}
+          index={seam}
+          variant={seamVariant}
+        />
+      )}
+      <View style={tone === 'well' ? styles.well : undefined}>
+        <View
+          style={[
+            styles.measure,
+            { paddingHorizontal: scale.inset, paddingVertical: scale.air },
+            style,
+          ]}
+        >
+          {children}
+        </View>
       </View>
     </View>
   );
@@ -397,14 +406,14 @@ export default function AboutScreen() {
             >
               Know which games you can actually finish.
             </Animated.Text>
-            {/* The standfirst names the mechanism and the outcome in
-                plain words, because the person this page has to convince
-                has never used it and may not play games at all. No
-                "backlog", no "triage": how long games take, how much you
-                play, which ones you can finish, which to let go. */}
+            {/* Two short sentences: what you give it, what it knows.
+                The outcome is already in the headline, so saying it
+                again here cost twenty-seven words to repeat a claim the
+                reader had just read. What it could not skip is the
+                input — time you actually have — because that is the
+                promise the rest of the page has to keep. */}
             <Animated.Text style={[styles.standfirst, step(0.2, 0.75)]}>
-              Sidequest knows how long games take. Tell it how much you play,
-              and it names the ones you can finish — and the ones to let go.
+              Tell it how much time you get. It knows how long games take.
             </Animated.Text>
             <Animated.View style={step(0.32, 0.9)}>{open}</Animated.View>
             {/* The three objections a stranger has, answered before they
@@ -418,12 +427,17 @@ export default function AboutScreen() {
         {/* The arithmetic nobody does for themselves, set as the number
             it is. This is the whole case for the product, and it is
             more persuasive than any sentence about it. */}
-        <WhenNear placeholder={<View style={styles.sumRoom} />}>
+        <WhenNear
+          placeholder={<View style={styles.sumRoom} />}
+          style={styles.raise}
+        >
           <Band
             tone="well"
             scale={scale}
             style={scale.wide ? styles.sumWide : styles.sumTall}
             raise
+            seam={0}
+            seamVariant="card"
           >
             <QuestMark id="sum" />
             <Sum
@@ -432,8 +446,19 @@ export default function AboutScreen() {
               unit={unit}
             />
             <Rise from="right" delay={220} style={styles.sumTailSlot}>
+              {/* Two sentences, not a dangling clause. The tail used to
+                  continue the figure's sentence — "and the average week
+                  has about six" — which reads if your eye arrives from
+                  the number and dangles if it arrives anywhere else,
+                  which on a phone it does. And the point of the whole
+                  band is the second line, so it is the one set in
+                  white: the number is the evidence, fifteen years is
+                  the argument. */}
               <Text style={[styles.sumTail, scale.body]}>
-                and the average week has about six. Fifteen years of evenings.
+                The average week has about six.
+              </Text>
+              <Text style={[styles.sumKicker, scale.body]}>
+                That’s fifteen years of evenings.
               </Text>
             </Rise>
           </Band>
@@ -446,7 +471,7 @@ export default function AboutScreen() {
             six sections and only then lets you touch something has the
             order backwards. */}
         <WhenNear placeholder={<View style={styles.tryRoom} />}>
-          <Band scale={scale}>
+          <Band scale={scale} seam={1}>
             <QuestMark id="try" />
             <LandingTry scale={scale} />
           </Band>
@@ -456,25 +481,44 @@ export default function AboutScreen() {
             of the detail. Somebody deciding whether to bother needs to
             know what will be asked of them, and three numbered steps is
             the plainest way to say it. */}
-        <Band scale={scale}>
+        <Band scale={scale} seam={2}>
           <QuestMark id="how" />
           <HowItWorks scale={scale} />
         </Band>
 
         {/* Volume, which none of the single objects below can show.
             The row runs off the right edge on purpose. */}
-        <WhenNear placeholder={<View style={styles.shelfRoom} />}>
+        {/* Raised like the memcard band, and for the same reason: the
+            gutter trail is drawn over the page, and this band's wavy
+            seam stands game pieces in the gutter. The trail passes
+            behind the whole band — the same reading it already has at
+            the memcard — instead of slicing through a controller. */}
+        <WhenNear
+          placeholder={<View style={styles.shelfRoom} />}
+          style={styles.raise}
+        >
           {/* Not a Band: the copy sits in the measured column, but the
               marquee runs edge to edge. A horizontally moving row that
               stops at the column's edge is a window with a frame; one
               that runs under both edges of the screen is a world going
               past. */}
           <View style={styles.well}>
+            {/* The one decorated seam on the page. It belongs to the
+                band about bringing your whole pile in, so the pile's
+                own furniture — a pad, a disc, a cartridge, a life —
+                is what the edge is cut out of. It works because the
+                three seams above it were plain. */}
+            <Seam color={LANDING_WELL} index={3} variant="glyphs" />
             <View
               style={[
                 styles.measure,
                 styles.pile,
-                { paddingHorizontal: inset, paddingTop: air },
+                /* Half the band's usual air. The wavy seam above is 68
+                   points of drawn transition with the pile riding it —
+                   it already IS the section's opening breath, and the
+                   full step on top of it left the heading floating in
+                   a hole twice the size of the one above the seam. */
+                { paddingHorizontal: inset, paddingTop: Math.round(air * 0.5) },
               ]}
             >
               <QuestMark id="pile" />
@@ -498,89 +542,36 @@ export default function AboutScreen() {
           </View>
         </WhenNear>
 
-        {/* All three beats in one band, divided by rules rather than by
-            background. Three separate bands gave each claim its own
-            slab of ground and its own sixty pixels of padding top and
-            bottom, which is what made the middle of the page read as
-            one long grey corridor. */}
-        <Band scale={scale} style={styles.beats}>
-          {BEATS.map((beat, index) => (
-            <View
-              key={beat.lead}
-              style={[
-                styles.beat,
-                index > 0 && styles.beatRuled,
-                scale.wide && styles.beatWide,
-                // Every other one turned around. Three identical
-                // two-column splits stacked is a table; alternating them
-                // is what makes a reader's eye travel down a page.
-                scale.wide && index % 2 === 1 && styles.beatFlipped,
-              ]}
-            >
-              <QuestMark id={`beat-${index}`} />
-              {/* The claim and its sentence, together. A lead belongs
-                  with its own body; what belongs opposite is the
-                  evidence. */}
-              <View style={scale.wide ? styles.beatCopyWide : styles.beatCopy}>
-                <View style={styles.beatHead}>
-                  <Rise from={scale.wide && index % 2 === 1 ? 'right' : 'left'}>
-                    <Text style={styles.beatIndex}>{`0${index + 1}`}</Text>
-                  </Rise>
-                  <Words
-                    text={beat.lead}
-                    style={[styles.lead, scale.leadColumn]}
-                    delay={90}
-                  />
-                </View>
-                <Rise delay={90}>
-                  <Text style={[styles.beatBody, scale.body]}>{beat.body}</Text>
-                </Rise>
-              </View>
-              {/* The app's own components, fed real data: a claim with
-                  the thing itself beside it beats a claim with an icon
-                  over it. */}
-              {/* Pinned to the page's outer edge, not centred in its
-                  half. A 320px object floating in the middle of a 500px
-                  column has grey on both sides of it and looks like it
-                  was dropped there; against the edge it looks placed. */}
-              <View
-                style={
-                  scale.wide
-                    ? [
-                        styles.beatProofWide,
-                        index % 2 === 1
-                          ? styles.beatProofFlipped
-                          : styles.beatProofOuter,
-                      ]
-                    : undefined
-                }
-              >
-                {/* Lags the copy beside it for the whole time the row
-                    is on screen, so a beat has depth rather than just an
-                    arrival. */}
-                <Drift
-                  distance={scale.wide ? 30 : 14}
-                  testID={`beat-proof-${index}`}
-                >
-                  <Rise from="lift" delay={200}>
-                    <LandingProof
-                      kind={beat.kind}
-                      game={games?.[index + 2]}
-                      width={scale.column}
-                      hue={beat.hue}
-                    />
-                  </Rise>
-                </Drift>
-              </View>
-            </View>
-          ))}
-        </Band>
+        {/* The three beats, as a swipeable deck of coloured panels —
+            one idea per card, the next peeking in from the edge, the
+            same live evidence the old rows carried. The section keeps
+            the ordinary lip seam: the panels are the event. */}
+        {/* No background of its own: the page's grained ground runs
+            straight through, and the seam's face is the only paint.
+            An explicit navy here was the flat-patch bug again — right
+            colour, wrong surface, visible as a strip under the deck. */}
+        <View>
+          <Seam color="transparent" index={4} />
+          <View style={styles.deckBody}>
+            <BeatDeck scale={scale} games={games} />
+          </View>
+        </View>
 
         {/* The one showpiece, and the only thing on the page that
             arrives crooked and straightens. Used once: a second `tilt`
             further down would turn a signature into a mannerism. */}
-        <WhenNear placeholder={<View style={styles.cardRoom} />}>
-          <Band tone="well" scale={scale} style={styles.card} raise>
+        <WhenNear
+          placeholder={<View style={styles.cardRoom} />}
+          style={styles.raise}
+        >
+          <Band
+            tone="well"
+            scale={scale}
+            style={styles.card}
+            raise
+            seam={5}
+            seamVariant="card"
+          >
             <QuestMark id="memcard" />
             <Words
               text="And something to show for the year."
@@ -616,7 +607,7 @@ export default function AboutScreen() {
         </WhenNear>
 
         {/* The long tail, ranked below everything argued above it. */}
-        <Band scale={scale}>
+        <Band scale={scale} seam={6}>
           <QuestMark id="index" />
           <FeatureIndex scale={scale} />
         </Band>
@@ -624,14 +615,27 @@ export default function AboutScreen() {
         {/* Where to get it, given the ceremony a store launch gets —
             because "it is just a link" is this product's proudest fact
             and was being said in a footnote. */}
-        <WhenNear placeholder={<View style={styles.takeRoom} />}>
-          <Band tone="well" scale={scale} raise>
+        <WhenNear
+          placeholder={<View style={styles.takeRoom} />}
+          style={styles.raise}
+        >
+          <Band tone="well" scale={scale} raise seam={7} seamVariant="card">
             <QuestMark id="take" />
             <LandingTake scale={scale} />
           </Band>
         </WhenNear>
 
-        <Band scale={scale} style={scale.wide && styles.plainWide}>
+        <Band
+          scale={scale}
+          seam={8}
+          style={[
+            // The phone above deliberately hangs over this band's
+            // seam; the headline needs to start below its overhang,
+            // not under its home indicator.
+            styles.plainRoom,
+            scale.wide && styles.plainWide,
+          ]}
+        >
           <View style={scale.wide ? styles.plainCopy : styles.plainStack}>
             <QuestMark id="close" />
             <Words
@@ -657,7 +661,7 @@ export default function AboutScreen() {
 
         {/* Padded to land on the same column the bands use, so the
             footer's first letter sits under everything above it. */}
-        <SiteFooter pad={footerPad} />
+        <SiteFooter pad={footerPad} mascot={false} shore={false} />
 
         {/* Above the bands, under nothing: the gutter it lives in has
             no text to cover. */}
@@ -773,7 +777,14 @@ const styles = StyleSheet.create({
   // the sum
   sumRoom: { height: 320 },
   // A number this size needs a room, not a strip.
-  sumTall: { paddingVertical: 0, gap: SPACING.lg },
+  /**
+   * The phone stack, spaced as one thought: eyebrow, figure, verdict,
+   * with the band's own air only above and below the group. The gap
+   * between figure and tail was the full large step, which cut the
+   * sentence in half — the number and its meaning read as two
+   * exhibits.
+   */
+  sumTall: { paddingTop: 0, paddingBottom: SPACING.lg, gap: SPACING.md },
   sumWide: {
     flexDirection: 'row',
     // On the number's baseline side rather than its centre: a 196px
@@ -797,32 +808,27 @@ const styles = StyleSheet.create({
   // Grey, not amber. Two amber weights in one line is two things
   // shouting; the number is the thing worth shouting.
   sumUnit: { ...TYPE.title, color: COLORS.lightGrey },
-  sumTail: { color: COLORS.lightGrey, maxWidth: 520, paddingBottom: 6 },
+  // A short measure: two lines that nearly span the phone read as a
+  // paragraph, and this is a verdict.
+  sumTail: { color: COLORS.mediumGrey, maxWidth: 340 },
+  sumKicker: {
+    fontFamily: 'Noah-Bold',
+    color: COLORS.white,
+    maxWidth: 340,
+    marginTop: 2,
+    paddingBottom: 6,
+  },
+
+  plainRoom: { paddingTop: SPACING.xl * 2.5 },
+  deckBody: { paddingTop: SPACING.lg, paddingBottom: SPACING.xl * 1.5 },
 
   // the three beats
-  beats: { gap: 0 },
-  beat: { paddingVertical: SPACING.xl * 1.4, gap: SPACING.lg },
   // A hairline between claims instead of a change of ground. Three
   // bands for three sentences is what turned the middle of the page
   // into a corridor.
-  beatRuled: { borderTopWidth: 1, borderTopColor: COLORS.stroke },
-  beatWide: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xl * 2,
-  },
-  beatFlipped: { flexDirection: 'row-reverse' },
-  beatCopy: { gap: SPACING.md },
-  beatCopyWide: { flex: 1, gap: SPACING.lg, justifyContent: 'center' },
-  beatHead: { gap: SPACING.sm },
   // A marker in the margin above the line, not a number in a circle.
   // Three beats need to read as an ordered argument; this is the
   // cheapest way to say so without a device.
-  beatIndex: { ...TYPE.tag },
-  beatBody: { maxWidth: 520 },
-  beatProofWide: { flex: 1, justifyContent: 'center' },
-  beatProofOuter: { alignItems: 'flex-end' },
-  beatProofFlipped: { alignItems: 'flex-start' },
 
   // the pile
   shelfRoom: { height: 420 },

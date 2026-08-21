@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import Svg, {
-  Circle,
   Defs,
   Ellipse,
   Path,
@@ -16,6 +15,7 @@ import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { COLORS } from '@/styles/colors';
 import { DURATION, EASING } from '@/styles/motion';
+import { SEAM_GLYPHS } from './SeamGlyphs';
 import { LANDING_WELL } from '@/styles/landing';
 import { RADIUS, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
@@ -35,25 +35,38 @@ import { TYPE } from '@/styles/typography';
  * number, because a static export renders once and a page must not
  * disagree with itself between server and client. Three of them
  * breathe on slow, offset clocks — the only ambient motion in the
- * scene, and enough to make the sky a sky.
+ * scene, and enough to make the sky a sky. The dot-stars this scene
+ * opened with are gone: at two pixels they read as dust on the screen,
+ * not as night, and the constellation of game shapes says "sky" better
+ * with five objects than the dots said it with ten.
  */
 
-/** [x, y, r, opacity] in the sky's 1000x150 space. */
-const STARS: [number, number, number, number][] = [
-  [88, 38, 1.6, 0.5],
-  [176, 96, 1.1, 0.3],
-  [268, 22, 1.4, 0.4],
-  [370, 70, 1.1, 0.28],
-  [498, 30, 1.8, 0.55],
-  [590, 88, 1.1, 0.3],
-  [668, 48, 1.4, 0.4],
-  [760, 18, 1.1, 0.32],
-  [842, 76, 1.6, 0.45],
-  [930, 40, 1.1, 0.3],
+/**
+ * The constellation: the pile's own shapes, up in the sky.
+ *
+ * The dusk had ten dots and nothing else, and the space above the
+ * ridge read as empty rather than as night. These are the same flat
+ * game shapes that ride the wavy seam earlier on the page — small,
+ * faint, and adrift among the stars, riding the scene's one breathing
+ * clock at offset phases. The quiet joke is the page's whole argument:
+ * the games you let go of become stars to look at, not weights to
+ * carry. Kept clear of the centre, where the Mark stands, and sized
+ * like a night sky is: two bright near things, a scatter of middle
+ * ones, and small far ones — eight shapes across four sizes, where
+ * five near-equals read as a pattern, not a depth.
+ *
+ * [glyph, left%, top, size, tilt, drift direction]
+ */
+const FLOATERS: [number, `${number}%`, number, number, number, 1 | -1][] = [
+  [0, '6%', 44, 26, -10, 1],
+  [4, '16%', 118, 13, 14, -1],
+  [2, '25%', 96, 19, 8, -1],
+  [5, '34%', 30, 14, -8, 1],
+  [3, '52%', 12, 17, -6, 1],
+  [1, '68%', 108, 15, 10, -1],
+  [5, '78%', 44, 12, -12, -1],
+  [0, '88%', 84, 22, 12, 1],
 ];
-
-/** Which stars breathe, and how far apart their clocks start. */
-const TWINKLE = [0, 4, 8];
 
 export function Horizon({ onStart }: { onStart?: () => void }) {
   const reduced = useReducedMotion();
@@ -116,42 +129,53 @@ export function Horizon({ onStart }: { onStart?: () => void }) {
             </RadialGradient>
           </Defs>
           <Ellipse cx="500" cy="260" rx="430" ry="200" fill="url(#dusk)" />
-          {STARS.map(([x, y, r, o], index) => (
-            <Circle
-              key={`${x}-${y}`}
-              cx={x}
-              cy={y}
-              r={r}
-              fill={index % 3 === 0 ? COLORS.accent : COLORS.white}
-              opacity={o}
-            />
-          ))}
         </Svg>
-        {/* Three of the stars, breathing over the static field. */}
-        {!reduced &&
-          TWINKLE.map((slot, index) => {
-            const [x, y, r] = STARS[slot];
-            return (
-              <Animated.View
-                key={slot}
-                style={[
-                  styles.twinkle,
+
+        {FLOATERS.map(([glyph, left, top, size, tilt, dir], index) => (
+          <Animated.View
+            key={`float-${index}`}
+            style={[
+              styles.floater,
+              {
+                left,
+                top,
+                // Every third one also breathes in brightness, on the
+                // same clock the drift rides — a sky that twinkles as
+                // well as swims, without a second animation running.
+                opacity:
+                  reduced || index % 3 !== 0
+                    ? 1
+                    : breathe.interpolate({
+                        inputRange: [0, 0.5, 1],
+                        outputRange: [0.55, 1, 0.55],
+                      }),
+                transform: [
+                  { rotate: `${tilt}deg` },
                   {
-                    left: `${x / 10}%`,
-                    top: y,
-                    width: r * 4,
-                    height: r * 4,
-                    borderRadius: r * 2,
-                    opacity: breathe.interpolate({
-                      inputRange: [0, 0.5, 1],
-                      outputRange:
-                        index % 2 === 0 ? [0.1, 0.6, 0.1] : [0.55, 0.15, 0.55],
-                    }),
+                    translateY: reduced
+                      ? 0
+                      : breathe.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0, dir * 6],
+                        }),
                   },
-                ]}
+                ],
+              },
+            ]}
+          >
+            <Svg width={size} height={size} viewBox="0 0 24 24">
+              <Path
+                d={SEAM_GLYPHS[glyph]}
+                fill={
+                  index % 2 === 0
+                    ? 'rgba(255,255,255,0.2)'
+                    : 'rgba(242,169,59,0.26)'
+                }
+                fillRule="evenodd"
               />
-            );
-          })}
+            </Svg>
+          </Animated.View>
+        ))}
 
         <Svg
           width="100%"
@@ -162,7 +186,7 @@ export function Horizon({ onStart }: { onStart?: () => void }) {
         >
           <Path
             d="M0 120 V86 C 280 18, 720 18, 1000 86 V120 Z"
-            fill={COLORS.navy}
+            fill={LANDING_WELL}
           />
           {/* The trail, carrying on over the hill — dashed like the
               unwalked road in the quest line, because the page's last
@@ -257,13 +281,20 @@ export function Horizon({ onStart }: { onStart?: () => void }) {
 
 const styles = StyleSheet.create({
   scene: {
-    // The deep band above continues behind the sky, so the crest reads
-    // against it rather than against a seam.
-    backgroundColor: LANDING_WELL,
+    /**
+     * No background at all: the sky IS the page's grained ground,
+     * running uninterrupted from the section above. Painted navy it
+     * was the right colour and the wrong surface — a flat patch in a
+     * grained page, which is exactly the seam this scene exists not
+     * to have. The land below the crest stays the deep well, which is
+     * also the footer's ground: the ridge the Mark stands on is the
+     * page's last transition, and everything past it is one deep
+     * surface to the end of the document.
+     */
     overflow: 'hidden',
   },
   skyzone: { height: 260 },
-  twinkle: { position: 'absolute', backgroundColor: COLORS.white },
+  floater: { position: 'absolute' },
   hill: { position: 'absolute', bottom: 0, left: 0 },
   /**
    * Placed by coordinate: the hill's apex sits 18 units above its own
@@ -306,7 +337,7 @@ const styles = StyleSheet.create({
     boxShadow: '0 0 16px 10px rgba(9,12,19,0.55)',
   },
   summit: {
-    backgroundColor: COLORS.navy,
+    backgroundColor: LANDING_WELL,
     alignItems: 'center',
     gap: SPACING.lg,
     paddingBottom: SPACING.xl,
