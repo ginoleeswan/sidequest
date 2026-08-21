@@ -21,6 +21,7 @@ const EXPLORE = [
   { label: 'Home', href: '/' },
   { label: 'My Library', href: '/library' },
   { label: 'The Plan', href: '/plan' },
+  { label: 'About', href: '/about' },
 ] as const;
 
 const LEGAL = [
@@ -174,6 +175,13 @@ interface Props {
    * whose horizon section already gives the Mark its real scene.
    */
   mascot?: boolean;
+  /**
+   * The waterline itself. Off on the landing page too: there the
+   * horizon's hill IS the transition — its ridge drops onto the same
+   * deep ground the footer sits on, and a second wave under a hill
+   * would be two goodbyes in a row.
+   */
+  shore?: boolean;
 }
 
 /**
@@ -187,9 +195,9 @@ export function SiteFooter({
   inset = 0,
   pad = SPACING.lg,
   mascot = true,
+  shore = true,
 }: Props) {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const { width } = useWindowDimensions();
   /**
    * The ghost wordmark, sized to its stage. Fixed at 128 it overflowed
@@ -200,7 +208,7 @@ export function SiteFooter({
 
   return (
     <View style={inset > 0 ? { marginHorizontal: -inset } : undefined}>
-      <Shore mascot={mascot} />
+      {shore && <Shore mascot={mascot} />}
       <View
         style={[styles.band, { paddingBottom: insets.bottom + SPACING.lg }]}
       >
@@ -219,26 +227,15 @@ export function SiteFooter({
                 <Mark size={26} />
                 <Text style={styles.wordmark}>Sidequest</Text>
               </View>
-              {/* The claim, said at claim size. As a label under the
-                  wordmark it was furniture; the footer is the last
-                  thing a reader sees, and it should leave saying the
-                  one sentence the product stands on. */}
+              {/* The claim, said once, at claim size — and nothing
+                  else. This block used to restate the product three
+                  times: wordmark, tagline, then a pitch paragraph and
+                  a link expanding on the pitch. A footer is a sign-off,
+                  not a second landing page; one sentence, said well,
+                  and the case itself lives behind About. */}
               <Text style={styles.tagline}>
                 Know what you can{'\n'}actually finish.
               </Text>
-              <Text style={styles.pitch}>
-                Backlog triage for people with more games than time. No account,
-                no tracking — your library lives on this device.
-              </Text>
-              {/* The page that makes the case for the product was filed
-                under Legal, between the terms and the privacy policy.
-                It belongs with the sentence it expands on. */}
-              <Pressable
-                onPress={() => router.push('/about')}
-                accessibilityRole="link"
-              >
-                <Text style={styles.pitchLink}>What Sidequest is →</Text>
-              </Pressable>
             </View>
             <View style={styles.cols}>
               <LinkColumn heading="Explore" links={EXPLORE} />
@@ -310,18 +307,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.4,
     color: COLORS.lightGrey,
     marginTop: SPACING.xs,
-  },
-  pitchLink: {
-    ...TYPE.labelSmall,
-    color: COLORS.lightGrey,
-    marginTop: SPACING.sm + 2,
-  },
-  pitch: {
-    ...TYPE.caption,
-    lineHeight: 20,
-    color: COLORS.mediumGrey,
-    marginTop: SPACING.xs,
-    maxWidth: 340,
   },
   cols: {
     flexDirection: 'row',

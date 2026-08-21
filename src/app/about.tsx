@@ -732,7 +732,7 @@ export default function AboutScreen() {
 
         {/* Padded to land on the same column the bands use, so the
             footer's first letter sits under everything above it. */}
-        <SiteFooter pad={footerPad} mascot={false} />
+        <SiteFooter pad={footerPad} mascot={false} shore={false} />
 
         {/* Above the bands, under nothing: the gutter it lives in has
             no text to cover. */}

@@ -162,7 +162,7 @@ export function Horizon({ onStart }: { onStart?: () => void }) {
         >
           <Path
             d="M0 120 V86 C 280 18, 720 18, 1000 86 V120 Z"
-            fill={COLORS.navy}
+            fill={LANDING_WELL}
           />
           {/* The trail, carrying on over the hill — dashed like the
               unwalked road in the quest line, because the page's last
@@ -257,9 +257,18 @@ export function Horizon({ onStart }: { onStart?: () => void }) {
 
 const styles = StyleSheet.create({
   scene: {
-    // The deep band above continues behind the sky, so the crest reads
-    // against it rather than against a seam.
-    backgroundColor: LANDING_WELL,
+    /**
+     * The sky is the page's own navy, so the scene begins without a
+     * seam — and the land below the crest is the deep well, which is
+     * also the footer's ground. That one choice is the whole ending:
+     * dusk holds the light, the ridge the Mark stands on is the last
+     * line on the page, and everything past it is one deep surface
+     * running to the end of the document. It used to be the other way
+     * up — a well sky over a navy hill, then a second transition into
+     * a well footer — which was a landscape lit from below and two
+     * goodbyes in a row.
+     */
+    backgroundColor: COLORS.navy,
     overflow: 'hidden',
   },
   skyzone: { height: 260 },
@@ -306,7 +315,7 @@ const styles = StyleSheet.create({
     boxShadow: '0 0 16px 10px rgba(9,12,19,0.55)',
   },
   summit: {
-    backgroundColor: COLORS.navy,
+    backgroundColor: LANDING_WELL,
     alignItems: 'center',
     gap: SPACING.lg,
     paddingBottom: SPACING.xl,
