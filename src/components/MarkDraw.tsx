@@ -85,7 +85,7 @@ export function MarkDraw({
     if (reduced || !play) return;
     const animation = Animated.timing(draw, {
       toValue: 1,
-      duration: 1500,
+      duration: 2900,
       easing: EASING.standard,
       useNativeDriver: false,
     });
@@ -96,6 +96,15 @@ export function MarkDraw({
   // Somebody who asked for less motion gets the finished drawing.
   if (reduced) return <Mark size={size} />;
 
+  /**
+   * Nearly three seconds, and the windows spread to match.
+   *
+   * At 1500ms the whole construction was over before a reader who had
+   * just scrolled to it had focused on it — the drawing has to be
+   * watchable to be worth drawing. Each stroke now gets most of a
+   * second, with real overlap between them, and the fills arrive last
+   * rather than chasing the ball.
+   */
   const over = (from: number, to: number, range: [number, number]) =>
     draw.interpolate({
       inputRange: [from, to],
@@ -103,8 +112,8 @@ export function MarkDraw({
       extrapolate: 'clamp',
     });
 
-  const inkFade = over(0.62, 0.95, [1, 0]);
-  const fillFade = over(0.55, 0.9, [0, 1]);
+  const inkFade = over(0.74, 1, [1, 0]);
+  const fillFade = over(0.66, 0.94, [0, 1]);
 
   return (
     <Svg width={size} height={size} viewBox={VIEW_BOX}>
@@ -135,7 +144,7 @@ export function MarkDraw({
             stroke={COLORS.white}
             strokeWidth={4}
             strokeDasharray={`${HEX_LEN}`}
-            strokeDashoffset={over(0, 0.4, [HEX_LEN, 0])}
+            strokeDashoffset={over(0, 0.34, [HEX_LEN, 0])}
           />
         </G>
         <AnimatedPath
@@ -145,7 +154,7 @@ export function MarkDraw({
           strokeWidth={3}
           strokeLinecap="round"
           strokeDasharray={`${SHAFT_LEN}`}
-          strokeDashoffset={over(0.2, 0.5, [SHAFT_LEN, 0])}
+          strokeDashoffset={over(0.28, 0.5, [SHAFT_LEN, 0])}
         />
         <AnimatedCircle
           cx={50}
@@ -155,7 +164,7 @@ export function MarkDraw({
           stroke={COLORS.accent}
           strokeWidth={3}
           strokeDasharray={`${BALL_LEN}`}
-          strokeDashoffset={over(0.38, 0.72, [BALL_LEN, 0])}
+          strokeDashoffset={over(0.46, 0.78, [BALL_LEN, 0])}
         />
       </AnimatedG>
     </Svg>
