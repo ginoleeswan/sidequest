@@ -194,7 +194,15 @@ function Band({
   seamVariant?: SeamVariant;
   children: React.ReactNode;
 }) {
-  const ground = tone === 'well' ? LANDING_WELL : LANDING_GROUND;
+  /**
+   * What the seam paints as the incoming face. Well bands are opaque,
+   * so their seams arrive in the well colour; ground bands are
+   * TRANSPARENT — the page's grained ground shows through them — so
+   * their seams must be transparent too. Painting those faces navy
+   * put an 18-point flat strip over the grain under every quiet seam,
+   * the flat-patch bug at its smallest and most repeated.
+   */
+  const ground = tone === 'well' ? LANDING_WELL : 'transparent';
   return (
     <View
       style={[tone === 'well' ? styles.well : undefined, raise && styles.raise]}
@@ -543,8 +551,12 @@ export default function AboutScreen() {
             one idea per card, the next peeking in from the edge, the
             same live evidence the old rows carried. The section keeps
             the ordinary lip seam: the panels are the event. */}
-        <View style={styles.deckSection}>
-          <Seam color={LANDING_GROUND} behind={LANDING_WELL} index={4} />
+        {/* No background of its own: the page's grained ground runs
+            straight through, and the seam's face is the only paint.
+            An explicit navy here was the flat-patch bug again — right
+            colour, wrong surface, visible as a strip under the deck. */}
+        <View>
+          <Seam color="transparent" behind={LANDING_WELL} index={4} />
           <View style={styles.deckBody}>
             <BeatDeck scale={scale} games={games} />
           </View>
@@ -813,7 +825,6 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
   },
 
-  deckSection: { backgroundColor: LANDING_GROUND },
   plainRoom: { paddingTop: SPACING.xl * 2.5 },
   deckBody: { paddingTop: SPACING.xl, paddingBottom: SPACING.xl * 1.5 },
 
