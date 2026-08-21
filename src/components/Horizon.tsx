@@ -95,110 +95,114 @@ export function Horizon({ onStart }: { onStart?: () => void }) {
 
   return (
     <View ref={ref} style={styles.scene} pointerEvents="box-none">
-      {/* The sky: stars out, dusk coming up from behind the crest. */}
-      <Svg
-        width="100%"
-        height={150}
-        viewBox="0 0 1000 150"
-        preserveAspectRatio="none"
-        style={styles.sky}
-        pointerEvents="none"
-      >
-        <Defs>
-          <RadialGradient id="dusk" cx="50%" cy="100%" rx="42%" ry="88%">
-            <Stop offset="0" stopColor={COLORS.accent} stopOpacity="0.26" />
-            <Stop offset="0.55" stopColor={COLORS.accent} stopOpacity="0.1" />
-            <Stop offset="1" stopColor={COLORS.accent} stopOpacity="0" />
-          </RadialGradient>
-        </Defs>
-        <Ellipse cx="500" cy="150" rx="430" ry="132" fill="url(#dusk)" />
-        {STARS.map(([x, y, r, o], index) => (
-          <Circle
-            key={`${x}-${y}`}
-            cx={x}
-            cy={y}
-            r={r}
-            fill={index % 3 === 0 ? COLORS.accent : COLORS.white}
-            opacity={o}
+      {/* The sky and the hill share one measured zone, so the Mark can
+          be placed against the crest by coordinate rather than by
+          margin luck. Paint order inside: sky, hill, Mark — the Mark
+          last, so the plinth overtly sits ON the lip with the ridge
+          running behind its feet. */}
+      <View style={styles.skyzone} pointerEvents="none">
+        <Svg
+          width="100%"
+          height={260}
+          viewBox="0 0 1000 260"
+          preserveAspectRatio="none"
+          style={StyleSheet.absoluteFill}
+        >
+          <Defs>
+            <RadialGradient id="dusk" cx="50%" cy="100%" rx="42%" ry="70%">
+              <Stop offset="0" stopColor={COLORS.accent} stopOpacity="0.26" />
+              <Stop offset="0.55" stopColor={COLORS.accent} stopOpacity="0.1" />
+              <Stop offset="1" stopColor={COLORS.accent} stopOpacity="0" />
+            </RadialGradient>
+          </Defs>
+          <Ellipse cx="500" cy="260" rx="430" ry="200" fill="url(#dusk)" />
+          {STARS.map(([x, y, r, o], index) => (
+            <Circle
+              key={`${x}-${y}`}
+              cx={x}
+              cy={y}
+              r={r}
+              fill={index % 3 === 0 ? COLORS.accent : COLORS.white}
+              opacity={o}
+            />
+          ))}
+        </Svg>
+        {/* Three of the stars, breathing over the static field. */}
+        {!reduced &&
+          TWINKLE.map((slot, index) => {
+            const [x, y, r] = STARS[slot];
+            return (
+              <Animated.View
+                key={slot}
+                style={[
+                  styles.twinkle,
+                  {
+                    left: `${x / 10}%`,
+                    top: y,
+                    width: r * 4,
+                    height: r * 4,
+                    borderRadius: r * 2,
+                    opacity: breathe.interpolate({
+                      inputRange: [0, 0.5, 1],
+                      outputRange:
+                        index % 2 === 0 ? [0.1, 0.6, 0.1] : [0.55, 0.15, 0.55],
+                    }),
+                  },
+                ]}
+              />
+            );
+          })}
+
+        <Svg
+          width="100%"
+          height={120}
+          viewBox="0 0 1000 120"
+          preserveAspectRatio="none"
+          style={styles.hill}
+        >
+          <Path
+            d="M0 120 V86 C 280 18, 720 18, 1000 86 V120 Z"
+            fill={COLORS.navy}
           />
-        ))}
-      </Svg>
-      {/* Three of the stars, breathing over the static field. */}
-      {!reduced &&
-        TWINKLE.map((slot, index) => {
-          const [x, y, r] = STARS[slot];
-          return (
-            <Animated.View
-              key={slot}
-              pointerEvents="none"
-              style={[
-                styles.twinkle,
+          {/* The trail, carrying on over the hill — dashed like the
+              unwalked road in the quest line, because the page's last
+              drawing should say the obvious warm thing: there is more
+              past the edge. */}
+          <Path
+            d="M0 86 C 280 18, 720 18, 1000 86"
+            fill="none"
+            stroke={COLORS.accent}
+            strokeWidth={2}
+            strokeDasharray="1 9"
+            strokeLinecap="round"
+            opacity={0.75}
+          />
+        </Svg>
+
+        {/* Standing on the crest: base a few pixels over the ridge,
+            painted after the hill, constructing itself as it settles. */}
+        <Animated.View
+          style={[
+            styles.mark,
+            {
+              transform: [
                 {
-                  left: `${x / 10}%`,
-                  top: (y / 150) * 150,
-                  width: r * 4,
-                  height: r * 4,
-                  borderRadius: r * 2,
-                  opacity: breathe.interpolate({
-                    inputRange: [0, 0.5, 1],
-                    outputRange:
-                      index % 2 === 0 ? [0.1, 0.6, 0.1] : [0.55, 0.15, 0.55],
+                  translateY: rise.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [26, 0],
                   }),
                 },
-              ]}
-            />
-          );
-        })}
-
-      {/* Behind the hill: rises into the dusk over its crest. */}
-      <Animated.View
-        style={[
-          styles.mark,
-          {
-            transform: [
-              {
-                translateY: rise.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [190, 0],
-                }),
-              },
-            ],
-          },
-        ]}
-        pointerEvents="none"
-      >
-        {/* Constructs itself as it rises — outline, shaft, ball,
-            fills — so the page's last drawing is being drawn. */}
-        <MarkDraw size={148} play={seen} />
-      </Animated.View>
-
-      {/* The hill, painted over the Mark's feet. */}
-      <Svg
-        width="100%"
-        height={120}
-        viewBox="0 0 1000 120"
-        preserveAspectRatio="none"
-        style={styles.hill}
-        pointerEvents="none"
-      >
-        <Path
-          d="M0 120 V86 C 280 18, 720 18, 1000 86 V120 Z"
-          fill={COLORS.navy}
-        />
-        {/* The trail, carrying on over the hill — dashed like the
-            unwalked road in the quest line, because the page's last
-            drawing should say the obvious warm thing: there is more
-            past the edge. */}
-        <Path
-          d="M0 86 C 280 18, 720 18, 1000 86"
-          fill="none"
-          stroke={COLORS.accent}
-          strokeWidth={2}
-          strokeDasharray="1 9"
-          strokeLinecap="round"
-          opacity={0.75}
-        />
-      </Svg>
+              ],
+              opacity: rise.interpolate({
+                inputRange: [0, 0.35, 1],
+                outputRange: [0, 1, 1],
+              }),
+            },
+          ]}
+        >
+          <MarkDraw size={148} play={seen} />
+        </Animated.View>
+      </View>
 
       {/* On the hill: the word, and the only thing left to do. */}
       <View style={styles.summit}>
@@ -239,20 +243,23 @@ const styles = StyleSheet.create({
     // The deep band above continues behind the sky, so the crest reads
     // against it rather than against a seam.
     backgroundColor: LANDING_WELL,
-    paddingTop: 26,
     overflow: 'hidden',
   },
-  sky: { position: 'absolute', top: 0, left: 0 },
+  skyzone: { height: 260 },
   twinkle: { position: 'absolute', backgroundColor: COLORS.white },
+  hill: { position: 'absolute', bottom: 0, left: 0 },
   /**
-   * The base kisses the crest instead of sinking behind it. The hill's
-   * apex sits eighteen units into its own box; minus fourteen leaves
-   * the plinth's whole silhouette above the ridge line, standing ON
-   * the lip — planted, not buried. The rise still starts from far
-   * enough down that the hill hides all of it at first.
+   * Placed by coordinate: the hill's apex sits 18 units above its own
+   * base, so a bottom of 88 puts the plinth's base about 14 pixels over
+   * the ridge — standing on the lip, ridge behind the feet.
    */
-  mark: { alignItems: 'center', marginBottom: -14, zIndex: 1 },
-  hill: { marginTop: 0 },
+  mark: {
+    position: 'absolute',
+    bottom: 88,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
   summit: {
     backgroundColor: COLORS.navy,
     alignItems: 'center',

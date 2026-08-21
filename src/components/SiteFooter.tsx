@@ -1,6 +1,12 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  useWindowDimensions,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { COLORS } from '@/styles/colors';
@@ -72,6 +78,13 @@ interface Props {
 export function SiteFooter({ inset = 0, pad = SPACING.lg }: Props) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  /**
+   * The ghost wordmark, sized to its stage. Fixed at 128 it overflowed
+   * a phone and the visible tail read as a different product name; the
+   * whole word spanning the band is the design, at every width.
+   */
+  const ghost = Math.round(Math.min(Math.max(width * 0.155, 54), 128));
 
   return (
     <View style={inset > 0 ? { marginHorizontal: -inset } : undefined}>
@@ -89,7 +102,7 @@ export function SiteFooter({ inset = 0, pad = SPACING.lg }: Props) {
         style={[styles.band, { paddingBottom: insets.bottom + SPACING.lg }]}
       >
         <Text
-          style={styles.watermark}
+          style={[styles.watermark, { fontSize: ghost }]}
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
         >
@@ -150,7 +163,6 @@ const styles = StyleSheet.create({
     right: -8,
     bottom: -26,
     fontFamily: 'Noah-Black',
-    fontSize: 128,
     letterSpacing: 6,
     color: 'rgba(255,255,255,0.028)',
   },
