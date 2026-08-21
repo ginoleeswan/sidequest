@@ -1,5 +1,11 @@
 import { useRouter } from 'expo-router';
-import Svg, { Path, Rect } from 'react-native-svg';
+import Svg, {
+  Defs,
+  LinearGradient as SvgGradient,
+  Path,
+  Rect,
+  Stop,
+} from 'react-native-svg';
 import { useState } from 'react';
 import {
   useWindowDimensions,
@@ -13,7 +19,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Mark } from './Mark';
 import { COLORS } from '@/styles/colors';
-import { LANDING_WELL } from '@/styles/landing';
 import { LAYOUT, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
@@ -106,7 +111,22 @@ function Shore({ mascot }: { mascot: boolean }) {
             </View>
           )}
           <Svg width="100%" height={SHORE_H} viewBox={`0 0 ${W} ${SHORE_H}`}>
-            <Path d={`M${wave} V${SHORE_H} H0 Z`} fill={LANDING_WELL} />
+            <Defs>
+              {/* Shadow, not a second ground: the water below the line
+                  is the SAME navy as the page, darkened just under the
+                  crest and clearing within forty points. That is what
+                  lets the footer be one colour with the page — and it
+                  has to be, because iOS tints both toolbars from a
+                  single theme-color, and the top of every page is
+                  navy. A deeper footer ground meant the bottom
+                  toolbar never matched the band above it. */}
+              <SvgGradient id="shoreDepth" x1="0" y1="0" x2="0" y2="1">
+                <Stop offset="0" stopColor="#0E1219" stopOpacity="0.5" />
+                <Stop offset="1" stopColor="#0E1219" stopOpacity="0" />
+              </SvgGradient>
+            </Defs>
+            <Path d={`M${wave} V${SHORE_H} H0 Z`} fill={COLORS.navy} />
+            <Path d={`M${wave} V${SHORE_H} H0 Z`} fill="url(#shoreDepth)" />
             <Path
               d={`M${wave}`}
               stroke="rgba(255,255,255,0.11)"
@@ -213,7 +233,22 @@ export function SiteFooter({
         style={[styles.band, { paddingBottom: insets.bottom + SPACING.lg }]}
       >
         <Text
-          style={[styles.watermark, { fontSize: ghost }]}
+          style={[
+            styles.watermark,
+            /**
+             * Above the safe area, never through it.
+             *
+             * It bled to `bottom: -26`, which on a phone is exactly
+             * where the home indicator and Safari's toolbar sit — and
+             * a ghost at 2.8% white lifted the document's last rows
+             * about a unit and a half off the navy the toolbar is
+             * tinted with. Measured: pure navy 150 points up, 40.5 in
+             * the final thirty. The bleed off the RIGHT edge is the
+             * part that matters; the bottom one was buying nothing and
+             * costing the weld.
+             */
+            { fontSize: ghost, bottom: insets.bottom + 2 },
+          ]}
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
         >
@@ -260,10 +295,15 @@ const styles = StyleSheet.create({
   bob: { position: 'absolute' },
   band: {
     marginTop: 'auto',
-    // The well tone, one step below the page: the footer is deeper
-    // water, which is what lets its waterline read on pages whose own
-    // ground is the same navy the footer used to share.
-    backgroundColor: LANDING_WELL,
+    /**
+     * The page's own navy, exactly — and this is a chrome constraint
+     * before it is a design one. iOS Safari tints its top and bottom
+     * toolbars from one `theme-color`; the top of every page is navy,
+     * so the bottom of every page must be too, or the bottom toolbar
+     * sits as a visibly lighter strip under the footer. The waterline
+     * above carries the depth with shadow instead.
+     */
+    backgroundColor: COLORS.navy,
     overflow: 'hidden',
   },
   // A ghost of the wordmark, barely-there, anchoring the band's depth
@@ -271,7 +311,6 @@ const styles = StyleSheet.create({
   watermark: {
     position: 'absolute',
     right: -8,
-    bottom: -26,
     fontFamily: 'Noah-Black',
     letterSpacing: 6,
     color: 'rgba(255,255,255,0.028)',

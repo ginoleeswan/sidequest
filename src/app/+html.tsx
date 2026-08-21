@@ -128,16 +128,14 @@ const registerServiceWorker = `
 const css = `
   html, body {
     /*
-     * The canvas is split: the top half is the page's navy, the bottom
-     * half the footer's deeper well. iOS Safari shows the canvas
-     * wherever it paints past the document - above the page on a
-     * downward rubber-band, below it on an upward one - and those are
-     * two different colours now that the footer is deeper water than
-     * the page. A hard 50% stop, not a fade: only the extremes are
-     * ever visible. (COLORS.navy over LANDING_WELL)
+     * One ground, top and bottom. iOS Safari tints both toolbars from
+     * a single theme-color, and this is the value it uses - so the
+     * document's first and last pixels have to be this navy or a
+     * toolbar sits as a visibly lighter strip against the page. The
+     * footer's depth is drawn with shadow under its waterline rather
+     * than with a second ground, for exactly that reason. (COLORS.navy)
      */
     background-color: #272F3F;
-    background-image: linear-gradient(#272F3F 50%, #1E2532 50%);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     /* Stop iOS Safari inflating text on rotation. */
