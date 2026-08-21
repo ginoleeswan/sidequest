@@ -10,7 +10,7 @@
  * not do is assume success.
  */
 
-import { Platform } from 'react-native';
+import { platformBackend } from './kvBackend';
 
 export type WriteResult =
   { ok: true } | { ok: false; reason: 'full' | 'unavailable'; error: unknown };
@@ -44,45 +44,9 @@ export interface KVBackend {
   removeItem?(key: string): void;
 }
 
-function memoryBackend(): KVBackend {
-  const map = new Map<string, string>();
-  return {
-    getItem: (key) => map.get(key) ?? null,
-    setItem: (key, value) => void map.set(key, value),
-    removeItem: (key) => void map.delete(key),
-  };
-}
-
-function nativeBackend(): KVBackend {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- platform-conditional module
-    const store = require('expo-sqlite/kv-store').default;
-    // Touch the sync path once so a broken binding fails HERE, where
-    // the fallback exists, rather than mid-session on a save.
-    store.getItemSync('sidequest.storage.probe');
-    return {
-      getItem: (key) => store.getItemSync(key),
-      setItem: (key, value) => store.setItemSync(key, value),
-      removeItem: (key) => void store.removeItemSync(key),
-    };
-  } catch {
-    return memoryBackend();
-  }
-}
-
-function platformBackend(): KVBackend {
-  if (Platform.OS === 'web')
-    return {
-      getItem: (key) => globalThis.localStorage?.getItem(key) ?? null,
-      setItem: (key, value) => {
-        const store = globalThis.localStorage;
-        if (!store) throw new Error('localStorage unavailable');
-        store.setItem(key, value);
-      },
-      removeItem: (key) => globalThis.localStorage?.removeItem(key),
-    };
-  return nativeBackend();
-}
+// The backend itself is platform-split (see kvBackend / kvBackend.native):
+// Metro follows `require` statically, so the sqlite reference must live in
+// a file the web bundle never resolves.
 
 let backend: KVBackend = platformBackend();
 
