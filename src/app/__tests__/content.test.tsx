@@ -21,9 +21,11 @@ describe('the static pages', () => {
     await renderApp(<AboutScreen />);
     // Twice over: the masthead, and the footer's tagline under it.
     expect(
-      screen.getAllByText('Know what you can actually finish.').length
+      screen.getAllByText('Know which games you can actually finish.').length
     ).toBeGreaterThan(0);
-    expect(screen.getByText(/Forty games waiting/)).toBeTruthy();
+    // The standfirst has to name the mechanism in plain words: this is
+    // the line that decides whether a stranger understands the product.
+    expect(screen.getByText(/knows how long games take/)).toBeTruthy();
     // Not the sum: that section is deferred until it is near the
     // viewport, so in a test it is still its placeholder.
     // By label, not by text: the page's claims are set a word at a

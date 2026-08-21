@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -137,17 +138,56 @@ export function FinishCelebration({
               <Mark size={30} />
             </View>
 
-            <Text style={styles.eyebrow}>CREDITS ROLLED</Text>
-            <Text style={styles.title} numberOfLines={3}>
-              {game.name}
-            </Text>
-
-            <View style={styles.artRow}>
+            {/* The finish, staged the way the landing page stages its
+                evidence: the game's own art at full width, the name over
+                it, and FINISHED thumped across in mint — the colour this
+                app gives to finishing things. A cover in a row with a
+                heading above it is a list item; this is a moment. */}
+            <View style={styles.stage}>
               <CoverImage
                 uri={game.background_image}
-                style={styles.art}
+                style={styles.stageArt}
                 size="tile"
               />
+              <LinearGradient
+                colors={[
+                  'rgba(9,12,19,0)',
+                  'rgba(9,12,19,0.5)',
+                  'rgba(9,12,19,0.92)',
+                ]}
+                locations={[0, 0.5, 1]}
+                style={styles.stageVeil}
+                pointerEvents="none"
+              />
+              <View style={styles.stageBody}>
+                <Text style={styles.eyebrow}>CREDITS ROLLED</Text>
+                <Text style={styles.title} numberOfLines={2}>
+                  {game.name}
+                </Text>
+              </View>
+              <Animated.View
+                style={[
+                  styles.stamp,
+                  {
+                    opacity: rise.interpolate({
+                      inputRange: [0, 0.35, 1],
+                      outputRange: [0, 1, 1],
+                    }),
+                    transform: [
+                      { rotate: '-7deg' },
+                      {
+                        scale: rise.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [2.3, 1],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+                pointerEvents="none"
+              >
+                <Text style={styles.stampWord}>FINISHED</Text>
+              </Animated.View>
             </View>
 
             {/* The block this just earned, landing on the year it lands
@@ -227,10 +267,53 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: SPACING.sm,
   },
+  stage: {
+    width: '100%',
+    aspectRatio: 16 / 10,
+    borderRadius: RADIUS.md,
+    overflow: 'hidden',
+    backgroundColor: COLORS.navy,
+    borderWidth: 1,
+    borderColor: COLORS.strokeStrong,
+    marginBottom: SPACING.lg,
+  },
+  stageArt: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  stageVeil: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '72%',
+  },
+  stageBody: {
+    position: 'absolute',
+    left: SPACING.lg,
+    right: SPACING.lg,
+    bottom: SPACING.md,
+    gap: 2,
+  },
+  stamp: {
+    position: 'absolute',
+    top: '26%',
+    alignSelf: 'center',
+    borderWidth: 4,
+    borderColor: COLORS.mint,
+    borderRadius: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(20,25,35,0.55)',
+  },
+  stampWord: {
+    fontFamily: 'Noah-Black',
+    fontSize: 26,
+    letterSpacing: 4,
+    color: COLORS.mint,
+  },
   eyebrow: {
     ...TYPE.tag,
-    color: COLORS.accent,
-    textAlign: 'center',
+    // Finishing's colour. Amber is time; this screen is about the
+    // opposite of time — a thing that is done.
+    color: COLORS.mint,
   },
   title: {
     ...TYPE.title,
@@ -238,14 +321,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   year: { marginBottom: SPACING.lg, alignItems: 'center' },
-  artRow: { alignItems: 'center', marginVertical: SPACING.sm },
-  art: {
-    width: '100%',
-    height: 128,
-    borderRadius: RADIUS.sm,
-    overflow: 'hidden',
-    backgroundColor: COLORS.navy,
-  },
   line: {
     ...TYPE.body,
     color: COLORS.mediumGrey,

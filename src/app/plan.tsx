@@ -556,7 +556,7 @@ export default function PlanScreen() {
                           <Ionicons
                             name="moon"
                             size={13}
-                            color={COLORS.accent}
+                            color={COLORS.violet}
                           />
                           <Text style={styles.tonightEyebrow}>TONIGHT</Text>
                         </View>
@@ -836,7 +836,8 @@ const styles = StyleSheet.create({
   onArt: { ...OVER_IMAGE.body, color: COLORS.white },
   tonightEyebrow: {
     ...TYPE.tag,
-    color: COLORS.accent,
+    // The evening's colour, the same one the landing page uses for it.
+    color: COLORS.violet,
   },
   /* Over artwork, so the copy carries its own contrast. */
   tonightWhy: {

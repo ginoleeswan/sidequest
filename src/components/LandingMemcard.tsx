@@ -129,7 +129,17 @@ export function LandingMemcard({
   const notch = Math.max(30, Math.min(52, width * 0.055));
 
   return (
-    <View style={[styles.card, { width, height }]}>
+    /**
+     * The card announces itself as one image, the way the share card
+     * did. Twelve slots and a scoreboard is a dozen fragments to a
+     * screen reader unless the whole thing carries the sentence.
+     */
+    <View
+      style={[styles.card, { width, height }]}
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={`${card.year}: ${card.headline}`}
+    >
       <Svg
         width={width}
         height={height}
@@ -380,11 +390,19 @@ const styles = StyleSheet.create({
   saveHoursWord: { ...TYPE.tag, fontSize: 11, color: COLORS.accent },
   stamp: {
     position: 'absolute',
-    right: PAD + 14,
-    // Over the grid's quiet upper rows, not over the scoreboard: a
-    // stamp goes on the document, and must not redact the score it
-    // just finished earning.
-    top: HEADER + 26,
+    right: PAD + 4,
+    /**
+     * On the card's bottom lip, half off the shell.
+     *
+     * This sat over the grid's upper rows, on the reasoning that they
+     * were the quiet ones. On the demo card they were; on a real card
+     * they are the loudest — January, February and March are exactly
+     * where someone who finishes games has saves, and the stamp was
+     * redacting two of them along with their hours. A stamp may sit on
+     * a document but it may not black out the record, so it moves to
+     * the edge, where it straddles the shell instead of covering it.
+     */
+    bottom: -21,
     borderWidth: 3,
     borderColor: COLORS.accent,
     borderRadius: 8,
