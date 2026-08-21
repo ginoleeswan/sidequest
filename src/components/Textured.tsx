@@ -19,12 +19,19 @@ const NOISE = require('../../assets/images/noise.png');
  * bar. Ramping the grain in over this distance means the chrome dissolves
  * into the page instead of butting against it.
  */
-const CHROME_FADE = '120px';
+const CHROME_FADE = '150px';
 
 const GRAIN_TILE = '150px 150px';
 
-/** Grain, ramped in from the top of the page. */
-const TOP_FADE = `linear-gradient(to bottom, rgba(0,0,0,0) 0px, rgba(0,0,0,1) ${CHROME_FADE})`;
+/**
+ * Grain, ramped in from the top of the page.
+ *
+ * Held at zero for the first rows, not merely started there: a stop at
+ * exactly 0px still gets sampled at the pixel's centre, and that sliver
+ * of noise is what measured every page's first row at 40,48,64 against
+ * a status bar of 39,47,63 — one unit off, on every route at once.
+ */
+const TOP_FADE = `linear-gradient(to bottom, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 16px, rgba(0,0,0,1) ${CHROME_FADE})`;
 
 /**
  * The colour iOS Safari paints its chrome with — the html canvas, which
@@ -34,7 +41,7 @@ const TOP_FADE = `linear-gradient(to bottom, rgba(0,0,0,0) 0px, rgba(0,0,0,1) ${
  * as one surface rather than meeting on a line.
  */
 const CHROME_BRIDGE =
-  'linear-gradient(to bottom, #272F3F 0px, rgba(39,47,63,0.55) 38%, rgba(39,47,63,0) 100%)';
+  'linear-gradient(to bottom, #272F3F 0px, #272F3F 14px, rgba(39,47,63,0.6) 40%, rgba(39,47,63,0.25) 72%, rgba(39,47,63,0) 100%)';
 
 const styles = StyleSheet.create({
   noInteraction: { pointerEvents: 'none' },

@@ -6,6 +6,19 @@ export const COLORS = {
    * finishing things rather than starting them.
    */
   accent: '#F2A93B',
+  /**
+   * The supporting cast. One amber note played on every element is a
+   * palette in name only — it stops reading as an accent the third
+   * time it appears in a viewport. These three exist so the big ideas
+   * can each own a colour, and they are semantic, not decorative:
+   * amber is time and the trail, violet is the evening (tonight, the
+   * plan, the moon), mint is finishing (credits, done, the stamp on a
+   * good year), coral is letting go (drops, amnesty). Values chosen to
+   * clear AA for small text on the navy ground.
+   */
+  violet: '#9D8FFF',
+  mint: '#3ECF8E',
+  coral: '#F87168',
   blue: '#1E69E1',
   lightGrey: '#D8DAE4',
   // 4.6:1 on darkGrey, AA for body text on every surface.

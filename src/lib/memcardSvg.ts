@@ -21,7 +21,7 @@ const CARD = '#1D2431';
 const SHELL = '#0E121A';
 
 /** Twelve columns, one per month; blocks stack upward within a month. */
-const GRID = {
+export const GRID = {
   x: 700,
   y: 190,
   width: 420,
@@ -32,6 +32,28 @@ const GRID = {
 
 /** Names on the card, before it stops being a card and starts being a list. */
 const NAMED = 8;
+
+/**
+ * Where a block sits, in the card's own 1200x630 space.
+ *
+ * Exported for the landing page's build animation, which flies each
+ * game's cover in from the viewer and lands it exactly here — the
+ * cover shrinking into the block it becomes. One source of geometry,
+ * so the flight can never land beside its own slot.
+ */
+export function blockSlot(
+  month: number,
+  row: number
+): { x: number; y: number; width: number; height: number } {
+  const cellW = GRID.width / GRID.columns;
+  const cellH = GRID.height / GRID.rows;
+  return {
+    x: GRID.x + month * cellW + 2,
+    y: GRID.y + (GRID.rows - 1 - row) * cellH + 2,
+    width: cellW - 4,
+    height: cellH - 4,
+  };
+}
 
 const escape = (text: string) =>
   text
@@ -58,15 +80,18 @@ function shell(): string {
   } a 16 16 0 0 1 16 -16 Z" fill="${SHELL}" stroke="rgba(255,255,255,0.10)" stroke-width="2"/>`;
 }
 
-function blocks(card: Memcard): string {
+function blocks(card: Memcard, progress: number): string {
   const months = blocksByMonth(card);
+  // Months land left to right as the build advances; a month is drawn
+  // once the sweep has passed it.
+  const landed = Math.floor(progress * GRID.columns + 1e-6);
   const cellW = GRID.width / GRID.columns;
   const cellH = GRID.height / GRID.rows;
   const parts: string[] = [];
 
   for (let month = 0; month < GRID.columns; month++) {
     for (let row = 0; row < GRID.rows; row++) {
-      const filled = row < Math.min(months[month], GRID.rows);
+      const filled = month < landed && row < Math.min(months[month], GRID.rows);
       const x = GRID.x + month * cellW + 2;
       // Blocks stack from the bottom, so a good month reads as a tower.
       const y = GRID.y + (GRID.rows - 1 - row) * cellH + 2;
@@ -105,9 +130,14 @@ function stamp(): string {
  * without the titles on it is a chart, and nobody posts a chart of
  * their own hobby.
  */
-function names(card: Memcard): string {
-  const shown = card.blocks.slice(0, NAMED);
-  const rest = card.count - shown.length;
+function names(card: Memcard, progress: number): string {
+  const landed = Math.floor(progress * GRID.columns + 1e-6);
+  // A game's name appears when its month's block lands, so the list
+  // writes itself in step with the grid.
+  const shown = card.blocks
+    .filter((block) => block.month < landed)
+    .slice(0, NAMED);
+  const rest = progress >= 1 ? card.count - shown.length : 0;
   const parts: string[] = [];
 
   shown.forEach((block, index) => {
@@ -141,11 +171,21 @@ export interface SvgOptions {
    * fonts already.
    */
   fontCss?: string;
+  /**
+   * How much of the year has been built, 0..1.
+   *
+   * The landing page assembles the card in front of the reader — months
+   * land left to right, each game's name writing itself in as its block
+   * arrives, the stamp last. Everything below 1 is that construction;
+   * the default is the finished card, which is what every other caller
+   * wants and exactly what shipped before this option existed.
+   */
+  progress?: number;
 }
 
 export function memcardSvg(
   card: Memcard,
-  { fontCss }: SvgOptions = {}
+  { fontCss, progress = 1 }: SvgOptions = {}
 ): string {
   const title = card.longest
     ? `Longest: ${escape(card.longest.name)} · ${Math.round(card.longest.hours)}h`
@@ -169,9 +209,9 @@ export function memcardSvg(
   <text x="80" y="368" font-family="Noah-Regular, Helvetica, Arial, sans-serif" font-size="17" fill="${DIM}">${title}</text>
 
   ${shell()}
-  ${blocks(card)}
-  ${names(card)}
-  ${card.count > 0 ? stamp() : ''}
+  ${blocks(card, progress)}
+  ${names(card, progress)}
+  ${card.count > 0 && progress >= 1 ? stamp() : ''}
   <text x="80" y="590" font-family="Noah-Regular, Helvetica, Arial, sans-serif" font-size="16" fill="${DIM}">sidequest — what you can actually finish</text>
 </svg>`;
 }

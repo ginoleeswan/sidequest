@@ -4,6 +4,7 @@ import {
   Platform,
   View,
   type LayoutChangeEvent,
+  type StyleProp,
   type ViewStyle,
 } from 'react-native';
 
@@ -119,7 +120,7 @@ export function Rise({
   children: React.ReactNode;
   from?: Entrance;
   delay?: number;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }) {
   const reduced = useReducedMotion();
   const [ref, seen] = useInView();

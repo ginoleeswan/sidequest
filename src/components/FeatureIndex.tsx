@@ -8,75 +8,38 @@ import { SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 /**
- * Everything else it does, set as an index rather than a feature grid.
+ * Everything else it does, set like a magazine's contents page.
  *
- * The page above this argues one idea at a time, at poster scale, and
- * that is the right way to make a case — but it leaves a stranger
- * thinking the app is three screens. It is not: there is importing,
- * planning, timing, sharing and a dozen smaller things, and none of them
- * deserve a headline while none of them deserve to be hidden either.
- *
- * So: an index. Twelve lines, numbered, ruled, two columns where there
- * is room. A card with an icon and two lines of body, repeated twelve
- * times, is the shape a page takes when nobody decided what mattered —
- * and it would flatly contradict the eight sections above it, which are
- * ranked on purpose. A back-of-book index says "there is more here" in
- * the one voice that does not compete with a headline.
+ * The first version was twelve numbered rows with hairline rules and a
+ * one-line body each — accurate, complete, and the most boring thing
+ * on the page. An index is a reference; this is an advert, and what an
+ * advert needs from a list is the sensation of plenty. So the bodies
+ * are gone and the titles are set big, black and flowing, each with a
+ * dot from the page's own colour cast — the way a magazine runs its
+ * contents across a spread rather than down a margin. Twelve bold
+ * names wrapping like a paragraph say "there is a lot in this box"
+ * faster than twelve explanations ever did; the explanations live in
+ * the app, one tap away.
  */
 const ENTRIES = [
-  {
-    title: 'Import from Steam',
-    body: 'Your owned games and the hours already on them, from one profile link.',
-  },
-  {
-    title: 'Import a list',
-    body: 'A CSV from wherever you have been keeping one. Names are enough.',
-  },
-  {
-    title: 'The week, not just tonight',
-    body: 'Seven evenings, filled in order. Tonight is only the first of them.',
-  },
-  {
-    title: 'Weekend mode',
-    body: 'Saturday afternoon is not a Tuesday, and it does not get planned like one.',
-  },
-  {
-    title: 'Deadlines',
-    body: 'A sequel you want to be ready for, counted back from, in weeks you actually have.',
-  },
-  {
-    title: 'Play sessions',
-    body: 'Start a timer. What it learns about your pace replaces the crowd’s estimate.',
-  },
-  {
-    title: 'Your own lengths',
-    body: 'Every estimate is editable. Yours wins over anybody else’s, permanently.',
-  },
-  {
-    title: 'Notes and tags',
-    body: 'Why you shelved it, in your words, on the tile — so future you knows.',
-  },
-  {
-    title: 'Collections',
-    body: 'Shelves you name yourself, for the ways a backlog is actually organised.',
-  },
-  {
-    title: 'Sequel alerts',
-    body: 'When something you finished gets a follow-up, it appears where you finished it.',
-  },
-  {
-    title: 'Search everything',
-    body: 'Command-K anywhere: every game, every shelf, every screen, one keystroke.',
-  },
-  {
-    title: 'Works offline',
-    body: 'Add it to your home screen and your library opens with no connection at all.',
-  },
+  'Steam import',
+  'CSV import',
+  'The week view',
+  'Weekend mode',
+  'Deadlines',
+  'Play sessions',
+  'Your own lengths',
+  'Notes & tags',
+  'Collections',
+  'Sequel alerts',
+  'Search everything',
+  'Works offline',
 ];
 
-/** Draws no band of its own: it is placed inside one. */
+/** The cast, dealt in order — no two neighbours share a colour. */
+const HUES = [COLORS.accent, COLORS.violet, COLORS.mint, COLORS.coral];
+
 export function FeatureIndex({ scale }: { scale: LandingScale }) {
-  const wide = scale.wide;
   return (
     <View style={styles.section}>
       <Rise from="mask">
@@ -87,23 +50,22 @@ export function FeatureIndex({ scale }: { scale: LandingScale }) {
         style={[styles.heading, scale.lead]}
         delay={80}
       />
-      <View style={[styles.list, wide && styles.listWide]}>
-        {ENTRIES.map((entry, index) => (
-          <Rise
-            key={entry.title}
-            // Down the left column, then down the right — the order a
-            // reader's eye takes, rather than the order of the array.
-            delay={(wide ? Math.floor(index / 2) : index) * 55}
-            style={wide ? styles.rowWide : undefined}
-          >
-            <View style={styles.row}>
-              <Text style={styles.number}>
-                {String(index + 1).padStart(2, '0')}
+      <View style={styles.flow}>
+        {ENTRIES.map((title, index) => (
+          <Rise key={title} from="lift" delay={index * 55}>
+            <View style={styles.item}>
+              <View
+                style={[
+                  styles.dot,
+                  { backgroundColor: HUES[index % HUES.length] },
+                ]}
+              />
+              <Text
+                style={[styles.title, scale.wide && styles.titleWide]}
+                numberOfLines={1}
+              >
+                {title}
               </Text>
-              <View style={styles.copy}>
-                <Text style={styles.title}>{entry.title}</Text>
-                <Text style={styles.body}>{entry.body}</Text>
-              </View>
             </View>
           </Rise>
         ))}
@@ -116,33 +78,23 @@ const styles = StyleSheet.create({
   section: { gap: SPACING.sm },
   eyebrow: { ...TYPE.micro, color: COLORS.accent },
   heading: { color: COLORS.white, marginBottom: SPACING.xl },
-  list: {},
-  listWide: {
+  flow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    // The gutter between the two columns. Rows keep their own rule, so
-    // the columns read as two lists rather than as a table.
-    columnGap: SPACING.xl * 2,
+    alignItems: 'center',
+    columnGap: SPACING.xl + 6,
+    rowGap: SPACING.lg + 2,
+    // A paragraph of names wants a ragged edge, not a grid.
+    maxWidth: 1000,
   },
-  rowWide: { width: '46%', flexGrow: 1 },
-
-  row: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: SPACING.md,
-    paddingVertical: SPACING.md,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.stroke,
+  item: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md - 3 },
+  dot: { width: 12, height: 12, borderRadius: 6 },
+  title: {
+    fontFamily: 'Noah-Black',
+    fontSize: 24,
+    lineHeight: 30,
+    letterSpacing: -0.5,
+    color: COLORS.white,
   },
-  number: {
-    ...TYPE.tag,
-    color: COLORS.mediumGrey,
-    // Sits on the title's first line, not above it: the number is a
-    // marker in the margin, not a heading of its own.
-    paddingTop: 3,
-    minWidth: 20,
-  },
-  copy: { flex: 1, gap: 3 },
-  title: { ...TYPE.h2, color: COLORS.white },
-  body: { ...TYPE.caption, lineHeight: 21 },
+  titleWide: { fontSize: 34, lineHeight: 42, letterSpacing: -1 },
 });

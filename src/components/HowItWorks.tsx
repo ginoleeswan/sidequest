@@ -26,18 +26,21 @@ import { TYPE } from '@/styles/typography';
 const STEPS = [
   {
     icon: 'bookmark' as const,
+    hue: COLORS.accent,
     title: 'Save what catches your eye',
-    body: 'Anything at all. Sidequest looks up how long each one takes while you browse.',
+    body: 'Sidequest looks up how long each takes while you browse.',
   },
   {
     icon: 'moon' as const,
+    hue: COLORS.violet,
     title: 'Say how much you play',
-    body: 'One number, in hours a week. Change it whenever the answer changes.',
+    body: 'One number, in hours a week.',
   },
   {
     icon: 'checkmark-circle' as const,
+    hue: COLORS.mint,
     title: 'Get one game, not forty',
-    body: 'It names what you can finish, in the order to play it, and what to let go.',
+    body: 'What you can finish, in order — and what to let go.',
   },
 ];
 
@@ -57,7 +60,9 @@ export function HowItWorks({ scale }: { scale: LandingScale }) {
         {STEPS.map((step, index) => (
           <Rise key={step.title} delay={index * 110} style={styles.stepSlot}>
             <View style={styles.step}>
-              <View style={styles.badge}>
+              {/* Save is amber, the evening is violet, done is mint —
+                  the same colour logic the rest of the page speaks. */}
+              <View style={[styles.badge, { backgroundColor: step.hue }]}>
                 <Ionicons name={step.icon} size={17} color={COLORS.navy} />
               </View>
               <Text style={styles.number}>{`0${index + 1}`}</Text>
@@ -90,12 +95,18 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: COLORS.accent,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.xs,
   },
   number: { ...TYPE.tag, color: COLORS.mediumGrey },
   title: { ...TYPE.h1, color: COLORS.white },
-  body: { ...TYPE.body, color: COLORS.mediumGrey, maxWidth: 340, marginTop: 2 },
+  body: {
+    ...TYPE.body,
+    fontSize: 16,
+    lineHeight: 25,
+    color: COLORS.mediumGrey,
+    maxWidth: 340,
+    marginTop: 2,
+  },
 });

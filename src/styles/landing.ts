@@ -98,7 +98,7 @@ export const LANDING_WELL = '#1E2532';
 export function landingScale(width: number): LandingScale {
   const wide = width >= 900;
 
-  const display = clamp(width * 0.098, 38, 104);
+  const display = clamp(width * 0.108, 42, 104);
   /**
    * Just over half the masthead at any width. A landing page needs
    * exactly two type sizes above body copy — the thing that stops you,
@@ -146,8 +146,10 @@ export function landingScale(width: number): LandingScale {
     },
     body: {
       ...TYPE.body,
-      fontSize: wide ? 18 : 17,
-      lineHeight: wide ? 30 : 28,
+      // A reading size, not a UI size. Seventeen is right for a
+      // settings screen; a landing page is read at arm's length.
+      fontSize: wide ? 20 : 18,
+      lineHeight: wide ? 33 : 30,
       color: COLORS.mediumGrey,
     },
     figure: {

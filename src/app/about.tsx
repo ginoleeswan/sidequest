@@ -16,16 +16,19 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FeatureIndex } from '@/components/FeatureIndex';
+import { Horizon } from '@/components/Horizon';
 import { HowItWorks } from '@/components/HowItWorks';
-import { InstallPrompt } from '@/components/InstallPrompt';
 import { LandingShelf } from '@/components/LandingShelf';
-import { Memcard } from '@/components/Memcard';
+import { LandingTake } from '@/components/LandingTake';
+import { LandingTry } from '@/components/LandingTry';
+import { MemcardBuild } from '@/components/MemcardBuild';
+import { QuestLine, QuestMark } from '@/components/QuestLine';
 import { LandingProof } from '@/components/LandingProof';
 import { Drift } from '@/components/Drift';
 import { Rise, useInView } from '@/components/Rise';
 import { Words } from '@/components/Words';
 import { LandingWall } from '@/components/LandingWall';
-import { Mark } from '@/components/Mark';
+import { MarkDraw } from '@/components/MarkDraw';
 import { PageTitle } from '@/components/PageTitle';
 import { RouteError } from '@/components/RouteError';
 import { ScaleButton } from '@/components/ScaleButton';
@@ -38,7 +41,6 @@ import type { Game, Paged } from '@/api/types';
 import type { Memcard as MemcardModel } from '@/lib/memcard';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useCountUp } from '@/hooks/useCountUp';
-import { drift, useScrollTravel } from '@/hooks/useScrollTravel';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { COLORS } from '@/styles/colors';
@@ -101,21 +103,30 @@ function sampleCard(games: Game[] | undefined): MemcardModel {
   };
 }
 
+/**
+ * Each beat owns a colour as well as a claim: amber for time, violet
+ * for the evening, coral for letting go. The marker, the lead's key
+ * word and the evidence all speak in it, so the three ideas stop
+ * being three paragraphs and start being three places.
+ */
 const BEATS = [
   {
     kind: 'length' as const,
+    hue: COLORS.accent,
     lead: 'It knows how long things take.',
-    body: 'Every game carries a real length, from the people who have finished it — not a guess, and not a store page. It is on every tile, in amber, before you tap anything.',
+    body: 'Real lengths from players who finished, on every tile — before you tap.',
   },
   {
     kind: 'tonight' as const,
+    hue: COLORS.violet,
     lead: 'It picks what fits tonight.',
-    body: 'Ninety minutes on a Tuesday is not three hours on a Saturday. Sidequest does the arithmetic and names one game.',
+    body: 'A Tuesday is not a Saturday. It does the arithmetic and names one game.',
   },
   {
     kind: 'drop' as const,
+    hue: COLORS.coral,
     lead: 'It lets you put things down.',
-    body: 'Most of a backlog is never going to be played, and saying so out loud is the only thing that makes the rest enjoyable. It asks why, and only so the shelves can learn something.',
+    body: 'Most of a backlog will never be played. Saying so is the fun part.',
   },
 ];
 
@@ -174,15 +185,24 @@ function Band({
   scale,
   tone = 'ground',
   style,
+  raise = false,
   children,
 }: {
   scale: LandingScale;
   tone?: 'ground' | 'well';
   style?: StyleProp<ViewStyle>;
+  /**
+   * Paint above the next band, so a child can sit on the lip between
+   * the two. Later siblings win by default; this reverses it for the
+   * band whose content deliberately leans over the edge.
+   */
+  raise?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <View style={tone === 'well' ? styles.well : undefined}>
+    <View
+      style={[tone === 'well' ? styles.well : undefined, raise && styles.raise]}
+    >
       <View
         style={[
           styles.measure,
@@ -242,7 +262,7 @@ export default function AboutScreen() {
    * with four heading sizes and no hierarchy.
    */
   const scale = useMemo(() => landingScale(width), [width]);
-  const { inset, figure, unit } = scale;
+  const { inset, air, figure, unit } = scale;
   /**
    * The footer draws its own full-width band, so it cannot sit inside
    * one. Padding it by the gutter plus whatever the column is inset
@@ -362,7 +382,7 @@ export default function AboutScreen() {
                   and have nowhere to go back to; the ones who came from
                   the footer have a browser button and the mark below. */}
             <Animated.View style={[styles.lockup, step(0, 0.35)]}>
-              <Mark size={26} />
+              <MarkDraw size={26} />
               <Text style={styles.word}>SIDEQUEST</Text>
             </Animated.View>
             <Animated.Text
@@ -371,8 +391,8 @@ export default function AboutScreen() {
               Know what you can actually finish.
             </Animated.Text>
             <Animated.Text style={[styles.standfirst, step(0.2, 0.75)]}>
-              Forty games waiting. Three you will actually see the end of.
-              Sidequest works out which three.
+              Forty games waiting. Three you will finish. Sidequest works out
+              which three.
             </Animated.Text>
             <Animated.View style={step(0.32, 0.9)}>{open}</Animated.View>
           </View>
@@ -383,6 +403,7 @@ export default function AboutScreen() {
             more persuasive than any sentence about it. */}
         <WhenNear placeholder={<View style={styles.sumRoom} />}>
           <Band tone="well" scale={scale} style={scale.wide && styles.sumWide}>
+            <QuestMark id="sum" />
             <Sum
               style={scale.wide ? styles.sumFigureWide : undefined}
               figure={figure}
@@ -390,11 +411,22 @@ export default function AboutScreen() {
             />
             <Rise from="right" delay={220} style={styles.sumTailSlot}>
               <Text style={[styles.sumTail, scale.body]}>
-                and the average week has about six in it. That is fifteen years
-                of evenings, which is not a to-do list — it is a fantasy about a
-                different life.
+                and the average week has about six. Fifteen years of evenings.
               </Text>
             </Rise>
+          </Band>
+        </WhenNear>
+
+        {/* The problem is stated above. This is the reader's own copy of
+            it, answered — the app's real scheduler, on real games, in a
+            band, before anybody has been asked for anything. It goes
+            here rather than lower down because a page that argues for
+            six sections and only then lets you touch something has the
+            order backwards. */}
+        <WhenNear placeholder={<View style={styles.tryRoom} />}>
+          <Band scale={scale}>
+            <QuestMark id="try" />
+            <LandingTry scale={scale} />
           </Band>
         </WhenNear>
 
@@ -403,29 +435,45 @@ export default function AboutScreen() {
             know what will be asked of them, and three numbered steps is
             the plainest way to say it. */}
         <Band scale={scale}>
+          <QuestMark id="how" />
           <HowItWorks scale={scale} />
         </Band>
 
         {/* Volume, which none of the single objects below can show.
             The row runs off the right edge on purpose. */}
         <WhenNear placeholder={<View style={styles.shelfRoom} />}>
-          <Band tone="well" scale={scale} style={styles.pile}>
-            <Words
-              text="Bring the whole pile."
-              style={[styles.lead, scale.lead]}
-            />
-            <Rise delay={90}>
-              <Text style={[styles.pileBody, scale.body]}>
-                Paste a Steam profile and everything you own arrives with the
-                hours already on it. Or hand it a CSV from wherever you have
-                been keeping the list. Nothing has to be typed twice.
-              </Text>
-            </Rise>
-            <LandingShelf
-              games={(games ?? []).slice(0, scale.wide ? 6 : 5)}
-              width={scale.wide ? 232 : 150}
-            />
-          </Band>
+          {/* Not a Band: the copy sits in the measured column, but the
+              marquee runs edge to edge. A horizontally moving row that
+              stops at the column's edge is a window with a frame; one
+              that runs under both edges of the screen is a world going
+              past. */}
+          <View style={styles.well}>
+            <View
+              style={[
+                styles.measure,
+                styles.pile,
+                { paddingHorizontal: inset, paddingTop: air },
+              ]}
+            >
+              <QuestMark id="pile" />
+              <Words
+                text="Bring the whole pile."
+                style={[styles.lead, scale.lead]}
+              />
+              <Rise delay={90}>
+                <Text style={[styles.pileBody, scale.body]}>
+                  Paste a Steam profile and everything arrives, hours included.
+                  Or hand it a CSV.
+                </Text>
+              </Rise>
+            </View>
+            <View style={{ paddingBottom: air, paddingTop: SPACING.lg }}>
+              <LandingShelf
+                games={(games ?? []).slice(0, scale.wide ? 6 : 5)}
+                width={scale.wide ? 232 : 150}
+              />
+            </View>
+          </View>
         </WhenNear>
 
         {/* All three beats in one band, divided by rules rather than by
@@ -447,6 +495,7 @@ export default function AboutScreen() {
                 scale.wide && index % 2 === 1 && styles.beatFlipped,
               ]}
             >
+              <QuestMark id={`beat-${index}`} />
               {/* The claim and its sentence, together. A lead belongs
                   with its own body; what belongs opposite is the
                   evidence. */}
@@ -496,6 +545,7 @@ export default function AboutScreen() {
                       kind={beat.kind}
                       game={games?.[index + 2]}
                       width={scale.column}
+                      hue={beat.hue}
                     />
                   </Rise>
                 </Drift>
@@ -508,75 +558,80 @@ export default function AboutScreen() {
             arrives crooked and straightens. Used once: a second `tilt`
             further down would turn a signature into a mannerism. */}
         <WhenNear placeholder={<View style={styles.cardRoom} />}>
-          <Band
-            tone="well"
-            scale={scale}
-            style={[styles.card, scale.wide && styles.cardWide]}
-          >
+          <Band tone="well" scale={scale} style={styles.card}>
+            <QuestMark id="memcard" />
+            <Words
+              text="And something to show for the year."
+              style={[styles.lead, scale.lead]}
+            />
+            {/* The covers fly in from the reader's side and become the
+                blocks — the product-film build, with the games as the
+                pieces. At the full width of the column, because a
+                showpiece drawn at a third of its stage is a thumbnail
+                of itself: the build IS the explanation, so it gets the
+                whole screen and the caption shrinks to one line. */}
             <Drift distance={-22} testID="memcard-drift">
-              <Rise from="tilt">
-                <Memcard
-                  card={sampleCard(games)}
-                  maxWidth={scale.wide ? 460 : 320}
-                />
-              </Rise>
-            </Drift>
-            <View style={scale.wide ? styles.cardCopy : undefined}>
-              <Words
-                text="And something to show for the year."
-                style={[styles.lead, scale.leadColumn]}
+              <MemcardBuild
+                card={sampleCard(games)}
+                games={games ?? []}
+                maxWidth={scale.wide ? 1000 : 640}
               />
-              <Rise delay={120}>
-                <Text style={[styles.cardCaption, scale.body]}>
-                  Every set of credits you reach becomes a block on a card — one
-                  per month, sized by how long it took. At the end of the year
-                  it is a picture of what you actually played, and it shares as
-                  a single link with no account attached to it.
-                </Text>
-              </Rise>
-            </View>
+            </Drift>
+            <Rise delay={120}>
+              <Text style={[styles.cardCaption, scale.body]}>
+                Shares as one link. No account attached.
+              </Text>
+            </Rise>
           </Band>
         </WhenNear>
 
         {/* The long tail, ranked below everything argued above it. */}
         <Band scale={scale}>
+          <QuestMark id="index" />
           <FeatureIndex scale={scale} />
         </Band>
 
+        {/* Where to get it, given the ceremony a store launch gets —
+            because "it is just a link" is this product's proudest fact
+            and was being said in a footnote. */}
+        <WhenNear placeholder={<View style={styles.takeRoom} />}>
+          <Band tone="well" scale={scale} raise>
+            <QuestMark id="take" />
+            <LandingTake scale={scale} />
+          </Band>
+        </WhenNear>
+
         <Band scale={scale} style={scale.wide && styles.plainWide}>
           <View style={scale.wide ? styles.plainCopy : styles.plainStack}>
+            <QuestMark id="close" />
             <Words
               text="No account. No tracking."
               style={[styles.lead, scale.lead]}
             />
             <Text style={[styles.plainBody, scale.body]}>
-              Your library lives in your browser and goes nowhere. There is
-              nothing to sign up for, nothing to cancel, and nobody selling what
-              you play. Game data comes from RAWG; lengths come from IGDB and
-              from you.
+              Your library lives in your browser and goes nowhere. Nothing to
+              sign up for, nothing to cancel, nobody selling what you play.
             </Text>
             <Text style={[styles.plainBody, scale.body]}>
-              An independent project, not affiliated with any platform,
-              publisher or store. Open source at ginoleeswan/sidequest.
+              Independent and open source. Data from RAWG and IGDB.
             </Text>
-            {/* The one honest answer to "put the artwork behind the
-                browser's own toolbar": in Safari that strip is chrome
-                and the page cannot draw into it — but on a home screen
-                the chrome is gone and it does, edge to edge. It says
-                nothing at all on a desktop that cannot install
-                anything. */}
-            <View style={styles.install}>
-              <InstallPrompt />
-            </View>
           </View>
           <View style={[styles.closeCta, scale.wide && styles.closeCtaWide]}>
             {open}
           </View>
         </Band>
 
+        {/* The trail ends at a place, not a line: the footer's ground
+            rises as a hill and the Mark climbs up to stand on it. */}
+        <Horizon onStart={() => router.push('/')} />
+
         {/* Padded to land on the same column the bands use, so the
             footer's first letter sits under everything above it. */}
         <SiteFooter pad={footerPad} />
+
+        {/* Above the bands, under nothing: the gutter it lives in has
+            no text to cover. */}
+        <QuestLine measure={LANDING_MEASURE} />
       </ScrollView>
     </Textured>
   );
@@ -630,12 +685,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'flex-start',
     gap: SPACING.sm,
-    paddingVertical: 15,
-    paddingHorizontal: SPACING.xl,
+    paddingVertical: 18,
+    paddingHorizontal: SPACING.xl + 6,
     borderRadius: RADIUS.lg,
     backgroundColor: COLORS.accent,
+    /**
+     * The hard-offset edge every arcade button has. A flat pill is a
+     * link wearing a background; four pixels of darker amber under it
+     * is a thing with a travel, which is what makes people want to
+     * press it. RN 0.81 ships boxShadow cross-platform.
+     */
+    boxShadow: '0 4px 0 #B87A16',
   },
-  ctaLabel: { ...TYPE.label, color: COLORS.navy },
+  ctaLabel: { ...TYPE.label, fontSize: 16, color: COLORS.navy },
 
   /**
    * Bands, not hairlines.
@@ -647,6 +709,7 @@ const styles = StyleSheet.create({
    * asymmetric column layout only works at one.
    */
   well: { backgroundColor: LANDING_WELL },
+  raise: { zIndex: 2 },
   measure: {
     width: '100%',
     maxWidth: LANDING_MEASURE,
@@ -709,7 +772,7 @@ const styles = StyleSheet.create({
   // A marker in the margin above the line, not a number in a circle.
   // Three beats need to read as an ordered argument; this is the
   // cheapest way to say so without a device.
-  beatIndex: { ...TYPE.tag, color: COLORS.accent },
+  beatIndex: { ...TYPE.tag },
   beatBody: { maxWidth: 520 },
   beatProofWide: { flex: 1, justifyContent: 'center' },
   beatProofOuter: { alignItems: 'flex-end' },
@@ -717,20 +780,15 @@ const styles = StyleSheet.create({
 
   // the pile
   shelfRoom: { height: 420 },
+  tryRoom: { height: 620 },
+  takeRoom: { height: 560 },
   pile: { gap: SPACING.lg },
   pileBody: { maxWidth: 620, marginBottom: SPACING.md },
 
   // the card
   cardRoom: { height: 460 },
   card: { alignItems: 'center', gap: SPACING.xl },
-  cardWide: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: SPACING.xl * 2,
-  },
-  cardCopy: { flex: 1, gap: SPACING.md },
-  cardCaption: { maxWidth: 520 },
+  cardCaption: { textAlign: 'center' },
 
   // the plain truth
   plainWide: {
@@ -741,7 +799,6 @@ const styles = StyleSheet.create({
   },
   plainStack: { gap: SPACING.md },
   plainCopy: { flex: 1, gap: SPACING.md },
-  install: { marginTop: SPACING.sm, alignSelf: 'flex-start' },
   closeCtaWide: { marginTop: 0, flexShrink: 0 },
   plainBody: { maxWidth: 560 },
   closeCta: { marginTop: SPACING.lg },

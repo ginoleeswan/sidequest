@@ -33,11 +33,15 @@ function sources(dir: string): string[] {
  * The scan is deliberately blunt — any quoted lowercase word that
  * matches a glyph name counts — because a false positive costs one
  * unused glyph and a false negative ships a blank box. That trade is
- * right, but DOM event names collide with the glyph map ("resize" is
- * both), and the honest fix is to name the collision rather than to
- * ship a glyph nothing draws or to contort the source around a regex.
+ * right, but the glyph map is a thousand ordinary English words, so it
+ * collides with the rest of the platform's vocabulary: "resize" is a
+ * DOM event, "radio" is an ARIA role. The honest fix is to name the
+ * collisions rather than to ship glyphs nothing draws, or to contort
+ * the source around a regex in a test.
+ *
+ * Add to this only for a word the app genuinely never draws as an icon.
  */
-const NOT_ICONS = new Set(['resize']);
+const NOT_ICONS = new Set(['resize', 'radio']);
 
 const used = new Set<string>();
 for (const file of sources(SRC)) {

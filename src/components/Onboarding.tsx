@@ -317,11 +317,11 @@ export function Onboarding() {
       onRequestClose={() => finish(false)}
     >
       <Textured style={styles.screen}>
-        {!isExpanded && (
-          <Text style={styles.watermark} numberOfLines={1}>
-            SIDEQUEST
-          </Text>
-        )}
+        {/* No numberOfLines on the watermark: react-native-web renders
+            that as text-overflow ellipsis, which at 128px is three
+            giant dots. One unbreakable word cannot wrap, and the
+            parent already clips. */}
+        {!isExpanded && <Text style={styles.watermark}>SIDEQUEST</Text>}
 
         <View style={[styles.chrome, { top: insets.top + SPACING.md }]}>
           {step > 0 ? (
