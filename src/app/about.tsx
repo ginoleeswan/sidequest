@@ -608,7 +608,7 @@ export default function AboutScreen() {
 
         {/* The trail ends at a place, not a line: the footer's ground
             rises as a hill and the Mark climbs up to stand on it. */}
-        <Horizon />
+        <Horizon onStart={() => router.push('/')} />
 
         {/* Padded to land on the same column the bands use, so the
             footer's first letter sits under everything above it. */}

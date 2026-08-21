@@ -1,36 +1,65 @@
 import { useEffect } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import Svg, {
+  Circle,
+  Defs,
+  Ellipse,
+  Path,
+  RadialGradient,
+  Stop,
+} from 'react-native-svg';
 
 import { Mark } from './Mark';
-import { useInView } from './Rise';
+import { Rise, useInView } from './Rise';
+import { ScaleButton } from './ScaleButton';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { COLORS } from '@/styles/colors';
 import { DURATION, EASING } from '@/styles/motion';
 import { LANDING_WELL } from '@/styles/landing';
+import { RADIUS, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 /**
- * The end of the page, drawn as a place.
+ * The end of the page, drawn as a place — and now as a time of day.
  *
- * Every band above this one ends in a straight line, which is what
- * makes them bands; a page that ended on one more straight line would
- * just stop. Instead the footer's ground rises as a hill against the
- * deep band above it, and the Mark climbs up from behind the crest to
- * stand on it — the flag planted at the end of the trail the quest
- * line has been drawing all the way down. The one word under it says
- * what finishing a page of this app ought to say.
+ * The first version was a hill with a mark on it, which is a diagram of
+ * this idea. The scene it wanted to be is dusk at the end of a walk:
+ * a handful of stars out in the deep band, a warm glow coming up from
+ * behind the crest, and the Mark rising into it — its amber ball
+ * reading as the last of the light. QUEST COMPLETE where the trail
+ * ends, and the one thing left to do sitting right on the hill:
+ * start your own.
  *
- * The rise works by paint order, not clipping: the Mark sits behind
- * the hill's fill and translates up, so the hill itself hides it until
- * it clears the crest — the same trick as a sunrise, which is what it
- * should feel like.
+ * The stars are placed by hand rather than scattered by a random
+ * number, because a static export renders once and a page must not
+ * disagree with itself between server and client. Three of them
+ * breathe on slow, offset clocks — the only ambient motion in the
+ * scene, and enough to make the sky a sky.
  */
-export function Horizon() {
+
+/** [x, y, r, opacity] in the sky's 1000x150 space. */
+const STARS: [number, number, number, number][] = [
+  [88, 38, 1.6, 0.5],
+  [176, 96, 1.1, 0.3],
+  [268, 22, 1.4, 0.4],
+  [370, 70, 1.1, 0.28],
+  [498, 30, 1.8, 0.55],
+  [590, 88, 1.1, 0.3],
+  [668, 48, 1.4, 0.4],
+  [760, 18, 1.1, 0.32],
+  [842, 76, 1.6, 0.45],
+  [930, 40, 1.1, 0.3],
+];
+
+/** Which stars breathe, and how far apart their clocks start. */
+const TWINKLE = [0, 4, 8];
+
+export function Horizon({ onStart }: { onStart?: () => void }) {
   const reduced = useReducedMotion();
   const [ref, seen] = useInView('-8%');
   const rise = useAnimatedValue(reduced ? 1 : 0);
+  const breathe = useAnimatedValue(0);
 
   useEffect(() => {
     if (reduced || !seen) return;
@@ -41,12 +70,87 @@ export function Horizon() {
       useNativeDriver: false,
     });
     animation.start();
-    return () => animation.stop();
-  }, [rise, seen, reduced]);
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(breathe, {
+          toValue: 1,
+          duration: 2600,
+          easing: EASING.linear,
+          useNativeDriver: false,
+        }),
+        Animated.timing(breathe, {
+          toValue: 0,
+          duration: 2600,
+          easing: EASING.linear,
+          useNativeDriver: false,
+        }),
+      ])
+    );
+    loop.start();
+    return () => {
+      animation.stop();
+      loop.stop();
+    };
+  }, [rise, breathe, seen, reduced]);
 
   return (
-    <View ref={ref} style={styles.scene} pointerEvents="none">
-      {/* Behind the hill: rises into view over its crest. */}
+    <View ref={ref} style={styles.scene} pointerEvents="box-none">
+      {/* The sky: stars out, dusk coming up from behind the crest. */}
+      <Svg
+        width="100%"
+        height={150}
+        viewBox="0 0 1000 150"
+        preserveAspectRatio="none"
+        style={styles.sky}
+        pointerEvents="none"
+      >
+        <Defs>
+          <RadialGradient id="dusk" cx="50%" cy="100%" rx="42%" ry="88%">
+            <Stop offset="0" stopColor={COLORS.accent} stopOpacity="0.26" />
+            <Stop offset="0.55" stopColor={COLORS.accent} stopOpacity="0.1" />
+            <Stop offset="1" stopColor={COLORS.accent} stopOpacity="0" />
+          </RadialGradient>
+        </Defs>
+        <Ellipse cx="500" cy="150" rx="430" ry="132" fill="url(#dusk)" />
+        {STARS.map(([x, y, r, o], index) => (
+          <Circle
+            key={`${x}-${y}`}
+            cx={x}
+            cy={y}
+            r={r}
+            fill={index % 3 === 0 ? COLORS.accent : COLORS.white}
+            opacity={o}
+          />
+        ))}
+      </Svg>
+      {/* Three of the stars, breathing over the static field. */}
+      {!reduced &&
+        TWINKLE.map((slot, index) => {
+          const [x, y, r] = STARS[slot];
+          return (
+            <Animated.View
+              key={slot}
+              pointerEvents="none"
+              style={[
+                styles.twinkle,
+                {
+                  left: `${x / 10}%`,
+                  top: (y / 150) * 150,
+                  width: r * 4,
+                  height: r * 4,
+                  borderRadius: r * 2,
+                  opacity: breathe.interpolate({
+                    inputRange: [0, 0.5, 1],
+                    outputRange:
+                      index % 2 === 0 ? [0.1, 0.6, 0.1] : [0.55, 0.15, 0.55],
+                  }),
+                },
+              ]}
+            />
+          );
+        })}
+
+      {/* Behind the hill: rises into the dusk over its crest. */}
       <Animated.View
         style={[
           styles.mark,
@@ -55,33 +159,36 @@ export function Horizon() {
               {
                 translateY: rise.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [110, 0],
+                  outputRange: [150, 0],
                 }),
               },
             ],
           },
         ]}
+        pointerEvents="none"
       >
-        <Mark size={96} />
+        <Mark size={118} />
       </Animated.View>
 
       {/* The hill, painted over the Mark's feet. */}
       <Svg
         width="100%"
-        height={90}
-        viewBox="0 0 1000 90"
+        height={120}
+        viewBox="0 0 1000 120"
         preserveAspectRatio="none"
         style={styles.hill}
+        pointerEvents="none"
       >
         <Path
-          d="M0 90 V64 C 280 14, 720 14, 1000 64 V90 Z"
+          d="M0 120 V86 C 280 18, 720 18, 1000 86 V120 Z"
           fill={COLORS.navy}
         />
-        {/* The trail, carrying on over the hill. Dashed like the
-            unwalked road in the quest line, so the page's last drawing
-            says the obvious warm thing: there is more past the edge. */}
+        {/* The trail, carrying on over the hill — dashed like the
+            unwalked road in the quest line, because the page's last
+            drawing should say the obvious warm thing: there is more
+            past the edge. */}
         <Path
-          d="M0 64 C 280 14, 720 14, 1000 64"
+          d="M0 86 C 280 18, 720 18, 1000 86"
           fill="none"
           stroke={COLORS.accent}
           strokeWidth={2}
@@ -91,41 +198,72 @@ export function Horizon() {
         />
       </Svg>
 
-      <Animated.Text
-        style={[
-          styles.word,
-          {
-            opacity: rise.interpolate({
-              inputRange: [0.6, 1],
-              outputRange: [0, 1],
-              extrapolate: 'clamp',
-            }),
-          },
-        ]}
-      >
-        QUEST COMPLETE
-      </Animated.Text>
+      {/* On the hill: the word, and the only thing left to do. */}
+      <View style={styles.summit}>
+        <Animated.Text
+          style={[
+            styles.word,
+            {
+              opacity: rise.interpolate({
+                inputRange: [0.6, 1],
+                outputRange: [0, 1],
+                extrapolate: 'clamp',
+              }),
+            },
+          ]}
+        >
+          QUEST COMPLETE
+        </Animated.Text>
+        {onStart && (
+          <Rise delay={200}>
+            <ScaleButton
+              onPress={onStart}
+              style={styles.start}
+              activeScale={0.97}
+              hoverScale={1.03}
+              accessibilityLabel="Start your own quest"
+            >
+              <Text style={styles.startLabel}>Start yours</Text>
+            </ScaleButton>
+          </Rise>
+        )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   scene: {
-    // The deep band above continues behind the hill, so the crest reads
+    // The deep band above continues behind the sky, so the crest reads
     // against it rather than against a seam.
     backgroundColor: LANDING_WELL,
-    paddingTop: 56,
+    paddingTop: 26,
     overflow: 'hidden',
   },
-  mark: { alignItems: 'center', marginBottom: -26, zIndex: 1 },
+  sky: { position: 'absolute', top: 0, left: 0 },
+  twinkle: { position: 'absolute', backgroundColor: COLORS.white },
+  mark: { alignItems: 'center', marginBottom: -34, zIndex: 1 },
   hill: { marginTop: 0 },
+  summit: {
+    backgroundColor: COLORS.navy,
+    alignItems: 'center',
+    gap: SPACING.lg,
+    paddingBottom: SPACING.xl,
+  },
   word: {
     ...TYPE.micro,
-    // Mint, not amber: on this page amber is time and mint is
-    // finishing, and this is the finish line.
+    // Set as the destination sign it is, not a footnote: finishing's
+    // own colour, at a size the moment has earned.
+    fontSize: 15,
+    letterSpacing: 5,
     color: COLORS.mint,
-    textAlign: 'center',
-    backgroundColor: COLORS.navy,
-    paddingBottom: 10,
   },
+  start: {
+    paddingVertical: 16,
+    paddingHorizontal: SPACING.xl + 4,
+    borderRadius: RADIUS.lg,
+    backgroundColor: COLORS.accent,
+    boxShadow: '0 4px 0 #B87A16',
+  },
+  startLabel: { ...TYPE.label, fontSize: 16, color: COLORS.navy },
 });
