@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   Animated,
   ScrollView,
@@ -10,6 +10,7 @@ import {
   Text,
   View,
   type TextStyle,
+  type StyleProp,
   type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,7 +21,9 @@ import { InstallPrompt } from '@/components/InstallPrompt';
 import { LandingShelf } from '@/components/LandingShelf';
 import { Memcard } from '@/components/Memcard';
 import { LandingProof } from '@/components/LandingProof';
+import { Drift } from '@/components/Drift';
 import { Rise, useInView } from '@/components/Rise';
+import { Words } from '@/components/Words';
 import { LandingWall } from '@/components/LandingWall';
 import { Mark } from '@/components/Mark';
 import { PageTitle } from '@/components/PageTitle';
@@ -35,11 +38,19 @@ import type { Game, Paged } from '@/api/types';
 import type { Memcard as MemcardModel } from '@/lib/memcard';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useCountUp } from '@/hooks/useCountUp';
+import { drift, useScrollTravel } from '@/hooks/useScrollTravel';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { COLORS } from '@/styles/colors';
 import { DURATION, EASING } from '@/styles/motion';
-import { LAYOUT, RADIUS, SPACING } from '@/styles/theme';
+import {
+  LANDING_GROUND,
+  LANDING_MEASURE,
+  LANDING_WELL,
+  landingScale,
+  type LandingScale,
+} from '@/styles/landing';
+import { RADIUS, SPACING } from '@/styles/theme';
 import { OVER_IMAGE, TYPE } from '@/styles/typography';
 
 /**
@@ -148,6 +159,43 @@ function Sum({
   );
 }
 
+/**
+ * A full-bleed stripe with a measured column inside it.
+ *
+ * Both halves matter. The stripe reaches both edges of the window, so
+ * alternating grounds actually read as bands rather than as a centred
+ * ribbon with page colour either side of it. The column inside is capped
+ * at a reading measure, so a claim set at fifty-four points does not
+ * find itself alone at the left edge of a 1440px row — which is exactly
+ * what the page did before, and exactly what "awkward grey space" looks
+ * like when you take a photograph of it.
+ */
+function Band({
+  scale,
+  tone = 'ground',
+  style,
+  children,
+}: {
+  scale: LandingScale;
+  tone?: 'ground' | 'well';
+  style?: StyleProp<ViewStyle>;
+  children: React.ReactNode;
+}) {
+  return (
+    <View style={tone === 'well' ? styles.well : undefined}>
+      <View
+        style={[
+          styles.measure,
+          { paddingHorizontal: scale.inset, paddingVertical: scale.air },
+          style,
+        ]}
+      >
+        {children}
+      </View>
+    </View>
+  );
+}
+
 export default function AboutScreen() {
   const router = useRouter();
   const { isExpanded, width } = useBreakpoint();
@@ -189,35 +237,19 @@ export default function AboutScreen() {
   });
 
   /**
-   * The masthead scales with the page rather than sitting on the app's
-   * heading scale. A landing line set at a UI size is a caption; this
-   * one has to carry a screen on its own.
+   * One scale for the whole page, shared with every section on it.
+   * Three sections each inventing their own clamp is how a page ends up
+   * with four heading sizes and no hierarchy.
    */
-  const display = Math.round(Math.min(Math.max(width * 0.098, 38), 104));
+  const scale = useMemo(() => landingScale(width), [width]);
+  const { inset, figure, unit } = scale;
   /**
-   * The sum, set as the number it is.
-   *
-   * Ninety-six points is the app's watermark numeral, which is right
-   * behind a tile and small for a statement that has a whole band to
-   * itself. This is the single most persuasive thing on the page, so it
-   * gets the room.
+   * The footer draws its own full-width band, so it cannot sit inside
+   * one. Padding it by the gutter plus whatever the column is inset
+   * from the window puts its first letter under everything above it.
    */
-  const sum = Math.round(Math.min(Math.max(width * 0.17, 96), 196));
-  const figure = {
-    fontSize: sum,
-    lineHeight: Math.round(sum * 0.92),
-    // Was minus five and a half percent, which closed "900" up until the
-    // nine and the first zero shared a stroke.
-    letterSpacing: Math.round(sum * -0.03),
-  };
-  const unit = { fontSize: Math.round(sum * 0.22), letterSpacing: 0 };
-
-  const masthead = {
-    fontSize: display,
-    lineHeight: Math.round(display * 1.02),
-    letterSpacing: display > 60 ? -3 : -1.2,
-  };
-  const inset = isExpanded ? SPACING.xl * 2 : SPACING.lg;
+  const footerPad =
+    inset + Math.max(0, (Math.min(width, 1600) - LANDING_MEASURE) / 2);
 
   /**
    * The same games the wall is built from, so the demonstrations below
@@ -267,10 +299,10 @@ export default function AboutScreen() {
                 exists to prove. */}
           <LinearGradient
             colors={[
-              'rgba(51,61,81,0.55)',
-              'rgba(51,61,81,0.80)',
-              'rgba(51,61,81,0.97)',
-              COLORS.darkGrey,
+              'rgba(39,47,63,0.50)',
+              'rgba(39,47,63,0.78)',
+              'rgba(39,47,63,0.96)',
+              LANDING_GROUND,
             ]}
             locations={[0, 0.42, 0.78, 1]}
             start={{ x: 0.75, y: 0 }}
@@ -279,28 +311,49 @@ export default function AboutScreen() {
             pointerEvents="none"
           />
           {/* The page's first pixels, in exactly the colour iOS Safari
-              paints its status bar.
+              paints its status bar — and then a long way down before it
+              lets go of it.
 
               While the toolbar is expanded that strip belongs to the
               browser, not the document, so artwork cannot be drawn into
-              it — but a seam between two dark blues is only a seam
-              because they are two. Landing the hero on the theme colour
-              and dissolving out of it makes the bar read as the top of
-              the picture rather than a slab above it.
+              it; a seam between two dark blues is only a seam because
+              they are two. Landing the hero on the theme colour makes
+              the bar read as the top of the picture rather than a slab
+              above it.
 
               It sits AFTER the scrim, which is the whole trick. Behind
               it the top row measured rgb(47,56,75) against a status bar
               of rgb(39,47,63) — the scrim is an absolute fill and was
               laying its lightest corner straight over the one band that
-              had to match exactly. */}
+              had to match exactly.
+
+              Six stops rather than three. A flat band with one linear
+              fade under it has a visible corner where the fade begins,
+              and at sixty pixels tall the flat part was itself a slab.
+              This is opaque for about fifteen pixels and then eases out
+              over a hundred and thirty, which is a scrim rather than an
+              edge. */}
           <LinearGradient
-            colors={[COLORS.navy, COLORS.navy, 'rgba(39,47,63,0)']}
-            locations={[0, 0.5, 1]}
-            style={[styles.statusMatch, { height: safe.top + SPACING.xl * 2 }]}
+            colors={[
+              LANDING_GROUND,
+              LANDING_GROUND,
+              'rgba(39,47,63,0.86)',
+              'rgba(39,47,63,0.55)',
+              'rgba(39,47,63,0.22)',
+              'rgba(39,47,63,0)',
+            ]}
+            locations={[0, 0.1, 0.3, 0.52, 0.75, 1]}
+            style={[
+              styles.statusMatch,
+              { height: safe.top + (isExpanded ? 110 : 150) },
+            ]}
             pointerEvents="none"
           />
+          {/* On the same column as every band below, so the headline
+              and the section leads share a left edge. */}
           <View
             style={[
+              styles.measure,
               styles.mastheadCopy,
               { paddingHorizontal: inset, paddingTop: safe.top + SPACING.xl },
             ]}
@@ -312,7 +365,9 @@ export default function AboutScreen() {
               <Mark size={26} />
               <Text style={styles.word}>SIDEQUEST</Text>
             </Animated.View>
-            <Animated.Text style={[styles.headline, masthead, step(0.08, 0.6)]}>
+            <Animated.Text
+              style={[styles.headline, scale.display, step(0.08, 0.6)]}
+            >
               Know what you can actually finish.
             </Animated.Text>
             <Animated.Text style={[styles.standfirst, step(0.2, 0.75)]}>
@@ -324,139 +379,155 @@ export default function AboutScreen() {
         </View>
 
         {/* The arithmetic nobody does for themselves, set as the number
-              it is. This is the whole case for the product, and it is
-              more persuasive than any sentence about it. */}
+            it is. This is the whole case for the product, and it is
+            more persuasive than any sentence about it. */}
         <WhenNear placeholder={<View style={styles.sumRoom} />}>
-          <View style={styles.band}>
-            <View
-              style={[
-                styles.sum,
-                { paddingHorizontal: inset },
-                isExpanded && styles.sumWide,
-              ]}
-            >
-              <Sum
-                style={isExpanded ? styles.sumFigureWide : undefined}
-                figure={figure}
-                unit={unit}
-              />
-              <Rise from="right" delay={220} style={styles.sumTailSlot}>
-                <Text
-                  style={[styles.sumTail, isExpanded && styles.sumTailWide]}
-                >
-                  and the average week has about six in it. That is fifteen
-                  years of evenings, which is not a to-do list — it is a fantasy
-                  about a different life.
-                </Text>
-              </Rise>
-            </View>
-          </View>
+          <Band tone="well" scale={scale} style={scale.wide && styles.sumWide}>
+            <Sum
+              style={scale.wide ? styles.sumFigureWide : undefined}
+              figure={figure}
+              unit={unit}
+            />
+            <Rise from="right" delay={220} style={styles.sumTailSlot}>
+              <Text style={[styles.sumTail, scale.body]}>
+                and the average week has about six in it. That is fifteen years
+                of evenings, which is not a to-do list — it is a fantasy about a
+                different life.
+              </Text>
+            </Rise>
+          </Band>
         </WhenNear>
 
         {/* The problem is stated above; this is the answer, before any
             of the detail. Somebody deciding whether to bother needs to
             know what will be asked of them, and three numbered steps is
             the plainest way to say it. */}
-        <HowItWorks inset={inset} wide={isExpanded} />
+        <Band scale={scale}>
+          <HowItWorks scale={scale} />
+        </Band>
 
         {/* Volume, which none of the single objects below can show.
             The row runs off the right edge on purpose. */}
         <WhenNear placeholder={<View style={styles.shelfRoom} />}>
-          <View style={[styles.pile, { paddingHorizontal: inset }]}>
-            <Rise from="mask">
-              <Text style={styles.pileLead}>
-                Bring the whole pile with you.
-              </Text>
-            </Rise>
+          <Band tone="well" scale={scale} style={styles.pile}>
+            <Words
+              text="Bring the whole pile."
+              style={[styles.lead, scale.lead]}
+            />
             <Rise delay={90}>
-              <Text style={styles.pileBody}>
+              <Text style={[styles.pileBody, scale.body]}>
                 Paste a Steam profile and everything you own arrives with the
                 hours already on it. Or hand it a CSV from wherever you have
                 been keeping the list. Nothing has to be typed twice.
               </Text>
             </Rise>
             <LandingShelf
-              games={(games ?? []).slice(0, isExpanded ? 8 : 5)}
-              width={isExpanded ? 190 : 150}
+              games={(games ?? []).slice(0, scale.wide ? 6 : 5)}
+              width={scale.wide ? 232 : 150}
             />
-          </View>
+          </Band>
         </WhenNear>
 
-        {BEATS.map((beat, index) => (
-          <View
-            key={beat.lead}
-            style={[
-              styles.beat,
-              { paddingHorizontal: inset },
-              isExpanded && styles.beatWide,
-              // Every other one turned around. Three identical
-              // two-column splits stacked is a table; alternating them
-              // is what makes a reader's eye travel down a page.
-              isExpanded && index % 2 === 1 && styles.beatFlipped,
-            ]}
-          >
-            {/* The claim and its sentence, together.
-                They were in separate columns, which is what left every
-                beat with a short line marooned beside half a screen of
-                nothing: a heading's column is only as tall as the
-                heading, and the row's height came from the other side.
-                A lead belongs with its own body; what belongs opposite
-                is the evidence. */}
-            <View style={isExpanded ? styles.beatCopyWide : styles.beatCopy}>
-              <Rise
-                // Wide: from the side the column already sits on, so
-                // the direction carries the layout. Narrow: a curtain,
-                // because there is no side for it to come from.
-                from={
-                  isExpanded ? (index % 2 === 1 ? 'right' : 'left') : 'mask'
+        {/* All three beats in one band, divided by rules rather than by
+            background. Three separate bands gave each claim its own
+            slab of ground and its own sixty pixels of padding top and
+            bottom, which is what made the middle of the page read as
+            one long grey corridor. */}
+        <Band scale={scale} style={styles.beats}>
+          {BEATS.map((beat, index) => (
+            <View
+              key={beat.lead}
+              style={[
+                styles.beat,
+                index > 0 && styles.beatRuled,
+                scale.wide && styles.beatWide,
+                // Every other one turned around. Three identical
+                // two-column splits stacked is a table; alternating them
+                // is what makes a reader's eye travel down a page.
+                scale.wide && index % 2 === 1 && styles.beatFlipped,
+              ]}
+            >
+              {/* The claim and its sentence, together. A lead belongs
+                  with its own body; what belongs opposite is the
+                  evidence. */}
+              <View style={scale.wide ? styles.beatCopyWide : styles.beatCopy}>
+                <View style={styles.beatHead}>
+                  <Rise from={scale.wide && index % 2 === 1 ? 'right' : 'left'}>
+                    <Text style={styles.beatIndex}>{`0${index + 1}`}</Text>
+                  </Rise>
+                  <Words
+                    text={beat.lead}
+                    style={[styles.lead, scale.leadColumn]}
+                    delay={90}
+                  />
+                </View>
+                <Rise delay={90}>
+                  <Text style={[styles.beatBody, scale.body]}>{beat.body}</Text>
+                </Rise>
+              </View>
+              {/* The app's own components, fed real data: a claim with
+                  the thing itself beside it beats a claim with an icon
+                  over it. */}
+              {/* Pinned to the page's outer edge, not centred in its
+                  half. A 320px object floating in the middle of a 500px
+                  column has grey on both sides of it and looks like it
+                  was dropped there; against the edge it looks placed. */}
+              <View
+                style={
+                  scale.wide
+                    ? [
+                        styles.beatProofWide,
+                        index % 2 === 1
+                          ? styles.beatProofFlipped
+                          : styles.beatProofOuter,
+                      ]
+                    : undefined
                 }
               >
-                <View style={styles.beatHead}>
-                  <Text style={styles.beatIndex}>{`0${index + 1}`}</Text>
-                  <Text style={styles.beatLead}>{beat.lead}</Text>
-                </View>
-              </Rise>
-              <Rise delay={90}>
-                <Text style={styles.beatBody}>{beat.body}</Text>
-              </Rise>
+                {/* Lags the copy beside it for the whole time the row
+                    is on screen, so a beat has depth rather than just an
+                    arrival. */}
+                <Drift
+                  distance={scale.wide ? 30 : 14}
+                  testID={`beat-proof-${index}`}
+                >
+                  <Rise from="lift" delay={200}>
+                    <LandingProof
+                      kind={beat.kind}
+                      game={games?.[index + 2]}
+                      width={scale.column}
+                    />
+                  </Rise>
+                </Drift>
+              </View>
             </View>
-            {/* The app's own components, fed real data: a claim with
-                the thing itself beside it beats a claim with an icon
-                over it. */}
-            <View style={isExpanded ? styles.beatProofWide : undefined}>
-              <Rise from="lift" delay={200}>
-                <LandingProof kind={beat.kind} game={games?.[index + 2]} />
-              </Rise>
-            </View>
-          </View>
-        ))}
+          ))}
+        </Band>
 
         {/* The one showpiece, and the only thing on the page that
             arrives crooked and straightens. Used once: a second `tilt`
             further down would turn a signature into a mannerism. */}
         <WhenNear placeholder={<View style={styles.cardRoom} />}>
-          <View
-            style={[
-              styles.band,
-              styles.card,
-              { paddingHorizontal: inset },
-              isExpanded && styles.cardWide,
-            ]}
+          <Band
+            tone="well"
+            scale={scale}
+            style={[styles.card, scale.wide && styles.cardWide]}
           >
-            <Rise from="tilt">
-              <Memcard
-                card={sampleCard(games)}
-                maxWidth={isExpanded ? 420 : 320}
-              />
-            </Rise>
-            <View style={isExpanded ? styles.cardCopy : undefined}>
-              <Rise from="mask">
-                <Text style={styles.cardLead}>
-                  And something to show for the year.
-                </Text>
+            <Drift distance={-22} testID="memcard-drift">
+              <Rise from="tilt">
+                <Memcard
+                  card={sampleCard(games)}
+                  maxWidth={scale.wide ? 460 : 320}
+                />
               </Rise>
+            </Drift>
+            <View style={scale.wide ? styles.cardCopy : undefined}>
+              <Words
+                text="And something to show for the year."
+                style={[styles.lead, scale.leadColumn]}
+              />
               <Rise delay={120}>
-                <Text style={styles.cardCaption}>
+                <Text style={[styles.cardCaption, scale.body]}>
                   Every set of credits you reach becomes a block on a card — one
                   per month, sized by how long it took. At the end of the year
                   it is a picture of what you actually played, and it shares as
@@ -464,64 +535,60 @@ export default function AboutScreen() {
                 </Text>
               </Rise>
             </View>
-          </View>
+          </Band>
         </WhenNear>
 
         {/* The long tail, ranked below everything argued above it. */}
-        <FeatureIndex inset={inset} wide={isExpanded} />
+        <Band scale={scale}>
+          <FeatureIndex scale={scale} />
+        </Band>
 
-        <View
-          style={[
-            styles.plain,
-            { paddingHorizontal: inset },
-            isExpanded && styles.plainWide,
-          ]}
-        >
-          <View style={isExpanded ? styles.plainCopy : undefined}>
-            <Rise from={isExpanded ? 'left' : 'mask'}>
-              <Text style={styles.plainLead}>No account. No tracking.</Text>
-            </Rise>
-            <Text style={styles.plainBody}>
+        <Band scale={scale} style={scale.wide && styles.plainWide}>
+          <View style={scale.wide ? styles.plainCopy : styles.plainStack}>
+            <Words
+              text="No account. No tracking."
+              style={[styles.lead, scale.lead]}
+            />
+            <Text style={[styles.plainBody, scale.body]}>
               Your library lives in your browser and goes nowhere. There is
               nothing to sign up for, nothing to cancel, and nobody selling what
               you play. Game data comes from RAWG; lengths come from IGDB and
               from you.
             </Text>
-            <Text style={styles.plainBody}>
+            <Text style={[styles.plainBody, scale.body]}>
               An independent project, not affiliated with any platform,
               publisher or store. Open source at ginoleeswan/sidequest.
             </Text>
             {/* The one honest answer to "put the artwork behind the
                 browser's own toolbar": in Safari that strip is chrome
                 and the page cannot draw into it — but on a home screen
-                the chrome is gone and it does, edge to edge. This is
-                where saying so belongs, and it says nothing at all on a
-                desktop that cannot install anything. */}
+                the chrome is gone and it does, edge to edge. It says
+                nothing at all on a desktop that cannot install
+                anything. */}
             <View style={styles.install}>
               <InstallPrompt />
             </View>
           </View>
-          <View style={[styles.closeCta, isExpanded && styles.closeCtaWide]}>
+          <View style={[styles.closeCta, scale.wide && styles.closeCtaWide]}>
             {open}
           </View>
-        </View>
+        </Band>
 
-        {/* No bleed: this page pads its sections, not its scroller. */}
-        <SiteFooter pad={inset} />
+        {/* Padded to land on the same column the bands use, so the
+            footer's first letter sits under everything above it. */}
+        <SiteFooter pad={footerPad} />
       </ScrollView>
     </Textured>
   );
 }
 
 const styles = StyleSheet.create({
-  background: { flexGrow: 1, backgroundColor: COLORS.darkGrey },
+  background: { flexGrow: 1, backgroundColor: LANDING_GROUND },
   // Centred past the cap, or a 4K monitor gets the whole page pinned to
   // its left edge with half a screen of nothing beside it.
-  scroll: {
-    maxWidth: LAYOUT.maxExpandedWidth,
-    width: '100%',
-    alignSelf: 'center',
-  },
+  // The scroller stays as wide as the app allows, so bands bleed to
+  // both edges; the column lives inside them. See `Band`.
+  scroll: { maxWidth: 1600, width: '100%', alignSelf: 'center' },
 
   // masthead
   masthead: {
@@ -579,19 +646,35 @@ const styles = StyleSheet.create({
    * landing page its rhythm, and it works at both widths — where an
    * asymmetric column layout only works at one.
    */
-  band: { backgroundColor: COLORS.navy },
+  well: { backgroundColor: LANDING_WELL },
+  measure: {
+    width: '100%',
+    maxWidth: LANDING_MEASURE,
+    alignSelf: 'center',
+  },
+  /**
+   * Every claim on the page, at one size.
+   *
+   * They were all TYPE.title — 26px, the app's shelf-heading step. That
+   * is the right size for a label above a row you are about to use and
+   * far too small to hold a band of its own: measured at 1440, a 26px
+   * lead capped at 460 sat in a row 1320 wide. The scale carries the
+   * size now; this carries everything else about it.
+   */
+  lead: { color: COLORS.white, maxWidth: 900 },
 
   // the sum
   sumRoom: { height: 320 },
-  sum: { paddingVertical: SPACING.xl * 2 },
   sumWide: {
     flexDirection: 'row',
-    alignItems: 'center',
+    // On the number's baseline side rather than its centre: a 196px
+    // numeral centred against three lines of body copy leaves the copy
+    // floating in the middle of a very tall row.
+    alignItems: 'flex-end',
     gap: SPACING.xl * 2,
   },
   sumFigureWide: { flexShrink: 0 },
   sumTailSlot: { flex: 1 },
-  sumTailWide: { flex: 1, maxWidth: 560 },
   sumLead: { ...TYPE.micro, color: COLORS.mediumGrey },
   sumLine: {
     flexDirection: 'row',
@@ -605,101 +688,62 @@ const styles = StyleSheet.create({
   // Grey, not amber. Two amber weights in one line is two things
   // shouting; the number is the thing worth shouting.
   sumUnit: { ...TYPE.title, color: COLORS.lightGrey },
-  sumTail: {
-    ...TYPE.body,
-    fontSize: 17,
-    lineHeight: 27,
-    color: COLORS.lightGrey,
-    maxWidth: 520,
-  },
+  sumTail: { color: COLORS.lightGrey, maxWidth: 520, paddingBottom: 6 },
 
   // the three beats
-  beat: { paddingVertical: SPACING.xl * 1.5, gap: SPACING.lg },
+  beats: { gap: 0 },
+  beat: { paddingVertical: SPACING.xl * 1.4, gap: SPACING.lg },
+  // A hairline between claims instead of a change of ground. Three
+  // bands for three sentences is what turned the middle of the page
+  // into a corridor.
+  beatRuled: { borderTopWidth: 1, borderTopColor: COLORS.stroke },
   beatWide: {
     flexDirection: 'row',
-    // Tops aligned, not centres. Centred against a tall column the lead
-    // floated in the middle of its own row with nothing beside it,
-    // reading as two unrelated things rather than a claim and its
-    // evidence.
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: SPACING.xl * 2,
   },
   beatFlipped: { flexDirection: 'row-reverse' },
   beatCopy: { gap: SPACING.md },
-  beatCopyWide: { flex: 1, gap: SPACING.md, maxWidth: 520 },
+  beatCopyWide: { flex: 1, gap: SPACING.lg, justifyContent: 'center' },
   beatHead: { gap: SPACING.sm },
   // A marker in the margin above the line, not a number in a circle.
   // Three beats need to read as an ordered argument; this is the
   // cheapest way to say so without a device.
   beatIndex: { ...TYPE.tag, color: COLORS.accent },
-  beatLead: { ...TYPE.title, color: COLORS.white, maxWidth: 460 },
-  beatBody: {
-    ...TYPE.body,
-    fontSize: 16,
-    lineHeight: 26,
-    color: COLORS.mediumGrey,
-    maxWidth: 480,
-  },
-  beatProofWide: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  beatBody: { maxWidth: 520 },
+  beatProofWide: { flex: 1, justifyContent: 'center' },
+  beatProofOuter: { alignItems: 'flex-end' },
+  beatProofFlipped: { alignItems: 'flex-start' },
 
   // the pile
   shelfRoom: { height: 420 },
-  pile: { paddingVertical: SPACING.xl * 2, gap: SPACING.md },
-  pileLead: { ...TYPE.title, color: COLORS.white, maxWidth: 460 },
-  pileBody: {
-    ...TYPE.body,
-    fontSize: 16,
-    lineHeight: 26,
-    color: COLORS.mediumGrey,
-    maxWidth: 540,
-    marginBottom: SPACING.md,
-  },
+  pile: { gap: SPACING.lg },
+  pileBody: { maxWidth: 620, marginBottom: SPACING.md },
 
   // the card
   cardRoom: { height: 460 },
-  card: {
-    paddingVertical: SPACING.xl * 2,
-    alignItems: 'center',
-    gap: SPACING.xl,
-  },
+  card: { alignItems: 'center', gap: SPACING.xl },
   cardWide: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: SPACING.xl * 2,
   },
-  cardCopy: { flex: 1, maxWidth: 440, gap: SPACING.sm },
-  cardLead: { ...TYPE.title, color: COLORS.white },
-  cardCaption: {
-    ...TYPE.caption,
-    fontSize: 16,
-    lineHeight: 26,
-    maxWidth: 440,
-  },
+  cardCopy: { flex: 1, gap: SPACING.md },
+  cardCaption: { maxWidth: 520 },
 
   // the plain truth
-  plain: { paddingVertical: SPACING.xl * 2, gap: SPACING.md },
   plainWide: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
     gap: SPACING.xl * 2,
   },
+  plainStack: { gap: SPACING.md },
   plainCopy: { flex: 1, gap: SPACING.md },
   install: { marginTop: SPACING.sm, alignSelf: 'flex-start' },
   closeCtaWide: { marginTop: 0, flexShrink: 0 },
-  plainLead: { ...TYPE.title, color: COLORS.white },
-  plainBody: {
-    ...TYPE.body,
-    fontSize: 15,
-    lineHeight: 24,
-    color: COLORS.mediumGrey,
-    maxWidth: 560,
-  },
+  plainBody: { maxWidth: 560 },
   closeCta: { marginTop: SPACING.lg },
 });
 

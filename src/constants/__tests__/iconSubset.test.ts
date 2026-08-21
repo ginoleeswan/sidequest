@@ -27,12 +27,24 @@ function sources(dir: string): string[] {
   });
 }
 
+/**
+ * Quoted words that are Ionicons names and are not icons.
+ *
+ * The scan is deliberately blunt — any quoted lowercase word that
+ * matches a glyph name counts — because a false positive costs one
+ * unused glyph and a false negative ships a blank box. That trade is
+ * right, but DOM event names collide with the glyph map ("resize" is
+ * both), and the honest fix is to name the collision rather than to
+ * ship a glyph nothing draws or to contort the source around a regex.
+ */
+const NOT_ICONS = new Set(['resize']);
+
 const used = new Set<string>();
 for (const file of sources(SRC)) {
   for (const [, name] of readFileSync(file, 'utf8').matchAll(
     /['"`]([a-z][a-z0-9-]{2,})['"`]/g
   )) {
-    if (name in ionicons) used.add(name);
+    if (name in ionicons && !NOT_ICONS.has(name)) used.add(name);
   }
 }
 

@@ -1,6 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Rise } from './Rise';
+import { Words } from './Words';
+import type { LandingScale } from '@/styles/landing';
 import { COLORS } from '@/styles/colors';
 import { SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
@@ -72,21 +74,19 @@ const ENTRIES = [
   },
 ];
 
-export function FeatureIndex({
-  inset,
-  wide,
-}: {
-  inset: number;
-  wide: boolean;
-}) {
+/** Draws no band of its own: it is placed inside one. */
+export function FeatureIndex({ scale }: { scale: LandingScale }) {
+  const wide = scale.wide;
   return (
-    <View style={[styles.section, { paddingHorizontal: inset }]}>
+    <View style={styles.section}>
       <Rise from="mask">
         <Text style={styles.eyebrow}>Also in the box</Text>
       </Rise>
-      <Rise from="mask" delay={80}>
-        <Text style={styles.heading}>The rest of it</Text>
-      </Rise>
+      <Words
+        text="The rest of it"
+        style={[styles.heading, scale.lead]}
+        delay={80}
+      />
       <View style={[styles.list, wide && styles.listWide]}>
         {ENTRIES.map((entry, index) => (
           <Rise
@@ -113,13 +113,9 @@ export function FeatureIndex({
 }
 
 const styles = StyleSheet.create({
-  section: { paddingVertical: SPACING.xl * 2, gap: SPACING.sm },
+  section: { gap: SPACING.sm },
   eyebrow: { ...TYPE.micro, color: COLORS.accent },
-  heading: {
-    ...TYPE.title,
-    color: COLORS.white,
-    marginBottom: SPACING.lg,
-  },
+  heading: { color: COLORS.white, marginBottom: SPACING.xl },
   list: {},
   listWide: {
     flexDirection: 'row',
@@ -129,6 +125,7 @@ const styles = StyleSheet.create({
     columnGap: SPACING.xl * 2,
   },
   rowWide: { width: '46%', flexGrow: 1 },
+
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -146,6 +143,6 @@ const styles = StyleSheet.create({
     minWidth: 20,
   },
   copy: { flex: 1, gap: 3 },
-  title: { ...TYPE.h3, color: COLORS.white },
+  title: { ...TYPE.h2, color: COLORS.white },
   body: { ...TYPE.caption, lineHeight: 21 },
 });

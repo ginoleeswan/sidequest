@@ -26,13 +26,21 @@ describe('the static pages', () => {
     expect(screen.getByText(/Forty games waiting/)).toBeTruthy();
     // Not the sum: that section is deferred until it is near the
     // viewport, so in a test it is still its placeholder.
-    expect(screen.getByText('It knows how long things take.')).toBeTruthy();
+    // By label, not by text: the page's claims are set a word at a
+    // time, so each one is a Text per word behind a single accessible
+    // label. Querying the label is both the accurate way to ask and the
+    // thing worth pinning — if the line ever stops announcing as one
+    // sentence, that is a regression whoever uses a screen reader will
+    // notice first.
+    expect(
+      screen.getByLabelText('It knows how long things take.')
+    ).toBeTruthy();
     expect(screen.getAllByText('Open Sidequest').length).toBeGreaterThan(0);
   });
 
   it('is honest about what it does not take', async () => {
     await renderApp(<AboutScreen />);
-    expect(screen.getByText('No account. No tracking.')).toBeTruthy();
+    expect(screen.getByLabelText('No account. No tracking.')).toBeTruthy();
   });
 
   it('states the terms', async () => {
