@@ -46,6 +46,45 @@ const FLIGHT = 1050;
 const LAUNCH_EVERY = 560;
 const SETTLE = 450;
 
+/** When flier `i` is in the air, as a fraction of the whole build. */
+export interface BuildWindow {
+  start: number;
+  end: number;
+}
+
+/**
+ * The build as proportions instead of milliseconds.
+ *
+ * The animation used to be a set of `setTimeout`s, which meant it ran
+ * on a clock the reader had no say in: it fired when the section was
+ * fifteen percent into view and took 5.4 seconds, so anybody scrolling
+ * at a normal pace watched the stamp come down somewhere above their
+ * screen. Expressed as fractions, the same pacing can be driven by
+ * scroll position instead — and the timer path can drive it too, from
+ * one value, so there is only one description of the sequence.
+ */
+export function buildTimeline(count: number): {
+  settleEnd: number;
+  windows: BuildWindow[];
+} {
+  if (count <= 0) return { settleEnd: 1, windows: [] };
+
+  const total = SETTLE + (count - 1) * LAUNCH_EVERY + FLIGHT;
+  return {
+    settleEnd: SETTLE / total,
+    windows: Array.from({ length: count }, (_, i) => ({
+      start: (SETTLE + i * LAUNCH_EVERY) / total,
+      end: (SETTLE + i * LAUNCH_EVERY + FLIGHT) / total,
+    })),
+  };
+}
+
+/** The whole build in milliseconds, for the un-pinned timer path. */
+export function buildDuration(count: number): number {
+  if (count <= 0) return 0;
+  return SETTLE + (count - 1) * LAUNCH_EVERY + FLIGHT;
+}
+
 export function MemcardBuild({
   card,
   games,
