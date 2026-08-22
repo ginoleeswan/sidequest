@@ -43,7 +43,15 @@ export function ScrollStage({
   const ref = useRef<View | null>(null);
 
   useEffect(() => {
-    if (!pinned) return;
+    if (!pinned) {
+      // Reduced motion is a live subscription, not a one-time read: a
+      // reader can turn it on mid-scroll, which drops us out of the
+      // pinned path with whatever fractional value the last scroll
+      // frame left behind. useAnimatedValue's initial argument only
+      // runs once, so nothing else corrects a stale in-progress value.
+      progress.setValue(1);
+      return;
+    }
     let frame = 0;
     const onScroll = () => {
       if (frame) return;
