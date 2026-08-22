@@ -35,17 +35,25 @@ export function useStagePins(minViewport = 0): boolean {
    * static render and never emits again on its own — see the comment
    * above the masthead in `about.tsx`, which measured an entire hero
    * stuck at that stale value — and a stage that believed the viewport
-   * was 0 tall would never pin at all. Initialised lazily from
-   * `window.innerHeight` rather than from an effect, so the very first
-   * render already has a real number instead of pinning-then-unpinning
-   * on mount. Guarded with `typeof window`: this hook's callers today
-   * mount behind `WhenNear` on the client, so `window` exists by the
-   * time this runs, but that's this file trusting a fact about its
-   * caller rather than one it can verify, hence the guard.
+   * was 0 tall would never pin at all.
+   *
+   * Starts at 0 EVEN ON THE CLIENT, and that is the important part.
+   *
+   * It used to initialise lazily from `window.innerHeight`, to spare
+   * the stage a frame of pinning-then-unpinning on mount. That is a
+   * hydration bug: the pre-rendered HTML is built with no `window`, so
+   * the server says unpinned while the first client render says pinned,
+   * and React tears the tree down with error #418. It went unnoticed
+   * because the only consumer at the time — the memcard — sits inside
+   * `WhenNear`, which starts closed on web, so its stage mounted after
+   * hydration and never had a server render to disagree with. The beat
+   * deck is not deferred, and it failed on `/about` immediately.
+   *
+   * So: first render always matches the server, and the effect below
+   * supplies the real height a frame later. A stage that settles is
+   * cheap; a page that fails to hydrate is not.
    */
-  const [viewportHeight, setViewportHeight] = useState(() =>
-    web && typeof window !== 'undefined' ? window.innerHeight : 0
-  );
+  const [viewportHeight, setViewportHeight] = useState(0);
 
   // Keeps `viewportHeight` current. Deliberately keyed on `web`, not on
   // the returned "pinned" value: a caller sitting unpinned only because
