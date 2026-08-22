@@ -77,7 +77,6 @@ const ATTRACT_REST = 2600;
 
 export function ArcadeButton({
   label,
-  sublabel,
   onPress,
   onPressIn,
   icon = 'arrow-forward',
@@ -85,8 +84,6 @@ export function ArcadeButton({
   accessibilityLabel,
 }: {
   label: string;
-  /** The small line under it — risk reduction, in the reader's way. */
-  sublabel?: string;
   onPress: () => void;
   onPressIn?: () => void;
   icon?: React.ComponentProps<typeof Ionicons>['name'];
@@ -186,10 +183,15 @@ export function ArcadeButton({
             plastic, and this palette is flat everywhere else — the depth
             in this button comes from the edge it presses into, not from
             a highlight painted on its face. */}
-        <View style={styles.stack}>
-          <Text style={styles.label}>{label}</Text>
-          {sublabel ? <Text style={styles.sublabel}>{sublabel}</Text> : null}
-        </View>
+        {/* One line, and no second one under it.
+            A small print line lived here — the two objections answered
+            where the hand already is — and it was right about the
+            objections and wrong about the place. A cap with a caption
+            on it is a panel, not a button: it asks to be read where the
+            rest of the object asks to be pressed. The claims are on the
+            page under the button now, which is also where the reader
+            was already finding them. */}
+        <Text style={styles.label}>{label}</Text>
         {/* The arrow sits in a socket rather than floating beside the
             word. A bare icon next to a label is the one part of this
             button that could have come off any template; sinking it
@@ -261,7 +263,6 @@ const styles = StyleSheet.create({
     opacity: 0,
     filter: 'blur(14px)',
   },
-  stack: { gap: 3 },
   socket: {
     width: 28,
     height: 28,
@@ -285,12 +286,5 @@ const styles = StyleSheet.create({
     // to read as moulded into the plastic rather than typed onto it.
     letterSpacing: 0.3,
     color: COLORS.navy,
-  },
-  sublabel: {
-    ...TYPE.micro,
-    // Navy held back, not grey. A grey line here would be a third
-    // colour on a two-colour object; the same ink at half strength
-    // reads as quieter rather than as different.
-    color: 'rgba(39,47,63,0.62)',
   },
 });

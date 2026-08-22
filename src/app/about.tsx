@@ -323,19 +323,34 @@ export default function AboutScreen() {
   });
 
   /**
-   * The promise, not the mechanism.
+   * The cabinet's own word, and only that.
    *
-   * "Open Sidequest" named the app and the act of opening it, which is
-   * the one thing a stranger already knows they can do with a link. The
-   * label finishes the headline's sentence instead, and the small line
-   * answers the two objections that stop the click — in the button,
-   * where the hand already is, rather than only underneath it.
+   * Two labels came before it. "Open Sidequest" named the app and the
+   * act of opening it, which is the one thing a stranger already knows
+   * they can do with a link. "Find what I can finish" replaced it to
+   * make the promise instead of the mechanism — and made it a second
+   * time, because the headline eight lines up is "Know which games you
+   * can actually finish". The same claim twice in one hero, with the
+   * pronoun flipping from you to I between them, and five words spent
+   * on a button whose reader had just read all five.
+   *
+   * A cabinet does not explain itself on the cap. It says START, which
+   * is the word this component is already built around — the attract
+   * lamp in `ArcadeButton` exists because a real machine pulses its
+   * START lamp at nobody in particular. Nothing here repeats the
+   * headline, and the hero's argument is left to the lines that are
+   * shaped to carry it.
+   *
+   * No sublabel either. It carried "20 seconds · no account" while the
+   * line below carried "Free · Nothing to install" — four reassurances
+   * in a hundred and fifty points, which is a hero negotiating rather
+   * than a hero stating. The claims live on one line under the button
+   * now, and the button is one object.
    */
   const open = (
     <ArcadeButton
-      label="Find what I can finish"
-      sublabel="20 seconds · no account"
-      accessibilityLabel="Find what I can finish — takes 20 seconds, no account needed"
+      label="Press start"
+      accessibilityLabel="Press start — open Sidequest"
       onPress={() => router.push('/')}
     />
   );
@@ -461,12 +476,17 @@ export default function AboutScreen() {
             </Animated.Text>
             <Animated.View style={step(0.32, 0.9)}>{open}</Animated.View>
             {/* The objections a stranger has, answered before they are
-                asked — minus the one the button now makes itself. This
-                line used to carry "No account" too, and a claim made
-                twice within forty pixels reads as a page insisting
-                rather than a page stating. */}
+                asked, and all in one place.
+                "No account" was moved out of here once, when the button
+                carried it in a line of its own — a claim made twice
+                within forty pixels reads as a page insisting rather than
+                a page stating. The button says nothing but its own name
+                now, so the claim comes back rather than disappearing
+                from the hero: no account is the promise the calendar
+                hand-off and the Twitch lookup are both shaped around,
+                and it is not a detail this page can afford to drop. */}
             <Animated.Text style={[styles.terms, step(0.4, 1)]}>
-              Free · Nothing to install
+              Free · No account · Nothing to install
             </Animated.Text>
           </View>
         </View>

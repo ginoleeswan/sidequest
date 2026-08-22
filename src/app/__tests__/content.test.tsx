@@ -47,12 +47,18 @@ describe('the static pages', () => {
       expect(
         screen.getByLabelText('It knows how long things take.')
       ).toBeTruthy();
-      // The CTA states the outcome, not the mechanism. Pinned because
-      // "Open Sidequest" is the sort of label that creeps back in: it is
-      // the obvious thing to write and the one thing a reader who has
-      // not used this yet gains nothing from being told.
+      // The CTA is the cabinet's own word, and nothing else. Pinned
+      // because both directions creep back in: "Open Sidequest" names
+      // the mechanism, which a reader who has not used this gains
+      // nothing from being told, and a label that states the outcome
+      // ends up saying what the headline directly above it already
+      // said. The button is the door, not the argument.
+      expect(screen.getAllByText('Press start').length).toBeGreaterThan(0);
+      // And the hero's three claims stay on one line under it rather
+      // than split between the button and the page. Dropping the
+      // button's own small line is how "no account" went missing once.
       expect(
-        screen.getAllByText('Find what I can finish').length
+        screen.getAllByText('Free · No account · Nothing to install').length
       ).toBeGreaterThan(0);
     },
     HEAVY
