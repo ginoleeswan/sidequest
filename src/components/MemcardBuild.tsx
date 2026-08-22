@@ -47,6 +47,22 @@ const FLIGHT = 1050;
 const LAUNCH_EVERY = 560;
 const SETTLE = 450;
 
+/**
+ * Where the scroll-driven build finishes within its track, leaving the
+ * rest as a deliberate hold on the completed card.
+ *
+ * A build that lands its last block exactly at `progress === 1` has no
+ * payoff: that is the same scroll position at which `ScrollStage`
+ * releases the pin, so the finished card would only ever be visible
+ * while it is already sliding away — measured live as the 8th block
+ * landing at `progress ≈ 0.9998` (short of the `>= 1` gate on sub-pixel
+ * rounding) with the pin already gone by the time it did. Ending the
+ * build at 0.85 instead means it always finishes with the section still
+ * pinned, and the last 15% of the track becomes a beat where the reader
+ * can actually see the stamp before the page lets go.
+ */
+const SCROLL_BUILD_ENDS_AT = 0.85;
+
 /** When flier `i` is in the air, as a fraction of the whole build. */
 export interface BuildWindow {
   start: number;
@@ -63,19 +79,37 @@ export interface BuildWindow {
  * screen. Expressed as fractions, the same pacing can be driven by
  * scroll position instead — and the timer path can drive it too, from
  * one value, so there is only one description of the sequence.
+ *
+ * `within` compresses every `start`, `end` and `settleEnd` into the
+ * first `within` of the 0→1 range, leaving the remainder as dead room
+ * at the top. It exists for the scroll-driven path: a build timed to
+ * land its last block exactly at `progress === 1` lands it exactly when
+ * the pin releases, which measured live as the finished card only
+ * becoming visible once it was already sliding away — sub-pixel
+ * rounding meant the literal end of scroll travel read as 0.9998, short
+ * of the `>= 1` landing gate, so the last block never landed at all
+ * while pinned. Compressing to `within = 0.85` fixes both: 0.85 is
+ * reached with room to spare despite rounding, and the untouched 15%
+ * above it becomes a hold where the reader can actually see the
+ * finished card before the section lets go. The clock-driven path
+ * passes the default `1` and is unaffected — its "when" is real time,
+ * not scroll position, so it has no release to race against.
  */
-export function buildTimeline(count: number): {
+export function buildTimeline(
+  count: number,
+  within: number = 1
+): {
   settleEnd: number;
   windows: BuildWindow[];
 } {
-  if (count <= 0) return { settleEnd: 1, windows: [] };
+  if (count <= 0) return { settleEnd: within, windows: [] };
 
   const total = SETTLE + (count - 1) * LAUNCH_EVERY + FLIGHT;
   return {
-    settleEnd: SETTLE / total,
+    settleEnd: (SETTLE / total) * within,
     windows: Array.from({ length: count }, (_, i) => ({
-      start: (SETTLE + i * LAUNCH_EVERY) / total,
-      end: (SETTLE + i * LAUNCH_EVERY + FLIGHT) / total,
+      start: ((SETTLE + i * LAUNCH_EVERY) / total) * within,
+      end: ((SETTLE + i * LAUNCH_EVERY + FLIGHT) / total) * within,
     })),
   };
 }
@@ -116,9 +150,15 @@ export function MemcardBuild({
     image: games[index]?.background_image,
   }));
 
+  // Only the scroll-driven path needs a hold: its "when" is a scroll
+  // position that can only ever reach 1 at the exact instant the pin
+  // releases, so the build has to finish early and sit still for the
+  // rest of the track or the reader never sees it complete. The clock
+  // path's "when" is real time with no pin to race, so it gets the
+  // untouched 0->1 timeline.
   const timeline = useMemo(
-    () => buildTimeline(flights.length),
-    [flights.length]
+    () => buildTimeline(flights.length, progress ? SCROLL_BUILD_ENDS_AT : 1),
+    [flights.length, progress]
   );
 
   // One value drives everything: the card's arrival, every flier's
