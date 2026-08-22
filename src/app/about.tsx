@@ -21,6 +21,7 @@ import { HowItWorks } from '@/components/HowItWorks';
 import { LandingShelf } from '@/components/LandingShelf';
 import { LandingTake } from '@/components/LandingTake';
 import { LandingTry } from '@/components/LandingTry';
+import { LandingCalendar } from '@/components/LandingCalendar';
 import { MemcardBuild } from '@/components/MemcardBuild';
 import { QuestLine, QuestMark } from '@/components/QuestLine';
 import { BeatDeck } from '@/components/BeatDeck';
@@ -522,11 +523,27 @@ export default function AboutScreen() {
           </Band>
         </WhenNear>
 
+        {/* Directly after the plan, because that is where the reader
+            asks "and then what?".
+            Every section above this one argues inside the app, and all
+            of it dies when the tab closes — the page's own case for the
+            product is about somebody's Tuesday, and until here it never
+            reaches one. This is also the only place the privacy promise
+            is load-bearing rather than decorative: the feature is a file
+            BECAUSE an integration would need OAuth, a server, and an
+            account. */}
+        <WhenNear placeholder={<View style={styles.calendarRoom} />}>
+          <Band tone="well" scale={scale} seam={2} seamVariant="card">
+            <QuestMark id="calendar" />
+            <LandingCalendar scale={scale} games={games} />
+          </Band>
+        </WhenNear>
+
         {/* The problem is stated above; this is the answer, before any
             of the detail. Somebody deciding whether to bother needs to
             know what will be asked of them, and three numbered steps is
             the plainest way to say it. */}
-        <Band scale={scale} seam={2}>
+        <Band scale={scale} seam={3}>
           <QuestMark id="how" />
           <HowItWorks scale={scale} />
         </Band>
@@ -652,7 +669,7 @@ export default function AboutScreen() {
             scale={scale}
             style={styles.card}
             raise
-            seam={5}
+            seam={4}
             seamVariant="card"
           >
             <QuestMark id="memcard" />
@@ -694,7 +711,7 @@ export default function AboutScreen() {
         </WhenNear>
 
         {/* The long tail, ranked below everything argued above it. */}
-        <Band scale={scale} seam={6}>
+        <Band scale={scale} seam={5}>
           <QuestMark id="index" />
           <FeatureIndex scale={scale} />
         </Band>
@@ -706,7 +723,7 @@ export default function AboutScreen() {
           placeholder={<View style={styles.takeRoom} />}
           style={styles.raise}
         >
-          <Band tone="well" scale={scale} raise seam={7} seamVariant="card">
+          <Band tone="well" scale={scale} raise seam={6} seamVariant="card">
             <QuestMark id="take" />
             <LandingTake scale={scale} />
           </Band>
@@ -714,7 +731,7 @@ export default function AboutScreen() {
 
         <Band
           scale={scale}
-          seam={8}
+          seam={7}
           style={[
             // The phone above deliberately hangs over this band's
             // seam; the headline needs to start below its overhang,
@@ -905,6 +922,7 @@ const styles = StyleSheet.create({
   },
 
   plainRoom: { paddingTop: SPACING.xl * 2.5 },
+  calendarRoom: { height: 620 },
   deckBody: { paddingTop: SPACING.lg, paddingBottom: SPACING.xl * 1.5 },
   /**
    * The deck's own opaque ground, painted above the quest trail.
