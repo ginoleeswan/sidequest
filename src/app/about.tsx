@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useMemo } from 'react';
 import {
   Animated,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -39,6 +40,7 @@ import { queryKeys } from '@/api/queryClient';
 import { getTrendingGames } from '@/api/rawg';
 import type { Game, Paged } from '@/api/types';
 import type { Memcard as MemcardModel } from '@/lib/memcard';
+import { webScrollContainerStyle } from '@/lib/webScrollContainer';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useCountUp } from '@/hooks/useCountUp';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
@@ -317,7 +319,11 @@ export default function AboutScreen() {
           band of flat page colour above the hero and stopped the
           artwork reaching the top of the screen; the copy clears the
           status bar on its own instead. */}
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView
+        testID="about-scroll"
+        style={SCROLL_CONTAINER}
+        contentContainerStyle={styles.scroll}
+      >
         {/* Sized off the width, not the viewport height.
             `useWindowDimensions().height` is 0 through the static render
             and never emits again on its own, so a 94%-of-viewport hero
@@ -697,6 +703,15 @@ export default function AboutScreen() {
     </Textured>
   );
 }
+
+/**
+ * Without this, the memcard's `ScrollStage` never pins on web: this
+ * page's own `overflow-x: hidden` (for the landing shelf's marquee)
+ * makes the ScrollView below a second scroll container, which steals
+ * every descendant's `position: sticky` out from under it. See
+ * `webScrollContainerStyle`'s doc comment for the full mechanism.
+ */
+const SCROLL_CONTAINER = webScrollContainerStyle(Platform.OS);
 
 const styles = StyleSheet.create({
   background: { flexGrow: 1, backgroundColor: LANDING_GROUND },
