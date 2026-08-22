@@ -42,6 +42,7 @@ import { queryKeys } from '@/api/queryClient';
 import { getTrendingGames } from '@/api/rawg';
 import type { Game, Paged } from '@/api/types';
 import type { Memcard as MemcardModel } from '@/lib/memcard';
+import { PILE_HOURS, PILE_VERDICT } from '@/lib/pile';
 import { webScrollContainerStyle } from '@/lib/webScrollContainer';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useCountUp } from '@/hooks/useCountUp';
@@ -136,20 +137,12 @@ function sampleCard(games: Game[] | undefined): MemcardModel {
  * every time. A ref declared in a parent and attached in a subtree that
  * has not rendered is not attached at all.
  */
-function Sum({
-  style,
-  figure,
-  unit,
-}: {
-  style?: ViewStyle;
-  figure: TextStyle;
-  unit: TextStyle;
-}) {
+function Sum({ figure, unit }: { figure: TextStyle; unit: TextStyle }) {
   const [ref, seen] = useInView('-30%');
-  const hours = useCountUp(900, 0, seen);
+  const hours = useCountUp(PILE_HOURS, 0, seen);
 
   return (
-    <View ref={ref} style={style}>
+    <View ref={ref}>
       {/* "Backlog" is the one word on this page a non-player would
           stumble on, and it was sitting over the biggest number. */}
       <Text style={styles.sumLead}>An average pile of unplayed games</Text>
@@ -501,31 +494,39 @@ export default function AboutScreen() {
           <Band
             tone="well"
             scale={scale}
-            style={scale.wide ? styles.sumWide : styles.sumTall}
+            style={styles.sumBand}
             raise
             seam={0}
             seamVariant="card"
           >
             <QuestMark id="sum" />
-            <Sum
-              style={scale.wide ? styles.sumFigureWide : undefined}
-              figure={figure}
-              unit={unit}
-            />
-            <Rise from="right" delay={220} style={styles.sumTailSlot}>
-              {/* Two sentences, not a dangling clause. The tail used to
-                  continue the figure's sentence — "and the average week
-                  has about six" — which reads if your eye arrives from
-                  the number and dangles if it arrives anywhere else,
-                  which on a phone it does. And the point of the whole
-                  band is the second line, so it is the one set in
-                  white: the number is the evidence, fifteen years is
-                  the argument. */}
-              <Text style={[styles.sumTail, scale.body]}>
-                The average week has about six.
-              </Text>
-              <Text style={[styles.sumKicker, scale.body]}>
-                That’s fifteen years of evenings.
+            {/* One stack at every width, not a numeral beside a column
+                of body copy.
+                The wide layout used to set the figure left and its
+                explanation in a second column — measured at 1100pt, 130
+                points of empty band between a number and the only text
+                that says what it is. A reader scrolling past saw a very
+                large 900 and nothing attached to it, which is exactly
+                what the band is for and exactly what it failed to do.
+                Stacked, the eyebrow names the quantity, the figure is
+                the quantity, and the sentence under it is the point —
+                in that order, down one left edge, with nothing to look
+                across a band for. */}
+            <Sum figure={figure} unit={unit} />
+            <Rise from="below" delay={220}>
+              {/* The argument, at the size an argument gets.
+                  This was two lines of grey body copy: "The average
+                  week has about six" — six of what, arriving after a
+                  number labelled hours — and a conclusion that did not
+                  follow from it. One sentence carries both operands and
+                  the result now, so the number explains itself where it
+                  is read, and it is set at the page's column size
+                  rather than at body: the figure is the evidence and
+                  this is the verdict, and a verdict in grey at
+                  seventeen points under a numeral at two hundred is not
+                  a hierarchy, it is a footnote. */}
+              <Text style={[styles.sumVerdict, scale.leadColumn]}>
+                {PILE_VERDICT}
               </Text>
             </Rise>
           </Band>
@@ -928,17 +929,7 @@ const styles = StyleSheet.create({
    * sentence in half — the number and its meaning read as two
    * exhibits.
    */
-  sumTall: { paddingTop: 0, paddingBottom: SPACING.lg, gap: SPACING.md },
-  sumWide: {
-    flexDirection: 'row',
-    // On the number's baseline side rather than its centre: a 196px
-    // numeral centred against three lines of body copy leaves the copy
-    // floating in the middle of a very tall row.
-    alignItems: 'flex-end',
-    gap: SPACING.xl * 2,
-  },
-  sumFigureWide: { flexShrink: 0 },
-  sumTailSlot: { flex: 1 },
+  sumBand: { paddingTop: 0, paddingBottom: SPACING.lg, gap: SPACING.md },
   sumLead: { ...TYPE.micro, color: COLORS.mediumGrey },
   sumLine: {
     flexDirection: 'row',
@@ -952,16 +943,13 @@ const styles = StyleSheet.create({
   // Grey, not amber. Two amber weights in one line is two things
   // shouting; the number is the thing worth shouting.
   sumUnit: { ...TYPE.title, color: COLORS.lightGrey },
-  // A short measure: two lines that nearly span the phone read as a
-  // paragraph, and this is a verdict.
-  sumTail: { color: COLORS.mediumGrey, maxWidth: 340 },
-  sumKicker: {
-    fontFamily: 'Noah-Bold',
-    color: COLORS.white,
-    maxWidth: 340,
-    marginTop: 2,
-    paddingBottom: 6,
-  },
+  /**
+   * A short measure on purpose. At the full band width this sets as one
+   * very long line on a monitor, and a verdict that spans a window
+   * reads as a caption; broken over two or three, it reads as a
+   * sentence somebody means.
+   */
+  sumVerdict: { maxWidth: 620, paddingBottom: 6 },
 
   plainRoom: { paddingTop: SPACING.xl * 2.5 },
   calendarRoom: { height: 620 },
