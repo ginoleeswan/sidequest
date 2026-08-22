@@ -63,6 +63,23 @@ const EXISTING = [
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+function Chip({
+  icon,
+  hue,
+  label,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  hue: string;
+  label: string;
+}) {
+  return (
+    <View style={styles.chip}>
+      <Ionicons name={icon} size={13} color={hue} />
+      <Text style={styles.chipWord}>{label}</Text>
+    </View>
+  );
+}
+
 export function LandingCalendar({
   scale,
   games,
@@ -74,7 +91,7 @@ export function LandingCalendar({
   // only interesting if the things in it are things.
   const named = PLANNED.map((evening, index) => ({
     ...evening,
-    name: games?.[index + 5]?.name ?? 'Something you own',
+    name: games?.[index + 5]?.name ?? 'Your pick',
   }));
 
   return (
@@ -83,41 +100,28 @@ export function LandingCalendar({
         <Words text="Then it leaves." style={[styles.lead, scale.lead]} />
         <Rise delay={90}>
           <Text style={[styles.body, scale.body]}>
-            The evenings go into the calendar you already keep — at eight, on
-            the nights that survived. The free ones stay free.
+            Your evenings land in the calendar you already keep. The free nights
+            stay free.
           </Text>
         </Rise>
+        {/* Chips, not paragraphs.
+            This said the same three things in five blocks of prose — the
+            OAuth reasoning, the compatible-apps list, the snapshot
+            caveat — and on a phone it was a wall of text above the one
+            picture that actually explains the feature. The reasoning is
+            worth having and is kept in full at the top of this file,
+            which is where the person who needs it will be. A reader on
+            the page needs to know it works, costs nothing, and connects
+            to nothing. */}
         <Rise delay={150}>
-          {/* The claim that costs something to make, so it is made
-              plainly and with its limit attached. */}
-          <View style={styles.proofRow}>
-            <Ionicons name="shield" size={15} color={COLORS.accent} />
-            <Text style={[styles.proof, scale.body]}>
-              No account to connect. A calendar integration needs OAuth, and
-              OAuth needs a server — so this is a file your device writes.
-            </Text>
+          <View style={styles.chips}>
+            <Chip icon="shield" hue={COLORS.accent} label="No account" />
+            <Chip
+              icon="calendar"
+              hue={COLORS.violet}
+              label="Google, Apple, Outlook"
+            />
           </View>
-        </Rise>
-        <Rise delay={210}>
-          {/* Named in words, never as logos.
-              A row of Google and Apple marks is the visual grammar of
-              "we integrate with these", which is the one thing this
-              feature deliberately is not — the paragraph above says so
-              in the same breath. It would also undersell it: `.ics` is
-              not two calendars, it is every calendar, and showing two
-              makes a universal thing look like it supports a pair. Both
-              companies restrict their marks to real integrations, so the
-              honest version and the permitted version are the same
-              sentence. */}
-          <Text style={[styles.opens, scale.body]}>
-            Opens in Google Calendar, Apple Calendar, Outlook — anything that
-            reads a <Text style={styles.mono}>.ics</Text> file.
-          </Text>
-        </Rise>
-        <Rise delay={260}>
-          <Text style={styles.caveat}>
-            A snapshot, not a live feed. Re-export when the plan changes.
-          </Text>
         </Rise>
       </View>
 
@@ -202,11 +206,18 @@ const styles = StyleSheet.create({
   artWide: { flex: 1 },
   lead: { color: COLORS.white, maxWidth: 520 },
   body: { color: COLORS.mediumGrey, maxWidth: 480 },
-  proofRow: { flexDirection: 'row', gap: SPACING.sm, maxWidth: 480 },
-  proof: { color: COLORS.lightGrey, flex: 1 },
-  opens: { color: COLORS.mediumGrey, maxWidth: 480 },
-  mono: { fontFamily: 'Noah-Bold', color: COLORS.lightGrey },
-  caveat: { ...TYPE.micro, color: COLORS.mediumGrey },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: SPACING.sm + 2,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: COLORS.stroke,
+  },
+  chipWord: { ...TYPE.micro, color: COLORS.lightGrey },
 
   grid: {
     backgroundColor: LANDING_WELL,

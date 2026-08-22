@@ -43,6 +43,23 @@ const CHANNELS = [
   { name: 'lateshift', viewers: '861' },
 ];
 
+function Chip({
+  icon,
+  hue,
+  label,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  hue: string;
+  label: string;
+}) {
+  return (
+    <View style={styles.chip}>
+      <Ionicons name={icon} size={13} color={hue} />
+      <Text style={styles.chipWord}>{label}</Text>
+    </View>
+  );
+}
+
 export function LandingWatch({
   scale,
   games,
@@ -61,27 +78,22 @@ export function LandingWatch({
         />
         <Rise delay={90}>
           <Text style={[styles.body, scale.body]}>
-            Every game page shows who is playing it right now. Ninety seconds of
-            somebody else’s stream answers the one thing a rating cannot.
+            Every game page shows who is playing it, live, right now.
           </Text>
         </Rise>
+        {/* Chips rather than two paragraphs of reasoning — see the note
+            in LandingCalendar. Why Twitch can work without a login, and
+            why Discord is a share rather than an integration, are both
+            worth knowing and are kept at the top of this file. On the
+            page they are two facts, not two essays. */}
         <Rise delay={150}>
-          <View style={styles.proofRow}>
-            <Ionicons name="shield" size={15} color={COLORS.accent} />
-            <Text style={[styles.proof, scale.body]}>
-              No Twitch login. The app asks a public question — who is live for
-              this game — and nothing about you is part of it.
-            </Text>
-          </View>
-        </Rise>
-        <Rise delay={210}>
-          {/* The claim already true today, and never made until now. */}
-          <View style={styles.proofRow}>
-            <Ionicons name="share-outline" size={15} color={COLORS.violet} />
-            <Text style={[styles.proof, scale.body]}>
-              Share a game or your year to Discord and it unfurls with the real
-              art and title — no bot to add, nothing to authorise.
-            </Text>
+          <View style={styles.chips}>
+            <Chip icon="shield" hue={COLORS.accent} label="No Twitch login" />
+            <Chip
+              icon="share-outline"
+              hue={COLORS.violet}
+              label="Shares to Discord"
+            />
           </View>
         </Rise>
       </View>
@@ -136,8 +148,18 @@ const styles = StyleSheet.create({
   artWide: { flex: 1 },
   lead: { color: COLORS.white, maxWidth: 520 },
   body: { color: COLORS.mediumGrey, maxWidth: 480 },
-  proofRow: { flexDirection: 'row', gap: SPACING.sm, maxWidth: 480 },
-  proof: { color: COLORS.lightGrey, flex: 1 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: SPACING.sm + 2,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: COLORS.stroke,
+  },
+  chipWord: { ...TYPE.micro, color: COLORS.lightGrey },
 
   /** Two, overlapped: a directory implies choosing, and the point is
       that there is always somebody on. */
