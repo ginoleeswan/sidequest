@@ -157,10 +157,23 @@ export function MemcardBuild({
   // is nothing for a synchronous setState in the effect body to buy.
   useEffect(() => {
     if (reduced) return;
-    const id = driver.addListener(({ value }) => {
-      const count = timeline.windows.filter((w) => value >= w.end).length;
+    const apply = (value: number) => {
+      let count = 0;
+      for (const w of timeline.windows) if (value >= w.end) count += 1;
       setLanded((previous) => (previous === count ? previous : count));
-    });
+    };
+    // `addListener` only fires on the NEXT change — it does not replay
+    // the driver's current value. Every animated output below (`settle`,
+    // each flier's `flight`) reads the value directly and so paints
+    // correctly the instant it mounts; `landed` would not, without this
+    // seed. That gap is reachable: a scroll-driven `progress` can already
+    // be part-way through when this subtree mounts (a reader who
+    // reloaded mid-section, or this component mounting late behind a
+    // deferred-render wrapper), and it would otherwise leave `landed`
+    // stuck at 0 forever, since nothing "changes" until the reader moves
+    // the scroll position again.
+    apply((driver as unknown as { __getValue(): number }).__getValue());
+    const id = driver.addListener(({ value }) => apply(value));
     return () => driver.removeListener(id);
   }, [driver, timeline, reduced]);
 
@@ -212,9 +225,9 @@ export function MemcardBuild({
           view — a scroll-driven progress value can legitimately sit at
           0 before the reader ever gets there. */}
       {!reduced &&
-        (progress ? true : seen) &&
+        (!!progress || seen) &&
         flights.map((flight, index) =>
-          flight.image && index >= landed ? (
+          flight.image && index >= shown ? (
             <Flier
               key={flight.block.id}
               image={flight.image}
@@ -274,12 +287,6 @@ function Flier({
     x: width / 2 + side * width * 0.2 + (index % 3) * 26,
     y: height * 0.4 - (index % 4) * 34,
   };
-
-  const at = (stops: [number, number][], out: number[]) =>
-    flight.interpolate({
-      inputRange: stops.map(([t]) => t),
-      outputRange: out,
-    });
 
   return (
     <Animated.View
