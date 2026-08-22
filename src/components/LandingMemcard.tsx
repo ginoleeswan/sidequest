@@ -404,7 +404,24 @@ function Stamp({ width }: { width: number }) {
            * card and nothing that is a number, and it reads more
            * like a stamp for it: a stamp goes half off the paper.
            */
-          right: size < 15 ? -10 : -16,
+          /**
+           * Hung off the corner only where there is somewhere to hang.
+           *
+           * The outward offset assumed the card had margin beside it.
+           * On a phone it does not: the card is laid out at the window
+           * width less 32, so 16pt of margin a side, and a stamp pushed
+           * 16pt outward — then ROTATED, which widens its box further —
+           * measured 377pt wide in a 375pt window. The page clips
+           * horizontally (see `webScrollContainerStyle`), so the right
+           * edge of the stamp was simply cut off, border and all.
+           *
+           * Keyed on the card's own width rather than the size step:
+           * `size` saturates at its cap well before the card is wide
+           * enough to have room, so it cannot tell a roomy card from a
+           * cramped one. Past 560 the card is only ever on a desktop
+           * band with real margin either side.
+           */
+          right: width >= 560 ? -16 : 6,
           bottom: size < 15 ? -16 : -24,
           borderWidth: size < 15 ? 2 : 3,
           paddingVertical: size < 15 ? 4 : 7,
