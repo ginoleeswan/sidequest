@@ -664,20 +664,19 @@ export default function AboutScreen() {
             BECAUSE an integration would need OAuth, a server, and an
             account. */}
         <WhenNear placeholder={<View style={styles.calendarRoom} />}>
-          {/* Ground, not a well, now that the calendar is a memory card.
-              The panel's shell and the well are a point apart on the
-              same navy — #1D2431 against #1E2532 — so a card drawn on a
-              well is a card nobody can see. The statistic's panel works
-              because it lies on the page's own ground, and this one
-              needs the same thing under it for the same reason.
-
-              And a plain lip above it, not the card edge. The card seam
-              IS this silhouette — one corner cut on the diagonal, grip
-              grooves beside it — and with a memory card drawn four
-              hundred points below it the section stated the same shape
-              twice in one screen. The panel is the object here; the
-              seam goes back to being a boundary. */}
-          <Band scale={scale} seam={0}>
+          {/* Ground, no seam, and close air — the statistic's treatment
+              exactly, because it is now the same kind of thing.
+              The well had to go first: the panel's shell and the well
+              are a point apart on the same navy — #1D2431 against
+              #1E2532 — so a card drawn on a well is a card nobody can
+              see. And with the ground continuous either side of it,
+              the seams have nothing left to mark. A seam is the edge
+              between two grounds; drawn over one unbroken ground it is
+              a rule around nothing, and it boxed the card into a
+              section instead of letting it lie on the page. The line
+              below it belonged to the watch band, which drops its own
+              for the same reason. */}
+          <Band scale={scale} air={SPACING.lg}>
             <QuestMark id="calendar" />
             <LandingCalendar scale={scale} games={games} />
           </Band>
@@ -689,7 +688,7 @@ export default function AboutScreen() {
             answers the last doubt the plan cannot — whether you'll
             actually like it. */}
         <WhenNear placeholder={<View style={styles.watchRoom} />}>
-          <Band scale={scale} seam={1}>
+          <Band scale={scale}>
             <QuestMark id="streams" />
             <LandingWatch scale={scale} games={games} />
           </Band>
@@ -699,7 +698,7 @@ export default function AboutScreen() {
             of the detail. Somebody deciding whether to bother needs to
             know what will be asked of them, and three numbered steps is
             the plainest way to say it. */}
-        <Band scale={scale} seam={2}>
+        <Band scale={scale} seam={0}>
           <QuestMark id="how" />
           <HowItWorks scale={scale} />
         </Band>
@@ -733,7 +732,7 @@ export default function AboutScreen() {
               boundary between the two grounds went hard and flat,
               and the lit line was left floating in the dark below,
               attached to nothing. Out here the wave IS the edge. */}
-          <Seam color={LANDING_WELL} index={3} variant="glyphs" />
+          <Seam color={LANDING_WELL} index={1} variant="glyphs" />
           <View style={styles.well}>
             <View
               style={[
@@ -785,7 +784,7 @@ export default function AboutScreen() {
               instead, so it reads as the same surface as the rest of the
               page rather than as a smooth panel dropped onto it. */}
           <Textured fill />
-          <Seam color="transparent" index={4} />
+          <Seam color="transparent" index={2} />
           {/* Pinned, so the three beats are walked by the reader's own
               scroll rather than swiped past. Two-and-a-bit screens: one
               per beat plus a little, which is the shortest track that

@@ -235,9 +235,23 @@ export function MemcardBuild({
 
   return (
     <View ref={ref} style={{ width, height }}>
+      {/* The shell is here from the first frame, and that is the fix
+          for a real hole in the page.
+          It used to fade in with `settle`, from nothing. Under a scroll
+          driver `progress` is pinned at 0 for the WHOLE approach — the
+          entire screen of scrolling before the stage pins — so the card
+          had opacity 0 for all of it, and the section read as a heading
+          with an empty screen under it: measured as one full viewport
+          of nothing between "And something to show for the year." and
+          any pixel of the thing it names.
+          An empty memory card is not a missing card. It is the "before"
+          of this section's own story, and the honest one: here is the
+          object, and it has nothing in it yet. The covers flying in
+          then FILL something the reader is already looking at, which is
+          what a build is. Only the scale still settles, and gently —
+          the drama belongs to the pieces, not to the box. */}
       <Animated.View
         style={{
-          opacity: settle,
           transform: [
             {
               scale:
@@ -245,7 +259,7 @@ export function MemcardBuild({
                   ? 1
                   : settle.interpolate({
                       inputRange: [0, 1],
-                      outputRange: [0.94, 1],
+                      outputRange: [0.97, 1],
                     }),
             },
           ],
