@@ -7,7 +7,7 @@ import { Words } from './Words';
 import type { Game } from '@/api/types';
 import { COLORS } from '@/styles/colors';
 import type { LandingScale } from '@/styles/landing';
-import { SPACING } from '@/styles/theme';
+import { RADIUS, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 /**
@@ -96,9 +96,22 @@ export function LandingCalendar({
   }));
 
   return (
-    <View style={scale.wide ? styles.wide : undefined}>
-      <View style={scale.wide ? styles.copy : styles.copyStack}>
-        {/* Say where it goes, not that it goes.
+    /**
+     * The whole section is the card — copy, chips and week together.
+     *
+     * The silhouette was tried around the grid alone first, and that is
+     * the smaller idea: it makes the illustration a nicer object and
+     * leaves the argument floating on the page beside it. What this
+     * section is actually about is a plan that has been SAVED
+     * somewhere, and a memory card holding the sentence and the week it
+     * describes says that in one move. It also gives the band the thing
+     * the statistic above it has — one object lying on the page rather
+     * than a stripe of paint with contents.
+     */
+    <MemcardPanel contentStyle={styles.panel}>
+      <View style={scale.wide ? styles.wide : undefined}>
+        <View style={scale.wide ? styles.copy : styles.copyStack}>
+          {/* Say where it goes, not that it goes.
             This read "Then it leaves." — three words carrying an idea
             that only exists in the writer's head: the plan leaving the
             app. A reader arriving at a picture of a calendar is asked
@@ -107,17 +120,17 @@ export function LandingCalendar({
             "it leaves" is that something is being taken away. Set at
             fifty-four points over a week grid, a header has one job and
             no room to be clever. */}
-        <Words
-          text="It lands in your calendar."
-          style={[styles.lead, scale.lead]}
-        />
-        <Rise delay={90}>
-          <Text style={[styles.body, scale.body]}>
-            The evenings it picked, in the calendar you already keep. Free
-            nights stay free.
-          </Text>
-        </Rise>
-        {/* Chips, not paragraphs.
+          <Words
+            text="It lands in your calendar."
+            style={[styles.lead, scale.lead]}
+          />
+          <Rise delay={90}>
+            <Text style={[styles.body, scale.body]}>
+              The evenings it picked, in the calendar you already keep. Free
+              nights stay free.
+            </Text>
+          </Rise>
+          {/* Chips, not paragraphs.
             This said the same three things in five blocks of prose — the
             OAuth reasoning, the compatible-apps list, the snapshot
             caveat — and on a phone it was a wall of text above the one
@@ -126,56 +139,50 @@ export function LandingCalendar({
             which is where the person who needs it will be. A reader on
             the page needs to know it works, costs nothing, and connects
             to nothing. */}
-        <Rise delay={150}>
-          <View style={styles.chips}>
-            <Chip icon="shield" hue={COLORS.accent} label="No account" />
-            <Chip
-              icon="calendar"
-              hue={COLORS.violet}
-              label="Google, Apple, Outlook"
-            />
-          </View>
-        </Rise>
-      </View>
+          <Rise delay={150}>
+            <View style={styles.chips}>
+              <Chip icon="shield" hue={COLORS.accent} label="No account" />
+              <Chip
+                icon="calendar"
+                hue={COLORS.violet}
+                label="Google, Apple, Outlook"
+              />
+            </View>
+          </Rise>
+        </View>
 
-      <Rise
-        from="lift"
-        delay={120}
-        style={scale.wide ? styles.artWide : undefined}
-      >
-        {/* The same object the statistic is drawn on.
-            A rounded well panel was a web card; this is the app's own
-            hardware, and the page now says so in both places it draws a
-            surface for something to sit on. It also earns its shape
-            here more than anywhere: a week somebody has committed to is
-            saved progress, which is what the silhouette means. */}
-        <MemcardPanel contentStyle={styles.grid}>
-          {/* The calendar's own furniture, quiet: this is somebody
+        <Rise
+          from="lift"
+          delay={120}
+          style={scale.wide ? styles.artWide : undefined}
+        >
+          <View style={styles.grid}>
+            {/* The calendar's own furniture, quiet: this is somebody
               else's app, and it should look like it. */}
-          <View style={styles.gridHead}>
-            {DAYS.map((day) => (
-              <Text key={day} style={styles.dayName}>
-                {day}
-              </Text>
-            ))}
-          </View>
-          <View style={styles.gridBody}>
-            {DAYS.map((day, index) => (
-              <View key={day} style={styles.column}>
-                {EXISTING.filter((slot) => slot.day === index).map(
-                  (slot, at) => (
-                    <View
-                      key={at}
-                      style={[
-                        styles.busy,
-                        { top: `${slot.top}%`, height: `${slot.height}%` },
-                      ]}
-                    />
-                  )
-                )}
-              </View>
-            ))}
-            {/* Absolute over the columns rather than inside them, so an
+            <View style={styles.gridHead}>
+              {DAYS.map((day) => (
+                <Text key={day} style={styles.dayName}>
+                  {day}
+                </Text>
+              ))}
+            </View>
+            <View style={styles.gridBody}>
+              {DAYS.map((day, index) => (
+                <View key={day} style={styles.column}>
+                  {EXISTING.filter((slot) => slot.day === index).map(
+                    (slot, at) => (
+                      <View
+                        key={at}
+                        style={[
+                          styles.busy,
+                          { top: `${slot.top}%`, height: `${slot.height}%` },
+                        ]}
+                      />
+                    )
+                  )}
+                </View>
+              ))}
+              {/* Absolute over the columns rather than inside them, so an
                 evening's label can run past its own day the way a real
                 calendar event does — and TWO columns wide, which is what
                 makes that true. Held to one column it was a 42pt box on
@@ -186,45 +193,46 @@ export function LandingCalendar({
                 construction, which is exactly the room a two-column
                 label needs and the reason it cannot collide with the
                 next one. */}
-            {named.map((evening) => (
-              <View
-                key={evening.day}
-                style={[
-                  styles.evening,
-                  {
-                    left: `${(evening.day * 100) / DAYS.length}%`,
-                    width: `${200 / DAYS.length}%`,
-                    top: '66%',
-                    // A floor under the proportion. Height still says
-                    // how long the evening is — two hours is shorter
-                    // than four — but never drops below what one line
-                    // of title and its time actually occupy.
-                    height: `${Math.max(evening.hours * 7, 18)}%`,
-                  },
-                ]}
-              >
-                <View style={styles.eveningInner}>
-                  <Text style={styles.eveningTime} numberOfLines={1}>
-                    20:00
-                  </Text>
-                  <Text style={styles.eveningName} numberOfLines={1}>
-                    {evening.name}
-                  </Text>
+              {named.map((evening) => (
+                <View
+                  key={evening.day}
+                  style={[
+                    styles.evening,
+                    {
+                      left: `${(evening.day * 100) / DAYS.length}%`,
+                      width: `${200 / DAYS.length}%`,
+                      top: '66%',
+                      // A floor under the proportion. Height still says
+                      // how long the evening is — two hours is shorter
+                      // than four — but never drops below what one line
+                      // of title and its time actually occupy.
+                      height: `${Math.max(evening.hours * 7, 18)}%`,
+                    },
+                  ]}
+                >
+                  <View style={styles.eveningInner}>
+                    <Text style={styles.eveningTime} numberOfLines={1}>
+                      20:00
+                    </Text>
+                    <Text style={styles.eveningName} numberOfLines={1}>
+                      {evening.name}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            ))}
-          </View>
-          {/* The calendar's own legend, which is where the app's name
+              ))}
+            </View>
+            {/* The calendar's own legend, which is where the app's name
               actually appears in a person's week — one checkbox to hide,
               one deletion to take back. */}
-          <View style={styles.legend}>
-            <View style={styles.legendDot} />
-            <Text style={styles.legendWord}>Sidequest</Text>
-            <Text style={styles.legendRest}>· your other calendars</Text>
+            <View style={styles.legend}>
+              <View style={styles.legendDot} />
+              <Text style={styles.legendWord}>Sidequest</Text>
+              <Text style={styles.legendRest}>· your other calendars</Text>
+            </View>
           </View>
-        </MemcardPanel>
-      </Rise>
-    </View>
+        </Rise>
+      </View>
+    </MemcardPanel>
   );
 }
 
@@ -253,17 +261,35 @@ const styles = StyleSheet.create({
   chipWord: { ...TYPE.micro, color: COLORS.lightGrey },
 
   /**
-   * The surface, the stroke and the cut corner all come from
-   * `MemcardPanel` now; this is only the room inside it.
+   * The room inside the card.
    *
-   * The top pad is the one number that is not taste. A memory card's
-   * chamfer takes the top right corner and its grip grooves sit in the
-   * first twenty-six points beside it, and the day names run the full
-   * width — so "SUN" lands underneath both unless the header starts
-   * below them.
+   * The top pad is the one number here that is not taste: a memory
+   * card's chamfer takes the top right corner and its grip grooves sit
+   * in the first twenty-six points beside it, so anything starting at
+   * an ordinary card's inset runs straight into the cut. On a wide
+   * layout the week grid is what sits up there; on a phone it is the
+   * header. Both need to begin below the grooves.
+   */
+  panel: {
+    paddingTop: SPACING.xl + 10,
+    paddingBottom: SPACING.xl,
+    paddingHorizontal: SPACING.lg,
+  },
+  /**
+   * A frame, not a surface.
+   *
+   * The grid used to be the card — its own well, border and drop
+   * shadow — and inside a card it cannot be that again: the panel's
+   * shell and the old well are a point apart on the same navy, so a
+   * filled grid on the shell is a rectangle nobody can see. The card is
+   * the surface now and the grid is drawn on it: a hairline round the
+   * week, and the day columns doing the rest.
    */
   grid: {
-    paddingTop: SPACING.xl + 8,
+    borderWidth: 1,
+    borderColor: COLORS.stroke,
+    borderRadius: RADIUS.md,
+    paddingTop: SPACING.md,
     paddingBottom: SPACING.md,
     paddingHorizontal: SPACING.md,
     gap: SPACING.sm,
