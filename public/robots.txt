@@ -1,4 +1,4 @@
-# Sidequest — https://sidequest-bice-nu.vercel.app
+# Sidequest — https://gosidequest.vercel.app
 User-agent: *
 Allow: /
 
@@ -11,4 +11,4 @@ Disallow: /memcard
 Disallow: /tidy
 Disallow: /shared
 
-Sitemap: https://sidequest-bice-nu.vercel.app/sitemap.xml
+Sitemap: https://gosidequest.vercel.app/sitemap.xml

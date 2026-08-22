@@ -155,8 +155,15 @@ function Pins() {
   const GAP = 4;
   const COUNT = 7;
   const width = COUNT * PIN_W + (COUNT - 1) * GAP;
+  // `aria-hidden`, not the accessibilityElementsHidden/
+  // importantForAccessibility pair used elsewhere in this file. Those are
+  // RN props that react-native-web consumes on a View; Svg forwards
+  // whatever it does not recognise straight to the DOM node, so the pair
+  // reached the browser as an invalid camelCase attribute and React
+  // warned on every render. `aria-hidden` is the one spelling that is
+  // valid in the DOM and still maps to the native flags.
   return (
-    <Svg width={width} height={PIN_H} accessibilityElementsHidden>
+    <Svg width={width} height={PIN_H} aria-hidden>
       {Array.from({ length: COUNT }, (_, pin) => (
         <Rect
           key={pin}

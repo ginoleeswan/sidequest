@@ -47,7 +47,13 @@ describe('the static pages', () => {
       expect(
         screen.getByLabelText('It knows how long things take.')
       ).toBeTruthy();
-      expect(screen.getAllByText('Open Sidequest').length).toBeGreaterThan(0);
+      // The CTA states the outcome, not the mechanism. Pinned because
+      // "Open Sidequest" is the sort of label that creeps back in: it is
+      // the obvious thing to write and the one thing a reader who has
+      // not used this yet gains nothing from being told.
+      expect(
+        screen.getAllByText('Find what I can finish').length
+      ).toBeGreaterThan(0);
     },
     HEAVY
   );

@@ -41,7 +41,7 @@ export function feedSeed(now: number, entries: LibraryEntry[]): number {
 }
 
 /** A small deterministic PRNG — same seed, same page, all day. */
-function random(seed: number): () => number {
+export function seededRandom(seed: number): () => number {
   let state = seed || 1;
   return () => {
     state = (state + 0x6d2b79f5) >>> 0;
@@ -64,7 +64,7 @@ export function pickShelves(
   seed: number
 ): Section[] {
   const shuffled = [...pool];
-  const next = random(seed);
+  const next = seededRandom(seed);
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(next() * (i + 1));
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];

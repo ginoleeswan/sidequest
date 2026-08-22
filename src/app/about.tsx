@@ -1,4 +1,3 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
@@ -32,7 +31,7 @@ import { LandingWall } from '@/components/LandingWall';
 import { MarkDraw } from '@/components/MarkDraw';
 import { PageTitle } from '@/components/PageTitle';
 import { RouteError } from '@/components/RouteError';
-import { ScaleButton } from '@/components/ScaleButton';
+import { ArcadeButton } from '@/components/ArcadeButton';
 import { SiteFooter } from '@/components/SiteFooter';
 import { Textured } from '@/components/Textured';
 import { WhenNear } from '@/components/WhenNear';
@@ -53,7 +52,7 @@ import {
   landingScale,
   type LandingScale,
 } from '@/styles/landing';
-import { RADIUS, SPACING } from '@/styles/theme';
+import { SPACING } from '@/styles/theme';
 import { OVER_IMAGE, TYPE } from '@/styles/typography';
 
 /**
@@ -293,17 +292,22 @@ export default function AboutScreen() {
     staleTime: 6 * 60 * 60 * 1000,
   });
 
+  /**
+   * The promise, not the mechanism.
+   *
+   * "Open Sidequest" named the app and the act of opening it, which is
+   * the one thing a stranger already knows they can do with a link. The
+   * label finishes the headline's sentence instead, and the small line
+   * answers the two objections that stop the click — in the button,
+   * where the hand already is, rather than only underneath it.
+   */
   const open = (
-    <ScaleButton
+    <ArcadeButton
+      label="Find what I can finish"
+      sublabel="20 seconds · no account"
+      accessibilityLabel="Find what I can finish — takes 20 seconds, no account needed"
       onPress={() => router.push('/')}
-      style={styles.cta}
-      activeScale={0.97}
-      hoverScale={1.03}
-      accessibilityLabel="Open Sidequest"
-    >
-      <Text style={styles.ctaLabel}>Open Sidequest</Text>
-      <Ionicons name="arrow-forward" size={16} color={COLORS.navy} />
-    </ScaleButton>
+    />
   );
 
   return (
@@ -324,7 +328,16 @@ export default function AboutScreen() {
             a vh-shaped box grows by a toolbar's worth the moment
             anybody scrolls. */}
         <View style={[styles.masthead, isExpanded && styles.mastheadWide]}>
-          <LandingWall columns={isExpanded ? 7 : 4} />
+          {/* Rows alongside columns, because the two are one fact about
+              this breakpoint: seven narrow lanes need seven covers each
+              to reach the bottom of a 760pt hero, four wide ones on a
+              phone need nine to cross 620pt at their smaller pitch.
+              Both overfill deliberately — `wall` crops, and the covers
+              are thumbnails. */}
+          <LandingWall
+            columns={isExpanded ? 7 : 4}
+            rows={isExpanded ? 7 : 9}
+          />
           {/* Heavy where the words are, open at the top right, so the
                 pile is visible without ever competing with the line it
                 exists to prove. */}
@@ -416,10 +429,13 @@ export default function AboutScreen() {
               Tell it how much time you get. It knows how long games take.
             </Animated.Text>
             <Animated.View style={step(0.32, 0.9)}>{open}</Animated.View>
-            {/* The three objections a stranger has, answered before they
-                are asked. */}
+            {/* The objections a stranger has, answered before they are
+                asked — minus the one the button now makes itself. This
+                line used to carry "No account" too, and a claim made
+                twice within forty pixels reads as a page insisting
+                rather than a page stating. */}
             <Animated.Text style={[styles.terms, step(0.4, 1)]}>
-              Free · No account · Nothing to install
+              Free · Nothing to install
             </Animated.Text>
           </View>
         </View>
@@ -729,24 +745,8 @@ const styles = StyleSheet.create({
     maxWidth: 600,
     marginBottom: SPACING.xl + 6,
   },
-  cta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: SPACING.sm,
-    paddingVertical: 18,
-    paddingHorizontal: SPACING.xl + 6,
-    borderRadius: RADIUS.lg,
-    backgroundColor: COLORS.accent,
-    /**
-     * The hard-offset edge every arcade button has. A flat pill is a
-     * link wearing a background; four pixels of darker amber under it
-     * is a thing with a travel, which is what makes people want to
-     * press it. RN 0.81 ships boxShadow cross-platform.
-     */
-    boxShadow: '0 4px 0 #B87A16',
-  },
-  ctaLabel: { ...TYPE.label, fontSize: 16, color: COLORS.navy },
+  // The CTA's own look moved into ArcadeButton, where the hard amber
+  // edge is a real object the cap presses into rather than a shadow.
   terms: {
     ...TYPE.micro,
     fontSize: 12,

@@ -19,7 +19,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /** Must match SITE in api/preview.ts. */
-const SITE = 'https://sidequest-bice-nu.vercel.app';
+const SITE = 'https://gosidequest.vercel.app';
 const OUT = join(
   dirname(fileURLToPath(import.meta.url)),
   '..',
@@ -41,7 +41,13 @@ const PER_PAGE = 40;
 const today = new Date().toISOString().slice(0, 10);
 
 async function popularGames() {
-  const key = process.env.EXPO_PUBLIC_RAWG_API_KEY?.trim();
+  // Build-time and server-side, so RAWG_API_KEY is the right var — the
+  // EXPO_PUBLIC_ copy is a fallback for native/older setups that still
+  // only set that one. Without this the sitemap silently drops every
+  // game page on a deployment configured with the server-side key alone.
+  const key = (
+    process.env.RAWG_API_KEY ?? process.env.EXPO_PUBLIC_RAWG_API_KEY
+  )?.trim();
   if (!key) {
     console.warn('sitemap: no RAWG key, emitting static pages only');
     return [];
