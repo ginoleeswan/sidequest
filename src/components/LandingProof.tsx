@@ -141,7 +141,25 @@ export function LandingProof({
           )}
         </View>
 
-        {/* The one bold thing, in the beat's colour. */}
+        {/* The one bold thing, in the beat's colour.
+            Both figures get a corner of controlled ground first. The
+            number is set in the beat's own hue over whatever artwork the
+            API happened to return — the over-image text shadow keeps it
+            from vanishing into a pale sky, but it cannot stop violet on
+            warm gold reading as mush, which is what a bright cover
+            actually produced. The scrim darkens only the corner it
+            needs and is gone well before the title bottom-left, so the
+            card still reads as art rather than as a panel with a plate
+            on it. */}
+        {!dropped && (
+          <LinearGradient
+            colors={['rgba(9,12,19,0.78)', 'rgba(9,12,19,0)']}
+            start={{ x: 1, y: 0 }}
+            end={{ x: 0.42, y: 0.46 }}
+            style={styles.figureScrim}
+            pointerEvents="none"
+          />
+        )}
         {kind === 'length' && (
           <Animated.View style={[styles.figureSlot, stamp]}>
             <Text style={[styles.figure, { color: hue }]}>{hours}</Text>
@@ -162,33 +180,42 @@ export function LandingProof({
             <Text style={[styles.stampWord, { color: hue }]}>LET GO</Text>
           </Animated.View>
         )}
-      </View>
+        {dropped && (
+          <View style={styles.amnesty} pointerEvents="none">
+            {/* The app's actual drop reasons — the excuses the tidy
+                screen lets you file a game under. As bare grey words
+                they read as a caption that lost its image; as stamped
+                coral tags under a LET GO stamp they read as what they
+                are: the permission slips.
 
-      {dropped && (
-        <View style={styles.amnesty}>
-          {/* These are the app's actual drop reasons — the excuses the
-              tidy screen lets you file a game under. As bare grey words
-              they read as a caption that lost its image; as stamped
-              coral tags under a LET GO stamp they read as what they
-              are: the permission slips. */}
-          <Text style={styles.amnestyLead}>ANY OF THESE COUNT</Text>
-          <View style={styles.reasons}>
-            {DROP_REASONS.map((reason, at) => (
-              <View
-                key={reason.key}
-                style={[
-                  styles.reason,
-                  {
-                    transform: [{ rotate: `${at % 2 === 0 ? -1.5 : 1.5}deg` }],
-                  },
-                ]}
-              >
-                <Text style={styles.reasonWord}>{reason.label}</Text>
-              </View>
-            ))}
+                INSIDE the card, on its veil above the title, rather
+                than in a block beneath it. Outside, they made this
+                panel 88 points taller than the other two, and a deck of
+                three cards that are not the same height reads as a
+                layout failure however good each card is alone. The card
+                is a fixed 16:10 box whose title is already absolutely
+                placed the same way, so these cost no height at all. */}
+            <Text style={styles.amnestyLead}>ANY OF THESE COUNT</Text>
+            <View style={styles.reasons}>
+              {DROP_REASONS.map((reason, at) => (
+                <View
+                  key={reason.key}
+                  style={[
+                    styles.reason,
+                    {
+                      transform: [
+                        { rotate: `${at % 2 === 0 ? -1.5 : 1.5}deg` },
+                      ],
+                    },
+                  ]}
+                >
+                  <Text style={styles.reasonWord}>{reason.label}</Text>
+                </View>
+              ))}
+            </View>
           </View>
-        </View>
-      )}
+        )}
+      </View>
     </View>
   );
 }
@@ -234,6 +261,22 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   line: { ...TYPE.caption, fontSize: 14 },
 
+  /**
+   * Sized to the figure's own corner, not the whole card: a full-card
+   * scrim would flatten the artwork the evidence is supposed to be
+   * showing off.
+   */
+  /**
+   * Fills the card and lets the GRADIENT do all the falloff.
+   *
+   * Sized to the corner it serves (62% x 52%) it drew its own bottom
+   * edge across the middle of the artwork — the box ended while the
+   * gradient inside it was still half opaque, which is a hard rule in
+   * exactly the place a scrim exists to avoid one. A full-bleed box has
+   * no edge to show; the diagonal stop below is what keeps the darkening
+   * in the top corner where the figure sits.
+   */
+  figureScrim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   figureSlot: { position: 'absolute', top: SPACING.lg, right: SPACING.lg + 2 },
   figure: {
     fontFamily: 'Noah-Black',
@@ -247,8 +290,11 @@ const styles = StyleSheet.create({
   },
   figureUnit: {
     ...TYPE.tag,
-    fontSize: 12,
-    letterSpacing: 3,
+    // Was 12/3. Under a 68px numeral, that read as a caption for the
+    // number rather than as its unit — and it is the word that makes
+    // the number mean anything.
+    fontSize: 13,
+    letterSpacing: 2.4,
     textAlign: 'right',
     marginTop: 3,
     color: COLORS.white,
@@ -271,7 +317,18 @@ const styles = StyleSheet.create({
     letterSpacing: 4,
   },
 
-  amnesty: { gap: SPACING.sm },
+  /**
+   * Inside the card, sitting on the veil above the title. `bottom` clears
+   * the title block (a 24px name over a 14px line) plus a step, so the
+   * two never touch.
+   */
+  amnesty: {
+    position: 'absolute',
+    left: SPACING.lg,
+    right: SPACING.lg,
+    bottom: SPACING.lg + 54,
+    gap: SPACING.sm - 2,
+  },
   amnestyLead: {
     ...TYPE.micro,
     color: COLORS.coral,

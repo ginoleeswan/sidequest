@@ -1,5 +1,5 @@
 // src/components/ScrollStage.tsx
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Platform, View, type ViewStyle } from 'react-native';
 
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
@@ -119,12 +119,37 @@ export function ScrollStage({
    * consumer's own "no driver" branch structurally, the same way
    * `MemcardBuild`'s optional `progress` prop already works.
    */
-  children: (progress: Animated.Value | undefined) => React.ReactNode;
+  children: (
+    progress: Animated.Value | undefined,
+    /**
+     * Scroll the page to a fraction of this track, 0 to 1.
+     *
+     * A pinned section's own controls cannot move their contents: the
+     * scroll position owns those, and the next frame would undo it. They
+     * have to move the PAGE instead, and this is the only place that
+     * knows where the track sits. `undefined` while unpinned, where a
+     * consumer's ordinary controls work normally.
+     */
+    seek: ((fraction: number) => void) | undefined
+  ) => React.ReactNode;
 }) {
   const pinned = useStagePins(minViewport);
 
   const progress = useAnimatedValue(pinned ? 0 : 1);
   const ref = useRef<View | null>(null);
+
+  const seek = useCallback((fraction: number) => {
+    const node = ref.current as unknown as Element | null;
+    if (!node) return;
+    const rect = node.getBoundingClientRect();
+    const travel = rect.height - window.innerHeight;
+    if (travel <= 0) return;
+    const clamped = Math.max(0, Math.min(1, fraction));
+    window.scrollTo({
+      top: rect.top + window.scrollY + travel * clamped,
+      behavior: 'smooth',
+    });
+  }, []);
 
   useEffect(() => {
     if (!pinned) {
@@ -164,11 +189,18 @@ export function ScrollStage({
     };
   }, [pinned, progress]);
 
-  if (!pinned) return <View>{children(undefined)}</View>;
+  if (!pinned) return <View>{children(undefined, undefined)}</View>;
 
   return (
     <View ref={ref} style={trackStyle(track)}>
-      <View style={STAGE}>{children(progress)}</View>
+      {/* `seek` reads `ref.current`, but only when a consumer calls it
+          from a press handler — never while rendering. The rule cannot
+          see that difference from the call site, and the alternative
+          (mirroring the track's geometry into state so the closure has
+          no ref to read) would mean re-rendering the whole stage on
+          every resize to keep a number the ref already knows. */}
+      {/* eslint-disable-next-line react-hooks/refs */}
+      <View style={STAGE}>{children(progress, seek)}</View>
     </View>
   );
 }
