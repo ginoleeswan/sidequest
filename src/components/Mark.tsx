@@ -45,6 +45,16 @@ const SHAFT = `M50 ${PLINTH_CY + 4} L50 ${BALL_CY + BALL_R * 0.5}`;
  * The plinth's side sits a step darker than its top. In one flat colour
  * the near edge was a hairline where two same-coloured shapes met, which
  * reads as a rendering artefact rather than a shape.
+ *
+ * The shaft stays the plate's own colour, and that has been tested
+ * rather than assumed. Where the stick meets the plinth is the one
+ * joint in the object and it goes unarticulated, so the obvious moves
+ * are to draw a dust washer around the base or to put the shaft in this
+ * grey. Both are worse: a filled ellipse split by the shaft reads
+ * unmistakably as an eye, and a grey shaft turns the stick into a dull
+ * column and breaks the single bright silhouette the mark lives on at
+ * nav sizes. White into white reads as the stick entering the base,
+ * which is what it is.
  */
 const SHADE = '#CBD1DC';
 

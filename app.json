@@ -17,7 +17,7 @@
       "package": "com.glstudio.sidequest",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#333D51"
+        "backgroundColor": "#272F3F"
       }
     },
     "web": {
@@ -31,9 +31,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#333D51",
+          "backgroundColor": "#272F3F",
           "image": "./assets/splash.png",
-          "imageWidth": 200
+          "imageWidth": 180
         }
       ],
       "expo-status-bar",

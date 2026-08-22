@@ -44,19 +44,62 @@ const layFlat = (cy) =>
   `translate(0 ${cy}) scale(1 ${SQUASH}) translate(0 -50)`;
 const SHAFT = `M50 ${PLINTH_CY + 4} L50 ${BALL_CY + BALL_R * 0.5}`;
 
-/** The mark's own bounds, for lockups where it stands alone. */
-const TIGHT = '4 6 92 92';
+/**
+ * How far the glyph rides up inside its own box, in mark units.
+ *
+ * The mark's ink runs from y=7 (the ball's crown) to y=99.2 (the near
+ * edge of the plinth's side), so its centre is at 53.1 — three units
+ * below the middle of the box it is drawn in. Centred by the box, it
+ * therefore sits low on every plate derived from it: measured at icon
+ * scale, 13.9 units of navy above the ball against 8.7 below the base,
+ * a top gap sixty percent larger than the bottom one.
+ *
+ * The first 3.1 units put the ink's own centre on the plate's. The
+ * last one is the optical correction a bottom-heavy object needs: all
+ * the mass is in the plinth, and an object like that reads as sinking
+ * when it is centred honestly. Held in mark units rather than plate
+ * ones so it stays correct at every scale the mark is drawn at.
+ */
+const INK_CENTRE = 53.1;
+const OPTICAL_LIFT = 1.1;
+const LIFT = INK_CENTRE - 50 + OPTICAL_LIFT;
 
-/** The mark in a 100×100 box. `scale` shrinks it about its centre. */
-function mark({ color = WHITE, knob = AMBER, shade = SHADE, scale = 1 } = {}) {
+/**
+ * The mark's own bounds, for lockups where it stands alone.
+ *
+ * Identical to VIEW_BOX in src/components/Mark.tsx, and it has to stay
+ * that way: the splash image is drawn through this box and SplashCurtain
+ * draws the same mark through that one, one on top of the other at the
+ * hand-off. Two percent apart — which is what 92 against 94 came to —
+ * is not a mismatch anybody could name, but it is a visible twitch at
+ * the exact moment the app is supposed to be seamless.
+ */
+const TIGHT = '4 6 94 94';
+
+/**
+ * The mark in a 100×100 box. `scale` shrinks it about its centre.
+ *
+ * `lift` is on by default — anything that centres the mark in a plate
+ * wants it. The lockups pass false: there the mark is aligned to a line
+ * of type, not to a box, and moving it up unsettles that instead.
+ */
+function mark({
+  color = WHITE,
+  knob = AMBER,
+  shade = SHADE,
+  scale = 1,
+  lift = true,
+} = {}) {
   const glyph =
     `<g transform="${layFlat(PLINTH_CY + PLINTH_DEPTH)}"><path d="${HEX}" fill="${shade}"/></g>` +
     `<g transform="${layFlat(PLINTH_CY)}"><path d="${HEX}" fill="${color}"/></g>` +
     `<path d="${SHAFT}" stroke="${color}" stroke-width="${SHAFT_WIDTH}" stroke-linecap="round"/>` +
     `<circle cx="50" cy="${BALL_CY}" r="${BALL_R}" fill="${knob}"/>`;
-  if (scale === 1) return glyph;
+  const up = lift ? LIFT : 0;
+  const body = up ? `<g transform="translate(0 ${-up})">${glyph}</g>` : glyph;
+  if (scale === 1) return body;
   const shift = 50 * (1 - scale);
-  return `<g transform="translate(${shift} ${shift}) scale(${scale})">${glyph}</g>`;
+  return `<g transform="translate(${shift} ${shift}) scale(${scale})">${body}</g>`;
 }
 
 /**
@@ -162,7 +205,7 @@ function ogCard() {
   </style>
   <div class="copy">
     <div class="lockup">
-      <svg viewBox="${TIGHT}" width="52" height="52">${mark()}</svg>
+      <svg viewBox="${TIGHT}" width="52" height="52">${mark({ lift: false })}</svg>
       <div class="word">SIDEQUEST</div>
     </div>
     <h1>Know what you<br/>can actually finish.</h1>
@@ -229,13 +272,26 @@ await shoot(wrap(icon(), 64), {
   dir: ASSETS,
 });
 
-// The splash: the mark alone on the app's own ground.
+/**
+ * The splash image: the mark alone, square, on nothing.
+ *
+ * Square and transparent because of what the platform does with it.
+ * The modern splash API takes ONE image, centres it, and scales it to
+ * `imageWidth` on a flat background colour — so the file has to be the
+ * mark and only the mark. Shipped as a full 1284x2778 canvas, the whole
+ * canvas was what got scaled to those 200 points: the mark inside it
+ * was 28% of that width, and the app opened on a 56-point joystick
+ * adrift in the middle of the screen.
+ *
+ * Everything else the splash wants to say — the wordmark, and the way
+ * it hands over — belongs to SplashCurtain, which can lay out real type
+ * and animate. This file only has to match that curtain's first frame.
+ */
 await shoot(
-  `<!doctype html><meta charset="utf-8"><style>*{margin:0}body{width:1284px;height:2778px;` +
-    `background:${NAVY};display:flex;align-items:center;justify-content:center}` +
-    `svg{width:360px;height:360px}</style>` +
-    `<svg viewBox="${TIGHT}">${mark()}</svg>`,
-  { width: 1284, height: 2778, out: 'splash.png', dir: ASSETS }
+  `<!doctype html><meta charset="utf-8"><style>*{margin:0}` +
+    `body{width:1024px;height:1024px}svg{display:block;width:1024px;height:1024px}</style>` +
+    `<svg viewBox="${TIGHT}">${mark({ lift: false })}</svg>`,
+  { width: 1024, height: 1024, out: 'splash.png', dir: ASSETS }
 );
 
 // The favicon and the native icons live in assets/, not public/.

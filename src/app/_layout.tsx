@@ -12,6 +12,7 @@ import { queryClient } from '@/api/queryClient';
 import { CommandPalette } from '@/components/CommandPalette';
 import { Onboarding } from '@/components/Onboarding';
 import { ScreenFade } from '@/components/ScreenFade';
+import { SplashCurtain } from '@/components/SplashCurtain';
 import { SaveErrorNotice } from '@/components/SaveErrorNotice';
 import { TabBar } from '@/components/TabBar';
 import { ToastProvider } from '@/components/Toast';
@@ -137,6 +138,9 @@ export default function RootLayout() {
               <Onboarding />
               <CommandPalette />
               <SaveErrorNotice />
+              {/* Last, so it covers the tab bar and the onboarding
+                  sheet too: until it lifts, the app has not opened. */}
+              <SplashCurtain />
             </ToastProvider>
           </SafeAreaProvider>
         </DurationsProvider>
