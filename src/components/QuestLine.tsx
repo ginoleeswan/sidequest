@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { COLORS } from '@/styles/colors';
+
+import { animatedSvg } from './animatedSvg';
 
 /**
  * The quest line: the page's scroll, drawn as a path.
@@ -83,7 +85,7 @@ const SWAY = 26;
 /** The gutter must hold the sway plus air on both sides. */
 const MIN_GUTTER = 96;
 
-const AnimatedPath = Animated.createAnimatedComponent(Path);
+const AnimatedPath = animatedSvg(Path);
 
 export function QuestLine({ measure }: { measure: number }) {
   const reduced = useReducedMotion();
