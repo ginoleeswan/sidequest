@@ -97,11 +97,23 @@ export function LandingCalendar({
   return (
     <View style={scale.wide ? styles.wide : undefined}>
       <View style={scale.wide ? styles.copy : styles.copyStack}>
-        <Words text="Then it leaves." style={[styles.lead, scale.lead]} />
+        {/* Say where it goes, not that it goes.
+            This read "Then it leaves." — three words carrying an idea
+            that only exists in the writer's head: the plan leaving the
+            app. A reader arriving at a picture of a calendar is asked
+            to work out what "it" is, what it is leaving, and whether
+            leaving is a good thing, and the most available reading of
+            "it leaves" is that something is being taken away. Set at
+            fifty-four points over a week grid, a header has one job and
+            no room to be clever. */}
+        <Words
+          text="It lands in your calendar."
+          style={[styles.lead, scale.lead]}
+        />
         <Rise delay={90}>
           <Text style={[styles.body, scale.body]}>
-            Your evenings land in the calendar you already keep. The free nights
-            stay free.
+            The evenings it picked, in the calendar you already keep. Free
+            nights stay free.
           </Text>
         </Rise>
         {/* Chips, not paragraphs.
@@ -158,7 +170,15 @@ export function LandingCalendar({
             ))}
             {/* Absolute over the columns rather than inside them, so an
                 evening's label can run past its own day the way a real
-                calendar event does. */}
+                calendar event does — and TWO columns wide, which is what
+                makes that true. Held to one column it was a 42pt box on
+                a phone: "20:00" wrapped after "20:0", every title broke
+                mid-word, and the 2-hour block was too short to hold
+                either, so the name was sliced off by the block's own
+                clip. The planned evenings are two days apart by
+                construction, which is exactly the room a two-column
+                label needs and the reason it cannot collide with the
+                next one. */}
             {named.map((evening) => (
               <View
                 key={evening.day}
@@ -166,15 +186,21 @@ export function LandingCalendar({
                   styles.evening,
                   {
                     left: `${(evening.day * 100) / DAYS.length}%`,
-                    width: `${100 / DAYS.length}%`,
+                    width: `${200 / DAYS.length}%`,
                     top: '66%',
-                    height: `${evening.hours * 7}%`,
+                    // A floor under the proportion. Height still says
+                    // how long the evening is — two hours is shorter
+                    // than four — but never drops below what one line
+                    // of title and its time actually occupy.
+                    height: `${Math.max(evening.hours * 7, 18)}%`,
                   },
                 ]}
               >
                 <View style={styles.eveningInner}>
-                  <Text style={styles.eveningTime}>20:00</Text>
-                  <Text style={styles.eveningName} numberOfLines={2}>
+                  <Text style={styles.eveningTime} numberOfLines={1}>
+                    20:00
+                  </Text>
+                  <Text style={styles.eveningName} numberOfLines={1}>
                     {evening.name}
                   </Text>
                 </View>
