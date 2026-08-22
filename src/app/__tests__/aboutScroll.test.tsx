@@ -1,6 +1,8 @@
 import { screen } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 
 import AboutScreen from '../about';
+import { webScrollContainerStyle } from '@/lib/webScrollContainer';
 import { renderApp } from '@/test-utils';
 
 /**
@@ -22,7 +24,15 @@ it(
   'leaves the native ScrollView unstyled by the web-only overflow fix',
   async () => {
     await renderApp(<AboutScreen />);
-    expect(screen.getByTestId('about-scroll').props.style).toBeNull();
+    // Asserted against the helper's own output, not a bare `toBeNull()`
+    // — a `toBeNull()` here would pass equally if `webScrollContainerStyle`
+    // started returning `null` on web too, which would silently undo the
+    // sticky-pinning fix it exists to apply. Tying the two together means
+    // this test can only pass if the page is actually wired to the
+    // helper's real, platform-dependent result.
+    expect(screen.getByTestId('about-scroll').props.style).toBe(
+      webScrollContainerStyle(Platform.OS)
+    );
   },
   45_000
 );

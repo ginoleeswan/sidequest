@@ -5,19 +5,27 @@ import type { ViewStyle } from 'react-native';
  * becoming a second scroll container on web — a CSS trap `about.tsx`
  * fell into once already.
  *
- * `overflow-x: hidden` on that ScrollView (there to let the landing
- * shelf's marquee run off the right edge without widening the
- * document) forces `overflow-y` to compute to `auto` per the CSS
- * overflow spec, whether or not anyone asked for a vertical scrollbar.
- * On web, react-native-web renders the `ScrollView` as the element
- * carrying that rule, which silently makes IT the nearest scroll
- * ancestor for everything inside it. `position: sticky` sticks to its
- * nearest scroll container, not to the viewport — so once that
- * ScrollView became one, a `ScrollStage`'s pinned stage anywhere inside
- * it stops pinning to the screen and starts scrolling past with the
- * rest of the page instead, exactly like everything around it. (The
- * document is meant to be the app's only scroller — see the comment in
- * `+html.tsx`.)
+ * `overflow-x: hidden` on that ScrollView is not a rule this page (or
+ * any page) asked for — it is react-native-web's own default style for
+ * every vertical `ScrollView` on web (`baseVertical` in
+ * `react-native-web/dist/exports/ScrollView/index.js`, which pairs
+ * `overflowX: 'hidden'` with `overflowY: 'auto'`). It forces
+ * `overflow-y` to compute to `auto` per the CSS overflow spec, whether
+ * or not anyone asked for a vertical scrollbar. On web, react-native-web
+ * renders the `ScrollView` as the element carrying that rule, which
+ * silently makes IT the nearest scroll ancestor for everything inside
+ * it. `position: sticky` sticks to its nearest scroll container, not to
+ * the viewport — so once that ScrollView became one, a `ScrollStage`'s
+ * pinned stage anywhere inside it stops pinning to the screen and
+ * starts scrolling past with the rest of the page instead, exactly like
+ * everything around it. (The document is meant to be the app's only
+ * scroller — see the comment in `+html.tsx`.)
+ *
+ * Because the rule comes from react-native-web itself rather than from
+ * any one page's own styling, this latent sticky-defeating trap is
+ * app-wide by construction: every vertical `ScrollView` on web carries
+ * it, not just this page's. Anyone adding a pinned section inside a
+ * `ScrollView` anywhere in the app needs this same fix.
  *
  * `clip` contains overflow the same way `hidden` does — nothing paints
  * past the box's edge either way — but, unlike `hidden`, it does not

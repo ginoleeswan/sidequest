@@ -69,6 +69,24 @@ describe('MemcardBuild', () => {
     expect(screen.queryByText('20')).toBeNull();
   });
 
+  // `SCROLL_BUILD_ENDS_AT` (0.85) is what makes the scroll-driven build
+  // finish while `ScrollStage` is still pinned, instead of exactly at
+  // `progress === 1` — the same instant the pin releases, per
+  // `SCROLL_BUILD_ENDS_AT`'s own doc comment. A test that only checks
+  // `progress === 1` would still pass if that constant were reverted to
+  // `1`, since the build finishes at `progress === 1` either way; this
+  // checks it finishes with track still left to hold on, which only
+  // holds when the build is compressed into the front of the range.
+  it('finishes the build before the driver reaches the end of the track', async () => {
+    const progress = new Animated.Value(0);
+    await render(
+      <MemcardBuild card={card} games={games} progress={progress} />
+    );
+
+    await act(async () => progress.setValue(0.86));
+    expect(screen.getByText('20')).toBeTruthy(); // finished, with track left to hold on
+  });
+
   // The driver can already be part-way through when this component
   // mounts — a reader who reloaded mid-section, or this subtree mounting
   // late behind a deferred-render wrapper on web. `Animated.Value.addListener`

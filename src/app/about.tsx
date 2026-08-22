@@ -591,7 +591,7 @@ export default function AboutScreen() {
             arrives crooked and straightens. Used once: a second `tilt`
             further down would turn a signature into a mannerism. */}
         <WhenNear
-          placeholder={<View style={styles.cardRoom} />}
+          placeholder={<View style={reduced ? styles.cardRoomFlat : styles.cardRoom} />}
           style={styles.raise}
         >
           <Band
@@ -620,11 +620,12 @@ export default function AboutScreen() {
                 showpiece drawn at a third of its stage is a thumbnail
                 of itself.
 
-                And hanging over the band's bottom edge, because the
-                page's biggest object should not sit politely inside its
-                box: an object crossing the seam is what tells a reader
-                the sections are one page rather than a stack. */}
-            <ScrollStage track={2.6}>
+                No longer hanging over the band's bottom edge — that
+                belonged to the old unpinned layout's negative margin.
+                ScrollStage now clips its stage vertically and centres
+                the card inside it (see `cardStage`'s own comment), so
+                nothing crosses the seam any more. */}
+            <ScrollStage track={2.6} minViewport={720}>
               {(progress) => (
                 <View style={styles.cardStage}>
                   <MemcardBuild
@@ -705,11 +706,16 @@ export default function AboutScreen() {
 }
 
 /**
- * Without this, the memcard's `ScrollStage` never pins on web: this
- * page's own `overflow-x: hidden` (for the landing shelf's marquee)
- * makes the ScrollView below a second scroll container, which steals
- * every descendant's `position: sticky` out from under it. See
- * `webScrollContainerStyle`'s doc comment for the full mechanism.
+ * Without this, the memcard's `ScrollStage` never pins on web: the
+ * `overflow-x: hidden` react-native-web puts on every vertical
+ * `ScrollView` by default (not a rule this page added — see
+ * `webScrollContainerStyle`'s doc comment) makes the ScrollView below a
+ * second scroll container, which steals every descendant's `position:
+ * sticky` out from under it. Because the rule is react-native-web's
+ * default rather than something specific to this page, the underlying
+ * sticky trap is app-wide by construction: any other screen with a
+ * pinned section inside a vertical `ScrollView` on web needs the same
+ * fix, not just this one.
  */
 const SCROLL_CONTAINER = webScrollContainerStyle(Platform.OS);
 
@@ -871,6 +877,15 @@ const styles = StyleSheet.create({
   // 460px flat number left on the table once the card's motion moved
   // into a 2.6-viewport-tall scroll track).
   cardRoom: { height: '260dvh' as unknown as number },
+  // Reduced motion (or a too-short viewport, per ScrollStage's own
+  // `minViewport`) never builds the 260dvh pinned track — it renders a
+  // plain, roughly-one-screen View instead. A placeholder reserving
+  // 260dvh for a section that will only ever be ~one viewport tall
+  // inflates the document by about two extra viewports until WhenNear
+  // swaps it, which throws off scrollbar position, End-key navigation
+  // and anchor links until the swap yanks them back. A flat number
+  // close to the real unpinned height avoids that.
+  cardRoomFlat: { height: 900 },
   card: { alignItems: 'center', gap: SPACING.xl },
   // Stacks the card above the fliers passing behind it. (No longer a
   // negative marginBottom to hang the card over a band's seam — that
