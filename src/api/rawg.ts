@@ -11,12 +11,19 @@ import type {
 } from './types';
 
 /**
- * On production web the API and image CDN are proxied through our own
- * domain (see vercel.json rewrites). Same-origin requests can't be blocked
- * by CORS and are far less likely to be caught by content blockers or
- * privacy relays - the cause of "Load failed" fetches on iOS Safari.
+ * On web the API and image CDN are proxied through our own domain — in
+ * production via the vercel.json rewrites (backed by api/rawg-proxy.ts),
+ * in dev via the Metro middleware in metro.config.js. Same-origin
+ * requests can't be blocked by CORS and are far less likely to be caught
+ * by content blockers or privacy relays - the cause of "Load failed"
+ * fetches on iOS Safari. It also means the API key never has to reach
+ * the browser: the proxy holds it server-side and injects it, so web
+ * requests carry no key at all (see `rawg()` below). Native still calls
+ * RAWG directly with the key embedded in the app binary — a key shipped
+ * that way is extractable regardless of where it lives, so there is
+ * nothing to gain by proxying native traffic too.
  */
-const USE_PROXY = Platform.OS === 'web' && !__DEV__;
+const USE_PROXY = Platform.OS === 'web';
 
 const BASE_URL = USE_PROXY ? '/rawg' : 'https://api.rawg.io/api';
 
@@ -161,7 +168,13 @@ async function rawg<T>(
   path: string,
   params: Record<string, string> = {}
 ): Promise<T> {
-  const search = new URLSearchParams({ key: apiKey(), ...params });
+  // Proxied (web): the server injects the real key, so none is sent from
+  // here — apiKey() reads EXPO_PUBLIC_RAWG_API_KEY, which a proxied build
+  // doesn't need to have set at all. Direct (native): the key travels
+  // with the request, same as it always has.
+  const search = new URLSearchParams(
+    USE_PROXY ? params : { key: apiKey(), ...params }
+  );
 
   // A request that never settles is worse than one that fails: without a
   // deadline a stalled connection leaves the UI in a loading state for

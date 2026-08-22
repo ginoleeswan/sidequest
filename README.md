@@ -3,6 +3,10 @@
 <p align="center">A video game discovery app built with React Native and Expo, powered by the RAWG database.<br/><em>Responsive from phone to desktop.</em></p>
 
 <p align="center">
+  <a href="https://gosidequest.vercel.app">gosidequest.vercel.app</a>
+</p>
+
+<p align="center">
   <img alt="Expo SDK 57" src="https://img.shields.io/badge/Expo%20SDK-57-000.svg?style=flat&logo=EXPO&labelColor=f3f3f3&logoColor=000" />
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-3178C6.svg?style=flat&logo=typescript&logoColor=fff" />
   <img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg" />
@@ -74,7 +78,11 @@ The web build is a static export — `vercel.json` is already configured.
    preset: **Other** — `vercel.json` supplies the build command and output
    directory).
 2. Add environment variables in the project settings:
-   - `EXPO_PUBLIC_RAWG_API_KEY` = your RAWG key.
+   - `RAWG_API_KEY` = your RAWG key. Server-side only (used by
+     `api/rawg-proxy.ts` and `api/preview.ts`) — kept out of the web
+     bundle entirely. `EXPO_PUBLIC_RAWG_API_KEY` is only needed for
+     native (EAS) builds, which call RAWG directly; the Vercel
+     deployment doesn't read it.
    - `STEAM_API_KEY` = your Steam Web API key
      ([steamcommunity.com/dev/apikey](https://steamcommunity.com/dev/apikey)) —
      powers Steam connect on The Plan. Server-side only (used by
@@ -89,7 +97,9 @@ The web build is a static export — `vercel.json` is already configured.
 3. Deploy. Dynamic game pages (`/game/123`) are served via the rewrite in
    `vercel.json`.
 
-Or from the CLI: `npx vercel --prod` (after `npx vercel env add EXPO_PUBLIC_RAWG_API_KEY`).
+Or from the CLI: `npx vercel --prod` (after `npx vercel env add RAWG_API_KEY`).
+
+Live at [gosidequest.vercel.app](https://gosidequest.vercel.app).
 
 ## Structure
 

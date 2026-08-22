@@ -14,7 +14,7 @@
  */
 
 const TIMEOUT_MS = 6_000;
-const SITE = 'https://sidequest-bice-nu.vercel.app';
+const SITE = 'https://gosidequest.vercel.app';
 
 interface PreviewGame {
   name: string;
@@ -124,7 +124,7 @@ export default async function handler(
     return;
   }
 
-  const key = process.env.EXPO_PUBLIC_RAWG_API_KEY?.trim();
+  const key = process.env.RAWG_API_KEY?.trim();
   if (!key) {
     res.status(503).send('<!doctype html><title>Sidequest</title>');
     return;

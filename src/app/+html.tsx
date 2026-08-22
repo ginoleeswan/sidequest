@@ -56,7 +56,7 @@ export default function Root({ children }: PropsWithChildren) {
         />
         <meta
           property="og:image"
-          content="https://sidequest-bice-nu.vercel.app/og.png?v=2"
+          content="https://gosidequest.vercel.app/og.png?v=2"
         />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
@@ -71,7 +71,7 @@ export default function Root({ children }: PropsWithChildren) {
         />
         <meta
           name="twitter:image"
-          content="https://sidequest-bice-nu.vercel.app/og.png?v=2"
+          content="https://gosidequest.vercel.app/og.png?v=2"
         />
         <style dangerouslySetInnerHTML={{ __html: css }} />
         <script dangerouslySetInnerHTML={{ __html: startAtTheTop }} />

@@ -70,7 +70,7 @@ describe('renderPreview', () => {
       '<meta property="og:image" content="https://media.rawg.io/media/games/abc.jpg"/>'
     );
     expect(html).toContain(
-      '<meta property="og:url" content="https://sidequest-bice-nu.vercel.app/game/123"/>'
+      '<meta property="og:url" content="https://gosidequest.vercel.app/game/123"/>'
     );
     expect(html).toContain('name="twitter:card" content="summary_large_image"');
   });
@@ -93,13 +93,13 @@ describe('renderPreview', () => {
     const html = renderPreview(game(), '123');
     expect(html).toContain('<h1>Hollow Knight: Silksong</h1>');
     expect(html).toContain(
-      'href="https://sidequest-bice-nu.vercel.app/game/123"'
+      'href="https://gosidequest.vercel.app/game/123"'
     );
   });
 });
 
 describe('preview handler', () => {
-  const ORIGINAL_KEY = process.env.EXPO_PUBLIC_RAWG_API_KEY;
+  const ORIGINAL_KEY = process.env.RAWG_API_KEY;
 
   function fakeRes() {
     const state = { code: 0, body: '', headers: {} as Record<string, string> };
@@ -120,10 +120,10 @@ describe('preview handler', () => {
   }
 
   beforeEach(() => {
-    process.env.EXPO_PUBLIC_RAWG_API_KEY = 'test-key';
+    process.env.RAWG_API_KEY = 'test-key';
   });
   afterAll(() => {
-    process.env.EXPO_PUBLIC_RAWG_API_KEY = ORIGINAL_KEY;
+    process.env.RAWG_API_KEY = ORIGINAL_KEY;
   });
 
   it('refuses anything that is not a game id', async () => {
