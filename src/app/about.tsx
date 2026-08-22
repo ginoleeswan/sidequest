@@ -872,8 +872,14 @@ const styles = StyleSheet.create({
   // into a 2.6-viewport-tall scroll track).
   cardRoom: { height: '260dvh' as unknown as number },
   card: { alignItems: 'center', gap: SPACING.xl },
-  // The showpiece hangs a third of itself past the band's bottom edge.
-  cardStage: { marginBottom: -110, zIndex: 1 },
+  // Stacks the card above the fliers passing behind it. (No longer a
+  // negative marginBottom to hang the card over a band's seam — that
+  // seam belonged to the old unpinned layout. ScrollStage now centres
+  // the card in its own 100dvh stage, and a negative margin there just
+  // shrank the box flex centring measures against, pushing the card
+  // below true centre by half of it — measured live as 183px above vs
+  // 73px below at 95% scroll, exactly 110px / 2 off.)
+  cardStage: { zIndex: 1 },
   cardCaption: { textAlign: 'center' },
 
   // the plain truth

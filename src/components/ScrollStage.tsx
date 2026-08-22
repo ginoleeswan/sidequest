@@ -108,10 +108,42 @@ export function ScrollStage({
 const trackStyle = (track: number) =>
   ({ height: `${Math.round(track * 100)}dvh` } as unknown as ViewStyle);
 
+/**
+ * The two axes clip on purpose, and differently.
+ *
+ * `overflowY: 'clip'` is load-bearing: it is what stops an in-flight
+ * cover (launched from outside the stage, per `MemcardBuild`'s own
+ * comment on its fliers) from bleeding into the sections above and
+ * below while it flies. That containment has to stay.
+ *
+ * `overflowX: 'visible'` exists because a plain `overflow: 'hidden'`
+ * clips both axes together, and a rotated element's axis-aligned
+ * bounding box is wider than the element itself — measured live as
+ * the memcard's "ROLL CREDITS" sticker reaching 18px past the stage's
+ * right edge and getting clipped by it. Splitting the two axes keeps
+ * the vertical containment and lets that horizontal overhang show.
+ *
+ * This does not reopen the horizontal scrollbar the page works to
+ * avoid: CSS only coerces `overflow-x` to `auto` when the *other* axis
+ * is neither `visible` nor `clip` — `clip` on `overflow-y` avoids that
+ * coercion, so `overflow-x: visible` here stays exactly `visible`,
+ * verified live (0 elements spilling past the stage vertically, and no
+ * horizontal page scroll).
+ *
+ * `STAGE` only renders on the pinned branch above, which is already
+ * gated to web — no extra platform check is needed here. `clip` needs
+ * Safari 16+ (2022); older Safari falls back to `hidden`'s behaviour on
+ * both axes (today's clipped sticker), not to anything broken.
+ *
+ * `overflowX`/`overflowY` as separate properties, and the `clip` value,
+ * are outside RN's `ViewStyle` type surface — cast confined here, same
+ * idiom as `position: sticky` and `dvh` elsewhere in this file.
+ */
 const STAGE = {
   position: 'sticky',
   top: 0,
   height: '100dvh',
-  overflow: 'hidden',
+  overflowX: 'visible',
+  overflowY: 'clip',
   justifyContent: 'center',
 } as unknown as ViewStyle;
