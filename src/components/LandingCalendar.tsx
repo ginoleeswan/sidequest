@@ -1,12 +1,13 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { MemcardPanel } from './MemcardPanel';
 import { Rise } from './Rise';
 import { Words } from './Words';
 import type { Game } from '@/api/types';
 import { COLORS } from '@/styles/colors';
-import { LANDING_WELL, type LandingScale } from '@/styles/landing';
-import { RADIUS, SPACING } from '@/styles/theme';
+import type { LandingScale } from '@/styles/landing';
+import { SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 /**
@@ -142,7 +143,13 @@ export function LandingCalendar({
         delay={120}
         style={scale.wide ? styles.artWide : undefined}
       >
-        <View style={styles.grid}>
+        {/* The same object the statistic is drawn on.
+            A rounded well panel was a web card; this is the app's own
+            hardware, and the page now says so in both places it draws a
+            surface for something to sit on. It also earns its shape
+            here more than anywhere: a week somebody has committed to is
+            saved progress, which is what the silhouette means. */}
+        <MemcardPanel contentStyle={styles.grid}>
           {/* The calendar's own furniture, quiet: this is somebody
               else's app, and it should look like it. */}
           <View style={styles.gridHead}>
@@ -215,7 +222,7 @@ export function LandingCalendar({
             <Text style={styles.legendWord}>Sidequest</Text>
             <Text style={styles.legendRest}>· your other calendars</Text>
           </View>
-        </View>
+        </MemcardPanel>
       </Rise>
     </View>
   );
@@ -245,14 +252,21 @@ const styles = StyleSheet.create({
   },
   chipWord: { ...TYPE.micro, color: COLORS.lightGrey },
 
+  /**
+   * The surface, the stroke and the cut corner all come from
+   * `MemcardPanel` now; this is only the room inside it.
+   *
+   * The top pad is the one number that is not taste. A memory card's
+   * chamfer takes the top right corner and its grip grooves sit in the
+   * first twenty-six points beside it, and the day names run the full
+   * width — so "SUN" lands underneath both unless the header starts
+   * below them.
+   */
   grid: {
-    backgroundColor: LANDING_WELL,
-    borderRadius: RADIUS.lg - 2,
-    borderWidth: 1.5,
-    borderColor: COLORS.strokeStrong,
-    padding: SPACING.md,
+    paddingTop: SPACING.xl + 8,
+    paddingBottom: SPACING.md,
+    paddingHorizontal: SPACING.md,
     gap: SPACING.sm,
-    boxShadow: '0 18px 40px rgba(9,12,19,0.42)',
   },
   gridHead: { flexDirection: 'row' },
   dayName: {

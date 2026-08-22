@@ -664,7 +664,20 @@ export default function AboutScreen() {
             BECAUSE an integration would need OAuth, a server, and an
             account. */}
         <WhenNear placeholder={<View style={styles.calendarRoom} />}>
-          <Band tone="well" scale={scale} seam={0} seamVariant="card">
+          {/* Ground, not a well, now that the calendar is a memory card.
+              The panel's shell and the well are a point apart on the
+              same navy — #1D2431 against #1E2532 — so a card drawn on a
+              well is a card nobody can see. The statistic's panel works
+              because it lies on the page's own ground, and this one
+              needs the same thing under it for the same reason.
+
+              And a plain lip above it, not the card edge. The card seam
+              IS this silhouette — one corner cut on the diagonal, grip
+              grooves beside it — and with a memory card drawn four
+              hundred points below it the section stated the same shape
+              twice in one screen. The panel is the object here; the
+              seam goes back to being a boundary. */}
+          <Band scale={scale} seam={0}>
             <QuestMark id="calendar" />
             <LandingCalendar scale={scale} games={games} />
           </Band>
