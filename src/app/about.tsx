@@ -502,13 +502,21 @@ export default function AboutScreen() {
               stops at the column's edge is a window with a frame; one
               that runs under both edges of the screen is a world going
               past. */}
+          {/* The one decorated seam on the page. It belongs to the
+              band about bringing your whole pile in, so the pile's
+              own furniture — a pad, a disc, a cartridge, a life — is
+              what the edge is cut out of. It works because the three
+              seams above it were plain.
+
+              ABOVE the well's paint, not inside it — the same hoist
+              Band does, and for the same reason. Nested, the well
+              filled a straight-edged rectangle from the seam's top
+              and the wavy face painted its own colour onto it: the
+              boundary between the two grounds went hard and flat,
+              and the lit line was left floating in the dark below,
+              attached to nothing. Out here the wave IS the edge. */}
+          <Seam color={LANDING_WELL} index={3} variant="glyphs" />
           <View style={styles.well}>
-            {/* The one decorated seam on the page. It belongs to the
-                band about bringing your whole pile in, so the pile's
-                own furniture — a pad, a disc, a cartridge, a life —
-                is what the edge is cut out of. It works because the
-                three seams above it were plain. */}
-            <Seam color={LANDING_WELL} index={3} variant="glyphs" />
             <View
               style={[
                 styles.measure,
