@@ -159,3 +159,32 @@ starts.
   candidate progressive enhancement later, not the foundation.
 - Scroll-jacking or snap-to-section. Ruled out by the document-is-the-
   scroller decision and by accessibility.
+
+---
+
+## Amendment, 2026-08-22: step 2 (the hero) is dropped
+
+Step 1 shipped. Before starting step 2 the hero's stated defect was measured
+on the running page, and it does not exist.
+
+This spec claimed the hero's payoff "can play offscreen". It does not. The
+pile fades from 0.72 to 0.04 and the three survivors rise from 0.72 to 1.0
+across the first 280px of scroll — `FADE_DISTANCE` — and at that point all
+three survivors are on screen (tops at 110–272 in an 837px viewport) with the
+headline still visible. The effect completes, fully seen, in a third of a
+screen.
+
+Pinning it would therefore freeze the first thing a reader meets for roughly
+two screens of scroll in order to fix nothing. That is the failure mode this
+spec's own Risks section names, so the hero keeps its existing ad-hoc scroll
+listener and `ScrollStage` is not applied to it.
+
+The lesson is worth keeping: `LandingWall`'s listener was cited here as
+evidence the technique was needed, when it was in fact evidence the technique
+was already working. A defect asserted in a design document is a hypothesis
+until something measures it.
+
+Step 3 (the three beats) proceeds, and is now the only remaining step. It is
+an enhancement rather than a repair — there is no defect in `BeatDeck` — so
+it is judged on whether the result is better, not on whether it fixes
+something.

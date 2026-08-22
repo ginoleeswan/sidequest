@@ -21,6 +21,8 @@ import { HowItWorks } from '@/components/HowItWorks';
 import { LandingShelf } from '@/components/LandingShelf';
 import { LandingTake } from '@/components/LandingTake';
 import { LandingTry } from '@/components/LandingTry';
+import { LandingCalendar } from '@/components/LandingCalendar';
+import { LandingWatch } from '@/components/LandingWatch';
 import { MemcardBuild } from '@/components/MemcardBuild';
 import { QuestLine, QuestMark } from '@/components/QuestLine';
 import { BeatDeck } from '@/components/BeatDeck';
@@ -91,6 +93,14 @@ const FINISHED_HOURS = [11, 34, 8, 62, 17, 26, 9, 41];
  * itself for a pin the stage isn't actually going to do.
  */
 const MEMCARD_MIN_VIEWPORT = 720;
+
+/**
+ * The beat deck's own floor, lower than the memcard's. A panel is a
+ * column of text and one proof card rather than a fixed-aspect object,
+ * so it stays legible in a much shorter window — and the deck has a
+ * working swipeable fallback below this, which the memcard does not.
+ */
+const DECK_MIN_VIEWPORT = 560;
 
 function sampleCard(games: Game[] | undefined): MemcardModel {
   const blocks = FINISHED_MONTHS.map((month, index) => ({
@@ -514,11 +524,39 @@ export default function AboutScreen() {
           </Band>
         </WhenNear>
 
+        {/* Directly after the plan, because that is where the reader
+            asks "and then what?".
+            Every section above this one argues inside the app, and all
+            of it dies when the tab closes — the page's own case for the
+            product is about somebody's Tuesday, and until here it never
+            reaches one. This is also the only place the privacy promise
+            is load-bearing rather than decorative: the feature is a file
+            BECAUSE an integration would need OAuth, a server, and an
+            account. */}
+        <WhenNear placeholder={<View style={styles.calendarRoom} />}>
+          <Band tone="well" scale={scale} seam={2} seamVariant="card">
+            <QuestMark id="calendar" />
+            <LandingCalendar scale={scale} games={games} />
+          </Band>
+        </WhenNear>
+
+        {/* Straight after the calendar, because they are the same idea
+            twice: the app reaching past itself without asking anyone to
+            log into anything. The plan leaves for your week; this
+            answers the last doubt the plan cannot — whether you'll
+            actually like it. */}
+        <WhenNear placeholder={<View style={styles.watchRoom} />}>
+          <Band scale={scale} seam={3}>
+            <QuestMark id="streams" />
+            <LandingWatch scale={scale} games={games} />
+          </Band>
+        </WhenNear>
+
         {/* The problem is stated above; this is the answer, before any
             of the detail. Somebody deciding whether to bother needs to
             know what will be asked of them, and three numbered steps is
             the plainest way to say it. */}
-        <Band scale={scale} seam={2}>
+        <Band scale={scale} seam={4}>
           <QuestMark id="how" />
           <HowItWorks scale={scale} />
         </Band>
@@ -595,11 +633,37 @@ export default function AboutScreen() {
             straight through, and the seam's face is the only paint.
             An explicit navy here was the flat-patch bug again — right
             colour, wrong surface, visible as a strip under the deck. */}
-        <View>
+        <View style={styles.deckGround}>
+          {/* The ground is opaque so the quest trail cannot show through
+              it, and opaque meant FLAT: the page's grain is painted by
+              the `Textured` wrapper around the whole document, and a
+              solid rectangle laid over it erased the texture for this
+              one section. The section carries its own copy of the grain
+              instead, so it reads as the same surface as the rest of the
+              page rather than as a smooth panel dropped onto it. */}
+          <Textured fill />
           <Seam color="transparent" index={4} />
-          <View style={styles.deckBody}>
-            <BeatDeck scale={scale} games={games} />
-          </View>
+          {/* Pinned, so the three beats are walked by the reader's own
+              scroll rather than swiped past. Two-and-a-bit screens: one
+              per beat plus a little, which is the shortest track that
+              still lets each panel arrive, be read, and leave.
+
+              The deck keeps working untouched when this does not pin —
+              on native, under reduced motion, and on viewports too short
+              to hold a panel — because `ScrollStage` hands `undefined`
+              through and `BeatDeck` falls back to its swipeable rail. */}
+          <ScrollStage track={2.4} minViewport={DECK_MIN_VIEWPORT}>
+            {(progress, seek) => (
+              <View style={styles.deckBody}>
+                <BeatDeck
+                  scale={scale}
+                  games={games}
+                  progress={progress}
+                  onSeek={seek}
+                />
+              </View>
+            )}
+          </ScrollStage>
         </View>
 
         {/* The one showpiece, and the only thing on the page that
@@ -871,7 +935,21 @@ const styles = StyleSheet.create({
   },
 
   plainRoom: { paddingTop: SPACING.xl * 2.5 },
+  calendarRoom: { height: 620 },
+  watchRoom: { height: 560 },
   deckBody: { paddingTop: SPACING.lg, paddingBottom: SPACING.xl * 1.5 },
+  /**
+   * The deck's own opaque ground, painted above the quest trail.
+   *
+   * The trail is drawn over the whole page from the Y positions of the
+   * section marks. Removing this section's mark stopped it having a
+   * waypoint here, but the line still RAN THROUGH the section on its way
+   * from "how" to the pile — an amber thread crossing a stage that holds
+   * still while the page scrolls past it. There is nothing to hide it
+   * behind, because the page's ground is the page's, so the stage paints
+   * its own copy of that exact colour and sits above the overlay.
+   */
+  deckGround: { backgroundColor: LANDING_GROUND, zIndex: 3 },
 
   // the three beats
   // A hairline between claims instead of a change of ground. Three
