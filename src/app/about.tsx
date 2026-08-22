@@ -22,10 +22,10 @@ import { LandingTake } from '@/components/LandingTake';
 import { LandingTry } from '@/components/LandingTry';
 import { MemcardBuild } from '@/components/MemcardBuild';
 import { QuestLine, QuestMark } from '@/components/QuestLine';
-import { Drift } from '@/components/Drift';
 import { BeatDeck } from '@/components/BeatDeck';
 import { Seam, type SeamVariant } from '@/components/Seam';
 import { Rise, useInView } from '@/components/Rise';
+import { ScrollStage } from '@/components/ScrollStage';
 import { Words } from '@/components/Words';
 import { LandingWall } from '@/components/LandingWall';
 import { MarkDraw } from '@/components/MarkDraw';
@@ -618,15 +618,18 @@ export default function AboutScreen() {
                 page's biggest object should not sit politely inside its
                 box: an object crossing the seam is what tells a reader
                 the sections are one page rather than a stack. */}
-            <Drift distance={-22} testID="memcard-drift">
-              <View style={styles.cardStage}>
-                <MemcardBuild
-                  card={sampleCard(games)}
-                  games={games ?? []}
-                  maxWidth={scale.wide ? 1000 : 640}
-                />
-              </View>
-            </Drift>
+            <ScrollStage track={2.6}>
+              {(progress) => (
+                <View style={styles.cardStage}>
+                  <MemcardBuild
+                    card={sampleCard(games)}
+                    games={games ?? []}
+                    maxWidth={scale.wide ? 1000 : 640}
+                    progress={progress}
+                  />
+                </View>
+              )}
+            </ScrollStage>
           </Band>
         </WhenNear>
 
@@ -846,7 +849,13 @@ const styles = StyleSheet.create({
   pileBody: { maxWidth: 620, marginBottom: SPACING.md },
 
   // the card
-  cardRoom: { height: 460 },
+  // Matches ScrollStage's own track={2.6} for the band this wraps: the
+  // placeholder has to reserve the same room the pinned track will
+  // occupy, or the page jumps by the difference the moment WhenNear
+  // swaps the placeholder for the real section (a CLS regression the
+  // 460px flat number left on the table once the card's motion moved
+  // into a 2.6-viewport-tall scroll track).
+  cardRoom: { height: '260dvh' as unknown as number },
   card: { alignItems: 'center', gap: SPACING.xl },
   // The showpiece hangs a third of itself past the band's bottom edge.
   cardStage: { marginBottom: -110, zIndex: 1 },

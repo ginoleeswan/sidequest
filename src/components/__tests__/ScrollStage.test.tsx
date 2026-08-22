@@ -14,20 +14,20 @@ describe('ScrollStage without pinning', () => {
     expect(screen.getByText('the showpiece')).toBeTruthy();
   });
 
-  it('hands children a finished progress value, so nothing waits for a scroll that will never come', async () => {
-    let seen = -1;
+  it('hands children undefined rather than a finished value, so nothing waits for a scroll that will never come', async () => {
+    let seen: unknown = 'not called';
     await render(
       <ScrollStage track={2.6}>
         {(progress) => {
-          // Reading the private current value is the only synchronous
-          // way to assert what the child was given.
-          seen = (
-            progress as unknown as { __getValue(): number }
-          ).__getValue();
+          // undefined tells the child "there is no driver" — the same
+          // signal MemcardBuild's own optional `progress` prop already
+          // understands as "run your own clock". A finished `1` would
+          // instead have the child believe the build already played out.
+          seen = progress;
           return <Text>x</Text>;
         }}
       </ScrollStage>
     );
-    expect(seen).toBe(1);
+    expect(seen).toBeUndefined();
   });
 });

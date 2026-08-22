@@ -31,7 +31,16 @@ export function ScrollStage({
 }: {
   /** The track's height as a multiple of the viewport. */
   track: number;
-  children: (progress: Animated.Value) => React.ReactNode;
+  /**
+   * `undefined` on the unpinned path (native, or reduced motion), never
+   * a finished `1`. A stage that lies about being finished forces every
+   * consumer to remember to treat that particular value as "no driver,
+   * run your own clock" — one caller forgetting produces a reader who
+   * never sees the build, only its result. Passing `undefined` instead
+   * makes that the consumer's own "no driver" branch structurally, the
+   * same way `MemcardBuild`'s optional `progress` prop already works.
+   */
+  children: (progress: Animated.Value | undefined) => React.ReactNode;
 }) {
   const reduced = useReducedMotion();
   // Native has no sticky at all, and a reader who asked for less motion
@@ -79,7 +88,7 @@ export function ScrollStage({
     };
   }, [pinned, progress]);
 
-  if (!pinned) return <View>{children(progress)}</View>;
+  if (!pinned) return <View>{children(undefined)}</View>;
 
   return (
     <View ref={ref} style={trackStyle(track)}>
