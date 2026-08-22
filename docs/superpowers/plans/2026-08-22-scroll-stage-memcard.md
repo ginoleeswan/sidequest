@@ -4,7 +4,7 @@
 
 **Goal:** Build the `ScrollStage` pinning primitive and re-drive `MemcardBuild`'s 5.4-second build animation from scroll position instead of `setTimeout`, so the showpiece plays under the reader's control instead of finishing off-screen.
 
-**Architecture:** A track `View` sized in `dvh` holds a `position: sticky` stage. A rAF-throttled scroll listener converts the track's `getBoundingClientRect()` into a 0→1 `Animated.Value`, handed to children by render prop. `MemcardBuild` gains one 0→1 *driver* value that every flier slices its own window out of — supplied either by the stage (scroll) or by an internal timing animation (native, reduced motion). That unification deletes the `setTimeout` array entirely.
+**Architecture:** A track `View` sized in `dvh` holds a `position: sticky` stage. A rAF-throttled scroll listener converts the track's `getBoundingClientRect()` into a 0→1 `Animated.Value`, handed to children by render prop. `MemcardBuild` gains one 0→1 _driver_ value that every flier slices its own window out of — supplied either by the stage (scroll) or by an internal timing animation (native, reduced motion). That unification deletes the `setTimeout` array entirely.
 
 **Tech Stack:** React Native 0.86 / react-native-web, Expo SDK 57, expo-router, `Animated`, Jest + @testing-library/react-native.
 
@@ -25,10 +25,12 @@
 ### Task 1: The progress maths
 
 **Files:**
+
 - Create: `src/lib/scrollStage.ts`
 - Test: `src/lib/__tests__/scrollStage.test.ts`
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: `stageProgress(top: number, trackHeight: number, viewportHeight: number): number` — `top` is the track's top edge in viewport coordinates (i.e. `getBoundingClientRect().top`). Returns 0→1.
 
@@ -125,10 +127,12 @@ git commit -m "Add the pinned-section progress maths"
 ### Task 2: The ScrollStage primitive
 
 **Files:**
+
 - Create: `src/components/ScrollStage.tsx`
 - Test: `src/components/__tests__/ScrollStage.test.tsx`
 
 **Interfaces:**
+
 - Consumes: `stageProgress` from Task 1.
 - Produces: `ScrollStage({ track, children })` where `track: number` is the section's height as a multiple of the viewport, and `children: (progress: Animated.Value) => React.ReactNode`. On web with motion allowed the child sees a live 0→1 value; on native or under reduced motion it sees a constant `1`.
 
@@ -267,7 +271,7 @@ export function ScrollStage({
  * cast `Sidebar` uses for its own `100dvh`.
  */
 const trackStyle = (track: number) =>
-  ({ height: `${Math.round(track * 100)}dvh` } as unknown as ViewStyle);
+  ({ height: `${Math.round(track * 100)}dvh` }) as unknown as ViewStyle;
 
 const STAGE = {
   position: 'sticky',
@@ -300,15 +304,23 @@ git commit -m "Add ScrollStage: a section that pins while its contents scrub"
 ### Task 3: The build timeline
 
 **Files:**
+
 - Modify: `src/components/MemcardBuild.tsx` (add an exported pure function; no behaviour change yet)
 - Test: `src/components/__tests__/memcardTimeline.test.ts`
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces, exported from `src/components/MemcardBuild.tsx`:
   ```ts
-  export interface BuildWindow { start: number; end: number }
-  export function buildTimeline(count: number): { settleEnd: number; windows: BuildWindow[] }
+  export interface BuildWindow {
+    start: number;
+    end: number;
+  }
+  export function buildTimeline(count: number): {
+    settleEnd: number;
+    windows: BuildWindow[];
+  };
   ```
   All values are fractions of the whole build, 0→1. `windows[i]` is when flier `i` is in flight.
 
@@ -419,10 +431,12 @@ git commit -m "Express the memcard build as proportions, not milliseconds"
 ### Task 4: Drive the build from one value
 
 **Files:**
+
 - Modify: `src/components/MemcardBuild.tsx`
 - Test: `src/components/__tests__/MemcardBuild.test.tsx` (create)
 
 **Interfaces:**
+
 - Consumes: `buildTimeline`, `buildDuration` from Task 3.
 - Produces: `MemcardBuild` gains one optional prop, `progress?: Animated.Value`. Given one, the build is driven by it (0 = nothing landed, 1 = finished). Given none, an internal timing animation drives it exactly as before. Existing call sites keep working unchanged.
 
@@ -453,7 +467,11 @@ const card: Memcard = {
 
 const games = [
   { id: 1, name: 'A game', background_image: 'https://media.rawg.io/a.jpg' },
-  { id: 2, name: 'Another game', background_image: 'https://media.rawg.io/b.jpg' },
+  {
+    id: 2,
+    name: 'Another game',
+    background_image: 'https://media.rawg.io/b.jpg',
+  },
 ] as never;
 
 describe('MemcardBuild', () => {
@@ -571,29 +589,31 @@ export function MemcardBuild({
 Then in the JSX, the card wrapper takes `settle` as before, and each `Flier` is handed its window instead of an index:
 
 ```tsx
-      {!reduced &&
-        (progress ? true : seen) &&
-        flights.map((flight, index) =>
-          flight.image && index >= landed ? (
-            <Flier
-              key={flight.block.id}
-              image={flight.image}
-              name={flight.block.name}
-              index={index}
-              flight={driver.interpolate({
-                inputRange: [
-                  timeline.windows[index].start,
-                  timeline.windows[index].end,
-                ],
-                outputRange: [0, 1],
-                extrapolate: 'clamp',
-              })}
-              slot={landingSlot(width, flight.block.month)}
-              width={width}
-              height={height}
-            />
-          ) : null
-        )}
+{
+  !reduced &&
+    (progress ? true : seen) &&
+    flights.map((flight, index) =>
+      flight.image && index >= landed ? (
+        <Flier
+          key={flight.block.id}
+          image={flight.image}
+          name={flight.block.name}
+          index={index}
+          flight={driver.interpolate({
+            inputRange: [
+              timeline.windows[index].start,
+              timeline.windows[index].end,
+            ],
+            outputRange: [0, 1],
+            extrapolate: 'clamp',
+          })}
+          slot={landingSlot(width, flight.block.month)}
+          width={width}
+          height={height}
+        />
+      ) : null
+    );
+}
 ```
 
 And `Flier` loses its own animation entirely — delete its `useAnimatedValue` and its `useEffect`, and take the value as a prop:
@@ -645,9 +665,11 @@ git commit -m "Drive the memcard build from one value instead of eight timers"
 ### Task 5: Pin the memcard section
 
 **Files:**
+
 - Modify: `src/app/about.tsx` (the memcard band, currently the `WhenNear` block containing `<Drift>` and `<MemcardBuild>`)
 
 **Interfaces:**
+
 - Consumes: `ScrollStage` from Task 2, `MemcardBuild`'s `progress` prop from Task 4.
 - Produces: no new exports.
 
@@ -656,18 +678,18 @@ git commit -m "Drive the memcard build from one value instead of eight timers"
 In `src/app/about.tsx`, the memcard section currently wraps `MemcardBuild` in `<Drift distance={-22}>` inside a `Band`. Replace the `Drift` wrapper with a `ScrollStage`, and hand its progress to the build. `Drift` goes: it existed to give the card a little parallax as it passed, and the stage now owns every bit of the card's motion — two things moving the same object is how the showpiece ends up drifting out from under its own animation.
 
 ```tsx
-            <ScrollStage track={2.6}>
-              {(progress) => (
-                <View style={styles.cardStage}>
-                  <MemcardBuild
-                    card={sampleCard(games)}
-                    games={games ?? []}
-                    maxWidth={scale.wide ? 1000 : 640}
-                    progress={progress}
-                  />
-                </View>
-              )}
-            </ScrollStage>
+<ScrollStage track={2.6}>
+  {(progress) => (
+    <View style={styles.cardStage}>
+      <MemcardBuild
+        card={sampleCard(games)}
+        games={games ?? []}
+        maxWidth={scale.wide ? 1000 : 640}
+        progress={progress}
+      />
+    </View>
+  )}
+</ScrollStage>
 ```
 
 Add `import { ScrollStage } from '@/components/ScrollStage';` to the imports. `Drift` is used exactly once on this page (`about.tsx:621`), so its import at line 25 becomes unused and must go too or lint fails — confirm with `grep -n "Drift" src/app/about.tsx` first.
@@ -691,6 +713,7 @@ npx expo start --web --port 8090
 ```
 
 Then at 1440×900 and again at 390×844:
+
 - the card holds still while the covers fly in and land, one per scroll
 - the stamp comes down at the end of the section, not before
 - scrolling back up runs the build backwards
@@ -705,6 +728,7 @@ In the browser devtools, enable **Rendering → Emulate CSS media feature prefer
 ```bash
 npm run build && npm run test:perf
 ```
+
 Expected: passes. CLS is the one at risk — if it regressed, Step 2's placeholder height is the first thing to check.
 
 - [ ] **Step 6: Prove the page's claims still render**

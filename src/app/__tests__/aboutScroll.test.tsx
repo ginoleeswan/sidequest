@@ -20,19 +20,15 @@ import { renderApp } from '@/test-utils';
  * no style override at all off web, so native scrolling is provably
  * unchanged by this fix.
  */
-it(
-  'leaves the native ScrollView unstyled by the web-only overflow fix',
-  async () => {
-    await renderApp(<AboutScreen />);
-    // Asserted against the helper's own output, not a bare `toBeNull()`
-    // — a `toBeNull()` here would pass equally if `webScrollContainerStyle`
-    // started returning `null` on web too, which would silently undo the
-    // sticky-pinning fix it exists to apply. Tying the two together means
-    // this test can only pass if the page is actually wired to the
-    // helper's real, platform-dependent result.
-    expect(screen.getByTestId('about-scroll').props.style).toBe(
-      webScrollContainerStyle(Platform.OS)
-    );
-  },
-  45_000
-);
+it('leaves the native ScrollView unstyled by the web-only overflow fix', async () => {
+  await renderApp(<AboutScreen />);
+  // Asserted against the helper's own output, not a bare `toBeNull()`
+  // — a `toBeNull()` here would pass equally if `webScrollContainerStyle`
+  // started returning `null` on web too, which would silently undo the
+  // sticky-pinning fix it exists to apply. Tying the two together means
+  // this test can only pass if the page is actually wired to the
+  // helper's real, platform-dependent result.
+  expect(screen.getByTestId('about-scroll').props.style).toBe(
+    webScrollContainerStyle(Platform.OS)
+  );
+}, 45_000);

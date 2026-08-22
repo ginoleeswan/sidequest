@@ -24,7 +24,11 @@ const card: Memcard = {
 
 const games = [
   { id: 1, name: 'A game', background_image: 'https://media.rawg.io/a.jpg' },
-  { id: 2, name: 'Another game', background_image: 'https://media.rawg.io/b.jpg' },
+  {
+    id: 2,
+    name: 'Another game',
+    background_image: 'https://media.rawg.io/b.jpg',
+  },
 ] as never;
 
 /**

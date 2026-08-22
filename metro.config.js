@@ -20,10 +20,13 @@ const DATA_PREFIX = '/rawg/';
 
 function proxyMedia(req, res) {
   https
-    .get('https://media.rawg.io/' + req.url.slice(MEDIA_PREFIX.length), (upstreamRes) => {
-      res.writeHead(upstreamRes.statusCode ?? 502, upstreamRes.headers);
-      upstreamRes.pipe(res);
-    })
+    .get(
+      'https://media.rawg.io/' + req.url.slice(MEDIA_PREFIX.length),
+      (upstreamRes) => {
+        res.writeHead(upstreamRes.statusCode ?? 502, upstreamRes.headers);
+        upstreamRes.pipe(res);
+      }
+    )
     .on('error', () => {
       res.writeHead(502);
       res.end('RAWG media proxy error');
@@ -49,21 +52,28 @@ function proxyData(req, res) {
   url.searchParams.set('key', key);
 
   https
-    .get(`https://api.rawg.io/api/${path}?${url.searchParams}`, (upstreamRes) => {
-      const chunks = [];
-      upstreamRes.on('data', (chunk) => chunks.push(chunk));
-      upstreamRes.on('end', () => {
-        // RAWG embeds this same URL — key included — in list responses'
-        // next/previous fields. The app never follows them, so the key
-        // is scrubbed outright rather than rewritten.
-        const body = Buffer.concat(chunks).toString('utf8').split(key).join('');
-        res.writeHead(upstreamRes.statusCode ?? 502, {
-          'Content-Type': upstreamRes.headers['content-type'] ?? 'application/json',
-          'Content-Length': Buffer.byteLength(body),
+    .get(
+      `https://api.rawg.io/api/${path}?${url.searchParams}`,
+      (upstreamRes) => {
+        const chunks = [];
+        upstreamRes.on('data', (chunk) => chunks.push(chunk));
+        upstreamRes.on('end', () => {
+          // RAWG embeds this same URL — key included — in list responses'
+          // next/previous fields. The app never follows them, so the key
+          // is scrubbed outright rather than rewritten.
+          const body = Buffer.concat(chunks)
+            .toString('utf8')
+            .split(key)
+            .join('');
+          res.writeHead(upstreamRes.statusCode ?? 502, {
+            'Content-Type':
+              upstreamRes.headers['content-type'] ?? 'application/json',
+            'Content-Length': Buffer.byteLength(body),
+          });
+          res.end(body);
         });
-        res.end(body);
-      });
-    })
+      }
+    )
     .on('error', () => {
       res.writeHead(502);
       res.end('RAWG proxy error');

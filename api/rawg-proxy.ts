@@ -58,7 +58,10 @@ export default async function handler(
     headers?: Record<string, string | string[] | undefined>;
   },
   res: {
-    status: (code: number) => { json: (body: unknown) => void; send: (body: string) => void };
+    status: (code: number) => {
+      json: (body: unknown) => void;
+      send: (body: string) => void;
+    };
     setHeader: (name: string, value: string) => void;
   }
 ) {
@@ -83,7 +86,8 @@ export default async function handler(
   const key = process.env.RAWG_API_KEY?.trim();
   if (!key) {
     res.status(503).json({
-      error: 'RAWG is not configured — add RAWG_API_KEY to the deployment environment.',
+      error:
+        'RAWG is not configured — add RAWG_API_KEY to the deployment environment.',
     });
     return;
   }

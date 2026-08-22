@@ -188,9 +188,7 @@ export function ArcadeButton({
             a highlight painted on its face. */}
         <View style={styles.stack}>
           <Text style={styles.label}>{label}</Text>
-          {sublabel ? (
-            <Text style={styles.sublabel}>{sublabel}</Text>
-          ) : null}
+          {sublabel ? <Text style={styles.sublabel}>{sublabel}</Text> : null}
         </View>
         {/* The arrow sits in a socket rather than floating beside the
             word. A bare icon next to a label is the one part of this

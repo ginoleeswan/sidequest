@@ -259,7 +259,10 @@ export function LandingWall({
     const keptSlots = new Set(
       Array.from({ length: SURVIVORS }, (_, n) => {
         const lane = Math.round(((n + 1) * (columns - 1)) / (SURVIVORS + 1));
-        const row = Math.min(rows - 1, Math.floor(rows / 2) + (n % 2 === 0 ? 0 : 1));
+        const row = Math.min(
+          rows - 1,
+          Math.floor(rows / 2) + (n % 2 === 0 ? 0 : 1)
+        );
         return `${lane}:${row}`;
       })
     );

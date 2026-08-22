@@ -92,9 +92,7 @@ describe('renderPreview', () => {
   it('is readable by a crawler that ignores meta tags', () => {
     const html = renderPreview(game(), '123');
     expect(html).toContain('<h1>Hollow Knight: Silksong</h1>');
-    expect(html).toContain(
-      'href="https://gosidequest.vercel.app/game/123"'
-    );
+    expect(html).toContain('href="https://gosidequest.vercel.app/game/123"');
   });
 });
 

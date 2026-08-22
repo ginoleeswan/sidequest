@@ -23,7 +23,7 @@ Both halves already exist in the repo and are proven:
 
 - **Pinning.** `position: sticky` is used in four places today, with a
   house pattern for RN's missing types — `({ position: 'sticky', top: 0
-  } as unknown as ViewStyle)`. `Sidebar.tsx:162` already pins at
+} as unknown as ViewStyle)`. `Sidebar.tsx:162` already pins at
   `height: '100dvh'`, which is the unit that avoids the iOS Safari
   viewport-unit problem.
 - **Scrubbing.** `LandingWall` already maps `window.scrollY` to an
@@ -49,8 +49,8 @@ sections so the fallbacks are written once.
 </ScrollStage>
 ```
 
-**Structure.** An outer *track* `View` with `height: ${track * 100}dvh`,
-containing an inner *stage* `View` at `position: sticky; top: 0; height:
+**Structure.** An outer _track_ `View` with `height: ${track * 100}dvh`,
+containing an inner _stage_ `View` at `position: sticky; top: 0; height:
 100dvh; overflow: hidden`. The reader scrolls the track; the stage stays.
 
 **Progress.** On each scroll frame (rAF-throttled, one write per paint,
