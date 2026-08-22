@@ -24,6 +24,7 @@ import { LandingTry } from '@/components/LandingTry';
 import { LandingCalendar } from '@/components/LandingCalendar';
 import { LandingWatch } from '@/components/LandingWatch';
 import { MemcardBuild } from '@/components/MemcardBuild';
+import { MemcardPanel } from '@/components/MemcardPanel';
 import { QuestLine, QuestMark } from '@/components/QuestLine';
 import { BeatDeck, BeatWash } from '@/components/BeatDeck';
 import { Seam, type SeamVariant } from '@/components/Seam';
@@ -175,6 +176,7 @@ function Band({
   scale,
   tone = 'ground',
   style,
+  air,
   raise = false,
   seam,
   seamVariant = 'lip',
@@ -183,6 +185,21 @@ function Band({
   scale: LandingScale;
   tone?: 'ground' | 'well';
   style?: StyleProp<ViewStyle>;
+  /**
+   * Room above and below, overriding the page's own `scale.air`.
+   *
+   * A prop rather than a `style` override, and that is not fussiness.
+   * The band applies its air as an INLINE object; react-native-web
+   * turns registered `StyleSheet` entries into classes and leaves
+   * inline objects inline, and inline wins on specificity whatever the
+   * array order says. A `styles.tighter` passed as `style` therefore
+   * looks correct at the call site, reads correct in the array, and
+   * does nothing — measured as 64 points of padding on a band that had
+   * asked for 20. Taking the number as a prop puts it in the same
+   * inline object as the default, where last-write-wins is the rule
+   * that actually applies.
+   */
+  air?: number;
   /**
    * Paint above the next band, so a child can sit on the lip between
    * the two. Later siblings win by default; this reverses it for the
@@ -230,7 +247,10 @@ function Band({
         <View
           style={[
             styles.measure,
-            { paddingHorizontal: scale.inset, paddingVertical: scale.air },
+            {
+              paddingHorizontal: scale.inset,
+              paddingVertical: air ?? scale.air,
+            },
             style,
           ]}
         >
@@ -369,31 +389,97 @@ export default function AboutScreen() {
             hero pinned to a real number is steadier on iOS anyway, where
             a vh-shaped box grows by a toolbar's worth the moment
             anybody scrolls. */}
-        <View style={[styles.masthead, isExpanded && styles.mastheadWide]}>
+        {/* The hero and the statistic are ONE surface.
+            Not two sections that meet politely — one region, with one
+            wall, one scrim over it and one fade that closes it. That is
+            the whole design, and it took three wrong versions to arrive
+            at, each of which drew a line across the page in a different
+            way. The wall lived inside the masthead first, clipped to
+            it, so the artwork stopped dead on a horizontal edge. Moving
+            it out without moving the scrim left the wall below the hero
+            with nothing over it, and the artwork under the hero came
+            out BRIGHTER than the artwork in it. Adding a second scrim
+            below to fix that put the two gradients edge to edge, and
+            two gradients that meet always show where.
+            Every layer here therefore spans the ENTIRE region and is
+            positioned in fractions of it. There is no join to see
+            because there is nowhere for one to be. */}
+        <View style={styles.heroRegion}>
           {/* Rows alongside columns, because the two are one fact about
               this breakpoint: seven narrow lanes need seven covers each
               to reach the bottom of a 760pt hero, four wide ones on a
               phone need nine to cross 620pt at their smaller pitch.
               Both overfill deliberately — `wall` crops, and the covers
-              are thumbnails. */}
-          <LandingWall columns={isExpanded ? 7 : 4} rows={isExpanded ? 7 : 9} />
+              are thumbnails.
+
+              More of both since the region grew past the masthead. The
+              lanes centre their covers and stretch to the wall's full
+              height, so a wall taller than its own content does not
+              spread the heap out — it opens a gap of bare ground at
+              each end, which on this page is the hard edge again with
+              extra steps. The overfill has to survive the taller box. */}
+          <LandingWall
+            columns={isExpanded ? 7 : 4}
+            rows={isExpanded ? 10 : 13}
+          />
           {/* Heavy where the words are, open at the top right, so the
-                pile is visible without ever competing with the line it
-                exists to prove. */}
+              pile is visible without ever competing with the line it
+              exists to prove.
+              Across the whole region rather than the masthead, and it
+              never closes completely — the diagonal cannot be what
+              shuts the artwork off, because a diagonal reaches the
+              bottom of its box at one corner and leaves the other
+              corner open. Closing is the next layer's job. The stops
+              moved earlier to compensate for the taller box: the
+              headline sits at the same points on the page but a
+              smaller fraction of the way down it, so a scrim tuned for
+              a 620pt hero would arrive under the copy far too light. */}
           <LinearGradient
             colors={[
-              'rgba(39,47,63,0.22)',
-              'rgba(39,47,63,0.62)',
+              'rgba(39,47,63,0.20)',
+              'rgba(39,47,63,0.60)',
+              'rgba(39,47,63,0.90)',
               'rgba(39,47,63,0.94)',
-              LANDING_GROUND,
             ]}
-            locations={[0, 0.44, 0.8, 1]}
+            locations={[0, 0.32, 0.6, 1]}
             start={{ x: 0.75, y: 0 }}
             end={{ x: 0.15, y: 1 }}
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
           />
-          {/* The page's first pixels, in exactly the colour iOS Safari
+          {/* And the layer that closes it, straight down.
+              Held at nothing through the hero so the artwork there is
+              the diagonal's business alone, then ramping to the page's
+              own ground and reaching it before the region ends. Every
+              stop is a fraction of the region, so the fade cannot come
+              adrift of the box the way a fixed height did — and because
+              it finishes above the region's foot, the last stretch is
+              already exactly the page below it. */}
+          <LinearGradient
+            colors={[
+              'rgba(39,47,63,0)',
+              'rgba(39,47,63,0)',
+              'rgba(39,47,63,0.55)',
+              LANDING_GROUND,
+            ]}
+            locations={[0, 0.46, 0.72, 0.93]}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+          {/* The page's own surface, over all of it.
+              The grain is painted BEHIND everything by the wrapper
+              around the document, so any opaque stop above covers it —
+              and the region's foot came out flat navy meeting grained
+              navy, which is a seam made of texture rather than tone and
+              reads exactly as hard. Laid over the whole region instead
+              of over the faded part, because a grain that starts
+              somewhere is one more edge to find. The hero's artwork
+              picks it up too, which is correct: the rest of the page is
+              this surface, and the hero was the one stretch pretending
+              otherwise. */}
+          <Textured fill />
+          <View style={[styles.masthead, isExpanded && styles.mastheadWide]}>
+            {/* The page's first pixels, in exactly the colour iOS Safari
               paints its status bar — and then a long way down before it
               lets go of it.
 
@@ -416,59 +502,59 @@ export default function AboutScreen() {
               This is opaque for about fifteen pixels and then eases out
               over a hundred and thirty, which is a scrim rather than an
               edge. */}
-          <LinearGradient
-            colors={[
-              LANDING_GROUND,
-              LANDING_GROUND,
-              'rgba(39,47,63,0.86)',
-              'rgba(39,47,63,0.55)',
-              'rgba(39,47,63,0.22)',
-              'rgba(39,47,63,0)',
-            ]}
-            locations={[0, 0.1, 0.3, 0.52, 0.75, 1]}
-            style={[
-              styles.statusMatch,
-              { height: safe.top + (isExpanded ? 110 : 150) },
-            ]}
-            pointerEvents="none"
-          />
-          {/* On the same column as every band below, so the headline
+            <LinearGradient
+              colors={[
+                LANDING_GROUND,
+                LANDING_GROUND,
+                'rgba(39,47,63,0.86)',
+                'rgba(39,47,63,0.55)',
+                'rgba(39,47,63,0.22)',
+                'rgba(39,47,63,0)',
+              ]}
+              locations={[0, 0.1, 0.3, 0.52, 0.75, 1]}
+              style={[
+                styles.statusMatch,
+                { height: safe.top + (isExpanded ? 110 : 150) },
+              ]}
+              pointerEvents="none"
+            />
+            {/* On the same column as every band below, so the headline
               and the section leads share a left edge. */}
-          <View
-            style={[
-              styles.measure,
-              styles.mastheadCopy,
-              { paddingHorizontal: inset, paddingTop: safe.top + SPACING.xl },
-            ]}
-          >
-            {/* No back chevron. Most people reach this page from a link
+            <View
+              style={[
+                styles.measure,
+                styles.mastheadCopy,
+                { paddingHorizontal: inset, paddingTop: safe.top + SPACING.xl },
+              ]}
+            >
+              {/* No back chevron. Most people reach this page from a link
                   and have nowhere to go back to; the ones who came from
                   the footer have a browser button and the mark below. */}
-            <Animated.View style={[styles.lockup, step(0, 0.35)]}>
-              <MarkDraw size={40} />
-              <Text style={styles.word}>SIDEQUEST</Text>
-            </Animated.View>
-            {/* Say WHICH games, not "what".
+              <Animated.View style={[styles.lockup, step(0, 0.35)]}>
+                <MarkDraw size={40} />
+                <Text style={styles.word}>SIDEQUEST</Text>
+              </Animated.View>
+              {/* Say WHICH games, not "what".
                 "Know what you can actually finish" is a fine line and an
                 ambiguous one: finish what — books, jobs, the washing? A
                 stranger who has never heard of this should not have to
                 infer the category from the artwork behind the words. */}
-            <Animated.Text
-              style={[styles.headline, scale.display, step(0.08, 0.6)]}
-            >
-              Know which games you can actually finish.
-            </Animated.Text>
-            {/* Two short sentences: what you give it, what it knows.
+              <Animated.Text
+                style={[styles.headline, scale.display, step(0.08, 0.6)]}
+              >
+                Know which games you can actually finish.
+              </Animated.Text>
+              {/* Two short sentences: what you give it, what it knows.
                 The outcome is already in the headline, so saying it
                 again here cost twenty-seven words to repeat a claim the
                 reader had just read. What it could not skip is the
                 input — time you actually have — because that is the
                 promise the rest of the page has to keep. */}
-            <Animated.Text style={[styles.standfirst, step(0.2, 0.75)]}>
-              Tell it how much time you get. It knows how long games take.
-            </Animated.Text>
-            <Animated.View style={step(0.32, 0.9)}>{open}</Animated.View>
-            {/* The objections a stranger has, answered before they are
+              <Animated.Text style={[styles.standfirst, step(0.2, 0.75)]}>
+                Tell it how much time you get. It knows how long games take.
+              </Animated.Text>
+              <Animated.View style={step(0.32, 0.9)}>{open}</Animated.View>
+              {/* The objections a stranger has, answered before they are
                 asked, and all in one place.
                 "No account" was moved out of here once, when the button
                 carried it in a line of its own — a claim made twice
@@ -478,59 +564,75 @@ export default function AboutScreen() {
                 from the hero: no account is the promise the calendar
                 hand-off and the Twitch lookup are both shaped around,
                 and it is not a detail this page can afford to drop. */}
-            <Animated.Text style={[styles.terms, step(0.4, 1)]}>
-              Free · No account · Nothing to install
-            </Animated.Text>
+              <Animated.Text style={[styles.terms, step(0.4, 1)]}>
+                Free · No account · Nothing to install
+              </Animated.Text>
+            </View>
           </View>
-        </View>
 
-        {/* The arithmetic nobody does for themselves, set as the number
-            it is. This is the whole case for the product, and it is
-            more persuasive than any sentence about it. */}
-        <WhenNear
-          placeholder={<View style={styles.sumRoom} />}
-          style={styles.raise}
-        >
-          <Band
-            tone="well"
-            scale={scale}
-            style={styles.sumBand}
-            raise
-            seam={0}
-            seamVariant="card"
-          >
-            <QuestMark id="sum" />
-            {/* One stack at every width, not a numeral beside a column
-                of body copy.
-                The wide layout used to set the figure left and its
-                explanation in a second column — measured at 1100pt, 130
-                points of empty band between a number and the only text
-                that says what it is. A reader scrolling past saw a very
-                large 900 and nothing attached to it, which is exactly
-                what the band is for and exactly what it failed to do.
-                Stacked, the eyebrow names the quantity, the figure is
-                the quantity, and the sentence under it is the point —
-                in that order, down one left edge, with nothing to look
-                across a band for. */}
-            <Sum figure={figure} unit={unit} />
-            <Rise from="below" delay={220}>
-              {/* The argument, at the size an argument gets.
-                  This was two lines of grey body copy: "The average
-                  week has about six" — six of what, arriving after a
-                  number labelled hours — and a conclusion that did not
-                  follow from it. One sentence carries both operands and
-                  the result now, so the number explains itself where it
-                  is read, and it is set at the page's column size
-                  rather than at body: the figure is the evidence and
-                  this is the verdict, and a verdict in grey at
-                  seventeen points under a numeral at two hundred is not
-                  a hierarchy, it is a footnote. */}
-              <Text style={[styles.sumVerdict, scale.leadColumn]}>
-                {PILE_VERDICT}
-              </Text>
-            </Rise>
-          </Band>
-        </WhenNear>
+          {/* The arithmetic nobody does for themselves, set as the number
+              it is. This is the whole case for the product, and it is
+              more persuasive than any sentence about it. */}
+          <WhenNear placeholder={<View style={styles.sumRoom} />}>
+            {/* No seam, above or below.
+              A seam is the edge between two grounds, and there is no
+              longer an edge here: the statistic used to be a well
+              stripe, so the page needed a line to say where the paint
+              changed. It is a card on the page's own ground now, and a
+              hairline over continuous ground is a rule drawn around
+              nothing — it cut the card off from the hero it belongs to
+              and from the question underneath that answers it. The
+              band below drops its seam for the same reason, so the
+              three read as one stretch of page with an object sitting
+              on it. */}
+            <Band scale={scale} air={SPACING.md}>
+              <QuestMark id="sum" />
+              {/* A memory card, not a stripe.
+                The statistic used to be a full-bleed well — a change of
+                ground, which is the page's quietest device and the one
+                it uses seven other times. This is the reader's own pile
+                stated as a number, and it lands harder as an object
+                than as a paint change: the memory-card silhouette is
+                the app's own hardware, and a save is exactly what nine
+                hundred unplayed hours is. The band keeps the page's
+                ground behind it so the card reads as sitting ON the
+                page rather than as another band of it, and the seam
+                above drops to a plain lip, because a chapter edge and a
+                card in the same two hundred points was the silhouette
+                twice.
+
+                One stack inside it, at every width. The wide layout set
+                the figure left and its explanation in a second column —
+                measured at 1100pt, 130 points of empty band between a
+                number and the only text that says what it is. A reader
+                scrolling past saw a very large 900 with nothing
+                attached to it, which is what the band is for and what
+                it failed at. */}
+              <MemcardPanel
+                style={styles.sumCard}
+                contentStyle={styles.sumInner}
+              >
+                <Sum figure={figure} unit={unit} />
+                <Rise from="below" delay={220}>
+                  {/* The argument, at the size an argument gets.
+                    This was two lines of grey body copy: "The average
+                    week has about six" — six of what, arriving after a
+                    number labelled hours — and a conclusion that did
+                    not follow from it. One sentence carries both
+                    operands and the result now, so the number explains
+                    itself where it is read, and it is set at the page's
+                    column size rather than at body: the figure is the
+                    evidence and this is the verdict, and a verdict in
+                    grey at seventeen points under a numeral at two
+                    hundred is not a hierarchy, it is a footnote. */}
+                  <Text style={[styles.sumVerdict, scale.leadColumn]}>
+                    {PILE_VERDICT}
+                  </Text>
+                </Rise>
+              </MemcardPanel>
+            </Band>
+          </WhenNear>
+        </View>
 
         {/* The problem is stated above. This is the reader's own copy of
             it, answered — the app's real scheduler, on real games, in a
@@ -539,7 +641,14 @@ export default function AboutScreen() {
             six sections and only then lets you touch something has the
             order backwards. */}
         <WhenNear placeholder={<View style={styles.tryRoom} />}>
-          <Band scale={scale} seam={1}>
+          {/* Tight to the card above it, not a band's worth of air.
+              The full `scale.air` belongs above a band that announces
+              itself with a change of ground; this one follows a card on
+              the same surface, and the question it asks is the direct
+              answer to the number on that card. A screenful of nothing
+              between the two makes the reader cross a gap to reach a
+              reply. */}
+          <Band scale={scale} air={SPACING.lg}>
             <QuestMark id="try" />
             <LandingTry scale={scale} />
           </Band>
@@ -555,7 +664,7 @@ export default function AboutScreen() {
             BECAUSE an integration would need OAuth, a server, and an
             account. */}
         <WhenNear placeholder={<View style={styles.calendarRoom} />}>
-          <Band tone="well" scale={scale} seam={2} seamVariant="card">
+          <Band tone="well" scale={scale} seam={0} seamVariant="card">
             <QuestMark id="calendar" />
             <LandingCalendar scale={scale} games={games} />
           </Band>
@@ -567,7 +676,7 @@ export default function AboutScreen() {
             answers the last doubt the plan cannot — whether you'll
             actually like it. */}
         <WhenNear placeholder={<View style={styles.watchRoom} />}>
-          <Band scale={scale} seam={3}>
+          <Band scale={scale} seam={1}>
             <QuestMark id="streams" />
             <LandingWatch scale={scale} games={games} />
           </Band>
@@ -577,7 +686,7 @@ export default function AboutScreen() {
             of the detail. Somebody deciding whether to bother needs to
             know what will be asked of them, and three numbered steps is
             the plainest way to say it. */}
-        <Band scale={scale} seam={4}>
+        <Band scale={scale} seam={2}>
           <QuestMark id="how" />
           <HowItWorks scale={scale} />
         </Band>
@@ -712,7 +821,7 @@ export default function AboutScreen() {
             scale={scale}
             style={styles.card}
             raise
-            seam={5}
+            seam={3}
             seamVariant="card"
           >
             <QuestMark id="memcard" />
@@ -754,7 +863,7 @@ export default function AboutScreen() {
         </WhenNear>
 
         {/* The long tail, ranked below everything argued above it. */}
-        <Band scale={scale} seam={6}>
+        <Band scale={scale} seam={4}>
           <QuestMark id="index" />
           <FeatureIndex scale={scale} />
         </Band>
@@ -766,7 +875,7 @@ export default function AboutScreen() {
           placeholder={<View style={styles.takeRoom} />}
           style={styles.raise}
         >
-          <Band tone="well" scale={scale} raise seam={7} seamVariant="card">
+          <Band tone="well" scale={scale} raise seam={5} seamVariant="card">
             <QuestMark id="take" />
             <LandingTake scale={scale} />
           </Band>
@@ -774,7 +883,7 @@ export default function AboutScreen() {
 
         <Band
           scale={scale}
-          seam={8}
+          seam={6}
           style={[
             // The phone above deliberately hangs over this band's
             // seam; the headline needs to start below its overhang,
@@ -841,9 +950,16 @@ const styles = StyleSheet.create({
   scroll: { maxWidth: 1600, width: '100%', alignSelf: 'center' },
 
   // masthead
+  /**
+   * The hero and the statistic under it, over one background.
+   *
+   * The clip lives here now rather than on the masthead: the wall is a
+   * region-wide object, and clipping it at the masthead's foot is
+   * exactly the hard horizontal edge this exists to remove.
+   */
+  heroRegion: { overflow: 'hidden' },
   masthead: {
     justifyContent: 'flex-end',
-    overflow: 'hidden',
     minHeight: 620,
   },
   mastheadWide: { minHeight: 760 },
@@ -929,7 +1045,48 @@ const styles = StyleSheet.create({
    * sentence in half — the number and its meaning read as two
    * exhibits.
    */
-  sumBand: { paddingTop: 0, paddingBottom: SPACING.lg, gap: SPACING.md },
+  /**
+   * Its own air, far tighter than the page's.
+   *
+   * Every other band pays `scale.air` — 64 points on a phone, 110 on a
+   * monitor — because a band is a change of ground and needs room
+   * either side of the line that announces it. This one has no line and
+   * no change of ground: it is a card lying on the same page as the
+   * hero above it and the question below. At full air it read as an
+   * isolated section with a card marooned in the middle of it, which is
+   * the opposite of what the card was for — the pile and the question
+   * that answers it belong in the same breath.
+   */
+  /**
+   * Its own air, far tighter than the page's.
+   *
+   * Every other band pays `scale.air` — 64 points on a phone, 110 on a
+   * monitor — because a band is a change of ground and needs room
+   * either side of the line that announces it. This one has no line and
+   * no change of ground: it is a card lying on the hero's own
+   * background. At full air it read as an isolated section with a card
+   * marooned in the middle of it, which is the opposite of what the
+   * card is for — the pile and the hero that names it belong in the
+   * same breath.
+   */
+  /**
+   * Capped short of the full measure. A memory card is a hand-sized
+   * object, and one stretched to a 1180pt column stops being a card and
+   * becomes a stripe with a nick in its corner — which is the thing
+   * this replaced.
+   */
+  sumCard: { maxWidth: 760, alignSelf: 'flex-start' },
+  /**
+   * Generous, because the notch eats the top right and the grooves sit
+   * in the first ten points: content that starts where an ordinary
+   * card's would runs straight into the cut.
+   */
+  sumInner: {
+    paddingTop: SPACING.xl + 6,
+    paddingBottom: SPACING.xl,
+    paddingHorizontal: SPACING.xl,
+    gap: SPACING.md,
+  },
   sumLead: { ...TYPE.micro, color: COLORS.mediumGrey },
   sumLine: {
     flexDirection: 'row',

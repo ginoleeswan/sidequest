@@ -41,27 +41,48 @@ import { TYPE } from '@/styles/typography';
  * say plainly what is being asked.
  */
 /**
- * The four honest answers, each named after a life rather than a number.
+ * The four honest answers: one word and one picture each.
  *
- * "2h" was the headline and the life was the caption, which asks the
- * reader to translate their week into hours before they can answer —
- * the one piece of arithmetic this product promises to do for them.
- * Flipped, the chip asks a question anyone can answer on sight: which
- * of these is your week? A parent recognises "after bedtime" faster
- * than any number, a student "school nights", a nine-to-fiver "after
- * work". The hours stay, small, because the scheduler runs on them and
- * hiding the number would make the answer feel like a guess.
+ * Two revisions got here. "2h" was the headline and the life was the
+ * caption, which asks the reader to translate their week into hours
+ * before they can answer — the one piece of arithmetic this product
+ * promises to do for them. Flipping those was right and left the
+ * labels as phrases: "After bedtime", "School nights", "Free
+ * weekends". Four two-word captions in four boxes is a paragraph
+ * arranged in a grid, and it forced a 20pt icon into a corner of its
+ * own button where it decorated the words instead of being the answer.
+ *
+ * One word each, and the picture at nearly twice the size. A moon, a
+ * mortarboard, a briefcase, a sun — these are read before any label
+ * is, so the label's whole job is to remove the ambiguity of the
+ * drawing, and one word does that. "Bedtime" is not a shorter way of
+ * saying "after bedtime"; under a moon it is the same sentence with
+ * the redundant half taken out.
+ *
+ * The hours stay, small, because the scheduler runs on them and hiding
+ * the number would make the answer feel like a guess.
  */
 const PACES: {
   hours: number;
   life: string;
   icon: keyof typeof Ionicons.glyphMap;
 }[] = [
-  { hours: 2, life: 'After bedtime', icon: 'moon' },
-  { hours: 5, life: 'School nights', icon: 'school' },
-  { hours: 10, life: 'After work', icon: 'briefcase' },
-  { hours: 20, life: 'Free weekends', icon: 'sunny' },
+  { hours: 2, life: 'Bedtime', icon: 'moon' },
+  { hours: 5, life: 'School', icon: 'school' },
+  { hours: 10, life: 'Work', icon: 'briefcase' },
+  { hours: 20, life: 'Weekends', icon: 'sunny' },
 ];
+
+/**
+ * Big enough to be the answer rather than a bullet.
+ *
+ * At twenty points the glyph sat above the caption as decoration; the
+ * eye read the words and the picture was something the button also
+ * had. At thirty-four it is the first thing seen in each box, which is
+ * the point of naming the options after lives at all — a parent
+ * recognises the moon before they have read anything.
+ */
+const PACE_ICON = 34;
 
 /**
  * How far out to plan.
@@ -135,8 +156,16 @@ export function LandingTry({ scale }: { scale: LandingScale }) {
       <Rise from="mask">
         <Text style={styles.eyebrow}>Try it here. Nothing to sign up for.</Text>
       </Rise>
+      {/* "When", not "how much".
+          The question follows the answers, and the answers are four
+          times of day now — a moon, a school, a briefcase, a sun. A
+          reader asked "how much do you actually play?" and handed
+          "Bedtime" has to convert a life into a quantity before they
+          can pick, which is the exact translation this band exists to
+          do for them. Asked when, they already know. The quantity is
+          still what the scheduler runs on, and it is on every button. */}
       <Words
-        text="How much do you actually play?"
+        text="When do you actually play?"
         style={[styles.lead, scale.lead]}
         delay={60}
       />
@@ -154,14 +183,16 @@ export function LandingTry({ scale }: { scale: LandingScale }) {
                 accessibilityLabel={`${life} — about ${hours} hours a week`}
                 style={[styles.pace, on && styles.paceOn]}
               >
-                {/* The icon says the life before the word does — a
-                    moon is read faster than "after bedtime" — and the
-                    hours drop to a bare ≈Nh, because "a week" was said
-                    once above and did not need saying four times. */}
+                {/* The icon IS the answer, and the word disambiguates
+                    it — not the other way round. Hence the size: a moon
+                    is read faster than any label, and at twenty points
+                    it was a bullet above a caption. The hours stay a
+                    bare ≈Nh, because "a week" was said once above and
+                    did not need saying four times. */}
                 <Ionicons
                   name={icon}
-                  size={20}
-                  color={on ? COLORS.navy : COLORS.mediumGrey}
+                  size={PACE_ICON}
+                  color={on ? COLORS.navy : COLORS.lightGrey}
                 />
                 <Text style={[styles.paceLife, on && styles.paceLifeOn]}>
                   {life}
@@ -180,10 +211,16 @@ export function LandingTry({ scale }: { scale: LandingScale }) {
           me". The arithmetic does not care whose week it is, and that
           is the reassurance — not a promise that everyone will finish
           a lot. */}
+      {/* Shorter than it was, because the buttons now say most of it.
+          This used to list the lives — "school, shifts, work, kids,
+          retirement" — which was the reassurance and the button labels
+          in the same breath, and reads as the page explaining its own
+          controls. The four words are on the four buttons; what is
+          left to say is the part no button can. */}
       <Rise delay={170}>
         <Text style={styles.everyone}>
-          A week is a week — school, shifts, work, kids, retirement. The
-          arithmetic is the same; only the number changes.
+          Whatever your week looks like, the arithmetic is the same. Only the
+          number changes.
         </Text>
       </Rise>
 
@@ -377,12 +414,18 @@ const styles = StyleSheet.create({
     // which makes them two-by-two on a phone and four across on a
     // laptop, all identical in size at either. Four chips of four
     // different widths — one per caption length — read as a jumble.
+    //
+    // Narrower than it was, now that the captions are one word: at 128
+    // the labels sat in the middle of a box sized for "After bedtime",
+    // which left the buttons looking padded rather than square.
     flexGrow: 1,
-    flexBasis: 128,
+    flexBasis: 104,
     alignItems: 'center',
-    gap: 3,
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.md,
+    // Room to breathe under a 34pt glyph. At three points the word was
+    // touching the icon's descender box and the two read as one blob.
+    gap: SPACING.sm,
+    paddingVertical: SPACING.lg,
+    paddingHorizontal: SPACING.sm,
     borderRadius: RADIUS.lg,
     borderWidth: 2,
     borderColor: COLORS.strokeStrong,
