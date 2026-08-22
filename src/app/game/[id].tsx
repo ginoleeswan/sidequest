@@ -33,6 +33,7 @@ import { SessionTimer } from '@/components/SessionTimer';
 import { rememberGame } from '@/lib/recent';
 import { PlatformIcons } from '@/components/PlatformIcons';
 import { Rail } from '@/components/Rail';
+import { LiveStreams } from '@/components/LiveStreams';
 import { RatingsBreakdown } from '@/components/RatingsBreakdown';
 import { ReadMoreText } from '@/components/ReadMoreText';
 import { ScorePill } from '@/components/ScorePill';
@@ -505,6 +506,15 @@ export default function GameInfoScreen() {
           />
         </View>
       )}
+
+      {/* Below the trailers on purpose. A trailer is what the publisher
+          wants this game to look like; a live stream is what it looks
+          like. Renders nothing when nobody is live, when Twitch has no
+          such category, or when the deployment has no Twitch keys — so
+          it can never be the reason this page looks unfinished. */}
+      <View style={mediaBlock}>
+        <LiveStreams game={game.name} />
+      </View>
 
       {series.length > 0 && (
         <View style={mediaBlock}>

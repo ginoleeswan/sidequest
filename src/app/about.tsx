@@ -22,6 +22,7 @@ import { LandingShelf } from '@/components/LandingShelf';
 import { LandingTake } from '@/components/LandingTake';
 import { LandingTry } from '@/components/LandingTry';
 import { LandingCalendar } from '@/components/LandingCalendar';
+import { LandingWatch } from '@/components/LandingWatch';
 import { MemcardBuild } from '@/components/MemcardBuild';
 import { QuestLine, QuestMark } from '@/components/QuestLine';
 import { BeatDeck } from '@/components/BeatDeck';
@@ -539,11 +540,23 @@ export default function AboutScreen() {
           </Band>
         </WhenNear>
 
+        {/* Straight after the calendar, because they are the same idea
+            twice: the app reaching past itself without asking anyone to
+            log into anything. The plan leaves for your week; this
+            answers the last doubt the plan cannot — whether you'll
+            actually like it. */}
+        <WhenNear placeholder={<View style={styles.watchRoom} />}>
+          <Band scale={scale} seam={3}>
+            <QuestMark id="streams" />
+            <LandingWatch scale={scale} games={games} />
+          </Band>
+        </WhenNear>
+
         {/* The problem is stated above; this is the answer, before any
             of the detail. Somebody deciding whether to bother needs to
             know what will be asked of them, and three numbered steps is
             the plainest way to say it. */}
-        <Band scale={scale} seam={3}>
+        <Band scale={scale} seam={4}>
           <QuestMark id="how" />
           <HowItWorks scale={scale} />
         </Band>
@@ -669,7 +682,7 @@ export default function AboutScreen() {
             scale={scale}
             style={styles.card}
             raise
-            seam={4}
+            seam={5}
             seamVariant="card"
           >
             <QuestMark id="memcard" />
@@ -711,7 +724,7 @@ export default function AboutScreen() {
         </WhenNear>
 
         {/* The long tail, ranked below everything argued above it. */}
-        <Band scale={scale} seam={5}>
+        <Band scale={scale} seam={6}>
           <QuestMark id="index" />
           <FeatureIndex scale={scale} />
         </Band>
@@ -723,7 +736,7 @@ export default function AboutScreen() {
           placeholder={<View style={styles.takeRoom} />}
           style={styles.raise}
         >
-          <Band tone="well" scale={scale} raise seam={6} seamVariant="card">
+          <Band tone="well" scale={scale} raise seam={7} seamVariant="card">
             <QuestMark id="take" />
             <LandingTake scale={scale} />
           </Band>
@@ -731,7 +744,7 @@ export default function AboutScreen() {
 
         <Band
           scale={scale}
-          seam={7}
+          seam={8}
           style={[
             // The phone above deliberately hangs over this band's
             // seam; the headline needs to start below its overhang,
@@ -923,6 +936,7 @@ const styles = StyleSheet.create({
 
   plainRoom: { paddingTop: SPACING.xl * 2.5 },
   calendarRoom: { height: 620 },
+  watchRoom: { height: 560 },
   deckBody: { paddingTop: SPACING.lg, paddingBottom: SPACING.xl * 1.5 },
   /**
    * The deck's own opaque ground, painted above the quest trail.
