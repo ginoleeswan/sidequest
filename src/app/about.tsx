@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useMemo } from 'react';
 import {
   Animated,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -22,10 +23,10 @@ import { LandingTake } from '@/components/LandingTake';
 import { LandingTry } from '@/components/LandingTry';
 import { MemcardBuild } from '@/components/MemcardBuild';
 import { QuestLine, QuestMark } from '@/components/QuestLine';
-import { Drift } from '@/components/Drift';
 import { BeatDeck } from '@/components/BeatDeck';
 import { Seam, type SeamVariant } from '@/components/Seam';
 import { Rise, useInView } from '@/components/Rise';
+import { ScrollStage, useStagePins } from '@/components/ScrollStage';
 import { Words } from '@/components/Words';
 import { LandingWall } from '@/components/LandingWall';
 import { MarkDraw } from '@/components/MarkDraw';
@@ -39,6 +40,7 @@ import { queryKeys } from '@/api/queryClient';
 import { getTrendingGames } from '@/api/rawg';
 import type { Game, Paged } from '@/api/types';
 import type { Memcard as MemcardModel } from '@/lib/memcard';
+import { webScrollContainerStyle } from '@/lib/webScrollContainer';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useCountUp } from '@/hooks/useCountUp';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
@@ -79,6 +81,16 @@ import { OVER_IMAGE, TYPE } from '@/styles/typography';
  */
 const FINISHED_MONTHS = [0, 2, 3, 5, 6, 8, 9, 11];
 const FINISHED_HOURS = [11, 34, 8, 62, 17, 26, 9, 41];
+
+/**
+ * The shortest viewport the memcard's `ScrollStage` will pin itself
+ * for — see `ScrollStage`'s own `minViewport` doc comment for why.
+ * Named and shared rather than inlined at each call site: the
+ * `WhenNear` placeholder below needs the SAME number the `ScrollStage`
+ * gets, via the same `useStagePins` hook, or the placeholder can size
+ * itself for a pin the stage isn't actually going to do.
+ */
+const MEMCARD_MIN_VIEWPORT = 720;
 
 function sampleCard(games: Game[] | undefined): MemcardModel {
   const blocks = FINISHED_MONTHS.map((month, index) => ({
@@ -232,6 +244,14 @@ export default function AboutScreen() {
   const safe = useSafeAreaInsets();
   const reduced = useReducedMotion();
   const enter = useAnimatedValue(reduced ? 1 : 0);
+  // The memcard's own pin decision, hoisted up here so the `WhenNear`
+  // placeholder below can size itself off the SAME answer `ScrollStage`
+  // computes internally, rather than a second, hand-written condition
+  // that could disagree with it (reduced motion is only one of two
+  // reasons `ScrollStage` might not pin — a too-short viewport is the
+  // other, and a placeholder that only checked `reduced` would still be
+  // wrong on that path).
+  const memcardPinned = useStagePins(MEMCARD_MIN_VIEWPORT);
 
   useEffect(() => {
     if (reduced) return;
@@ -317,7 +337,11 @@ export default function AboutScreen() {
           band of flat page colour above the hero and stopped the
           artwork reaching the top of the screen; the copy clears the
           status bar on its own instead. */}
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView
+        testID="about-scroll"
+        style={SCROLL_CONTAINER}
+        contentContainerStyle={styles.scroll}
+      >
         {/* Sized off the width, not the viewport height.
             `useWindowDimensions().height` is 0 through the static render
             and never emits again on its own, so a 94%-of-viewport hero
@@ -334,10 +358,7 @@ export default function AboutScreen() {
               phone need nine to cross 620pt at their smaller pitch.
               Both overfill deliberately — `wall` crops, and the covers
               are thumbnails. */}
-          <LandingWall
-            columns={isExpanded ? 7 : 4}
-            rows={isExpanded ? 7 : 9}
-          />
+          <LandingWall columns={isExpanded ? 7 : 4} rows={isExpanded ? 7 : 9} />
           {/* Heavy where the words are, open at the top right, so the
                 pile is visible without ever competing with the line it
                 exists to prove. */}
@@ -585,7 +606,11 @@ export default function AboutScreen() {
             arrives crooked and straightens. Used once: a second `tilt`
             further down would turn a signature into a mannerism. */}
         <WhenNear
-          placeholder={<View style={styles.cardRoom} />}
+          placeholder={
+            <View
+              style={memcardPinned ? styles.cardRoom : styles.cardRoomFlat}
+            />
+          }
           style={styles.raise}
         >
           <Band
@@ -614,19 +639,23 @@ export default function AboutScreen() {
                 showpiece drawn at a third of its stage is a thumbnail
                 of itself.
 
-                And hanging over the band's bottom edge, because the
-                page's biggest object should not sit politely inside its
-                box: an object crossing the seam is what tells a reader
-                the sections are one page rather than a stack. */}
-            <Drift distance={-22} testID="memcard-drift">
-              <View style={styles.cardStage}>
-                <MemcardBuild
-                  card={sampleCard(games)}
-                  games={games ?? []}
-                  maxWidth={scale.wide ? 1000 : 640}
-                />
-              </View>
-            </Drift>
+                No longer hanging over the band's bottom edge — that
+                belonged to the old unpinned layout's negative margin.
+                ScrollStage now clips its stage vertically and centres
+                the card inside it (see `cardStage`'s own comment), so
+                nothing crosses the seam any more. */}
+            <ScrollStage track={2.6} minViewport={MEMCARD_MIN_VIEWPORT}>
+              {(progress) => (
+                <View style={styles.cardStage}>
+                  <MemcardBuild
+                    card={sampleCard(games)}
+                    games={games ?? []}
+                    maxWidth={scale.wide ? 1000 : 640}
+                    progress={progress}
+                  />
+                </View>
+              )}
+            </ScrollStage>
           </Band>
         </WhenNear>
 
@@ -694,6 +723,20 @@ export default function AboutScreen() {
     </Textured>
   );
 }
+
+/**
+ * Without this, the memcard's `ScrollStage` never pins on web: the
+ * `overflow-x: hidden` react-native-web puts on every vertical
+ * `ScrollView` by default (not a rule this page added — see
+ * `webScrollContainerStyle`'s doc comment) makes the ScrollView below a
+ * second scroll container, which steals every descendant's `position:
+ * sticky` out from under it. Because the rule is react-native-web's
+ * default rather than something specific to this page, the underlying
+ * sticky trap is app-wide by construction: any other screen with a
+ * pinned section inside a vertical `ScrollView` on web needs the same
+ * fix, not just this one.
+ */
+const SCROLL_CONTAINER = webScrollContainerStyle(Platform.OS);
 
 const styles = StyleSheet.create({
   background: { flexGrow: 1, backgroundColor: LANDING_GROUND },
@@ -846,10 +889,34 @@ const styles = StyleSheet.create({
   pileBody: { maxWidth: 620, marginBottom: SPACING.md },
 
   // the card
-  cardRoom: { height: 460 },
+  // Matches ScrollStage's own track={2.6} for the band this wraps: the
+  // placeholder has to reserve the same room the pinned track will
+  // occupy, or the page jumps by the difference the moment WhenNear
+  // swaps the placeholder for the real section (a CLS regression the
+  // 460px flat number left on the table once the card's motion moved
+  // into a 2.6-viewport-tall scroll track).
+  cardRoom: { height: '260dvh' as unknown as number },
+  // Picked, via `memcardPinned` (== `useStagePins(MEMCARD_MIN_VIEWPORT)`,
+  // the exact hook `ScrollStage` uses internally to decide the same
+  // thing), whenever the stage is NOT going to pin — reduced motion, or
+  // a viewport shorter than `MEMCARD_MIN_VIEWPORT`, are both live reasons
+  // that can happen, and this style has to cover both rather than only
+  // the first. An unpinned stage renders a plain, roughly-one-screen
+  // View, so a placeholder reserving 260dvh for it inflates the document
+  // by about two extra viewports until WhenNear swaps it, which throws
+  // off scrollbar position, End-key navigation and anchor links until
+  // the swap yanks them back. A flat number close to the real unpinned
+  // height avoids that.
+  cardRoomFlat: { height: 900 },
   card: { alignItems: 'center', gap: SPACING.xl },
-  // The showpiece hangs a third of itself past the band's bottom edge.
-  cardStage: { marginBottom: -110, zIndex: 1 },
+  // Stacks the card above the fliers passing behind it. (No longer a
+  // negative marginBottom to hang the card over a band's seam — that
+  // seam belonged to the old unpinned layout. ScrollStage now centres
+  // the card in its own 100dvh stage, and a negative margin there just
+  // shrank the box flex centring measures against, pushing the card
+  // below true centre by half of it — measured live as 183px above vs
+  // 73px below at 95% scroll, exactly 110px / 2 off.)
+  cardStage: { zIndex: 1 },
   cardCaption: { textAlign: 'center' },
 
   // the plain truth

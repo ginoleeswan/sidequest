@@ -7,6 +7,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { COLORS } from '@/styles/colors';
 import { EASING } from '@/styles/motion';
 
+import { animatedSvg } from './animatedSvg';
 import { Mark } from './Mark';
 
 /**
@@ -66,9 +67,9 @@ const HEX_LEN = 300;
 const BALL_LEN = 130;
 const SHAFT_LEN = 50;
 
-const AnimatedPath = Animated.createAnimatedComponent(Path);
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-const AnimatedG = Animated.createAnimatedComponent(G);
+const AnimatedPath = animatedSvg(Path);
+const AnimatedCircle = animatedSvg(Circle);
+const AnimatedG = animatedSvg(G);
 
 export function MarkDraw({
   size = 26,
