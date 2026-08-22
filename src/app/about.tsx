@@ -26,7 +26,7 @@ import { QuestLine, QuestMark } from '@/components/QuestLine';
 import { BeatDeck } from '@/components/BeatDeck';
 import { Seam, type SeamVariant } from '@/components/Seam';
 import { Rise, useInView } from '@/components/Rise';
-import { ScrollStage } from '@/components/ScrollStage';
+import { ScrollStage, useStagePins } from '@/components/ScrollStage';
 import { Words } from '@/components/Words';
 import { LandingWall } from '@/components/LandingWall';
 import { MarkDraw } from '@/components/MarkDraw';
@@ -81,6 +81,16 @@ import { OVER_IMAGE, TYPE } from '@/styles/typography';
  */
 const FINISHED_MONTHS = [0, 2, 3, 5, 6, 8, 9, 11];
 const FINISHED_HOURS = [11, 34, 8, 62, 17, 26, 9, 41];
+
+/**
+ * The shortest viewport the memcard's `ScrollStage` will pin itself
+ * for — see `ScrollStage`'s own `minViewport` doc comment for why.
+ * Named and shared rather than inlined at each call site: the
+ * `WhenNear` placeholder below needs the SAME number the `ScrollStage`
+ * gets, via the same `useStagePins` hook, or the placeholder can size
+ * itself for a pin the stage isn't actually going to do.
+ */
+const MEMCARD_MIN_VIEWPORT = 720;
 
 function sampleCard(games: Game[] | undefined): MemcardModel {
   const blocks = FINISHED_MONTHS.map((month, index) => ({
@@ -234,6 +244,14 @@ export default function AboutScreen() {
   const safe = useSafeAreaInsets();
   const reduced = useReducedMotion();
   const enter = useAnimatedValue(reduced ? 1 : 0);
+  // The memcard's own pin decision, hoisted up here so the `WhenNear`
+  // placeholder below can size itself off the SAME answer `ScrollStage`
+  // computes internally, rather than a second, hand-written condition
+  // that could disagree with it (reduced motion is only one of two
+  // reasons `ScrollStage` might not pin — a too-short viewport is the
+  // other, and a placeholder that only checked `reduced` would still be
+  // wrong on that path).
+  const memcardPinned = useStagePins(MEMCARD_MIN_VIEWPORT);
 
   useEffect(() => {
     if (reduced) return;
@@ -340,10 +358,7 @@ export default function AboutScreen() {
               phone need nine to cross 620pt at their smaller pitch.
               Both overfill deliberately — `wall` crops, and the covers
               are thumbnails. */}
-          <LandingWall
-            columns={isExpanded ? 7 : 4}
-            rows={isExpanded ? 7 : 9}
-          />
+          <LandingWall columns={isExpanded ? 7 : 4} rows={isExpanded ? 7 : 9} />
           {/* Heavy where the words are, open at the top right, so the
                 pile is visible without ever competing with the line it
                 exists to prove. */}
@@ -591,7 +606,11 @@ export default function AboutScreen() {
             arrives crooked and straightens. Used once: a second `tilt`
             further down would turn a signature into a mannerism. */}
         <WhenNear
-          placeholder={<View style={reduced ? styles.cardRoomFlat : styles.cardRoom} />}
+          placeholder={
+            <View
+              style={memcardPinned ? styles.cardRoom : styles.cardRoomFlat}
+            />
+          }
           style={styles.raise}
         >
           <Band
@@ -625,7 +644,7 @@ export default function AboutScreen() {
                 ScrollStage now clips its stage vertically and centres
                 the card inside it (see `cardStage`'s own comment), so
                 nothing crosses the seam any more. */}
-            <ScrollStage track={2.6} minViewport={720}>
+            <ScrollStage track={2.6} minViewport={MEMCARD_MIN_VIEWPORT}>
               {(progress) => (
                 <View style={styles.cardStage}>
                   <MemcardBuild
@@ -877,14 +896,17 @@ const styles = StyleSheet.create({
   // 460px flat number left on the table once the card's motion moved
   // into a 2.6-viewport-tall scroll track).
   cardRoom: { height: '260dvh' as unknown as number },
-  // Reduced motion (or a too-short viewport, per ScrollStage's own
-  // `minViewport`) never builds the 260dvh pinned track — it renders a
-  // plain, roughly-one-screen View instead. A placeholder reserving
-  // 260dvh for a section that will only ever be ~one viewport tall
-  // inflates the document by about two extra viewports until WhenNear
-  // swaps it, which throws off scrollbar position, End-key navigation
-  // and anchor links until the swap yanks them back. A flat number
-  // close to the real unpinned height avoids that.
+  // Picked, via `memcardPinned` (== `useStagePins(MEMCARD_MIN_VIEWPORT)`,
+  // the exact hook `ScrollStage` uses internally to decide the same
+  // thing), whenever the stage is NOT going to pin — reduced motion, or
+  // a viewport shorter than `MEMCARD_MIN_VIEWPORT`, are both live reasons
+  // that can happen, and this style has to cover both rather than only
+  // the first. An unpinned stage renders a plain, roughly-one-screen
+  // View, so a placeholder reserving 260dvh for it inflates the document
+  // by about two extra viewports until WhenNear swaps it, which throws
+  // off scrollbar position, End-key navigation and anchor links until
+  // the swap yanks them back. A flat number close to the real unpinned
+  // height avoids that.
   cardRoomFlat: { height: 900 },
   card: { alignItems: 'center', gap: SPACING.xl },
   // Stacks the card above the fliers passing behind it. (No longer a

@@ -7,6 +7,64 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { stageProgress } from '@/lib/scrollStage';
 
 /**
+ * The whole "does this stage pin?" decision, in one place.
+ *
+ * `ScrollStage` needs this to decide its own layout, and `about.tsx`
+ * needs the SAME answer to size the `WhenNear` placeholder it reserves
+ * ahead of the (deferred-mounted) stage — a placeholder sized for the
+ * pinned track when the stage is about to render unpinned (or vice
+ * versa) is a CLS bug. Two call sites computing "is it pinned" by
+ * separate, hand-written conditions is exactly how that drifts: this
+ * repo shipped once with the placeholder checking only `reduced` while
+ * this hook's `minViewport` check was the other, newer reason a stage
+ * goes unpinned. Exporting one hook both call sites use removes the
+ * chance of a second condition existing to disagree with.
+ */
+export function useStagePins(minViewport = 0): boolean {
+  const reduced = useReducedMotion();
+  // Native has no sticky at all, and a reader who asked for less motion
+  // should not be made to scroll extra screens past a section that is
+  // no longer moving. This does NOT yet decide pinning on its own — the
+  // return value below also needs the viewport height, which isn't
+  // known synchronously.
+  const web = Platform.OS === 'web' && !reduced;
+
+  /**
+   * Held in state and updated from a resize listener, NOT read from
+   * `useWindowDimensions()`. That hook's `.height` is 0 through the
+   * static render and never emits again on its own — see the comment
+   * above the masthead in `about.tsx`, which measured an entire hero
+   * stuck at that stale value — and a stage that believed the viewport
+   * was 0 tall would never pin at all. Initialised lazily from
+   * `window.innerHeight` rather than from an effect, so the very first
+   * render already has a real number instead of pinning-then-unpinning
+   * on mount. Guarded with `typeof window`: this hook's callers today
+   * mount behind `WhenNear` on the client, so `window` exists by the
+   * time this runs, but that's this file trusting a fact about its
+   * caller rather than one it can verify, hence the guard.
+   */
+  const [viewportHeight, setViewportHeight] = useState(() =>
+    web && typeof window !== 'undefined' ? window.innerHeight : 0
+  );
+
+  // Keeps `viewportHeight` current. Deliberately keyed on `web`, not on
+  // the returned "pinned" value: a caller sitting unpinned only because
+  // the viewport is currently too short still has to notice the window
+  // growing back past `minViewport`, or it can never re-pin. Off
+  // entirely for native and reduced motion, where pinning is never on
+  // the table.
+  useEffect(() => {
+    if (!web || typeof window === 'undefined') return;
+    const onResize = () => setViewportHeight(window.innerHeight);
+    onResize();
+    window.addEventListener('resize', onResize, { passive: true });
+    return () => window.removeEventListener('resize', onResize);
+  }, [web]);
+
+  return web && viewportHeight >= minViewport;
+}
+
+/**
  * A section that holds still while the reader scrolls past it.
  *
  * The track is a tall box; the stage inside it is stuck to the top of
@@ -63,49 +121,10 @@ export function ScrollStage({
    */
   children: (progress: Animated.Value | undefined) => React.ReactNode;
 }) {
-  const reduced = useReducedMotion();
-  // Native has no sticky at all, and a reader who asked for less motion
-  // should not be made to scroll extra screens past a section that is
-  // no longer moving. This does NOT yet decide pinning on its own —
-  // `pinned` below also needs the viewport height, which isn't known
-  // synchronously.
-  const web = Platform.OS === 'web' && !reduced;
-
-  /**
-   * Held in state and updated from a resize listener, NOT read from
-   * `useWindowDimensions()`. That hook's `.height` is 0 through the
-   * static render and never emits again on its own — see the comment
-   * above the masthead in `about.tsx`, which measured an entire hero
-   * stuck at that stale value — and a stage that believed the viewport
-   * was 0 tall would never pin at all. Initialised lazily from
-   * `window.innerHeight` rather than from an effect, so the very first
-   * render already has a real number instead of pinning-then-unpinning
-   * on mount. Guarded with `typeof window`: this component's only
-   * consumer today mounts behind `WhenNear` on the client, so `window`
-   * exists by the time this runs, but that's this file trusting a fact
-   * about its caller rather than one it can verify, hence the guard.
-   */
-  const [viewportHeight, setViewportHeight] = useState(() =>
-    web && typeof window !== 'undefined' ? window.innerHeight : 0
-  );
-
-  const pinned = web && viewportHeight >= minViewport;
+  const pinned = useStagePins(minViewport);
 
   const progress = useAnimatedValue(pinned ? 0 : 1);
   const ref = useRef<View | null>(null);
-
-  // Keeps `viewportHeight` current. Deliberately keyed on `web`, not on
-  // `pinned`: a stage sitting unpinned only because the viewport is
-  // currently too short still has to notice the window growing back
-  // past `minViewport`, or it can never re-pin. Off entirely for native
-  // and reduced motion, where pinning is never on the table.
-  useEffect(() => {
-    if (!web || typeof window === 'undefined') return;
-    const onResize = () => setViewportHeight(window.innerHeight);
-    onResize();
-    window.addEventListener('resize', onResize, { passive: true });
-    return () => window.removeEventListener('resize', onResize);
-  }, [web]);
 
   useEffect(() => {
     if (!pinned) {
@@ -163,7 +182,7 @@ export function ScrollStage({
  * cast `Sidebar` uses for its own `100dvh`.
  */
 const trackStyle = (track: number) =>
-  ({ height: `${Math.round(track * 100)}dvh` } as unknown as ViewStyle);
+  ({ height: `${Math.round(track * 100)}dvh` }) as unknown as ViewStyle;
 
 /**
  * The two axes clip on purpose, and differently.
