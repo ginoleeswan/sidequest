@@ -48,6 +48,18 @@ export const EASING = {
   standard: Easing.bezier(0.2, 0, 0, 1),
   exit: Easing.bezier(0.4, 0, 1, 1),
   linear: Easing.linear,
+  /**
+   * Overshoots its target and comes back.
+   *
+   * The one easing here that is allowed to be seen. Everything else in
+   * this app moves to explain what went where; this exists for the beat
+   * deck's arrival, where three panels start as a stack and spread into
+   * a rail — and a spread that merely decelerates reads as a layout
+   * settling, where one that carries a little past and returns reads as
+   * cards being dealt. Used once, deliberately, and never on anything a
+   * reader is waiting for.
+   */
+  overshoot: Easing.bezier(0.2, 1.5, 0.35, 1),
 } as const;
 
 /**

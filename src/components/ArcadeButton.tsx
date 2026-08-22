@@ -282,9 +282,11 @@ const styles = StyleSheet.create({
     // Bold it was the lightest thing in its own corner of the hero.
     fontFamily: 'Noah-Black',
     fontSize: 18,
-    // A shade of tracking. Black sets tight, and on a cap the word wants
-    // to read as moulded into the plastic rather than typed onto it.
-    letterSpacing: 0.3,
+    // Set in caps, so the tracking has to open up: Noah-Black sets very
+    // tight, and capitals at 0.3 close into a solid bar. This is the
+    // spacing the cabinet's own lettering has — and the same the
+    // section nameplates on this page use.
+    letterSpacing: 1.4,
     color: COLORS.navy,
   },
 });

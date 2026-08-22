@@ -20,6 +20,7 @@ import { Words } from './Words';
 import type { Game } from '@/api/types';
 import { beatAnchor, beatIndexAt, beatStops } from '@/lib/beatDeck';
 import { COLORS } from '@/styles/colors';
+import { EASING } from '@/styles/motion';
 import {
   LANDING_MEASURE,
   LANDING_WELL,
@@ -89,6 +90,23 @@ const PAD = SPACING.lg + 4;
  * See `lib/beatDeck` for what the shape of it is doing.
  */
 const STOPS = beatStops(BEATS.length);
+
+/**
+ * How much of the track the deck spends dealing itself out.
+ *
+ * Inside the schedule's own arrival hold (`BEAT_ARRIVE`, 0.16), and
+ * deliberately: the rail must not begin walking while the panels are
+ * still finding their places, or the spread and the first transition
+ * run over each other and neither reads. The small remainder is a beat
+ * of stillness between the two.
+ */
+const SPREAD_ENDS_AT = 0.12;
+
+/** How much of a stacked card shows past the one in front of it. */
+const STACK_PEEK = 16;
+/** And how far it sits below, and how much smaller. A held deck. */
+const STACK_DROP = 12;
+const STACK_SHRINK = 0.05;
 
 /**
  * The room's light, painted behind the whole pinned track.
@@ -256,12 +274,72 @@ export function BeatDeck({
       setActive(index);
   };
 
+  /**
+   * The deck deals itself.
+   *
+   * At progress 0 the three panels are stacked — each one sitting on the
+   * first one's spot, a little smaller and a little lower, the way a
+   * held deck looks — and over the first slice of the track they spread
+   * into the rail. That first slice is the only part of this section a
+   * reader sees before the stage pins, so it is the part that had
+   * nothing happening in it: the section arrived with one card already
+   * at rest and the other two off-stage, which is a rail that has
+   * finished rather than a deck about to be played.
+   *
+   * The easing overshoots. Every other movement on this page is there to
+   * explain what went where; this one is there to be watched, and a
+   * spread that merely decelerates reads as a layout settling where one
+   * that carries a little past and comes back reads as cards being
+   * dealt.
+   */
+  const spread = progress
+    ? progress.interpolate({
+        inputRange: [0, SPREAD_ENDS_AT],
+        outputRange: [0, 1],
+        extrapolate: 'clamp',
+        easing: EASING.overshoot,
+      })
+    : null;
+
   // Built once and rendered by whichever rail is in play, so the driven
   // and the swipeable deck can never show different panels.
   const panels = BEATS.map((beat, index) => (
-    <View
+    <Animated.View
       key={beat.kind}
-      style={[styles.panel, { width: panelW, borderColor: `${beat.hue}4D` }]}
+      style={[
+        styles.panel,
+        { width: panelW, borderColor: `${beat.hue}4D` },
+        // First card on top of the stack, so the deck reads as one held
+        // in a hand rather than as three sheets in DOM order.
+        spread ? { zIndex: BEATS.length - index } : null,
+        spread && index > 0
+          ? {
+              transform: [
+                {
+                  translateX: spread.interpolate({
+                    inputRange: [0, 1],
+                    // Home, minus the whole distance to the first
+                    // panel, plus the sliver a stacked card shows of
+                    // the one under it.
+                    outputRange: [-index * step + index * STACK_PEEK, 0],
+                  }),
+                },
+                {
+                  translateY: spread.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [index * STACK_DROP, 0],
+                  }),
+                },
+                {
+                  scale: spread.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [1 - index * STACK_SHRINK, 1],
+                  }),
+                },
+              ],
+            }
+          : null,
+      ]}
     >
       {/* The tint is a wash over the well, not a colour of its own —
           the beats stay rooms in the same house. */}
@@ -297,7 +375,7 @@ export function BeatDeck({
           />
         </Rise>
       </View>
-    </View>
+    </Animated.View>
   ));
 
   return (

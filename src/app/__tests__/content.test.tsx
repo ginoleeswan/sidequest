@@ -53,7 +53,7 @@ describe('the static pages', () => {
       // nothing from being told, and a label that states the outcome
       // ends up saying what the headline directly above it already
       // said. The button is the door, not the argument.
-      expect(screen.getAllByText('Press start').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('PRESS START').length).toBeGreaterThan(0);
       // And the hero's three claims stay on one line under it rather
       // than split between the button and the page. Dropping the
       // button's own small line is how "no account" went missing once.

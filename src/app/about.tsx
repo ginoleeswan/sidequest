@@ -362,7 +362,7 @@ export default function AboutScreen() {
    */
   const open = (
     <ArcadeButton
-      label="Press start"
+      label="PRESS START"
       accessibilityLabel="Press start — open Sidequest"
       onPress={() => router.push('/')}
     />
