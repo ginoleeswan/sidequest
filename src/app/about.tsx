@@ -25,7 +25,7 @@ import { LandingCalendar } from '@/components/LandingCalendar';
 import { LandingWatch } from '@/components/LandingWatch';
 import { MemcardBuild } from '@/components/MemcardBuild';
 import { QuestLine, QuestMark } from '@/components/QuestLine';
-import { BeatDeck } from '@/components/BeatDeck';
+import { BeatDeck, BeatWash } from '@/components/BeatDeck';
 import { Seam, type SeamVariant } from '@/components/Seam';
 import { Rise, useInView } from '@/components/Rise';
 import { ScrollStage, useStagePins } from '@/components/ScrollStage';
@@ -652,7 +652,16 @@ export default function AboutScreen() {
               on native, under reduced motion, and on viewports too short
               to hold a panel — because `ScrollStage` hands `undefined`
               through and `BeatDeck` falls back to its swipeable rail. */}
-          <ScrollStage track={2.4} minViewport={DECK_MIN_VIEWPORT}>
+          {/* The beat's colour washes the whole section, handed to the
+              stage rather than rendered inside the deck: inside, it sat
+              under the stage's vertical clip and could only paint the
+              pinned window — so the tint began below this seam on the
+              way in, and stopped short of the next one once pinned. */}
+          <ScrollStage
+            track={2.4}
+            minViewport={DECK_MIN_VIEWPORT}
+            background={(progress) => <BeatWash progress={progress} />}
+          >
             {(progress, seek) => (
               <View style={styles.deckBody}>
                 <BeatDeck

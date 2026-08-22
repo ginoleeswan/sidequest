@@ -15,8 +15,10 @@ import {
 
 import { LandingProof } from './LandingProof';
 import { Rise } from './Rise';
+import { SEAM_LIP_HEIGHT } from './Seam';
 import { Words } from './Words';
 import type { Game } from '@/api/types';
+import { beatAnchor, beatIndexAt, beatStops } from '@/lib/beatDeck';
 import { COLORS } from '@/styles/colors';
 import {
   LANDING_MEASURE,
@@ -80,6 +82,70 @@ const WASH = 0.055;
 const PEEK = 36;
 const GAP = SPACING.md;
 const PAD = SPACING.lg + 4;
+
+/**
+ * Where the rail rests and where it travels, once and for the module —
+ * the beats are a constant, so the schedule derived from them is too.
+ * See `lib/beatDeck` for what the shape of it is doing.
+ */
+const STOPS = beatStops(BEATS.length);
+
+/**
+ * The room's light, painted behind the whole pinned track.
+ *
+ * It used to live inside the deck, and inside the deck it was inside
+ * the stage, which clips vertically — so the colour could only ever
+ * begin where the pinned window began. On the way into the section
+ * that put the tint's top edge below the seam rather than at it, and
+ * once pinned it left the bottom of the screen untinted, because the
+ * wash was sized off the deck's own box rather than off the section's.
+ *
+ * As a track backdrop it is sized by the section instead: from the top
+ * of the seam that opens it to the seam that closes it, so the light
+ * starts exactly where the room does.
+ *
+ * Crossfaded solid layers, not an interpolated `backgroundColor`:
+ * animating a colour is a JS-driven repaint of a full-bleed box on
+ * every frame, where opacity stays on the native driver. Each beat's
+ * wash is flat while that beat is held and crosses to the next one
+ * while the rail travels, so the light changes exactly when the
+ * argument does.
+ */
+export function BeatWash({ progress }: { progress: Animated.Value }) {
+  return (
+    <View style={styles.wash} pointerEvents="none">
+      {BEATS.map((beat, index) => (
+        <Animated.View
+          key={`wash-${beat.kind}`}
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              opacity: progress.interpolate({
+                inputRange: STOPS.input,
+                outputRange: STOPS.output.map((at) =>
+                  at === index ? WASH : 0
+                ),
+                extrapolate: 'clamp',
+              }),
+            },
+          ]}
+        >
+          {/* A flat, even wash — deliberately.
+              Gradient versions of this were tried twice: feathered top
+              and bottom, then two crossed falloffs meant to bloom from
+              behind the card. Both looked more designed in the abstract
+              and worse on the page. At a twentieth of an alpha the
+              colour is barely there, and shaping something that faint
+              just makes it uneven — you stop reading it as the room's
+              light and start seeing the shape of the gradient. */}
+          <View
+            style={[StyleSheet.absoluteFill, { backgroundColor: beat.hue }]}
+          />
+        </Animated.View>
+      ))}
+    </View>
+  );
+}
 
 export function BeatDeck({
   scale,
@@ -152,7 +218,7 @@ export function BeatDeck({
       // next scroll frame would snap it straight back. This keeps the
       // buttons working — the deck is swipe-first but never swipe-only,
       // and a pinned deck must not quietly become scroll-only either.
-      onSeek?.(clamped / LAST);
+      onSeek?.(beatAnchor(clamped, STOPS));
       return;
     }
     rail.current?.scrollTo({ x: clamped * step, animated: true });
@@ -168,7 +234,13 @@ export function BeatDeck({
   useEffect(() => {
     if (!progress) return;
     const apply = (value: number) => {
-      const next = Math.max(0, Math.min(LAST, Math.round(value * LAST)));
+      // Through the schedule, not `value * LAST`: the dots have to say
+      // which beat is on screen, and with holds in the track those two
+      // numbers are no longer the same thing.
+      const next = Math.max(
+        0,
+        Math.min(LAST, Math.round(beatIndexAt(value, STOPS)))
+      );
       setActive((previous) => (previous === next ? previous : next));
     };
     // addListener only fires on change; seed from where the driver
@@ -228,55 +300,13 @@ export function BeatDeck({
     </View>
   ));
 
-  /**
-   * The room changes colour as the argument does.
-   *
-   * Crossfaded solid layers, not an interpolated `backgroundColor`:
-   * animating a colour is a JS-driven repaint of a full-bleed box on
-   * every frame, where opacity stays on the native driver. Each beat's
-   * wash peaks as that beat arrives and is gone by the next, so the
-   * section reads as three rooms rather than one room with a tint.
-   *
-   * Only when driven — the swipeable deck keeps the page's own ground,
-   * because a wash that changed under a horizontal swipe would be
-   * animating on a gesture the reader may never make.
-   */
-  const wash = progress
-    ? BEATS.map((beat, index) => (
-        <Animated.View
-          key={`wash-${beat.kind}`}
-          pointerEvents="none"
-          style={[
-            styles.wash,
-            {
-              opacity: progress.interpolate({
-                inputRange: BEATS.map((_, i) => i / LAST),
-                outputRange: BEATS.map((_, i) => (i === index ? WASH : 0)),
-                extrapolate: 'clamp',
-              }),
-            },
-          ]}
-        >
-          {/* A flat, even wash — deliberately.
-              Gradient versions of this were tried twice: feathered top
-              and bottom, then two crossed falloffs meant to bloom from
-              behind the card. Both looked more designed in the abstract
-              and worse on the page. At a tenth of an alpha the colour is
-              barely there, and shaping something that faint just makes
-              it uneven — you stop reading it as the room's light and
-              start seeing the shape of the gradient. The seam is handled
-              where it belongs, by the section's own opaque ground in
-              `about.tsx`, not by softening this. */}
-          <View
-            style={[StyleSheet.absoluteFill, { backgroundColor: beat.hue }]}
-          />
-        </Animated.View>
-      ))
-    : null;
-
   return (
     <View onLayout={onLayout}>
-      {wash}
+      {/* No wash here.
+          The room's light is `BeatWash`, and it is handed to the stage
+          as a track backdrop rather than rendered in the deck, because
+          rendered here it was inside the stage's vertical clip and
+          could never reach the section's own edges. */}
       <View style={[styles.head, { paddingHorizontal: inset }]}>
         {/* The mark and the nameplate are ONE left-hand group.
             The section's quest mark used to sit here as a bare sibling,
@@ -361,9 +391,17 @@ export function BeatDeck({
               {
                 transform: [
                   {
+                    /**
+                     * Held, then travelled — not a straight line from
+                     * the first beat to the last. Linear, the first
+                     * panel became whole at the instant the section
+                     * pinned and began sliding away on the next pixel
+                     * of scroll, so no beat was ever both complete and
+                     * still. See `lib/beatDeck`.
+                     */
                     translateX: progress.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0, -step * LAST],
+                      inputRange: STOPS.input,
+                      outputRange: STOPS.output.map((at) => -step * at),
                       extrapolate: 'clamp',
                     }),
                   },
@@ -446,25 +484,25 @@ const styles = StyleSheet.create({
   headLeft: { flexDirection: 'row', alignItems: 'center' },
   arrows: { flexDirection: 'row', gap: SPACING.sm },
   /**
-   * Bleeds past the section's own box on purpose: the wash is the
-   * room's light, and a light that stopped at the deck's padding would
-   * read as a coloured panel behind the panels.
-   */
-  /**
-   * Bleeds past the section top and bottom on purpose. Clipped to the
-   * section exactly, the colour starts and stops at a line, and the eye
-   * finds that line; carried past both edges, it reads as light in the
-   * room rather than as a panel of colour behind the deck.
+   * The section's own box, edge to edge, and one seam higher.
+   *
+   * This is a track backdrop now, so it is measured against the thing
+   * the reader thinks of as the section rather than against the deck
+   * inside it. `bottom: 0` is the closing seam. `top` reaches back over
+   * the opening one, because the seam is the leading edge of the band
+   * BELOW it — a wash that started under the seam left the tint
+   * beginning a hairline inside a room that had visibly already begun.
+   *
+   * Absolutely positioned because `ScrollStage` renders this inside the
+   * track: anything in normal flow here would add to the track's
+   * height, which is the number the entire pin is measured from.
    */
   wash: {
     position: 'absolute',
-    // Far enough up to clear the seam and the header's own padding. At
-    // -80 the colour began a visible distance below the drawn card edge,
-    // so the section opened with a strip of untinted ground above it.
-    top: -220,
-    left: -200,
-    right: -200,
-    bottom: -80,
+    top: -SEAM_LIP_HEIGHT,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   arrow: {
     width: 42,

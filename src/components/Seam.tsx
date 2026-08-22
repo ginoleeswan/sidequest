@@ -300,3 +300,10 @@ const styles = StyleSheet.create({
 });
 
 export const SEAM_HEIGHT = HEIGHT;
+/**
+ * A plain seam's height, for the one thing that has to reach over it:
+ * a section whose ground begins at its own leading edge rather than
+ * below it. Exported so that reach is derived from the seam instead of
+ * copied as a number that would quietly stop matching.
+ */
+export const SEAM_LIP_HEIGHT = LIP_HEIGHT;

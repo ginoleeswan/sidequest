@@ -94,6 +94,7 @@ export function useStagePins(minViewport = 0): boolean {
 export function ScrollStage({
   track,
   minViewport = 0,
+  background,
   children,
 }: {
   /** The track's height as a multiple of the viewport. */
@@ -117,6 +118,29 @@ export function ScrollStage({
    * hold the stage.
    */
   minViewport?: number;
+  /**
+   * Paint behind the whole track, outside the stage's clip.
+   *
+   * `STAGE` clips vertically, and it has to: that clip is the only
+   * thing stopping the memcard's in-flight covers bleeding into the
+   * sections either side of it. But it also means nothing rendered by
+   * `children` can reach past the pinned window — so a section-wide
+   * ground, which is exactly the sort of thing that wants to run from
+   * the seam above to the seam below, was being cut to the viewport.
+   * Measured on the beat deck: 121 points of intended bleed thrown away
+   * at the top, and a 47-point strip of untinted ground left at the
+   * bottom of every pinned frame.
+   *
+   * This renders inside the track and before the stage, so it paints
+   * under the stage's contents and is sized by the track rather than by
+   * the window. Supply an absolutely positioned, non-interactive node —
+   * anything in normal flow here would add to the track's height, which
+   * is the one number the whole pin depends on.
+   *
+   * Pinned only, like `progress`: an unpinned stage is an ordinary
+   * section that can paint its own background the ordinary way.
+   */
+  background?: (progress: Animated.Value) => React.ReactNode;
   /**
    * `undefined` on the unpinned path (native, reduced motion, or a
    * viewport shorter than `minViewport`), never a finished `1`. A stage
@@ -201,6 +225,7 @@ export function ScrollStage({
 
   return (
     <View ref={ref} style={trackStyle(track)}>
+      {background?.(progress)}
       {/* `seek` reads `ref.current`, but only when a consumer calls it
           from a press handler — never while rendering. The rule cannot
           see that difference from the call site, and the alternative
