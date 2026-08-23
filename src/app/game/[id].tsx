@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Animated,
   Modal,
@@ -80,19 +80,6 @@ function decodeEntities(text: string): string {
 
 /* ------------------------------------------------------------------ atoms */
 
-function Stat({ value, label }: { value: React.ReactNode; label: string }) {
-  return (
-    <View style={styles.stat}>
-      {typeof value === 'string' ? (
-        <Text style={styles.statValue}>{value}</Text>
-      ) : (
-        value
-      )}
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
-}
-
 function StatStrip({
   game,
   onEditLength,
@@ -103,66 +90,94 @@ function StatStrip({
   const { durationOf } = useDurations();
   const duration = durationOf(game);
   const [pace] = usePersistedState('sidequest.plan.pace', 6);
+
+  /**
+   * One figure, one sentence, one quiet line.
+   *
+   * This was five statistics in equal columns — length, rating,
+   * Metacritic, year, ESRB — which wrapped three-and-two on a phone and
+   * gave a certification the same weight as the number the whole app is
+   * built on. Equal weight is not neutrality; it is a refusal to say
+   * what matters.
+   *
+   * So the hours are set at display size, the way the Library sets the
+   * hours ahead of you, and everything else falls to a byline: the
+   * things you glance at to place a game, in one run, none of them
+   * pretending to be the headline.
+   */
+  const meta: React.ReactNode[] = [];
+  if (game.rating > 0) {
+    meta.push(
+      <Text key="rating" style={styles.metaBit}>
+        ★ {game.rating.toFixed(1)}
+      </Text>
+    );
+  }
+  if (game.metacritic != null) {
+    meta.push(<ScorePill key="mc" score={game.metacritic} />);
+  }
+  if (game.released) {
+    meta.push(
+      <Text key="year" style={styles.metaBit}>
+        {game.released.slice(0, 4)}
+      </Text>
+    );
+  }
+  if (game.esrb_rating?.name) {
+    meta.push(
+      <Text key="esrb" style={styles.metaBit}>
+        {game.esrb_rating.name}
+      </Text>
+    );
+  }
+
   return (
     <View style={styles.statBlock}>
-      <View style={styles.statStrip}>
-        {/* Length first, and it is not a tie-break.
-            Every other games database opens on a score; this app exists
-            because the number that decides whether you play something is
-            how long it takes. It was third here, between a rating and a
-            release year, at exactly the weight of both.
+      {/* The length is the one fact a person can out-know the data on,
+          so it is the one fact they can change. */}
+      <Pressable
+        onPress={onEditLength}
+        accessibilityRole="button"
+        accessibilityLabel={`Change how long ${game.name} takes`}
+      >
+        <View style={styles.hoursLine}>
+          <Text style={styles.hoursValue}>
+            {duration.hours > 0 ? formatHours(duration.hours) : 'Set'}
+            {duration.rough && duration.hours > 0 ? (
+              <Text style={styles.statFlag}> ?</Text>
+            ) : null}
+          </Text>
+          <Text style={styles.hoursLabel}>
+            {duration.source === 'yours'
+              ? 'your length'
+              : duration.source === 'reported'
+                ? 'players report'
+                : 'to finish'}
+            <Text style={styles.statPencil}> ✎</Text>
+          </Text>
+        </View>
+      </Pressable>
 
-            It is also the one stat a person can out-know the data on,
-            so it is the one stat they can change. */}
-        <Pressable onPress={onEditLength} accessibilityRole="button">
-          <Stat
-            value={
-              <Text style={styles.statValue}>
-                {duration.hours > 0 ? formatHours(duration.hours) : 'Set'}
-                {duration.rough && duration.hours > 0 ? (
-                  <Text style={styles.statFlag}> ?</Text>
-                ) : null}
-                <Text style={styles.statPencil}> ✎</Text>
-              </Text>
-            }
-            label={
-              duration.source === 'yours'
-                ? 'Your length'
-                : duration.source === 'reported'
-                  ? 'Players report'
-                  : 'To finish'
-            }
-          />
-        </Pressable>
-        {game.rating > 0 && (
-          /* "Players" under a bare 3.6 reads as three and a half people.
-             It is a rating, and the label now says so. */
-          <Stat value={`★ ${game.rating.toFixed(1)}`} label="Player rating" />
-        )}
-        {game.metacritic != null && (
-          <Stat
-            value={<ScorePill score={game.metacritic} />}
-            label="Metacritic"
-          />
-        )}
-        {game.released && (
-          <Stat value={game.released.slice(0, 4)} label="Released" />
-        )}
-        {game.esrb_rating?.name && (
-          <Stat value={game.esrb_rating.name} label="ESRB" />
-        )}
-      </View>
-
-      {/* The sentence no other games database can write.
-          A length is an abstraction until it is measured against the
-          hours somebody actually has — which this app knows, because
-          the Plan asked. */}
+      {/* The sentence no other games database can write. A length is an
+          abstraction until it is measured against the hours somebody
+          actually has — which this app knows, because the Plan asked. */}
       {duration.hours > 0 && (
         <Text style={styles.statPace}>
           {duration.hours <= pace
             ? `Under a week at ${pace}h a week.`
             : `About ${Math.round(duration.hours / pace)} weeks at ${pace}h a week.`}
         </Text>
+      )}
+
+      {meta.length > 0 && (
+        <View style={styles.metaLine}>
+          {meta.map((bit, i) => (
+            <React.Fragment key={i}>
+              {i > 0 ? <Text style={styles.metaDot}>·</Text> : null}
+              {bit}
+            </React.Fragment>
+          ))}
+        </View>
       )}
     </View>
   );
@@ -439,57 +454,34 @@ export default function GameInfoScreen() {
     </View>
   ) : null;
 
+  /**
+   * Genres as a byline, not a fourth row of pills.
+   *
+   * Under the masthead sat four consecutive rows of rounded outlines —
+   * status, session, commitment, then these — and by the fourth the eye
+   * has stopped reading them as different kinds of thing. Genres are
+   * not something you press to change the page; they say what kind of
+   * game this is, which is identity, and identity is set in text.
+   */
   const genres =
     game.genres && game.genres.length > 0 ? (
       <View style={styles.genreRow}>
-        {game.genres.map((genre) => (
-          <Chip
-            key={genre.id}
-            title={genre.name}
-            quiet
-            onPress={
-              genre.slug && findSection(genre.slug)
-                ? () => openGenre(genre)
-                : undefined
-            }
-          />
-        ))}
-      </View>
-    ) : null;
-
-  const details = (
-    <View style={[styles.block, isExpanded && styles.railCard]}>
-      <SectionHeader title="Details" />
-      <MetaRow
-        label="Platforms"
-        items={game.platforms?.map(({ platform }) => platform)}
-      />
-      <MetaRow label="Developers" items={game.developers} />
-      <MetaRow label="Publishers" items={game.publishers} />
-      {game.released ? (
-        <View style={styles.metaRow}>
-          <Text style={styles.metaLabel}>Release date</Text>
-          <Text style={styles.metaValue}>
-            {new Date(game.released).toLocaleDateString('en-US', {
-              month: 'long',
-              day: 'numeric',
-              year: 'numeric',
-            })}
-          </Text>
-        </View>
-      ) : null}
-    </View>
-  );
-
-  const tags =
-    game.tags && game.tags.length > 0 ? (
-      <View style={[styles.block, isExpanded && styles.railCard]}>
-        <SectionHeader title="Tags" />
-        <View style={styles.tags}>
-          {game.tags.slice(0, isExpanded ? 24 : 12).map((tag) => (
-            <Chip key={tag.id} title={tag.name} quiet />
-          ))}
-        </View>
+        {game.genres.map((genre, i) => {
+          const to = genre.slug && findSection(genre.slug);
+          return (
+            <React.Fragment key={genre.id}>
+              {i > 0 ? <Text style={styles.metaDot}>·</Text> : null}
+              <Text
+                style={[styles.genreText, to && styles.genreLink]}
+                onPress={to ? () => openGenre(genre) : undefined}
+                accessibilityRole={to ? 'link' : undefined}
+                suppressHighlighting
+              >
+                {genre.name}
+              </Text>
+            </React.Fragment>
+          );
+        })}
       </View>
     ) : null;
 
@@ -574,24 +566,75 @@ export default function GameInfoScreen() {
       </View>
     ) : null;
 
-  const community = game.added_by_status ? (
-    <View style={styles.block}>
-      <SectionHeader title="Community" />
-      <CommunityStats status={game.added_by_status} />
-    </View>
-  ) : null;
+  /**
+   * The file: everything you look up rather than read.
+   *
+   * Where to get it, who else has it, who made it and what it is tagged
+   * were four sections with four headings, each the same weight as
+   * About and Player verdict — which are arguments, not lookups. A
+   * feature does not give its fact box four headlines. One frame, rules
+   * inside, and labels at the size of labels.
+   */
+  const hasLinks =
+    (storeLinks.length > 0 && game.stores?.length) || Boolean(game.website);
 
-  const links =
-    (storeLinks.length > 0 && game.stores?.length) || game.website ? (
-      <View style={styles.block}>
-        <SectionHeader title="Get it" />
-        <StoreLinks
-          stores={game.stores}
-          links={storeLinks}
-          website={game.website}
-        />
+  const fileBox = (
+    <View style={styles.block}>
+      <SectionHeader title="The file" eyebrow="Where, who and what" />
+      <View style={styles.fileBox}>
+        {hasLinks ? (
+          <View style={styles.fileSection}>
+            <Text style={styles.fileLabel}>GET IT</Text>
+            <StoreLinks
+              stores={game.stores}
+              links={storeLinks}
+              website={game.website}
+            />
+          </View>
+        ) : null}
+
+        {game.added_by_status ? (
+          <View style={styles.fileSection}>
+            <Text style={styles.fileLabel}>WHO ELSE HAS IT</Text>
+            <CommunityStats status={game.added_by_status} />
+          </View>
+        ) : null}
+
+        <View style={styles.fileSection}>
+          <Text style={styles.fileLabel}>DETAILS</Text>
+          <MetaRow
+            label="Platforms"
+            items={game.platforms?.map(({ platform }) => platform)}
+          />
+          <MetaRow label="Developers" items={game.developers} />
+          <MetaRow label="Publishers" items={game.publishers} />
+          {game.released ? (
+            <View style={styles.metaRow}>
+              <Text style={styles.metaLabel}>Release date</Text>
+              <Text style={styles.metaValue}>
+                {new Date(game.released).toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+
+        {game.tags && game.tags.length > 0 ? (
+          <View style={[styles.fileSection, styles.fileSectionLast]}>
+            <Text style={styles.fileLabel}>TAGS</Text>
+            <View style={styles.tags}>
+              {game.tags.slice(0, isExpanded ? 24 : 12).map((tag) => (
+                <Chip key={tag.id} title={tag.name} quiet />
+              ))}
+            </View>
+          </View>
+        ) : null}
       </View>
-    ) : null;
+    </View>
+  );
 
   /* -------------------------------------------------------------- layout */
 
@@ -619,12 +662,7 @@ export default function GameInfoScreen() {
                     {about}
                     {ratingsBreakdown}
                   </View>
-                  <View style={styles.columnRail}>
-                    {details}
-                    {community}
-                    {links}
-                    {tags}
-                  </View>
+                  <View style={styles.columnRail}>{fileBox}</View>
                 </Animated.View>
                 {/* media escapes the column: full-bleed rails, gutter-aligned */}
                 <Animated.View style={{ opacity }}>{media}</Animated.View>
@@ -634,18 +672,18 @@ export default function GameInfoScreen() {
                 {hero}
                 {controls}
                 <Animated.View style={[styles.compactBody, { opacity }]}>
+                  {/* The case, then the reader's own note on it, then
+                      the file. "Your take" used to sit second on the
+                      page, directly under the controls, where for any
+                      game you have not played it is an empty box in the
+                      most valuable position on the screen. It is a
+                      response, so it follows what it responds to. */}
                   {genres}
-                  {yourTake}
                   {about}
                   {ratingsBreakdown}
                   {media}
-                  {/* Where to buy it before who else owns it: one is
-                      something to do, the other is something to know,
-                      and the doing was four sections further down. */}
-                  {links}
-                  {community}
-                  {details}
-                  {tags}
+                  {yourTake}
+                  {fileBox}
                 </Animated.View>
               </>
             )}
@@ -735,37 +773,48 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
 
-  // stats
-  statStrip: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.xl,
-    marginTop: SPACING.xs,
-  },
-  stat: { gap: 3, alignItems: 'flex-start' },
   /**
-   * The strip sits on the artwork, so it carries its own contrast the
-   * way the title does. "74h TO FINISH" in medium grey over a cream
-   * frame was the least readable text in the app.
+   * Stats sit on the artwork, so they carry their own contrast the way
+   * the title does. "74h TO FINISH" in medium grey over a cream frame
+   * was the least readable text in the app.
    */
-  statBlock: { gap: SPACING.sm },
+  statBlock: { gap: SPACING.xs, marginTop: SPACING.xs },
+  /** The hours, at the size the Library sets the hours ahead of you. */
+  hoursLine: { flexDirection: 'row', alignItems: 'baseline', gap: SPACING.sm },
+  hoursValue: {
+    fontFamily: 'Noah-Black',
+    fontSize: 34,
+    lineHeight: 38,
+    letterSpacing: -0.6,
+    ...OVER_IMAGE.heading,
+    color: COLORS.white,
+  },
+  hoursLabel: {
+    ...TYPE.body,
+    ...OVER_IMAGE.body,
+    color: COLORS.lightGrey,
+  },
   statPace: {
     ...TYPE.caption,
     ...OVER_IMAGE.body,
     color: COLORS.lightGrey,
   },
-  statValue: {
-    ...TYPE.h3,
-    ...OVER_IMAGE.body,
-    color: COLORS.white,
-  },
   statFlag: { color: COLORS.accent },
   statPencil: { fontSize: 11, color: COLORS.lightGrey },
-  statLabel: {
-    ...TYPE.micro,
+  /** The byline: what you glance at to place a game, in one run. */
+  metaLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+    marginTop: SPACING.xs,
+  },
+  metaBit: {
+    ...TYPE.labelSmall,
     ...OVER_IMAGE.body,
     color: COLORS.lightGrey,
   },
+  metaDot: { ...TYPE.labelSmall, color: COLORS.mediumGrey },
 
   // body
   expandedInner: { width: '100%' },
@@ -855,13 +904,47 @@ const styles = StyleSheet.create({
   },
 
   // blocks
-  block: { gap: SPACING.sm + 2, marginBottom: SPACING.lg },
+  /**
+   * A section, and the room between sections.
+   *
+   * Twenty points between blocks against ten inside one is the
+   * difference between a list and a structure — the same ratio the Plan
+   * and the Library now use, so a reader crossing between the three
+   * meets one rhythm rather than three.
+   */
+  block: { gap: SPACING.sm + 2, marginBottom: SPACING.xl },
+  genreText: { ...TYPE.labelSmall, color: COLORS.mediumGrey },
+  genreLink: { color: COLORS.lightGrey },
+
+  /**
+   * The fact box, on the plane the rest of the app puts panels on.
+   * `raised`, not `surface`: surface is a step DOWN from the page's navy
+   * and reads as a recess.
+   */
+  fileBox: {
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.stroke,
+    backgroundColor: COLORS.raised,
+    paddingHorizontal: SPACING.lg,
+    ...SHADOW.card,
+  },
+  fileSection: {
+    paddingVertical: SPACING.lg,
+    gap: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.stroke,
+  },
+  fileSectionLast: { borderBottomWidth: 0 },
+  /** A label, at the size of a label — not a fourth headline. */
+  fileLabel: { ...TYPE.micro, color: COLORS.mediumGrey },
   aboutText: { ...TYPE.p },
   genreRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     flexWrap: 'wrap',
-    gap: SPACING.xs + 2,
-    marginBottom: SPACING.md,
+    gap: SPACING.sm,
+    marginBottom: SPACING.xl,
   },
   metaRow: { gap: 2, marginBottom: SPACING.sm },
   metaLabel: {

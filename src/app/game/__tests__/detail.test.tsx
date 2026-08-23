@@ -76,17 +76,24 @@ describe('the game screen', () => {
     );
   });
 
+  /**
+   * The length is the masthead's figure now rather than one of five
+   * equal columns, so the label reads as the sentence it finishes —
+   * "5h to finish" — and the whole line is the target.
+   */
   it('shows the length, and offers to correct it', async () => {
     await renderApp(<GameInfoScreen />);
-    await waitFor(() => expect(screen.getByText('To finish')).toBeTruthy());
-    await fireEvent.press(screen.getByText('To finish'));
+    await waitFor(() => expect(screen.getByText(/to finish/)).toBeTruthy());
+    await fireEvent.press(
+      screen.getByLabelText('Change how long Celeste takes')
+    );
     expect(screen.getByText('HOW LONG DOES IT TAKE?')).toBeTruthy();
   });
 
   it('calls the length yours once you have set one', async () => {
     store['sidequest.durations.v1'] = JSON.stringify({ '1': 9 });
     await renderApp(<GameInfoScreen />);
-    await waitFor(() => expect(screen.getByText('Your length')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/your length/)).toBeTruthy());
   });
 
   it('says so when the game cannot be loaded', async () => {
