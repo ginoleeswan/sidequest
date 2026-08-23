@@ -8,6 +8,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { BackButton } from '@/components/BackButton';
 import { PageTitle } from '@/components/PageTitle';
 import { Screen } from '@/components/Screen';
+import { useToast } from '@/components/Toast';
 import { SignInRows } from '@/components/SignInRows';
 import { SiteFooter } from '@/components/SiteFooter';
 import { Textured } from '@/components/Textured';
@@ -89,7 +90,21 @@ export default function YouScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isExpanded } = useBreakpoint();
-  const { entries } = useLibrary();
+  const { entries, count, exportJson } = useLibrary();
+  const toast = useToast();
+
+  /** Straight to the clipboard, and it says whether that worked. */
+  const copyLibrary = async () => {
+    try {
+      await navigator.clipboard?.writeText(exportJson());
+      toast('Library copied — paste it on another device', 'copy');
+    } catch {
+      toast(
+        'Copy failed — your browser blocked clipboard access',
+        'alert-circle'
+      );
+    }
+  };
   const { durationOf } = useDurations();
   const hydrated = useHydrated();
   const [pace] = usePersistedState('sidequest.plan.pace', 6);
@@ -155,6 +170,16 @@ export default function YouScreen() {
               icon="download"
               label="Import from Steam"
               onPress={() => router.push('/import')}
+            />
+            {/* Moved off the Library page, where it sat at the foot
+                below every game you own — fine at two, unreachable at
+                two hundred. Exporting is a settings action, and this is
+                where the settings are. */}
+            <Row
+              icon="copy"
+              label="Copy library"
+              value={count > 0 ? `${count} games` : undefined}
+              onPress={count > 0 ? copyLibrary : undefined}
               last
             />
           </View>

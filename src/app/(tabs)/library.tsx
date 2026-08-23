@@ -39,7 +39,7 @@ import {
   type LibrarySort,
 } from '@/lib/libraryStats';
 import { COLORS } from '@/styles/colors';
-import { GUTTER, LAYOUT, SPACING } from '@/styles/theme';
+import { GUTTER, LAYOUT, RADIUS, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 const TABS: LibraryStatus[] = ['wishlist', 'playing', 'finished'];
@@ -79,29 +79,59 @@ function chunk<T>(items: T[], size: number): T[][] {
   return rows;
 }
 
-function Stat({
-  value,
-  label,
-  accent = false,
-}: {
-  value: string;
-  label: string;
-  accent?: boolean;
-}) {
+/**
+ * The backlog, drawn as the time it is.
+ *
+ * A library screen that lists what you own is every library screen. The
+ * thing this app knows, and the reason it exists, is that a collection
+ * is an amount of your life — so the shelf is drawn as a bar of hours,
+ * one segment per game, longest first.
+ *
+ * What it shows that a number cannot: proportion. Forty hours of one RPG
+ * beside six short games is a bar that is half one colour, and seeing
+ * that is the whole argument for being allowed to skip things. The
+ * figure above it says how much; this says what it is made of.
+ *
+ * Finished games are not in it. This is what is still ahead.
+ */
+const BAR_MIN_FLEX = 0.04;
+
+function BacklogBar({ hours }: { hours: number[] }) {
+  const ordered = [...hours].sort((a, b) => b - a);
+  const total = ordered.reduce((sum, h) => sum + h, 0);
+  if (total <= 0 || ordered.length === 0) return null;
+
   return (
-    <View style={styles.stat}>
-      <Text style={[styles.statValue, accent && styles.statValueAccent]}>
-        {value}
-      </Text>
-      <Text style={styles.statLabel}>{label}</Text>
+    <View
+      style={styles.bar}
+      accessibilityRole="image"
+      accessibilityLabel={`${ordered.length} games, longest ${Math.round(ordered[0])} hours`}
+    >
+      {ordered.map((h, i) => (
+        <View
+          key={i}
+          style={[
+            styles.barSeg,
+            {
+              // A three-hour game next to a hundred-hour one is a
+              // hairline, and a hairline reads as a rendering fault
+              // rather than as a short game. The floor costs the long
+              // ones a sliver of truth and buys every game a presence.
+              flexGrow: Math.max(h / total, BAR_MIN_FLEX),
+              // The longest is the one the backlog is really made of.
+              backgroundColor: i === 0 ? COLORS.accent : COLORS.white,
+              opacity: i === 0 ? 1 : Math.max(0.5 - i * 0.06, 0.16),
+            },
+          ]}
+        />
+      ))}
     </View>
   );
 }
 
 export default function LibraryScreen() {
   const router = useRouter();
-  const { byStatus, entries, count, exportJson, importJson, addGames, tags } =
-    useLibrary();
+  const { byStatus, entries, count, importJson, addGames, tags } = useLibrary();
   const { durationOf, learnDurations } = useDurations();
   const [sort, setSort] = useState<LibrarySort>('added');
 
@@ -128,18 +158,6 @@ export default function LibraryScreen() {
     done: number;
     total: number;
   } | null>(null);
-
-  const copyLibrary = async () => {
-    try {
-      await navigator.clipboard?.writeText(exportJson());
-      toast('Library copied — paste it on another device', 'copy');
-    } catch {
-      toast(
-        'Copy failed — your browser blocked clipboard access',
-        'alert-circle'
-      );
-    }
-  };
 
   /**
    * One box, two formats.
@@ -199,6 +217,16 @@ export default function LibraryScreen() {
     );
   };
 
+  /** Everything still ahead, as hours — the bar's raw material. */
+  const aheadHours = useMemo(
+    () =>
+      Object.values(entries)
+        .filter((entry) => entry.status !== 'finished')
+        .map((entry) => hoursOf(entry.game))
+        .filter((h) => h > 0),
+    [entries, hoursOf]
+  );
+
   const games = sortLibrary(byStatus(tab), sort, hoursOf)
     .filter((entry) => shelf == null || (entry.tags ?? []).includes(shelf))
     .map((entry) => entry.game);
@@ -246,27 +274,26 @@ export default function LibraryScreen() {
               onAction={count > 0 ? () => router.push('/plan') : undefined}
             />
             {count > 0 && (
-              <View style={styles.stats}>
-                <Stat
-                  value={String(stats.waiting + stats.playing)}
-                  label="still to play"
-                />
-                <Stat
-                  value={formatHours(stats.hoursAhead)}
-                  label="ahead of you"
-                />
-                <Stat
-                  value={String(stats.finished)}
-                  label="finished"
-                  accent={stats.finished > 0}
-                />
-                {stats.hoursFinished > 0 && (
-                  <Stat
-                    value={formatHours(stats.hoursFinished)}
-                    label="credits rolled"
-                    accent
-                  />
-                )}
+              <View style={styles.hero}>
+                <View style={styles.heroLine}>
+                  <Text style={styles.heroValue}>
+                    {formatHours(stats.hoursAhead)}
+                  </Text>
+                  <Text style={styles.heroLabel}>ahead of you</Text>
+                </View>
+
+                <BacklogBar hours={aheadHours} />
+
+                {/* The supporting counts, quiet and on one line. They
+                    were three stats the same size as each other, which
+                    made the only meaningful one — the hours — no louder
+                    than a zero. */}
+                <Text style={styles.heroSub}>
+                  {stats.waiting + stats.playing} still to play
+                  {stats.finished > 0 && ` · ${stats.finished} finished`}
+                  {stats.hoursFinished > 0 &&
+                    ` · ${formatHours(stats.hoursFinished)} of credits`}
+                </Text>
               </View>
             )}
 
@@ -277,7 +304,7 @@ export default function LibraryScreen() {
               worth keeping up here because they act on what the numbers
               above just told you; the transfer links are not, and have
               gone to the foot. */}
-            {(count > 3 || stats.finished > 0) && (
+            {count > 0 && (
               <View style={styles.quickRow}>
                 {count > 3 && (
                   <Chip
@@ -295,6 +322,14 @@ export default function LibraryScreen() {
                     onPress={() => router.push('/memcard')}
                   />
                 )}
+                {/* Up here with the other things you can do to a
+                    library, rather than in a footer beneath it. */}
+                <Chip
+                  title="Import"
+                  iconName="download-outline"
+                  iconType="ionicon"
+                  onPress={() => setImportOpen(true)}
+                />
               </View>
             )}
 
@@ -327,7 +362,14 @@ export default function LibraryScreen() {
               </View>
             )}
 
-            {games.length > 1 && (
+            {/* The grid is two across, so six is the point at which a
+                shelf stops fitting on a screen and an order starts
+                mattering. Below that this was four more controls in
+                front of a list you could already see all of.
+                Gated on the whole library rather than the filtered view,
+                so narrowing to a status with three games in it does not
+                make the control vanish mid-use. */}
+            {count >= 6 && (
               <View style={styles.sortRow}>
                 <Text style={styles.sortLabel}>Sort</Text>
                 {(Object.keys(SORT_LABELS) as LibrarySort[]).map((option) => (
@@ -357,14 +399,33 @@ export default function LibraryScreen() {
                   title={EMPTY_COPY[tab].title}
                   detail={EMPTY_COPY[tab].detail}
                 />
+                {/* The one moment importing is the obvious next thing to
+                    do, so it is offered as an action rather than as a
+                    link in the footer. An empty screen is an invitation
+                    to act; it was telling the reader there was nothing
+                    here and hiding the fix below the fold. */}
+                {count === 0 && (
+                  <Pressable
+                    onPress={() => setImportOpen(true)}
+                    style={styles.emptyAction}
+                    accessibilityRole="button"
+                  >
+                    <Ionicons
+                      name="download-outline"
+                      size={16}
+                      color={COLORS.white}
+                    />
+                    <Text style={styles.emptyActionText}>Import a library</Text>
+                  </Pressable>
+                )}
               </View>
             ) : (
-              <View
-                style={[
-                  styles.gridContent,
-                  { paddingBottom: insets.bottom + 40 },
-                ]}
-              >
+              /* No bottom clearance here. It was meant to clear the tab
+                 bar, but the transfer links sit BELOW this grid — so all
+                 it did was wedge seventy points of nothing between the
+                 games and the links. `Screen` already insets for the
+                 bar, and `inner` carries the page's own footer space. */
+              <View style={styles.gridContent}>
                 {chunk(padToRows(games, columns), columns).map((row, r) => (
                   <View key={r} style={styles.gridRow}>
                     {row.map((item, i) =>
@@ -381,29 +442,12 @@ export default function LibraryScreen() {
 
             {/* Moving a library in or out is housekeeping, not the reason
               anyone opened this page. */}
-            <View style={styles.transferRow}>
-              {count > 0 && (
-                <Pressable onPress={copyLibrary} style={styles.transferLink}>
-                  <Ionicons
-                    name="copy-outline"
-                    size={13}
-                    color={COLORS.mediumGrey}
-                  />
-                  <Text style={styles.transferText}>Copy library</Text>
-                </Pressable>
-              )}
-              <Pressable
-                onPress={() => setImportOpen(true)}
-                style={styles.transferLink}
-              >
-                <Ionicons
-                  name="download-outline"
-                  size={13}
-                  color={COLORS.mediumGrey}
-                />
-                <Text style={styles.transferText}>Import</Text>
-              </Pressable>
-            </View>
+            {/* No data actions down here any more.
+                "Copy library" sat at the foot of this page, which reads
+                as reasonable on a library of two and is unreachable on a
+                library of two hundred — you would scroll past every
+                game you own to find it. Exporting is a settings action
+                and lives on /you with the rest of them. */}
           </View>
         </FadeInView>
         <SiteFooter />
@@ -475,22 +519,38 @@ const styles = StyleSheet.create({
    * one — which reads as a row that broke rather than a grid that was
    * meant. Fixed halves make the wrap the layout.
    */
-  stats: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    rowGap: SPACING.md,
-    paddingVertical: SPACING.sm,
-  },
-  stat: { gap: 1, flexBasis: '50%', flexGrow: 1 },
-  statValue: {
-    ...TYPE.h2,
+  /**
+   * The hero: the hours, then what they are made of.
+   *
+   * This block was four stats of identical weight, which made the only
+   * number worth reading no louder than a zero.
+   */
+  hero: { paddingVertical: SPACING.sm, gap: SPACING.sm },
+  heroLine: { flexDirection: 'row', alignItems: 'baseline', gap: SPACING.sm },
+  heroValue: {
+    fontFamily: 'Noah-Black',
+    fontSize: 46,
+    lineHeight: 50,
     color: COLORS.white,
   },
-  statValueAccent: { color: COLORS.accent },
-  statLabel: {
-    ...TYPE.micro,
-    color: COLORS.mediumGrey,
+  heroLabel: { ...TYPE.body, color: COLORS.mediumGrey },
+  heroSub: { ...TYPE.caption, color: COLORS.mediumGrey },
+
+  bar: {
+    flexDirection: 'row',
+    gap: 3,
+    height: 10,
+    marginTop: SPACING.xs,
   },
+  barSeg: { borderRadius: 3, flexBasis: 0 },
+
+  /**
+   * Sized by how many there are, not by a guess at how many there will
+   * be. At a fixed 50% basis the row fitted two, so the three a normal
+   * library shows left the third stranded on a line of its own and the
+   * block read as a mistake. Growing from a 100pt basis gives two a half
+   * each, three a third each, and lets four wrap to a tidy pair of rows.
+   */
   shelfRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
   sortRow: {
     flexDirection: 'row',
@@ -510,18 +570,19 @@ const styles = StyleSheet.create({
   gridRow: { flexDirection: 'row', gap: LAYOUT.gridGap },
   gridContent: { gap: LAYOUT.gridGap },
   gridSpacer: { flex: 1 },
-  emptyFrame: { minHeight: 320 },
-  quickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  transferRow: {
+  emptyFrame: { minHeight: 320, alignItems: 'center', gap: SPACING.lg },
+  emptyAction: {
     flexDirection: 'row',
-    gap: SPACING.lg,
-    paddingTop: SPACING.lg,
+    alignItems: 'center',
+    gap: SPACING.sm,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: RADIUS.xl,
+    borderWidth: 1,
+    borderColor: COLORS.strokeStrong,
   },
-  transferLink: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  transferText: {
-    ...TYPE.labelTiny,
-    color: COLORS.mediumGrey,
-  },
+  emptyActionText: { ...TYPE.body, color: COLORS.white },
+  quickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(15, 19, 28, 0.82)',

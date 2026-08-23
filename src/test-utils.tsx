@@ -4,6 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ToastProvider } from '@/components/Toast';
 import { DurationsProvider } from '@/lib/durations';
+import { AuthProvider } from '@/lib/auth';
 import { LibraryProvider } from '@/lib/library';
 import { _setBackendForTests } from '@/lib/storage';
 
@@ -36,11 +37,17 @@ export function renderApp(ui: React.ReactElement) {
   return render(
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider initialMetrics={METRICS}>
-        <LibraryProvider>
-          <DurationsProvider>
-            <ToastProvider>{ui}</ToastProvider>
-          </DurationsProvider>
-        </LibraryProvider>
+        {/* Mirrors the root layout. `/you` renders the sign-in section,
+            which asks for a session — without this the screen throws
+            rather than rendering signed out, which is the state almost
+            every reader is in. */}
+        <AuthProvider>
+          <LibraryProvider>
+            <DurationsProvider>
+              <ToastProvider>{ui}</ToastProvider>
+            </DurationsProvider>
+          </LibraryProvider>
+        </AuthProvider>
       </SafeAreaProvider>
     </QueryClientProvider>
   );

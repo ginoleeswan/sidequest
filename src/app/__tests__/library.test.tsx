@@ -72,11 +72,13 @@ describe('the library screen', () => {
     expect(screen.queryByText('Underway')).toBeNull();
   });
 
-  it('offers the library as a transferable string', async () => {
+  it('offers a way to bring a library in', async () => {
     seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
     await renderApp(<LibraryScreen />);
-    expect(screen.getByText('Copy library')).toBeTruthy();
-    expect(screen.getByText('Import')).toBeTruthy();
+    expect(screen.getByText(/^Import/)).toBeTruthy();
+    // Copying moved to /you: it is a settings action, and at the foot of
+    // this page it sat below every game you own.
+    expect(screen.queryByText('Copy library')).toBeNull();
   });
 
   /**
@@ -85,9 +87,15 @@ describe('the library screen', () => {
    * preference.
    */
   it('reorders by length on demand', async () => {
+    // Six, because that is where the control appears: two across the
+    // grid, three rows, the point a shelf stops fitting on a screen.
     seed([
       { game: game(1, 'Long', 40), status: 'wishlist' },
       { game: game(2, 'Short', 4), status: 'wishlist' },
+      { game: game(3, 'Filler c', 20), status: 'wishlist' },
+      { game: game(4, 'Filler d', 21), status: 'wishlist' },
+      { game: game(5, 'Filler e', 22), status: 'wishlist' },
+      { game: game(6, 'Filler f', 23), status: 'wishlist' },
     ]);
     await renderApp(<LibraryScreen />);
     await fireEvent.press(screen.getByText('Shortest'));
@@ -97,46 +105,15 @@ describe('the library screen', () => {
     expect(titles[0]).toBe('Short');
   });
 
-  it('offers no sort control for a single game', async () => {
+  it('offers no sort control for a library you can already see', async () => {
     seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
     await renderApp(<LibraryScreen />);
     expect(screen.queryByText('Shortest')).toBeNull();
   });
 
-  it('copies the library out, and says so', async () => {
-    const writeText = jest.fn().mockResolvedValue(undefined);
-    Object.defineProperty(globalThis, 'navigator', {
-      configurable: true,
-      value: { clipboard: { writeText } },
-    });
-    seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
-    await renderApp(<LibraryScreen />);
-    await fireEvent.press(screen.getByText('Copy library'));
-    await waitFor(() => expect(writeText).toHaveBeenCalled());
-    expect(JSON.parse(writeText.mock.calls[0][0])['1'].game.name).toBe(
-      'Celeste'
-    );
-    await waitFor(() =>
-      expect(screen.getByText(/Library copied/)).toBeTruthy()
-    );
-  });
-
-  it('says so rather than failing silently when the browser blocks the clipboard', async () => {
-    Object.defineProperty(globalThis, 'navigator', {
-      configurable: true,
-      value: {
-        clipboard: { writeText: jest.fn().mockRejectedValue(new Error('no')) },
-      },
-    });
-    seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
-    await renderApp(<LibraryScreen />);
-    await fireEvent.press(screen.getByText('Copy library'));
-    await waitFor(() => expect(screen.getByText(/Copy failed/)).toBeTruthy());
-  });
-
   it('refuses a paste that is not a library', async () => {
     await renderApp(<LibraryScreen />);
-    await fireEvent.press(screen.getByText('Import'));
+    await fireEvent.press(screen.getByText(/^Import/));
     await fireEvent.changeText(
       screen.getByPlaceholderText(/Paste/i),
       'not json'
@@ -152,7 +129,7 @@ describe('the library screen', () => {
   it('merges a pasted library in, and counts what arrived', async () => {
     seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
     await renderApp(<LibraryScreen />);
-    await fireEvent.press(screen.getByText('Import'));
+    await fireEvent.press(screen.getByText(/^Import/));
     await fireEvent.changeText(
       screen.getByPlaceholderText(/Paste/i),
       JSON.stringify({
@@ -191,7 +168,7 @@ describe('the library screen', () => {
    */
   it('imports a pasted CSV export, with its statuses and hours', async () => {
     await renderApp(<LibraryScreen />);
-    await fireEvent.press(screen.getByText('Import'));
+    await fireEvent.press(screen.getByText(/^Import/));
     await fireEvent.changeText(
       screen.getByPlaceholderText(/Paste/i),
       ['Title,Status,Hours', 'Celeste,Completed,9', 'Hades,Playing,4'].join(
@@ -208,7 +185,7 @@ describe('the library screen', () => {
 
   it('says which titles it could not match rather than dropping them silently', async () => {
     await renderApp(<LibraryScreen />);
-    await fireEvent.press(screen.getByText('Import'));
+    await fireEvent.press(screen.getByText(/^Import/));
     await fireEvent.changeText(
       screen.getByPlaceholderText(/Paste/i),
       ['Title', 'Celeste', 'Some Obscure Thing'].join('\n')
@@ -221,7 +198,7 @@ describe('the library screen', () => {
 
   it('explains a spreadsheet with no title column', async () => {
     await renderApp(<LibraryScreen />);
-    await fireEvent.press(screen.getByText('Import'));
+    await fireEvent.press(screen.getByText(/^Import/));
     await fireEvent.changeText(
       screen.getByPlaceholderText(/Paste/i),
       ['Foo,Bar', '1,2'].join('\n')
