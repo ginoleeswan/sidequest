@@ -419,6 +419,7 @@ export default function PlanScreen() {
               <SectionHeader
                 title="The Plan"
                 eyebrow={empty ? undefined : `${entries.length} in your queue`}
+                onAccount={() => router.push('/you')}
                 actionLabel={canShare ? 'Share →' : undefined}
                 actionAccessibilityLabel="Copy a link to this plan"
                 onAction={canShare ? sharePlan : undefined}

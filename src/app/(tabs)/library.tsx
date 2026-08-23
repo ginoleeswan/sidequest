@@ -272,6 +272,7 @@ export default function LibraryScreen() {
               }
               actionLabel={count > 0 ? 'Plan my backlog →' : undefined}
               onAction={count > 0 ? () => router.push('/plan') : undefined}
+              onAccount={() => router.push('/you')}
             />
             {count > 0 && (
               <View style={styles.hero}>

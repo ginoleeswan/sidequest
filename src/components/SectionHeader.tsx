@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { COLORS } from '@/styles/colors';
@@ -19,6 +20,16 @@ interface Props {
    */
   actionAccessibilityLabel?: string;
   onAction?: () => void;
+  /**
+   * The way to You, on a screen that has a section header.
+   *
+   * It rides the eyebrow's line rather than floating over the top-right
+   * corner, and that is not cosmetic: these screens just gave up the
+   * clearance they were holding for a back button they no longer have,
+   * and a floating icon would want all of it back. Sharing a row the
+   * page already draws costs no height at all.
+   */
+  onAccount?: () => void;
 }
 
 /** The one way section titles are rendered, everywhere. */
@@ -28,12 +39,31 @@ export function SectionHeader({
   actionLabel,
   actionAccessibilityLabel,
   onAction,
+  onAccount,
 }: Props) {
   const [hovered, setHovered] = useState(false);
 
   return (
     <View style={styles.header}>
-      {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
+      {eyebrow || onAccount ? (
+        <View style={styles.topRow}>
+          <Text style={styles.eyebrow}>{eyebrow ?? ''}</Text>
+          {onAccount ? (
+            <Pressable
+              onPress={onAccount}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel="You"
+            >
+              <Ionicons
+                name="person-circle-outline"
+                size={23}
+                color={COLORS.mediumGrey}
+              />
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
       {/* The action shares a row with the TITLE, not with the title and
           its eyebrow together. Set against the pair it was aligned to
           the bottom of a two-line block, which put it 10.5pt below the
@@ -64,6 +94,11 @@ export function SectionHeader({
 }
 
 const styles = StyleSheet.create({
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   header: { gap: 2 },
   row: {
     flexDirection: 'row',
