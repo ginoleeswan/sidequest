@@ -61,3 +61,15 @@ jest.mock('expo-router', () => {
  */
 const { notifyManager } = require('@tanstack/react-query');
 notifyManager.setScheduler((callback) => callback());
+
+/**
+ * The share sheet, as a spy.
+ *
+ * `Share.share` opens real system UI, so tests that hand a library or a
+ * plan link out of the app read this instead. Spied rather than mocked
+ * wholesale, so the rest of react-native stays itself.
+ */
+const { Share: RNShare } = require('react-native');
+jest
+  .spyOn(RNShare, 'share')
+  .mockResolvedValue({ action: RNShare.sharedAction });

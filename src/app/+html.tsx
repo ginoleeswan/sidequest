@@ -1,4 +1,5 @@
 import type { PropsWithChildren } from 'react';
+import { SITE_ORIGIN } from '@/constants/site';
 
 /**
  * Static-export HTML shell (web only). Carries the desktop polish the RN
@@ -54,10 +55,7 @@ export default function Root({ children }: PropsWithChildren) {
           property="og:description"
           content="Your next game, found — and a plan you'll actually finish."
         />
-        <meta
-          property="og:image"
-          content="https://gosidequest.vercel.app/og.png?v=2"
-        />
+        <meta property="og:image" content={`${SITE_ORIGIN}/og.png?v=2`} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card" content="summary_large_image" />
@@ -69,10 +67,7 @@ export default function Root({ children }: PropsWithChildren) {
           name="twitter:description"
           content="Your next game, found — and a plan you'll actually finish."
         />
-        <meta
-          name="twitter:image"
-          content="https://gosidequest.vercel.app/og.png?v=2"
-        />
+        <meta name="twitter:image" content={`${SITE_ORIGIN}/og.png?v=2`} />
         <style dangerouslySetInnerHTML={{ __html: css }} />
         <script dangerouslySetInnerHTML={{ __html: startAtTheTop }} />
         <script dangerouslySetInnerHTML={{ __html: registerServiceWorker }} />
