@@ -1,6 +1,6 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 
-import HomeScreen from '../index';
+import HomeScreen from '../(tabs)/index';
 import type { Game } from '@/api/types';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { renderApp, useFakeStorage } from '@/test-utils';

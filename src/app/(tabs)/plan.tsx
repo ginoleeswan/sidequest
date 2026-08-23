@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useBreakpoint } from '@/hooks/useBreakpoint';
@@ -349,13 +349,22 @@ export default function PlanScreen() {
   return (
     <Textured style={styles.background}>
       <PageTitle>The Plan — Sidequest</PageTitle>
+      {/* Wide gets the header; compact WEB gets a back button; compact
+          native gets neither, because it has the tab bar.
+          This screen is a tab root now. A back chevron on a tab root is
+          a control with nowhere to go — `BackButton` falls back to
+          replacing the route with home when there is no history, so
+          tapping it would silently throw you onto Home from a tab you
+          had deliberately opened. iOS tab roots never carry one. Web
+          still does, because web has no tab bar and this would
+          otherwise be a screen with no way out on a phone. */}
       {isExpanded ? (
         <AppHeader />
-      ) : (
+      ) : Platform.OS === 'web' ? (
         <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
           <BackButton />
         </View>
-      )}
+      ) : null}
 
       <Screen>
         <View style={{ paddingBottom: SPACING.xl * 1.5 }}>

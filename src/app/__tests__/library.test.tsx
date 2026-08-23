@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
-import LibraryScreen from '../library';
+import LibraryScreen from '../(tabs)/library';
 import type { Game } from '@/api/types';
 import type { LibraryStatus } from '@/lib/library';
 import { renderApp, useFakeStorage } from '@/test-utils';

@@ -14,7 +14,6 @@ import { Onboarding } from '@/components/Onboarding';
 import { ScreenFade } from '@/components/ScreenFade';
 import { SplashCurtain } from '@/components/SplashCurtain';
 import { SaveErrorNotice } from '@/components/SaveErrorNotice';
-import { TabBar } from '@/components/TabBar';
 import { ToastProvider } from '@/components/Toast';
 import { DurationsProvider } from '@/lib/durations';
 import { LibraryProvider } from '@/lib/library';
@@ -134,7 +133,6 @@ export default function RootLayout() {
                   }}
                 />
               </ScreenFade>
-              <TabBar />
               <Onboarding />
               <CommandPalette />
               <SaveErrorNotice />

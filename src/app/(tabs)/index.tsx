@@ -44,7 +44,6 @@ import { GameTile } from '@/components/GameTile';
 import { Message } from '@/components/Message';
 import { PageTitle } from '@/components/PageTitle';
 import { Screen } from '@/components/Screen';
-import { TAB_BAR_HEIGHT } from '@/components/TabBar';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { PromptBand } from '@/components/PromptBand';
 import { RecentShelf } from '@/components/RecentShelf';
@@ -501,7 +500,7 @@ export default function HomeScreen() {
           styles.gridContent,
           !isExpanded && { paddingTop: headerHeight },
           Platform.OS !== 'web' && {
-            paddingBottom: TAB_BAR_HEIGHT + insets.bottom,
+            paddingBottom: insets.bottom,
           },
         ]}
       />
@@ -758,7 +757,7 @@ export default function HomeScreen() {
                   styles.list,
                   { paddingTop: headerHeight },
                   Platform.OS !== 'web' && {
-                    paddingBottom: TAB_BAR_HEIGHT + insets.bottom,
+                    paddingBottom: insets.bottom,
                   },
                 ]}
               />

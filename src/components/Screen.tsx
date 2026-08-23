@@ -1,4 +1,3 @@
-import { usePathname } from 'expo-router';
 import {
   Platform,
   ScrollView,
@@ -10,8 +9,6 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import { isTabRoute, TAB_BAR_HEIGHT } from './TabBar';
 
 /** How far from the end the scroller counts as "near it". */
 const END_SLACK = 900;
@@ -44,17 +41,22 @@ interface Props {
  */
 export function Screen({ children, style, onEndReached }: Props) {
   const insets = useSafeAreaInsets();
-  const pathname = usePathname();
 
   if (Platform.OS === 'web') {
     return style ? <View style={style}>{children}</View> : <>{children}</>;
   }
 
-  // Tab routes reserve room for the bar; everywhere else just clears the
-  // home indicator.
-  const clearance = isTabRoute(pathname)
-    ? TAB_BAR_HEIGHT + insets.bottom
-    : insets.bottom;
+  /**
+   * The home indicator, and nothing else.
+   *
+   * Tab routes used to add `TAB_BAR_HEIGHT` here, because the bar was a
+   * View this app drew on top of its own content and nothing else knew
+   * it was there. `NativeTabs` is a real `UITabBarController`: it owns
+   * the safe area below it and applies content insets to the screens
+   * inside it automatically, so reserving the same room again puts a
+   * bar's worth of blank page under every shelf.
+   */
+  const clearance = insets.bottom;
 
   const onScroll = onEndReached
     ? (event: NativeSyntheticEvent<NativeScrollEvent>) => {
