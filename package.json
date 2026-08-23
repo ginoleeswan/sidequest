@@ -26,7 +26,7 @@
     "build:prod": "eas build --profile production",
     "update:preview": "eas update --channel preview",
     "update:prod": "eas update --channel production",
-    "fingerprint": "expo-updates fingerprint:generate"
+    "fingerprint:generate": "expo-updates fingerprint:generate"
   },
   "engines": {
     "node": ">=20.19.4"
@@ -39,7 +39,7 @@
     "@tanstack/react-query": "^5.101.4",
     "@tanstack/react-query-persist-client": "^5.101.4",
     "babel-plugin-react-compiler": "^1.0.0",
-    "expo": "~57.0.14",
+    "expo": "~57.0.15",
     "expo-calendar": "~57.0.2",
     "expo-constants": "~57.0.12",
     "expo-dev-client": "~57.0.14",
@@ -47,9 +47,9 @@
     "expo-haptics": "~57.0.1",
     "expo-image": "~57.0.3",
     "expo-linear-gradient": "~57.0.1",
-    "expo-linking": "~57.0.6",
+    "expo-linking": "~57.0.7",
     "expo-notifications": "~57.0.13",
-    "expo-router": "~57.0.14",
+    "expo-router": "~57.0.15",
     "expo-sharing": "~57.0.14",
     "expo-splash-screen": "~57.0.7",
     "expo-sqlite": "~57.0.1",
