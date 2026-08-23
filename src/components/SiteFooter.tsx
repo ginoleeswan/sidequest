@@ -292,7 +292,7 @@ export function SiteFooter({
             <View style={styles.brand}>
               <View style={styles.lockup}>
                 <Mark size={26} />
-                <Text style={styles.wordmark}>Sidequest</Text>
+                <Text style={styles.wordmark}>SIDEQUEST</Text>
               </View>
               {/* The claim, said once, at claim size — and nothing
                   else. This block used to restate the product three
