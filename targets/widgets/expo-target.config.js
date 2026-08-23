@@ -16,7 +16,22 @@
  */
 module.exports = {
   type: 'widget',
-  name: 'Sidequest',
+  /**
+   * NOT "Sidequest", which is what this said and what broke the first
+   * build.
+   *
+   * The name becomes the Xcode target's name and its `productName`, and
+   * the app target is already called Sidequest — so the project carried
+   * two targets with one name, building `Sidequest.app` and
+   * `Sidequest.appex` through the same intermediate paths. Xcode reports
+   * that as "Multiple commands produce conflicting outputs", which
+   * names the symptom and not the cause.
+   *
+   * The bundle identifier is unaffected either way: it comes from the
+   * app's own id plus the target type, and stays
+   * com.glstudio.sidequest.widget.
+   */
+  name: 'Widgets',
   /**
    * The app's own palette, as colour sets the Swift reads by name.
    *

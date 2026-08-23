@@ -12,6 +12,9 @@
     "development": {
       "extends": "base",
       "environment": "development",
+      "env": {
+        "APP_VARIANT": "development"
+      },
       "developmentClient": true,
       "distribution": "internal",
       "channel": "development",
@@ -26,6 +29,9 @@
     "preview": {
       "extends": "base",
       "environment": "preview",
+      "env": {
+        "APP_VARIANT": "preview"
+      },
       "distribution": "internal",
       "channel": "preview",
       "ios": {
@@ -39,6 +45,9 @@
     "production": {
       "extends": "base",
       "environment": "production",
+      "env": {
+        "APP_VARIANT": "production"
+      },
       "distribution": "store",
       "channel": "production",
       "autoIncrement": true,
