@@ -1,0 +1,36 @@
+diff --git a/node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI-Cxx/include/RuntimeScheduler.h b/node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI-Cxx/include/RuntimeScheduler.h
+index 6115e87..a0af8e2 100644
+--- a/node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI-Cxx/include/RuntimeScheduler.h
++++ b/node_modules/expo-modules-jsi/apple/Sources/ExpoModulesJSI-Cxx/include/RuntimeScheduler.h
+@@ -50,7 +50,21 @@ public:
+    `scheduleTask` dispatches through `fn`, which the host implements against
+    the real react::RuntimeScheduler.
+    */
+-  SWIFT_RETURNS_RETAINED RuntimeScheduler(void *scheduler, ScheduleFn fn) noexcept
++  // SWIFT_RETURNS_RETAINED removed from the two constructors below.
++  //
++  // Xcode 26.3 rejects it outright: "'RuntimeScheduler' cannot be
++  // annotated with either SWIFT_RETURNS_RETAINED or
++  // SWIFT_RETURNS_UNRETAINED because it is not returning a
++  // SWIFT_SHARED_REFERENCE type". The class IS one — but the attribute
++  // is applied on the closing brace at the end of this class, so at the
++  // point these constructors are parsed the compiler does not know it
++  // yet, and refuses the annotation.
++  //
++  // Dropping it is what the compiler asks for, and it is the safe half
++  // of the trade: the annotation describes the ownership of a RETURNED
++  // shared reference, and a constructor does not return one. Compilers
++  // that accepted it were ignoring it.
++  RuntimeScheduler(void *scheduler, ScheduleFn fn) noexcept
+       : nativeScheduler(scheduler), scheduleFn(fn) {}
+ 
+   /**
+@@ -58,7 +72,7 @@ public:
+    caller's thread — intended for standalone runtimes (e.g. tests) that have
+    no React scheduler.
+    */
+-  SWIFT_RETURNS_RETAINED RuntimeScheduler() {}
++  RuntimeScheduler() {}
+ 
+   RuntimeScheduler(const RuntimeScheduler &) = delete;
+ 
