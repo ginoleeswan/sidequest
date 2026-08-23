@@ -218,25 +218,21 @@ function BacklogFan({ games }: { games: Game[] }) {
 }
 
 const PACES: {
-  icon: keyof typeof Ionicons.glyphMap;
   title: string;
   line: string;
   hours: number;
 }[] = [
   {
-    icon: 'moon',
     title: 'A couple of evenings',
     line: 'Work, life, and the occasional boss fight.',
     hours: 4,
   },
   {
-    icon: 'game-controller',
     title: 'Most nights',
     line: 'A steady hour or two once the day winds down.',
     hours: 8,
   },
   {
-    icon: 'flash',
     title: 'It’s my main thing',
     line: 'Weekends were invented for this.',
     hours: 15,
@@ -405,12 +401,33 @@ export function Onboarding() {
                 setTimeout(() => setStep(2), 260);
               }}
               style={[styles.paceCard, selected && styles.paceCardSelected]}
+              accessibilityRole="button"
+              accessibilityLabel={`${option.title}, about ${option.hours} hours a week`}
             >
-              <Ionicons
-                name={option.icon}
-                size={18}
-                color={selected ? COLORS.darkGrey : COLORS.mediumGrey}
-              />
+              {/* The number leads, because the number is the choice.
+                  This row carried a moon, a controller and a lightning
+                  bolt — evocative, and telling the reader nothing the
+                  words beside them did not. The hours are the only
+                  thing here anybody is actually deciding between, and
+                  they were set small and grey off to the right. */}
+              <View style={styles.paceHoursBox}>
+                <Text
+                  style={[
+                    styles.paceHoursNum,
+                    selected && styles.paceHoursNumSelected,
+                  ]}
+                >
+                  {option.hours}
+                </Text>
+                <Text
+                  style={[
+                    styles.paceHoursUnit,
+                    selected && styles.paceLineSelected,
+                  ]}
+                >
+                  h / week
+                </Text>
+              </View>
               <View style={styles.paceBody}>
                 <Text
                   style={[
@@ -426,18 +443,15 @@ export function Onboarding() {
                   {option.line}
                 </Text>
               </View>
-              <Text
-                style={[styles.paceHours, selected && styles.paceTitleSelected]}
-              >
-                ~{option.hours}h
-              </Text>
             </Pressable>
           );
         })}
       </View>
-      <Text style={styles.quiet}>
-        You can tune this later — or measure it from Steam.
-      </Text>
+      {/* "or measure it from Steam" read as a link, was not one, and
+          pointed at an import that would have to leave onboarding
+          half-finished to reach. The reassurance that matters is that
+          this is not a decision they are stuck with. */}
+      <Text style={styles.quiet}>You can change this later.</Text>
     </View>,
 
     // -------------------------------------------------- act 3: first saves
@@ -701,6 +715,19 @@ const styles = StyleSheet.create({
   paceCardSelected: {
     backgroundColor: COLORS.white,
     borderColor: COLORS.white,
+  },
+  paceHoursBox: { width: 62, alignItems: 'flex-start' },
+  paceHoursNum: {
+    fontFamily: 'Noah-Black',
+    fontSize: 30,
+    lineHeight: 32,
+    color: COLORS.accent,
+  },
+  paceHoursNumSelected: { color: COLORS.darkGrey },
+  paceHoursUnit: {
+    ...TYPE.micro,
+    color: COLORS.mediumGrey,
+    letterSpacing: 1,
   },
   paceBody: { flex: 1, gap: 1 },
   paceTitle: {
