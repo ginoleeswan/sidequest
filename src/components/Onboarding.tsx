@@ -28,6 +28,7 @@ import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useHydrated } from '@/hooks/useHydrated';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { usePersistedState } from '@/hooks/usePersistedState';
+import { formatHours } from '@/lib/duration';
 import { useLibrary } from '@/lib/library';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, RADIUS, SPACING } from '@/styles/theme';
@@ -352,6 +353,23 @@ export function Onboarding() {
     if (toPlan) router.push('/plan');
   };
 
+  /**
+   * What they have saved, and what it would take them.
+   *
+   * Act two asked for a pace; this is where that answer starts paying.
+   * Rather than telling the reader their saves "become your first plan",
+   * the screen works the plan out in front of them — which is the
+   * product's one trick, performed before they have finished signing up
+   * for it.
+   *
+   * Derived from the library rather than counted separately: the tiles
+   * already read their state from `statusOf`, and a tally kept beside
+   * them is a second source of truth waiting to disagree.
+   */
+  const savedGames = picks.filter((game) => statusOf(game.id) === 'wishlist');
+  const savedHours = savedGames.reduce((sum, game) => sum + game.playtime, 0);
+  const weeks = savedHours / (pace ?? 6);
+
   const contentWidth = Math.min(width - SPACING.lg * 2, 460);
   const tileWidth = (contentWidth - SPACING.sm * 2) / 3;
 
@@ -460,9 +478,12 @@ export function Onboarding() {
       <Text style={styles.display}>
         Been meaning to{'\n'}play any of these?
       </Text>
+      {/* "Or skip; the bookmark is everywhere" named an affordance
+          nobody has seen yet — the reader has not met a bookmark, and
+          the way out of this screen is the Skip they have had all
+          along. What is worth saying is what a tap does. */}
       <Text style={styles.lede}>
-        Tap to save — they become your first plan. Or skip; the bookmark is
-        everywhere.
+        Tap the ones you have been meaning to play.
       </Text>
       <View style={styles.pickGrid}>
         {picks.map((game) => {
@@ -481,6 +502,19 @@ export function Onboarding() {
           );
         })}
       </View>
+      {/* The plan, arriving as they tap. Held to one line and one
+          decimal-free number: this is a promise being demonstrated, not
+          a readout. */}
+      {savedGames.length > 0 && (
+        <Text style={styles.tally}>
+          <Text style={styles.tallyStrong}>{formatHours(savedHours)}</Text> of
+          play — about{' '}
+          <Text style={styles.tallyStrong}>
+            {weeks < 1.5 ? 'a week' : `${Math.round(weeks)} weeks`}
+          </Text>{' '}
+          at {pace ?? 6}h a week.
+        </Text>
+      )}
       <Pressable
         onPress={() => finish(savedCount > 0)}
         style={[styles.cta, isExpanded && styles.ctaInline]}
@@ -693,6 +727,14 @@ const styles = StyleSheet.create({
     ...TYPE.h3,
     color: COLORS.darkGrey,
   },
+  tally: {
+    ...TYPE.caption,
+    color: COLORS.mediumGrey,
+    marginTop: SPACING.md,
+    marginBottom: -SPACING.xs,
+  },
+  tallyStrong: { fontFamily: 'Noah-Bold', color: COLORS.white },
+
   quiet: {
     ...TYPE.p,
     color: COLORS.mediumGrey,
