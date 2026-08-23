@@ -52,13 +52,13 @@ beforeEach(() => {
 describe('onboarding', () => {
   it('opens on the promise', async () => {
     await renderApp(<Onboarding />);
-    expect(screen.getByText('Set me up — 20 seconds')).toBeTruthy();
+    expect(screen.getByText('Set me up')).toBeTruthy();
   });
 
   it('stays away once it has been seen', async () => {
     store['sidequest.onboarded.v1'] = JSON.stringify(true);
     await renderApp(<Onboarding />);
-    expect(screen.queryByText('Set me up — 20 seconds')).toBeNull();
+    expect(screen.queryByText('Set me up')).toBeNull();
   });
 
   it('remembers being skipped, and does not send you anywhere', async () => {
@@ -74,7 +74,7 @@ describe('onboarding', () => {
     jest.useFakeTimers();
     try {
       await renderApp(<Onboarding />);
-      await fireEvent.press(screen.getByText('Set me up — 20 seconds'));
+      await fireEvent.press(screen.getByText('Set me up'));
       await fireEvent.press(screen.getByText('Most nights'));
       expect(store['sidequest.plan.pace']).toBe('8');
       await act(async () => {
@@ -88,15 +88,15 @@ describe('onboarding', () => {
 
   it('lets you walk back a step', async () => {
     await renderApp(<Onboarding />);
-    await fireEvent.press(screen.getByText('Set me up — 20 seconds'));
+    await fireEvent.press(screen.getByText('Set me up'));
     expect(screen.getByText('YOUR PACE')).toBeTruthy();
     await fireEvent.press(screen.getByLabelText('Back'));
-    expect(screen.getByText('Set me up — 20 seconds')).toBeTruthy();
+    expect(screen.getByText('Set me up')).toBeTruthy();
   });
 
   it('saves what you tap, and counts it on the button', async () => {
     await renderApp(<Onboarding />);
-    await fireEvent.press(screen.getByText('Set me up — 20 seconds'));
+    await fireEvent.press(screen.getByText('Set me up'));
     await fireEvent.press(screen.getByText('A couple of evenings'));
     await waitFor(() => expect(screen.getByText('FIRST SAVES')).toBeTruthy());
     await waitFor(() =>
@@ -113,7 +113,7 @@ describe('onboarding', () => {
 
   it('opens the plan when you finish with something saved', async () => {
     await renderApp(<Onboarding />);
-    await fireEvent.press(screen.getByText('Set me up — 20 seconds'));
+    await fireEvent.press(screen.getByText('Set me up'));
     await fireEvent.press(screen.getByText('A couple of evenings'));
     await waitFor(() =>
       expect(screen.getByLabelText('Save Game 1')).toBeTruthy()
@@ -125,7 +125,7 @@ describe('onboarding', () => {
 
   it('leaves you where you are when you finish with nothing saved', async () => {
     await renderApp(<Onboarding />);
-    await fireEvent.press(screen.getByText('Set me up — 20 seconds'));
+    await fireEvent.press(screen.getByText('Set me up'));
     await fireEvent.press(screen.getByText('A couple of evenings'));
     await waitFor(() =>
       expect(screen.getByText('Start exploring')).toBeTruthy()

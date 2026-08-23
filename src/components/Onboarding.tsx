@@ -1,8 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter, usePathname } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+  Animated,
+  Easing,
   Modal,
   Pressable,
   StyleSheet,
@@ -15,13 +17,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { CoverImage } from './CoverImage';
+import { Mark } from './Mark';
 import { FadeInView } from './FadeInView';
 import { Textured } from './Textured';
 import { queryKeys } from '@/api/queryClient';
 import { getMustPlayGames } from '@/api/rawg';
 import type { Game, Paged } from '@/api/types';
+import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useHydrated } from '@/hooks/useHydrated';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { useLibrary } from '@/lib/library';
 import { COLORS } from '@/styles/colors';
@@ -69,6 +74,144 @@ function CoverWall({ games }: { games: Game[] }) {
         start={{ x: 0, y: 0.5 }}
         end={{ x: 1, y: 0.5 }}
         style={StyleSheet.absoluteFill}
+      />
+    </View>
+  );
+}
+
+/**
+ * The backlog, as a hand of cards — and then as a shortlist.
+ *
+ * The screen has one sentence to make credible, and it is the lede's
+ * second half: works out what you can actually finish, and gives you
+ * permission to skip the rest. Type alone cannot say that. Five covers
+ * arrive, three go dark, two stay lit — the sentence as a picture, and
+ * the reason the animation is here rather than being decoration.
+ *
+ * The same argument LandingWall makes, deliberately in a different
+ * form. That wall is a grid driven by scrolling, and it shows on phones
+ * too, so a reader arriving from the web has already seen it; restating
+ * the idea as a hand of cards driven by arrival reads as the product
+ * having a voice, where pasting the same grid twice would read as a
+ * loop. There is also nothing to scroll here — this is a fixed modal,
+ * so the wall's mechanism has nothing turning it.
+ *
+ * Real covers from the query that seeds act three. Additive, never
+ * load-bearing: a cold first run with no network draws nothing and the
+ * screen still reads, which is why this sits above the copy instead of
+ * behind it.
+ */
+/**
+ * Portrait, because box art is portrait.
+ *
+ * Drawn first at 132x88 — the shape RAWG's artwork actually arrives in
+ * — overlapped by 59%. Each card showed a 54px sliver of a wide
+ * screenshot, and five of those read as a smudge rather than as games.
+ * Cropping to 3:4 and overlapping by a third gives each card enough face to
+ * be recognised as a cover, which is the entire point of showing them.
+ */
+const FAN_W = 96;
+const FAN_H = 128;
+const FAN_STEP = 62;
+/** Splayed from the middle, so the run arcs rather than leaning. */
+const FAN_TILT = [-12, -6, 0, 6, 12];
+const FAN_LIFT = [18, 5, 0, 5, 18];
+/** The two you would actually get to. Everything else goes out. */
+const FAN_KEEPS = [1, 2];
+const FAN_DIM = 0.16;
+
+function BacklogFan({ games }: { games: Game[] }) {
+  const reduced = useReducedMotion();
+  const run = useAnimatedValue(reduced ? 1 : 0);
+  const cards = games.slice(0, FAN_TILT.length);
+  const enough = cards.length === FAN_TILT.length;
+
+  useEffect(() => {
+    if (reduced || !enough) return;
+    const animation = Animated.timing(run, {
+      toValue: 1,
+      duration: 1900,
+      delay: 260,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [run, reduced, enough]);
+
+  if (!enough) return null;
+  const span = FAN_W + FAN_STEP * (cards.length - 1);
+
+  return (
+    <View
+      style={[styles.fan, { width: span, height: FAN_H + 34 }]}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      {cards.map((game, i) => {
+        const keeps = FAN_KEEPS.includes(i);
+        // Dealt left to right, the way a hand is.
+        const dealt = 0.06 * i;
+        const deal = (from: number, to: number) =>
+          run.interpolate({
+            inputRange: [dealt, dealt + 0.28],
+            outputRange: [from, to],
+            extrapolate: 'clamp',
+          });
+        return (
+          <Animated.View
+            key={game.id}
+            style={[
+              styles.fanCard,
+              {
+                left: i * FAN_STEP,
+                top: FAN_LIFT[i],
+                transform: [
+                  { translateY: deal(26, 0) },
+                  // Lands flat and settles into its tilt, so the run
+                  // arrives as a hand rather than as five fading boxes.
+                  {
+                    rotate: deal(0, FAN_TILT[i]).interpolate({
+                      inputRange: [-12, 12],
+                      outputRange: ['-12deg', '12deg'],
+                    }),
+                  },
+                ],
+                opacity: keeps
+                  ? deal(0, 1)
+                  : run.interpolate({
+                      // Arrives, holds, then goes out — staggered from
+                      // the outside in so the pile reads as emptying
+                      // rather than as one dip in brightness.
+                      inputRange: [
+                        dealt,
+                        dealt + 0.28,
+                        0.55 + Math.abs(i - 2) * 0.06,
+                        0.85 + Math.abs(i - 2) * 0.04,
+                      ],
+                      outputRange: [0, 1, 1, FAN_DIM],
+                      extrapolate: 'clamp',
+                    }),
+              },
+            ]}
+          >
+            <CoverImage
+              uri={game.background_image}
+              style={styles.fanArt}
+              contentFit="cover"
+              size="tile"
+              iconSize={20}
+            />
+          </Animated.View>
+        );
+      })}
+      {/* The run does not end, it recedes. Without this the bottom edge
+          is a hard line of five rectangles and reads as a gallery. */}
+      <LinearGradient
+        colors={['rgba(39,47,63,0)', 'rgba(39,47,63,0.72)', COLORS.navy]}
+        locations={[0, 0.66, 1]}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
       />
     </View>
   );
@@ -219,18 +362,27 @@ export function Onboarding() {
   const acts = [
     // -------------------------------------------------- act 1: the hook
     <View key="hook" style={styles.act}>
-      <Text style={styles.eyebrow}>WELCOME TO</Text>
-      <Text style={styles.wordmark}>SIDEQUEST</Text>
+      {!isExpanded && <BacklogFan games={picks} />}
+
       <Text style={styles.display}>Your backlog isn’t{'\n'}a to-do list.</Text>
+      {/* The fan just showed five games, so "Sidequest finds your next
+          game" was the sentence repeating the picture. What is left is
+          the half no image can carry. */}
       <Text style={styles.lede}>
-        Sidequest finds your next game, works out what you can actually finish —
-        and gives you permission to skip the rest.
+        It works out what you can actually finish — and gives you permission to
+        skip the rest.
       </Text>
       <Pressable
         onPress={() => setStep(1)}
         style={[styles.cta, isExpanded && styles.ctaInline]}
       >
-        <Text style={styles.ctaText}>Set me up — 20 seconds</Text>
+        {/* "Set me up — 20 seconds" bargained before the reader had
+            agreed to anything, and About already settled this argument
+            on its own cap: a cabinet does not explain itself, it says
+            START. "Skip the tour" underneath is the reassurance, and it
+            is one the reader can act on rather than one they have to
+            take on trust. */}
+        <Text style={styles.ctaText}>Set me up</Text>
         <Ionicons name="arrow-forward" size={16} color={COLORS.darkGrey} />
       </Pressable>
       <Pressable onPress={() => finish(false)}>
@@ -340,12 +492,6 @@ export function Onboarding() {
       onRequestClose={() => finish(false)}
     >
       <Textured style={styles.screen}>
-        {/* No numberOfLines on the watermark: react-native-web renders
-            that as text-overflow ellipsis, which at 128px is three
-            giant dots. One unbreakable word cannot wrap, and the
-            parent already clips. */}
-        {!isExpanded && <Text style={styles.watermark}>SIDEQUEST</Text>}
-
         <View style={[styles.chrome, { top: insets.top + SPACING.md }]}>
           {step > 0 ? (
             <Pressable
@@ -360,7 +506,18 @@ export function Onboarding() {
               />
             </Pressable>
           ) : (
-            <View style={styles.chromeButton} />
+            /* The mark, where the splash left it.
+               "WELCOME TO / SIDEQUEST" said the name twice and welcomed
+               nobody — the reader has just watched this joystick settle
+               on the launch screen, so carrying it in beats announcing
+               it. It sits in the chrome rather than the column because a
+               masthead that floats in the middle of a page is not a
+               masthead; the back button takes this slot from step two
+               on, by which point the name has been made. */
+            <View style={styles.masthead}>
+              <Mark size={24} />
+              <Text style={styles.mastheadWord}>SIDEQUEST</Text>
+            </View>
           )}
           <Pressable onPress={() => finish(false)}>
             <Text style={styles.skip}>Skip</Text>
@@ -411,15 +568,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  watermark: {
-    position: 'absolute',
-    bottom: -30,
-    right: -12,
-    fontFamily: 'Noah-Black',
-    fontSize: 150,
-    letterSpacing: 6,
-    color: 'rgba(255,255,255,0.03)',
-  },
   chrome: {
     position: 'absolute',
     left: SPACING.md,
@@ -465,6 +613,32 @@ const styles = StyleSheet.create({
     opacity: 0.75,
   },
   act: { gap: SPACING.md, alignItems: 'flex-start' },
+  masthead: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  mastheadWord: {
+    fontFamily: 'Noah-Black',
+    fontSize: 15,
+    letterSpacing: 4,
+    color: COLORS.white,
+  },
+
+  /**
+   * The fan sits above the copy, and centres itself rather than the
+   * column: the cards are rotated, so their box is wider than the art
+   * and letting it stretch the act would push the headline off-centre.
+   */
+  fan: { alignSelf: 'center', marginBottom: SPACING.xl * 1.25 },
+  fanCard: {
+    position: 'absolute',
+    width: FAN_W,
+    height: FAN_H,
+    borderRadius: RADIUS.md,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: COLORS.surface,
+  },
+  fanArt: { width: '100%', height: '100%' },
+
   eyebrow: {
     ...TYPE.tag,
     color: COLORS.mediumGrey,
