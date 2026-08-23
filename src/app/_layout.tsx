@@ -15,6 +15,7 @@ import { ScreenFade } from '@/components/ScreenFade';
 import { SplashCurtain } from '@/components/SplashCurtain';
 import { SaveErrorNotice } from '@/components/SaveErrorNotice';
 import { ToastProvider } from '@/components/Toast';
+import { AuthProvider } from '@/lib/auth';
 import { DurationsProvider } from '@/lib/durations';
 import { LibraryProvider } from '@/lib/library';
 import { COLORS } from '@/styles/colors';
@@ -119,30 +120,32 @@ export default function RootLayout() {
       client={queryClient}
       persistOptions={{ persister, maxAge: MAX_AGE }}
     >
-      <LibraryProvider>
-        <DurationsProvider>
-          <SafeAreaProvider>
-            <ToastProvider>
-              <StatusBar style="light" />
-              <ScrollToTop />
-              <ScreenFade>
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    contentStyle: { backgroundColor: COLORS.darkGrey },
-                  }}
-                />
-              </ScreenFade>
-              <Onboarding />
-              <CommandPalette />
-              <SaveErrorNotice />
-              {/* Last, so it covers the tab bar and the onboarding
+      <AuthProvider>
+        <LibraryProvider>
+          <DurationsProvider>
+            <SafeAreaProvider>
+              <ToastProvider>
+                <StatusBar style="light" />
+                <ScrollToTop />
+                <ScreenFade>
+                  <Stack
+                    screenOptions={{
+                      headerShown: false,
+                      contentStyle: { backgroundColor: COLORS.darkGrey },
+                    }}
+                  />
+                </ScreenFade>
+                <Onboarding />
+                <CommandPalette />
+                <SaveErrorNotice />
+                {/* Last, so it covers the tab bar and the onboarding
                   sheet too: until it lifts, the app has not opened. */}
-              <SplashCurtain />
-            </ToastProvider>
-          </SafeAreaProvider>
-        </DurationsProvider>
-      </LibraryProvider>
+                <SplashCurtain />
+              </ToastProvider>
+            </SafeAreaProvider>
+          </DurationsProvider>
+        </LibraryProvider>
+      </AuthProvider>
     </PersistQueryClientProvider>
   );
 }

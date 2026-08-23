@@ -8,6 +8,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { BackButton } from '@/components/BackButton';
 import { PageTitle } from '@/components/PageTitle';
 import { Screen } from '@/components/Screen';
+import { SignInRows } from '@/components/SignInRows';
 import { SiteFooter } from '@/components/SiteFooter';
 import { Textured } from '@/components/Textured';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
@@ -181,9 +182,11 @@ export default function YouScreen() {
             />
           </View>
 
+          <SignInRows />
+
           <Text style={styles.promise}>
-            Everything here is on this device. Nothing is uploaded, and there is
-            nothing to sign in to.
+            Everything here is on this device unless you sign in — and signing
+            in only syncs it, it never unlocks anything.
           </Text>
         </View>
 

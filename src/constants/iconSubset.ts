@@ -54,6 +54,7 @@ export const SUBSET_ICONS = [
   'locate',
   'lock-closed',
   'logo-apple',
+  'logo-google',
   'logo-playstation',
   'logo-steam',
   'map',

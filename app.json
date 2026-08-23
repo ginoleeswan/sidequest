@@ -73,7 +73,14 @@
           "enableBackgroundRemoteNotifications": false
         }
       ],
-      "@bacons/apple-targets"
+      "@bacons/apple-targets",
+      "expo-apple-authentication",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.856441670004-huokukuefp2ejpo667u8584vaig3iohf"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
