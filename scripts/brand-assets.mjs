@@ -294,6 +294,31 @@ await shoot(
   { width: 1024, height: 1024, out: 'splash.png', dir: ASSETS }
 );
 
+/**
+ * The Android notification icon: the mark as a flat white silhouette.
+ *
+ * Android does not draw this file. It reads the alpha channel and paints
+ * the result in the accent colour, discarding every colour in the source
+ * — so an ordinary icon here arrives as a solid white blob the shape of
+ * its own background plate, which is what happens to every app that
+ * hands it the launcher icon by mistake. One colour, no plate, no
+ * shading, and the transparency doing all the drawing.
+ *
+ * 96px is the largest density bucket (xxxhdpi wants 96); Android scales
+ * down cleanly and never up.
+ */
+await shoot(
+  `<!doctype html><meta charset="utf-8"><style>*{margin:0}` +
+    `body{width:96px;height:96px}svg{display:block;width:96px;height:96px}</style>` +
+    `<svg viewBox="${TIGHT}">${mark({
+      color: WHITE,
+      knob: WHITE,
+      shade: WHITE,
+      lift: false,
+    })}</svg>`,
+  { width: 96, height: 96, out: 'notification-icon.png', dir: ASSETS }
+);
+
 // The favicon and the native icons live in assets/, not public/.
 writeFileSync(join(ROOT, 'assets/brand-mark.svg'), icon());
 console.log('assets/brand-mark.svg');

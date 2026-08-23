@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Modal,
@@ -57,7 +57,7 @@ export function CommandPalette() {
   }, []);
 
   const commands = useMemo<Command[]>(() => {
-    const go = (path: string) => () => {
+    const go = (path: Href) => () => {
       setOpen(false);
       setQuery('');
       router.push(path);

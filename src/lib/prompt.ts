@@ -1,3 +1,5 @@
+import type { Href } from 'expo-router';
+
 import type { LibraryEntry } from './library';
 
 /**
@@ -21,7 +23,13 @@ export interface Prompt {
   /** One sentence under it. */
   detail: string;
   action: string;
-  href: string;
+  /**
+   * A route, not a string. Typed routes are on (`experiments.typedRoutes`),
+   * so `router.push` accepts only paths this app actually has — and a
+   * plain `string` here made every consumer's call site the place that
+   * error surfaced instead of this one.
+   */
+  href: Href;
 }
 
 /** Below this there is no arithmetic worth doing, so none is claimed. */

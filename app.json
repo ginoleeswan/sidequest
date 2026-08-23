@@ -4,6 +4,9 @@
     "slug": "sidequest",
     "version": "1.0.0",
     "owner": "gl-studio",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
     "scheme": "sidequest",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -18,7 +21,13 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#272F3F"
-      }
+      },
+      "permissions": [
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR",
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR"
+      ]
     },
     "web": {
       "output": "static",
@@ -45,6 +54,15 @@
         {
           "calendarPermission": "Sidequest files your planned evenings and finished games into a calendar of its own, on this device."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#F2A93B",
+          "defaultChannel": "evenings",
+          "enableBackgroundRemoteNotifications": false
+        }
       ]
     ],
     "experiments": {
@@ -52,6 +70,15 @@
       "reactCompiler": true
     },
     "description": "Discover games worth your limited time",
-    "githubUrl": "https://github.com/ginoleeswan/sidequest"
+    "githubUrl": "https://github.com/ginoleeswan/sidequest",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "3a9dd675-5fbe-4ee3-a12c-2137d1ea9f12"
+      }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/3a9dd675-5fbe-4ee3-a12c-2137d1ea9f12"
+    }
   }
 }

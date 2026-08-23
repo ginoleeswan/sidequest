@@ -8,7 +8,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
@@ -18,7 +18,8 @@
     "test:hydration": "node e2e/hydration.mjs",
     "test:a11y": "node e2e/a11y.mjs",
     "test:perf": "node e2e/perf.mjs",
-    "test:icons": "node e2e/icons.mjs"
+    "test:icons": "node e2e/icons.mjs",
+    "lint:fix": "eslint . --fix"
   },
   "engines": {
     "node": ">=20.19.4"
@@ -38,12 +39,14 @@
     "expo-image": "~57.0.3",
     "expo-linear-gradient": "~57.0.1",
     "expo-linking": "~57.0.6",
+    "expo-notifications": "~57.0.13",
     "expo-router": "~57.0.14",
     "expo-sharing": "~57.0.14",
     "expo-splash-screen": "~57.0.7",
     "expo-sqlite": "~57.0.1",
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.2",
+    "expo-updates": "~57.0.16",
     "expo-video": "~57.0.2",
     "react": "19.2.3",
     "react-compiler-runtime": "^1.0.0",

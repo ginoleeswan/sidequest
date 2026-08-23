@@ -40,9 +40,20 @@ const pool = (n: number): Section[] =>
  * both.
  */
 describe('the daily rotation', () => {
-  const morning = Date.UTC(2026, 7, 20, 9);
-  const evening = Date.UTC(2026, 7, 20, 23);
-  const tomorrow = Date.UTC(2026, 7, 21, 9);
+  /**
+   * Local times, not UTC, because the thing under test is deliberately
+   * local: `dayNumber` reads the calendar date off the runner's own
+   * clock, so the shelves turn over at the READER's midnight rather
+   * than at Greenwich's. Feeding it `Date.UTC(...)` asserted that 23:00
+   * UTC is the same day as 09:00 UTC, which is only true for a machine
+   * sitting on UTC — green on CI, red on any developer east or west of
+   * it. Measured at UTC+2: 23:00Z is already the 21st locally, so
+   * `dayNumber` returned 20685 and 20686 and the suite failed on a
+   * correctly behaving app.
+   */
+  const morning = new Date(2026, 7, 20, 9).getTime();
+  const evening = new Date(2026, 7, 20, 23).getTime();
+  const tomorrow = new Date(2026, 7, 21, 9).getTime();
 
   it('is one number for a whole day', () => {
     expect(dayNumber(morning)).toBe(dayNumber(evening));

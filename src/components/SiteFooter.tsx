@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import Svg, {
   Defs,
   LinearGradient as SvgGradient,
@@ -39,7 +39,7 @@ function LinkColumn({
   links,
 }: {
   heading: string;
-  links: readonly { label: string; href: string }[];
+  links: readonly { label: string; href: Href }[];
 }) {
   const router = useRouter();
   return (
@@ -47,7 +47,7 @@ function LinkColumn({
       <Text style={styles.colHeading}>{heading}</Text>
       {links.map((link) => (
         <Pressable
-          key={link.href}
+          key={link.label}
           onPress={() => router.push(link.href)}
           accessibilityRole="link"
         >

@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import {
   Animated,
   StyleSheet,
-  Text,
   View,
   type TextStyle,
   type StyleProp,
