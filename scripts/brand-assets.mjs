@@ -391,7 +391,9 @@ await shoot(
     `</svg>`,
   { width: SPLASH_PX_W, height: SPLASH_PX_H, out: 'splash.png', dir: ASSETS }
 );
-console.log(`splash: mark ${SPLASH_MARK_PT}pt, set app.json imageWidth = ${SPLASH_IMAGE_WIDTH}`);
+console.log(
+  `splash: mark ${SPLASH_MARK_PT}pt, set app.json imageWidth = ${SPLASH_IMAGE_WIDTH}`
+);
 
 /**
  * The Android notification icon: the mark as a flat white silhouette.
