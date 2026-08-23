@@ -14,7 +14,13 @@
     "backgroundColor": "#333D51",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.glstudio.sidequest"
+      "bundleIdentifier": "com.glstudio.sidequest",
+      "appleTeamId": "A85929B4HV",
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.com.glstudio.sidequest"
+        ]
+      }
     },
     "android": {
       "package": "com.glstudio.sidequest",
