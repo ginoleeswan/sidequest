@@ -175,27 +175,20 @@ const styles = StyleSheet.create({
     color: COLORS.lightGrey,
   },
   /**
-   * Secondary, and named for what it is.
+   * A quiet action inside the decision panel, not a lozenge beside it.
    *
-   * This was a solid white button reading "Start playing", sitting
-   * directly under the three status chips — one of which also says
-   * Playing. Two controls with the same word meaning different things,
-   * and the quieter concern shouting: the white one recorded a session,
-   * while choosing a shelf, the actual decision on this page, was an
-   * outline. The selected status chip is the page's one solid control
-   * now, and the clock is a clock.
+   * This was a solid white "Start playing" under three status chips —
+   * one of which also says Playing — so the quieter concern shouted and
+   * two controls used one word for different things. Demoting it to an
+   * outline only moved the problem: an outlined pill floating under a
+   * filled segmented control has nothing holding it. Icon and label,
+   * inside the same frame as the decision it follows.
    */
   start: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: COLORS.strokeStrong,
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm + 2,
+    gap: 7,
+    paddingVertical: SPACING.xs,
   },
   startText: {
     ...TYPE.labelSmall,

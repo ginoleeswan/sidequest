@@ -381,9 +381,20 @@ export default function GameInfoScreen() {
    */
   const controls = (
     <View style={styles.controls}>
-      <StatusActions game={game} />
-      <SessionTimer game={game} />
-      <Commitment gameId={game.id} />
+      {/* One object: the decision, then what follows from it.
+          The status control, the clock and the two commitment toggles
+          were four separate things loose on the page — a filled group
+          with three outlined pills drifting beneath it and nothing
+          holding any of them together. They are one question: what are
+          you doing about this game. */}
+      <View style={styles.decision}>
+        <StatusActions game={game} />
+        <View style={styles.decisionRule} />
+        <View style={styles.decisionActions}>
+          <SessionTimer game={game} />
+          <Commitment gameId={game.id} />
+        </View>
+      </View>
     </View>
   );
 
@@ -781,10 +792,26 @@ const styles = StyleSheet.create({
   controls: {
     paddingHorizontal: SPACING.md,
     paddingTop: SPACING.md,
-    gap: SPACING.sm,
+    gap: SPACING.md,
     width: '100%',
     maxWidth: LAYOUT.maxContentWidth,
     alignSelf: 'center',
+  },
+  decision: {
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.stroke,
+    backgroundColor: COLORS.raised,
+    padding: SPACING.md,
+    gap: SPACING.md,
+    ...SHADOW.card,
+  },
+  decisionRule: { height: 1, backgroundColor: COLORS.stroke },
+  decisionActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: SPACING.lg,
   },
   heroCopy: {
     paddingHorizontal: SPACING.md,

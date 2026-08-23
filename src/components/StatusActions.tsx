@@ -12,7 +12,21 @@ import { TYPE } from '@/styles/typography';
 
 const ORDER: LibraryStatus[] = ['wishlist', 'playing', 'finished'];
 
-/** Want to play / Playing / Finished — the backlog, one tap deep. */
+/**
+ * Want to play / Playing / Finished — the backlog, one tap deep.
+ *
+ * One control, not three buttons. A game is in exactly one of these
+ * states, and drawing them as three separate outlined pills said the
+ * opposite: three independent things you might switch on. It also put
+ * three more lozenges on a page that already had a session button, two
+ * commitment toggles and a row of store links in the same shape — by
+ * the fourth row of rounded outlines the eye stops distinguishing them,
+ * and a page of identical outlines is the cheapest a dark interface can
+ * look.
+ *
+ * Grouped, with the chosen state filled in the accent, it matches the
+ * Plan's dials: one selection language for the whole app.
+ */
 const CONFIRM: Record<LibraryStatus, string> = {
   wishlist: 'Saved — Want to play',
   playing: 'Marked as Playing',
@@ -26,7 +40,7 @@ export function StatusActions({ game }: { game: Game }) {
   const [celebrating, setCelebrating] = useState(false);
 
   return (
-    <View style={styles.row}>
+    <View style={styles.group}>
       {ORDER.map((status) => {
         const active = current === status;
         const meta = STATUS_META[status];
@@ -50,7 +64,11 @@ export function StatusActions({ game }: { game: Game }) {
             accessibilityLabel={
               active ? `Remove from ${meta.label}` : `Mark as ${meta.label}`
             }
-            style={[styles.button, active && styles.buttonActive]}
+            style={({ pressed }) => [
+              styles.segment,
+              active && styles.segmentActive,
+              pressed && !active && styles.segmentPressed,
+            ]}
           >
             <Ionicons
               name={
@@ -59,9 +77,12 @@ export function StatusActions({ game }: { game: Game }) {
                   : `${meta.icon}-outline`) as keyof typeof Ionicons.glyphMap
               }
               size={15}
-              color={active ? COLORS.darkGrey : COLORS.lightGrey}
+              color={active ? COLORS.navy : COLORS.lightGrey}
             />
-            <Text style={[styles.label, active && styles.labelActive]}>
+            <Text
+              style={[styles.label, active && styles.labelActive]}
+              numberOfLines={1}
+            >
               {meta.label}
             </Text>
           </Pressable>
@@ -76,26 +97,32 @@ export function StatusActions({ game }: { game: Game }) {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  button: {
+  group: {
+    flexDirection: 'row',
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.strokeOnImage,
+    backgroundColor: COLORS.plate,
+    padding: 3,
+    gap: 3,
+  },
+  segment: {
+    flex: 1,
+    flexBasis: 0,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
-    borderWidth: 1,
-    borderColor: COLORS.strokeStrong,
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm + 1,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(0,0,0,0.25)',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: SPACING.sm + 2,
+    borderRadius: RADIUS.sm - 4,
   },
-  buttonActive: {
-    backgroundColor: COLORS.white,
-    borderColor: 'transparent',
-  },
+  segmentActive: { backgroundColor: COLORS.accent },
+  segmentPressed: { backgroundColor: COLORS.raised },
   label: {
     ...TYPE.labelSmall,
     color: COLORS.lightGrey,
+    flexShrink: 1,
   },
-  labelActive: { color: COLORS.darkGrey },
+  labelActive: { color: COLORS.navy },
 });

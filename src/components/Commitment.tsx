@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useToast } from './Toast';
 import { useLibrary } from '@/lib/library';
 import { COLORS } from '@/styles/colors';
-import { RADIUS, SPACING } from '@/styles/theme';
+import { SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 /**
@@ -83,7 +83,7 @@ export function Commitment({ gameId }: { gameId: number }) {
         <Ionicons
           name={must ? 'star' : 'star-outline'}
           size={14}
-          color={must ? COLORS.darkGrey : COLORS.mediumGrey}
+          color={must ? COLORS.accent : COLORS.mediumGrey}
         />
         <Text style={[styles.chipText, must && styles.chipTextOn]}>
           Must play
@@ -107,7 +107,7 @@ export function Commitment({ gameId }: { gameId: number }) {
         <Ionicons
           name="calendar-outline"
           size={14}
-          color={entry.deadline != null ? COLORS.darkGrey : COLORS.mediumGrey}
+          color={entry.deadline != null ? COLORS.accent : COLORS.mediumGrey}
         />
         <Text
           style={[styles.chipText, entry.deadline != null && styles.chipTextOn]}
@@ -120,21 +120,25 @@ export function Commitment({ gameId }: { gameId: number }) {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
+  /**
+   * Quiet actions, not lozenges.
+   *
+   * These were two more outlined pills in a page already full of them,
+   * floating under the status control with nothing to sit on. Inside
+   * the decision panel they are icon-and-label, and the accent — the
+   * app's one selection colour — says which are on.
+   */
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.lg },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    borderWidth: 1,
-    borderColor: COLORS.strokeStrong,
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+    gap: 7,
+    paddingVertical: SPACING.xs,
   },
-  chipOn: { backgroundColor: COLORS.white, borderColor: COLORS.white },
+  chipOn: {},
   chipText: {
-    ...TYPE.labelTiny,
-    color: COLORS.mediumGrey,
+    ...TYPE.labelSmall,
+    color: COLORS.lightGrey,
   },
-  chipTextOn: { color: COLORS.darkGrey },
+  chipTextOn: { color: COLORS.accent },
 });
