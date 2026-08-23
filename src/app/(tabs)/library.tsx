@@ -27,6 +27,7 @@ import { SectionHeader } from '@/components/SectionHeader';
 import { Textured } from '@/components/Textured';
 import { useToast } from '@/components/Toast';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { useTopPad } from '@/hooks/useTopPad';
 import { importTitles } from '@/api/steamImport';
 import { parseCsv } from '@/lib/csvImport';
 import { formatHours } from '@/lib/duration';
@@ -149,6 +150,7 @@ export default function LibraryScreen() {
   );
   const { columns, isExpanded } = useBreakpoint();
   const insets = useSafeAreaInsets();
+  const topPad = useTopPad(false);
   const toast = useToast();
   const [tab, setTab] = useState<LibraryStatus>('wishlist');
   const [shelf, setShelf] = useState<string | null>(null);
@@ -257,9 +259,7 @@ export default function LibraryScreen() {
             style={[
               styles.inner,
               {
-                paddingTop: isExpanded
-                  ? SPACING.xl * 1.5
-                  : insets.top + SPACING.xl * 2,
+                paddingTop: topPad,
               },
             ]}
           >

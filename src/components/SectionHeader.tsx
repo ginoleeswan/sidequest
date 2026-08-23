@@ -10,6 +10,14 @@ interface Props {
   /** Small muted line above the title, e.g. a count. */
   eyebrow?: string;
   actionLabel?: string;
+  /**
+   * What a screen reader should say instead of the visible label.
+   *
+   * These labels carry a trailing arrow — "Share →", "Plan my backlog →"
+   * — which VoiceOver reads out as the glyph. Where the visible text is
+   * also shorthand, the spoken version can say the whole thing.
+   */
+  actionAccessibilityLabel?: string;
   onAction?: () => void;
 }
 
@@ -18,6 +26,7 @@ export function SectionHeader({
   title,
   eyebrow,
   actionLabel,
+  actionAccessibilityLabel,
   onAction,
 }: Props) {
   const [hovered, setHovered] = useState(false);
@@ -41,6 +50,8 @@ export function SectionHeader({
             onHoverIn={() => setHovered(true)}
             onHoverOut={() => setHovered(false)}
             hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={actionAccessibilityLabel ?? actionLabel}
           >
             <Text style={[styles.action, hovered && styles.actionHovered]}>
               {actionLabel}

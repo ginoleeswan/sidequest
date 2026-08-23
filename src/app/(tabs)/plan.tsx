@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, Text, View, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { useTopPad } from '@/hooks/useTopPad';
 
 import type { Game } from '@/api/types';
 import { Alerts } from '@/components/Alerts';
@@ -204,6 +205,8 @@ export default function PlanScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isExpanded } = useBreakpoint();
+  const topPad = useTopPad(false);
+
   const { byStatus, entries: libraryEntries } = useLibrary();
   const { durationOf, learnDurations, count: correctionCount } = useDurations();
   const [editing, setEditing] = useState<Game | null>(null);
@@ -299,6 +302,32 @@ export default function PlanScreen() {
     });
   }, [entries, pace, windowWeeks, now]);
 
+  /**
+   * The plan travels in the link: no account, no server, no copy of
+   * anyone's library anywhere. Native has no location at all, so the
+   * link degrades to a path rather than throwing.
+   */
+  const sharePlan = async () => {
+    const origin = globalThis.location?.origin ?? '';
+    const link = `${origin}/shared?p=${encodePlan({
+      pace,
+      games: schedule.scheduled.map((item) => ({
+        name: item.name,
+        hours: item.hours,
+      })),
+    })}`;
+    try {
+      await navigator.clipboard?.writeText(link);
+      toast('Plan link copied', 'link');
+    } catch {
+      toast(
+        'Copy failed — your browser blocked clipboard access',
+        'alert-circle'
+      );
+    }
+  };
+  const canShare = schedule.scheduled.length > 0;
+
   const unknown = entries.filter((e) => e.hours <= 0);
 
   // What the app would have told you, if it could tell you anything —
@@ -374,15 +403,25 @@ export default function PlanScreen() {
                 styles.inner,
                 isExpanded && styles.innerWide,
                 {
-                  paddingTop: isExpanded
-                    ? SPACING.xl * 1.5
-                    : insets.top + SPACING.xl * 2,
+                  paddingTop: topPad,
                 },
               ]}
             >
+              {/* Share lives up here now.
+                  It sat inside the card that carries the verdict and the
+                  pace sentence — a card about what your plan IS and how
+                  to change it. Sharing is an output, and it was the
+                  second link stacked in there: two unrelated actions
+                  dressed as a pair, which is the same shape the library
+                  footer had. The Steam link stayed, because it sits
+                  directly under "I play about 8h a week" and offers to
+                  measure exactly that. */}
               <SectionHeader
                 title="The Plan"
                 eyebrow={empty ? undefined : `${entries.length} in your queue`}
+                actionLabel={canShare ? 'Share →' : undefined}
+                actionAccessibilityLabel="Copy a link to this plan"
+                onAction={canShare ? sharePlan : undefined}
               />
 
               {empty ? (
@@ -477,40 +516,6 @@ export default function PlanScreen() {
                           }
                         />
                       </Text>
-
-                      {schedule.scheduled.length > 0 && (
-                        <Text
-                          style={styles.steamLink}
-                          accessibilityRole="button"
-                          accessibilityLabel="Copy a link to this plan"
-                          suppressHighlighting
-                          onPress={async () => {
-                            // The plan travels in the link: no account, no
-                            // server, no copy of anyone's library anywhere.
-                            // Native has no location at all, so the
-                            // link degrades to a path rather than throwing.
-                            const origin = globalThis.location?.origin ?? '';
-                            const link = `${origin}/shared?p=${encodePlan({
-                              pace,
-                              games: schedule.scheduled.map((item) => ({
-                                name: item.name,
-                                hours: item.hours,
-                              })),
-                            })}`;
-                            try {
-                              await navigator.clipboard?.writeText(link);
-                              toast('Plan link copied', 'link');
-                            } catch {
-                              toast(
-                                'Copy failed — your browser blocked clipboard access',
-                                'alert-circle'
-                              );
-                            }
-                          }}
-                        >
-                          Share this plan →
-                        </Text>
-                      )}
 
                       <Text
                         style={styles.steamLink}
