@@ -87,7 +87,7 @@ struct NightColumn: View {
         }
       }
       Text(night.day)
-        .font(.system(size: 9, weight: .semibold))
+        .font(Brand.bold(9))
         .foregroundStyle(night.isFree ? Color("$muted") : .white)
     }
   }
@@ -122,14 +122,14 @@ struct WeekView: View {
           VStack(alignment: .leading, spacing: 3) {
             ForEach(Array(runs(planned).prefix(3)), id: \.self) { line in
               Text(line)
-                .font(.system(size: 13))
+                .font(Brand.regular(13))
                 .foregroundStyle(Color("$muted"))
                 .lineLimit(1)
             }
           }
         } else {
           Text(summary(planned, of: nights.count))
-            .font(.system(size: 12))
+            .font(Brand.regular(12))
             .foregroundStyle(Color("$muted"))
             .lineLimit(1)
         }

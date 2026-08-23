@@ -11,6 +11,7 @@ import {
 import type { Game } from '@/api/types';
 import { useHydrated } from '@/hooks/useHydrated';
 import { readVersioned, writeFailureMessage, writeJson } from '@/lib/storage';
+import { clearWidgets } from '@/lib/widgetBridge';
 
 export type LibraryStatus = 'wishlist' | 'playing' | 'finished';
 
@@ -361,6 +362,21 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     setEntries((prev) => {
       const next = { ...prev };
       for (const id of ids) delete next[String(id)];
+      /**
+       * An emptied library empties the widgets with it.
+       *
+       * The app group is a second copy of the reader's data, living
+       * outside the app's own storage in a container the app cannot see
+       * from any screen. Every other path keeps it current by
+       * republishing — the plan screen and the memory card both write
+       * whenever their data changes — but "delete everything" has no
+       * screen left to republish from, so the last plan would sit on a
+       * home screen after the library that produced it was gone.
+       *
+       * Only on the last one out. Removing some games is an edit, and
+       * the ordinary publish handles it.
+       */
+      if (Object.keys(next).length === 0) void clearWidgets();
       return next;
     });
     return count;

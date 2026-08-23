@@ -42,6 +42,7 @@
     "expo": "~57.0.14",
     "expo-calendar": "~57.0.2",
     "expo-constants": "~57.0.12",
+    "expo-dev-client": "~57.0.14",
     "expo-font": "~57.0.1",
     "expo-haptics": "~57.0.1",
     "expo-image": "~57.0.3",

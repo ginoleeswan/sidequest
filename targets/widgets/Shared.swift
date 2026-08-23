@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import WidgetKit
 
 /**
@@ -108,15 +109,50 @@ func spanLabel(_ hours: Int) -> String {
 }
 
 /**
+ * The app's own face, in the extension's own bundle.
+ *
+ * An extension is a separate bundle with a separate font registry: the
+ * app registering Noah at launch does nothing here. The three files are
+ * target resources and declared in this target's `UIAppFonts` (see
+ * Info.plist), which is what makes them loadable at all.
+ *
+ * Every accessor falls back to the system face at a matching weight if
+ * the font is missing. `Font.custom` already falls back silently, and
+ * silently is the problem — a widget rendering in SF because a resource
+ * did not copy looks deliberate, so the fallback is written down here
+ * where it can be reasoned about rather than discovered on a home
+ * screen.
+ *
+ * Home-screen families only. Lock Screen accessories stay on the system
+ * font on purpose: the system tints and lays them out to sit against a
+ * wallpaper, they are rendered at sizes where SF's hinting genuinely
+ * beats a display face, and Apple's guidance for accessories is to
+ * leave the type alone. Brand where there is room; the platform's own
+ * face where the platform owns the surface.
+ */
+enum Brand {
+  static func black(_ size: CGFloat) -> Font { face("Noah-Black", size, .heavy) }
+  static func bold(_ size: CGFloat) -> Font { face("Noah-Bold", size, .bold) }
+  static func regular(_ size: CGFloat) -> Font {
+    face("Noah-Regular", size, .regular)
+  }
+
+  private static func face(
+    _ name: String,
+    _ size: CGFloat,
+    _ fallback: Font.Weight
+  ) -> Font {
+    UIFont(name: name, size: size) == nil
+      ? .system(size: size, weight: fallback)
+      : .custom(name, size: size)
+  }
+}
+
+/**
  * The section label every widget opens with.
  *
- * Heavy, tracked wide and small — the same nameplate treatment the page
- * uses, in the system face. The brand's own Noah is not bundled here:
- * an extension needs the font as a target resource and a `UIAppFonts`
- * entry in its own Info.plist, and neither is expressible in the target
- * config, so it would take a custom prebuild step to add. SF at these
- * weights is what Apple's own widgets use and renders cleanly at every
- * size the Lock Screen asks for.
+ * Black, tracked wide and set small — the same nameplate the page uses,
+ * now in the same face the page uses it in.
  */
 struct Nameplate: View {
   let text: String
@@ -124,7 +160,7 @@ struct Nameplate: View {
 
   var body: some View {
     Text(text)
-      .font(.system(size: 11, weight: .heavy))
+      .font(Brand.black(11))
       .kerning(1.4)
       .foregroundStyle(tint)
   }
@@ -138,10 +174,10 @@ struct Waiting: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 4) {
       Text(line)
-        .font(.system(size: 18, weight: .bold))
+        .font(Brand.bold(18))
         .foregroundStyle(.white)
       Text(hint)
-        .font(.system(size: 12))
+        .font(Brand.regular(12))
         .foregroundStyle(Color("$muted"))
         .lineLimit(2)
     }

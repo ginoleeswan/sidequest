@@ -1,5 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  The widget extension's own Info.plist.
+
+  Hand-maintained on purpose. `@bacons/apple-targets` writes this file
+  only when it does not already exist (see with-widget.js), so an edited
+  copy survives every prebuild — which is what makes UIAppFonts possible
+  without a custom config plugin.
+
+  UIAppFonts is why it is edited at all. An extension is a separate
+  bundle with its own font registry: the app registering Noah at launch
+  does nothing for the widget process, and a `Font.custom("Noah-Black")`
+  in a target that has not declared the file falls back to the system
+  face silently. The three files sit beside this plist and are picked up
+  as target resources by the synchronised folder reference.
+
+  The names are the FILE names here, and the PostScript names in Swift —
+  "Noah-Black", "Noah-Bold", "Noah-Regular", confirmed by reading name
+  ID 6 out of the TTFs rather than assuming they match the filenames.
+-->
 <plist version="1.0">
   <dict>
     <key>NSExtension</key>
@@ -7,5 +25,11 @@
       <key>NSExtensionPointIdentifier</key>
       <string>com.apple.widgetkit-extension</string>
     </dict>
+    <key>UIAppFonts</key>
+    <array>
+      <string>Noah-Black.ttf</string>
+      <string>Noah-Bold.ttf</string>
+      <string>Noah-Regular.ttf</string>
+    </array>
   </dict>
 </plist>

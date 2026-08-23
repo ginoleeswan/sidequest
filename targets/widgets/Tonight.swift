@@ -72,12 +72,12 @@ struct TonightHome: View {
 
       if let tonight = entry.tonight {
         Text(tonight.title)
-          .font(.system(size: wide ? 24 : 19, weight: .bold))
+          .font(Brand.bold(wide ? 24 : 19))
           .foregroundStyle(.white)
           .lineLimit(wide ? 1 : 2)
           .minimumScaleFactor(0.75)
         Text(spanLabel(tonight.hours))
-          .font(.system(size: wide ? 15 : 13))
+          .font(Brand.regular(wide ? 15 : 13))
           .foregroundStyle(Color("$muted"))
       } else {
         Waiting()

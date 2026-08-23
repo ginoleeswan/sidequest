@@ -101,11 +101,11 @@ struct YearView: View {
       if let year = entry.year {
         HStack(alignment: .firstTextBaseline) {
           Text(String(year.year))
-            .font(.system(size: wide ? 22 : 18, weight: .heavy))
+            .font(Brand.black(wide ? 22 : 18))
             .foregroundStyle(.white)
           Spacer(minLength: 4)
           Text("\(year.count) · \(year.hours)h")
-            .font(.system(size: 11, weight: .semibold))
+            .font(Brand.bold(11))
             .foregroundStyle(Color("$accent"))
         }
 
@@ -120,7 +120,7 @@ struct YearView: View {
 
         if wide {
           Text(year.count == 1 ? "one game finished" : "\(year.count) games finished")
-            .font(.system(size: 12))
+            .font(Brand.regular(12))
             .foregroundStyle(Color("$muted"))
         }
       } else {
