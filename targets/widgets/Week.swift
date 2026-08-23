@@ -11,9 +11,12 @@ import WidgetKit
  * free. Filing "nothing" into somebody's week is not the same gesture
  * as showing them a Tuesday they still have.
  *
- * Medium and large only. Seven columns do not survive a small widget —
- * at that width each night gets about twenty points, which is a column
- * of truncated first letters and no information at all.
+ * Medium and up. Seven columns do not survive a small widget — at that
+ * width each night gets about twenty points, which is a column of
+ * truncated first letters and no information at all. Extra large is
+ * the iPad size, and this is the widget that earns it: a seven-column
+ * strip gets better with width where a single sentence would only get
+ * larger.
  */
 
 struct WeekEntry: TimelineEntry {
@@ -186,7 +189,17 @@ struct WeekWidget: Widget {
     }
     .configurationDisplayName("This week")
     .description("The seven evenings ahead, and the ones still free.")
-    .supportedFamilies([.systemMedium, .systemLarge])
+    /**
+     * `systemExtraLarge` is iPad only, and this is the one widget that
+     * earns it: seven columns and a list of runs is a shape that gets
+     * better with width, where Tonight's single sentence would just be
+     * a very large sentence.
+     *
+     * It has to be declared here rather than added later — supported
+     * families live in the binary, so an iPad size missing from this
+     * list costs a build to add.
+     */
+    .supportedFamilies([.systemMedium, .systemLarge, .systemExtraLarge])
   }
 }
 
@@ -195,7 +208,13 @@ struct WeekSurface: View {
   @Environment(\.widgetFamily) private var family
 
   var body: some View {
-    WeekView(entry: entry, tall: family == .systemLarge)
+    // Extra large is an iPad size and has more room than large, not
+    // less — it takes the same tall treatment rather than falling
+    // through to the medium one-liner.
+    WeekView(
+      entry: entry,
+      tall: family == .systemLarge || family == .systemExtraLarge
+    )
       .containerBackground(Color("$ground"), for: .widget)
       .widgetURL(Deep.plan)
   }
