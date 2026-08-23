@@ -38,7 +38,12 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router",
+      [
+        "expo-router",
+        {
+          "origin": "https://gosidequest.vercel.app"
+        }
+      ],
       "expo-font",
       "expo-image",
       [
