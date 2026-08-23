@@ -40,7 +40,7 @@ import {
   type LibrarySort,
 } from '@/lib/libraryStats';
 import { COLORS } from '@/styles/colors';
-import { GUTTER, LAYOUT, RADIUS, SPACING } from '@/styles/theme';
+import { GUTTER, LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 const TABS: LibraryStatus[] = ['wishlist', 'playing', 'finished'];
@@ -61,12 +61,68 @@ const EMPTY_COPY: Record<LibraryStatus, { title: string; detail: string }> = {
   },
 };
 
+/**
+ * The last cell: somewhere to put the next one.
+ *
+ * A shelf of two games left seven hundred points of nothing under it
+ * and no sign that it was meant to grow. This is the shape a game would
+ * take, waiting for one — the gesture a photo library or a playlist
+ * makes, and the reason those never look abandoned at three items.
+ *
+ * An INVITATION, not a control, and the distinction is what decides
+ * where it can live. Import belongs to fixed chrome because somebody
+ * looking for it has to be able to find it; at the foot of a shelf of
+ * two hundred games they would scroll past all of them, which is
+ * exactly why Copy library was moved off this page. This is different:
+ * nobody comes to the Library hunting for it, Home is the real way to
+ * find games, and the end of the shelf is the only place a "more goes
+ * here" mark means anything.
+ */
+function AddCell({
+  icon,
+  label,
+  hint,
+  onPress,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  label: string;
+  hint: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      style={styles.addCell}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={hint}
+    >
+      {({ pressed }) => (
+        <>
+          <View style={[styles.addArt, pressed && styles.addArtPressed]}>
+            <Ionicons name={icon} size={24} color={COLORS.mediumGrey} />
+          </View>
+          {/* Capped to a line like every tile caption: an uncapped
+              label reports its own text as the cell's minimum width,
+              which is how this cell ended up fifty points wider than
+              the artwork beside it. */}
+          <Text style={styles.addLabel} numberOfLines={1}>
+            {label}
+          </Text>
+        </>
+      )}
+    </Pressable>
+  );
+}
+
 /** Sentinel filling an incomplete final grid row so tiles keep their width. */
 const SPACER = { spacer: true } as const;
-type GridItem = Game | typeof SPACER;
+/** The invitation, carried through the grid like a game. */
+const ADD = { add: true } as const;
+type GridItem = Game | typeof SPACER | typeof ADD;
 const isSpacer = (item: GridItem): item is typeof SPACER => 'spacer' in item;
+const isAdd = (item: GridItem): item is typeof ADD => 'add' in item;
 
-function padToRows(items: Game[], columns: number): GridItem[] {
+function padToRows(items: GridItem[], columns: number): GridItem[] {
   const remainder = items.length % columns;
   if (remainder === 0) return items;
   return [...items, ...Array(columns - remainder).fill(SPACER)];
@@ -219,6 +275,26 @@ export default function LibraryScreen() {
     );
   };
 
+  /**
+   * The one the backlog is mostly made of.
+   *
+   * The bar draws the longest game in amber and says nothing about
+   * which it is, so at two games it reads as a progress bar somebody
+   * is halfway through. Naming it turns the picture into the app's
+   * actual argument: most of what is ahead of you is one game.
+   */
+  const longest = useMemo(() => {
+    let best: { name: string; hours: number } | null = null;
+    for (const entry of Object.values(entries)) {
+      if (entry.status === 'finished') continue;
+      const hours = hoursOf(entry.game);
+      if (hours > 0 && (best == null || hours > best.hours)) {
+        best = { name: entry.game.name, hours };
+      }
+    }
+    return best;
+  }, [entries, hoursOf]);
+
   /** Everything still ahead, as hours — the bar's raw material. */
   const aheadHours = useMemo(
     () =>
@@ -274,6 +350,12 @@ export default function LibraryScreen() {
               onAction={count > 0 ? () => router.push('/plan') : undefined}
               onAccount={() => router.push('/you')}
             />
+            {/* The backlog and what you can do to it, as one object.
+                These were three loose lines and a row of chips sitting
+                directly on the page, so the top of the shelf had no
+                shape at all — the same flatness the Plan had before it
+                got a plane to sit on. Content, rule, actions: the shape
+                the week panel uses over there. */}
             {count > 0 && (
               <View style={styles.hero}>
                 <View style={styles.heroLine}>
@@ -283,7 +365,44 @@ export default function LibraryScreen() {
                   <Text style={styles.heroLabel}>ahead of you</Text>
                 </View>
 
+                {/* Bringing a library in is an action on this panel, and
+                    it stays in fixed chrome for a reason: at the foot of
+                    the shelf — where it and Copy library both started —
+                    you would scroll past two hundred games to reach it.
+                    As a lone outlined chip under a rule it read as an
+                    orphan; in the corner of the thing it fills, it
+                    reads as what it is.
+
+                    `download-outline` because that is already this
+                    app's word for importing — the row on You and the
+                    action in the empty state below both use it, and a
+                    third glyph for one idea is a third thing to learn.
+
+                    Positioned rather than laid out. In the flow it sat
+                    in a baseline-aligned row whose height is set by a
+                    46pt numeral, so "centre" meant halfway down the
+                    figure rather than in the corner. */}
+                <Pressable
+                  onPress={() => setImportOpen(true)}
+                  hitSlop={14}
+                  style={styles.heroImport}
+                  accessibilityRole="button"
+                  accessibilityLabel="Import a library"
+                >
+                  <Ionicons
+                    name="download-outline"
+                    size={20}
+                    color={COLORS.mediumGrey}
+                  />
+                </Pressable>
+
                 <BacklogBar hours={aheadHours} />
+
+                {longest && aheadHours.length > 1 && (
+                  <Text style={styles.heroBarNote}>
+                    Longest: {longest.name} · {formatHours(longest.hours)}
+                  </Text>
+                )}
 
                 {/* The supporting counts, quiet and on one line. They
                     were three stats the same size as each other, which
@@ -295,42 +414,35 @@ export default function LibraryScreen() {
                   {stats.hoursFinished > 0 &&
                     ` · ${formatHours(stats.hoursFinished)} of credits`}
                 </Text>
-              </View>
-            )}
 
-            {/* Two chips rather than two full-width bars.
-              Before the first game you passed four stats, two banners,
-              three tabs, four sort options and two more links — fifteen
-              controls ahead of the thing the page is for. These two are
-              worth keeping up here because they act on what the numbers
-              above just told you; the transfer links are not, and have
-              gone to the foot. */}
-            {count > 0 && (
-              <View style={styles.quickRow}>
-                {count > 3 && (
-                  <Chip
-                    title="Backlog amnesty"
-                    iconName="sparkles"
-                    iconType="ionicon"
-                    onPress={() => router.push('/tidy')}
-                  />
+                {/* Only what acts on the numbers above it. Import used
+                    to sit here too and had nothing to do with them —
+                    a lone outlined chip under a rule, which is what an
+                    orphan looks like. It is at the foot of the shelf
+                    now, beside the other way of filling one. */}
+                {(count > 3 || stats.finished > 0) && (
+                  <>
+                    <View style={styles.heroRule} />
+                    <View style={styles.quickRow}>
+                      {count > 3 && (
+                        <Chip
+                          title="Backlog amnesty"
+                          iconName="sparkles"
+                          iconType="ionicon"
+                          onPress={() => router.push('/tidy')}
+                        />
+                      )}
+                      {stats.finished > 0 && (
+                        <Chip
+                          title="Your Memcard"
+                          iconName="albums"
+                          iconType="ionicon"
+                          onPress={() => router.push('/memcard')}
+                        />
+                      )}
+                    </View>
+                  </>
                 )}
-                {stats.finished > 0 && (
-                  <Chip
-                    title="Your Memcard"
-                    iconName="albums"
-                    iconType="ionicon"
-                    onPress={() => router.push('/memcard')}
-                  />
-                )}
-                {/* Up here with the other things you can do to a
-                    library, rather than in a footer beneath it. */}
-                <Chip
-                  title="Import"
-                  iconName="download-outline"
-                  iconType="ionicon"
-                  onPress={() => setImportOpen(true)}
-                />
               </View>
             )}
 
@@ -410,6 +522,7 @@ export default function LibraryScreen() {
                     onPress={() => setImportOpen(true)}
                     style={styles.emptyAction}
                     accessibilityRole="button"
+                    accessibilityLabel="Import a library"
                   >
                     <Ionicons
                       name="download-outline"
@@ -427,17 +540,27 @@ export default function LibraryScreen() {
                  games and the links. `Screen` already insets for the
                  bar, and `inner` carries the page's own footer space. */
               <View style={styles.gridContent}>
-                {chunk(padToRows(games, columns), columns).map((row, r) => (
-                  <View key={r} style={styles.gridRow}>
-                    {row.map((item, i) =>
-                      isSpacer(item) ? (
-                        <View key={`s-${r}-${i}`} style={styles.gridSpacer} />
-                      ) : (
-                        <GameTile key={item.id} game={item} />
-                      )
-                    )}
-                  </View>
-                ))}
+                {chunk(padToRows([...games, ADD], columns), columns).map(
+                  (row, r) => (
+                    <View key={r} style={styles.gridRow}>
+                      {row.map((item, i) =>
+                        isSpacer(item) ? (
+                          <View key={`s-${r}-${i}`} style={styles.gridSpacer} />
+                        ) : isAdd(item) ? (
+                          <AddCell
+                            key="find"
+                            icon="add"
+                            label="Find a game"
+                            hint="Find a game to add"
+                            onPress={() => router.push('/')}
+                          />
+                        ) : (
+                          <GameTile key={item.id} game={item} />
+                        )
+                      )}
+                    </View>
+                  )
+                )}
               </View>
             )}
 
@@ -526,8 +649,44 @@ const styles = StyleSheet.create({
    * This block was four stats of identical weight, which made the only
    * number worth reading no louder than a zero.
    */
-  hero: { paddingVertical: SPACING.sm, gap: SPACING.sm },
+  /**
+   * The backlog, on a plane of its own.
+   *
+   * `raised`, not `surface`: surface is a step DOWN from the page's
+   * navy and reads as a recess. Matches the Plan's panels, because the
+   * two tabs are the same product and a reader moving between them
+   * should not have to relearn what a card is.
+   */
+  hero: {
+    gap: SPACING.sm,
+    padding: SPACING.lg,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.stroke,
+    backgroundColor: COLORS.raised,
+    ...SHADOW.card,
+  },
+  heroRule: {
+    height: 1,
+    backgroundColor: COLORS.stroke,
+    marginTop: SPACING.xs,
+  },
+  heroBarNote: { ...TYPE.fine, color: COLORS.mediumGrey },
   heroLine: { flexDirection: 'row', alignItems: 'baseline', gap: SPACING.sm },
+  /**
+   * Inset by sixteen against the panel's twenty.
+   *
+   * A glyph carries less visual mass than its box, so setting it on the
+   * padding line leaves it looking adrift of the corner; four points
+   * tighter reads as aligned. The row it used to sit in is untouched,
+   * which keeps the figure and its label on their shared baseline.
+   */
+  heroImport: {
+    position: 'absolute',
+    top: SPACING.md,
+    right: SPACING.md,
+    padding: 2,
+  },
   heroValue: {
     fontFamily: 'Noah-Black',
     fontSize: 46,
@@ -583,7 +742,34 @@ const styles = StyleSheet.create({
     borderColor: COLORS.strokeStrong,
   },
   emptyActionText: { ...TYPE.body, color: COLORS.white },
-  quickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
+  quickRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+    marginTop: SPACING.xs,
+  },
+
+  /**
+   * The add cell, drawn as the absence of a tile.
+   *
+   * Dashed and unfilled so it never competes with the artwork beside
+   * it: it is the shape a game would take, waiting for one. Its art box
+   * matches GameTile's aspect exactly, or the last row of the grid
+   * would sit a few points out of true.
+   */
+  addCell: { flex: 1, flexBasis: 0, minWidth: 0, gap: SPACING.xs + 1 },
+  addArt: {
+    width: '100%',
+    aspectRatio: LAYOUT.tileAspect,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: COLORS.strokeStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addArtPressed: { backgroundColor: COLORS.raised },
+  addLabel: { ...TYPE.label, color: COLORS.mediumGrey },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(15, 19, 28, 0.82)',

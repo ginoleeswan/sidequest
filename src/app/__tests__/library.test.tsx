@@ -1,4 +1,5 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { router } from 'expo-router';
 
 import LibraryScreen from '../(tabs)/library';
 import type { Game } from '@/api/types';
@@ -75,7 +76,11 @@ describe('the library screen', () => {
   it('offers a way to bring a library in', async () => {
     seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
     await renderApp(<LibraryScreen />);
-    expect(screen.getByText(/^Import/)).toBeTruthy();
+    // In fixed chrome, on the panel it fills. It has been a chip at the
+    // foot of the page and a chip under a rule inside the panel; the
+    // first was unreachable past two hundred games and the second read
+    // as an orphan.
+    expect(screen.getByLabelText('Import a library')).toBeTruthy();
     // Copying moved to /you: it is a settings action, and at the foot of
     // this page it sat below every game you own.
     expect(screen.queryByText('Copy library')).toBeNull();
@@ -113,7 +118,7 @@ describe('the library screen', () => {
 
   it('refuses a paste that is not a library', async () => {
     await renderApp(<LibraryScreen />);
-    await fireEvent.press(screen.getByText(/^Import/));
+    await fireEvent.press(screen.getByLabelText('Import a library'));
     await fireEvent.changeText(
       screen.getByPlaceholderText(/Paste/i),
       'not json'
@@ -129,7 +134,7 @@ describe('the library screen', () => {
   it('merges a pasted library in, and counts what arrived', async () => {
     seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
     await renderApp(<LibraryScreen />);
-    await fireEvent.press(screen.getByText(/^Import/));
+    await fireEvent.press(screen.getByLabelText('Import a library'));
     await fireEvent.changeText(
       screen.getByPlaceholderText(/Paste/i),
       JSON.stringify({
@@ -168,7 +173,7 @@ describe('the library screen', () => {
    */
   it('imports a pasted CSV export, with its statuses and hours', async () => {
     await renderApp(<LibraryScreen />);
-    await fireEvent.press(screen.getByText(/^Import/));
+    await fireEvent.press(screen.getByLabelText('Import a library'));
     await fireEvent.changeText(
       screen.getByPlaceholderText(/Paste/i),
       ['Title,Status,Hours', 'Celeste,Completed,9', 'Hades,Playing,4'].join(
@@ -185,7 +190,7 @@ describe('the library screen', () => {
 
   it('says which titles it could not match rather than dropping them silently', async () => {
     await renderApp(<LibraryScreen />);
-    await fireEvent.press(screen.getByText(/^Import/));
+    await fireEvent.press(screen.getByLabelText('Import a library'));
     await fireEvent.changeText(
       screen.getByPlaceholderText(/Paste/i),
       ['Title', 'Celeste', 'Some Obscure Thing'].join('\n')
@@ -198,7 +203,7 @@ describe('the library screen', () => {
 
   it('explains a spreadsheet with no title column', async () => {
     await renderApp(<LibraryScreen />);
-    await fireEvent.press(screen.getByText(/^Import/));
+    await fireEvent.press(screen.getByLabelText('Import a library'));
     await fireEvent.changeText(
       screen.getByPlaceholderText(/Paste/i),
       ['Foo,Bar', '1,2'].join('\n')
@@ -207,5 +212,26 @@ describe('the library screen', () => {
     await waitFor(() =>
       expect(screen.getByText(/expected Title, Name or Game/)).toBeTruthy()
     );
+  });
+});
+
+/**
+ * A shelf of two games left most of the screen empty, and the only way
+ * to add anything was to leave the page — so the grid ends on the shape
+ * a game would take, waiting for one.
+ */
+describe('the last cell', () => {
+  it('offers somewhere to put the next game', async () => {
+    seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
+    await renderApp(<LibraryScreen />);
+    await fireEvent.press(screen.getByLabelText('Find a game to add'));
+    expect(router.push).toHaveBeenCalledWith('/');
+  });
+
+  it('stays out of the way when the shelf is empty', async () => {
+    await renderApp(<LibraryScreen />);
+    // The empty state is the invitation there; two of them would be one
+    // too many.
+    expect(screen.queryByLabelText('Find a game to add')).toBeNull();
   });
 });
