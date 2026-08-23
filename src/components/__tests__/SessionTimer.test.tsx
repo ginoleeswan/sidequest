@@ -26,7 +26,7 @@ const saved = () => JSON.parse(store[LIB] ?? '{}')['1'];
 describe('a play session', () => {
   it('offers to start', async () => {
     await renderApp(<SessionTimer game={game} />);
-    expect(screen.getByLabelText('Start playing Celeste')).toBeTruthy();
+    expect(screen.getByLabelText('Start a session on Celeste')).toBeTruthy();
   });
 
   it('keeps counting across a reload, because the clock is in storage', async () => {
@@ -89,7 +89,7 @@ describe('a play session', () => {
     await renderApp(<SessionTimer game={game} />);
     await fireEvent.press(screen.getByLabelText('Throw this session away'));
     await waitFor(() =>
-      expect(screen.getByLabelText('Start playing Celeste')).toBeTruthy()
+      expect(screen.getByLabelText('Start a session on Celeste')).toBeTruthy()
     );
     expect(store[LIB]).toBeUndefined();
   });

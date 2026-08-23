@@ -49,6 +49,7 @@ import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { formatHours } from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
+import { usePersistedState } from '@/hooks/usePersistedState';
 import { findSection } from '@/constants/categories';
 import { COLORS } from '@/styles/colors';
 import { DURATION, EASING } from '@/styles/motion';
@@ -101,44 +102,67 @@ function StatStrip({
 }) {
   const { durationOf } = useDurations();
   const duration = durationOf(game);
+  const [pace] = usePersistedState('sidequest.plan.pace', 6);
   return (
-    <View style={styles.statStrip}>
-      {game.rating > 0 && (
-        <Stat value={`★ ${game.rating.toFixed(1)}`} label="Players" />
-      )}
-      {game.metacritic != null && (
-        <Stat
-          value={<ScorePill score={game.metacritic} />}
-          label="Metacritic"
-        />
-      )}
-      {/* The length is the one stat a person can out-know the data on,
-          so it is the one stat they can change. */}
-      <Pressable onPress={onEditLength} accessibilityRole="button">
-        <Stat
-          value={
-            <Text style={styles.statValue}>
-              {duration.hours > 0 ? formatHours(duration.hours) : 'Set'}
-              {duration.rough && duration.hours > 0 ? (
-                <Text style={styles.statFlag}> ?</Text>
-              ) : null}
-              <Text style={styles.statPencil}> ✎</Text>
-            </Text>
-          }
-          label={
-            duration.source === 'yours'
-              ? 'Your length'
-              : duration.source === 'reported'
-                ? 'Players report'
-                : 'To finish'
-          }
-        />
-      </Pressable>
-      {game.released && (
-        <Stat value={game.released.slice(0, 4)} label="Released" />
-      )}
-      {game.esrb_rating?.name && (
-        <Stat value={game.esrb_rating.name} label="ESRB" />
+    <View style={styles.statBlock}>
+      <View style={styles.statStrip}>
+        {/* Length first, and it is not a tie-break.
+            Every other games database opens on a score; this app exists
+            because the number that decides whether you play something is
+            how long it takes. It was third here, between a rating and a
+            release year, at exactly the weight of both.
+
+            It is also the one stat a person can out-know the data on,
+            so it is the one stat they can change. */}
+        <Pressable onPress={onEditLength} accessibilityRole="button">
+          <Stat
+            value={
+              <Text style={styles.statValue}>
+                {duration.hours > 0 ? formatHours(duration.hours) : 'Set'}
+                {duration.rough && duration.hours > 0 ? (
+                  <Text style={styles.statFlag}> ?</Text>
+                ) : null}
+                <Text style={styles.statPencil}> ✎</Text>
+              </Text>
+            }
+            label={
+              duration.source === 'yours'
+                ? 'Your length'
+                : duration.source === 'reported'
+                  ? 'Players report'
+                  : 'To finish'
+            }
+          />
+        </Pressable>
+        {game.rating > 0 && (
+          /* "Players" under a bare 3.6 reads as three and a half people.
+             It is a rating, and the label now says so. */
+          <Stat value={`★ ${game.rating.toFixed(1)}`} label="Player rating" />
+        )}
+        {game.metacritic != null && (
+          <Stat
+            value={<ScorePill score={game.metacritic} />}
+            label="Metacritic"
+          />
+        )}
+        {game.released && (
+          <Stat value={game.released.slice(0, 4)} label="Released" />
+        )}
+        {game.esrb_rating?.name && (
+          <Stat value={game.esrb_rating.name} label="ESRB" />
+        )}
+      </View>
+
+      {/* The sentence no other games database can write.
+          A length is an abstraction until it is measured against the
+          hours somebody actually has — which this app knows, because
+          the Plan asked. */}
+      {duration.hours > 0 && (
+        <Text style={styles.statPace}>
+          {duration.hours <= pace
+            ? `Under a week at ${pace}h a week.`
+            : `About ${Math.round(duration.hours / pace)} weeks at ${pace}h a week.`}
+        </Text>
       )}
     </View>
   );
@@ -312,7 +336,15 @@ export default function GameInfoScreen() {
       <GrainScrim style={styles.heroGrain} />
       <ChromeWeld height={insets.top + WELD_HEIGHT} />
       <View style={styles.heroCopy}>
-        <PlatformIcons platforms={game.parent_platforms ?? []} />
+        {/* Meta, at meta weight. At the default twenty points a game
+            on one platform put a single 35pt white glyph over the art
+            above the title, where it read as a mark somebody had
+            stamped there rather than as "runs on PC". */}
+        <PlatformIcons
+          platforms={game.parent_platforms ?? []}
+          size={14}
+          color={COLORS.lightGrey}
+        />
         <Text style={styles.heroTitle}>{game.name}</Text>
         <StatStrip game={game} onEditLength={() => setEditingLength(true)} />
       </View>
@@ -366,7 +398,11 @@ export default function GameInfoScreen() {
       </View>
       <View style={styles.deskHeroInner}>
         <View style={styles.deskHeroCopy}>
-          <PlatformIcons platforms={game.parent_platforms ?? []} />
+          <PlatformIcons
+            platforms={game.parent_platforms ?? []}
+            size={14}
+            color={COLORS.lightGrey}
+          />
           <Text style={styles.deskTitle}>{game.name}</Text>
           <StatStrip game={game} onEditLength={() => setEditingLength(true)} />
           <StatusActions game={game} />
@@ -603,8 +639,11 @@ export default function GameInfoScreen() {
                   {about}
                   {ratingsBreakdown}
                   {media}
-                  {community}
+                  {/* Where to buy it before who else owns it: one is
+                      something to do, the other is something to know,
+                      and the doing was four sections further down. */}
                   {links}
+                  {community}
                   {details}
                   {tags}
                 </Animated.View>
@@ -629,7 +668,26 @@ const styles = StyleSheet.create({
   // flexGrow + auto basis: wraps tall content, still fills 100dvh when short.
   background: { flexGrow: 1, backgroundColor: COLORS.darkGrey },
   container: { flexGrow: 1 },
-  backButton: { position: 'absolute', left: SPACING.lg, zIndex: 30 },
+  /**
+   * A plate, because this one floats over a page that scrolls under it.
+   *
+   * On every other screen the back button sits over a fixed header. Here
+   * it is pinned above eight hundred points of scrolling content, so
+   * halfway down the page a bare white chevron was landing on top of
+   * "Read More", "Screenshots" and "Community" — two glyphs sharing the
+   * same pixels, both illegible. A disc of the app's own plate colour
+   * makes it a button rather than a mark on whatever passes beneath.
+   */
+  backButton: {
+    position: 'absolute',
+    left: SPACING.lg,
+    zIndex: 30,
+    borderRadius: 22,
+    backgroundColor: COLORS.plate,
+    borderWidth: 1,
+    borderColor: COLORS.strokeOnImage,
+    overflow: 'hidden',
+  },
 
   // hero
   hero: { height: 480, justifyContent: 'flex-end' },
@@ -690,6 +748,12 @@ const styles = StyleSheet.create({
    * way the title does. "74h TO FINISH" in medium grey over a cream
    * frame was the least readable text in the app.
    */
+  statBlock: { gap: SPACING.sm },
+  statPace: {
+    ...TYPE.caption,
+    ...OVER_IMAGE.body,
+    color: COLORS.lightGrey,
+  },
   statValue: {
     ...TYPE.h3,
     ...OVER_IMAGE.body,

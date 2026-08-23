@@ -138,11 +138,13 @@ export function SessionTimer({ game }: { game: Game }) {
       }}
       style={styles.start}
       accessibilityRole="button"
-      accessibilityLabel={`Start playing ${game.name}`}
+      accessibilityLabel={`Start a session on ${game.name}`}
     >
-      <Ionicons name="play" size={14} color={COLORS.darkGrey} />
-      <Text style={styles.primaryText}>
-        {running ? `Start playing (stops ${running.name})` : 'Start playing'}
+      <Ionicons name="play" size={14} color={COLORS.lightGrey} />
+      <Text style={styles.startText}>
+        {running
+          ? `Start a session (stops ${running.name})`
+          : 'Start a session'}
       </Text>
     </Pressable>
   );
@@ -172,16 +174,32 @@ const styles = StyleSheet.create({
     ...TYPE.body,
     color: COLORS.lightGrey,
   },
+  /**
+   * Secondary, and named for what it is.
+   *
+   * This was a solid white button reading "Start playing", sitting
+   * directly under the three status chips — one of which also says
+   * Playing. Two controls with the same word meaning different things,
+   * and the quieter concern shouting: the white one recorded a session,
+   * while choosing a shelf, the actual decision on this page, was an
+   * outline. The selected status chip is the page's one solid control
+   * now, and the clock is a clock.
+   */
   start: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: SPACING.sm,
     alignSelf: 'flex-start',
-    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.strokeStrong,
     borderRadius: RADIUS.lg,
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.sm + 2,
+  },
+  startText: {
+    ...TYPE.labelSmall,
+    color: COLORS.lightGrey,
   },
   primary: {
     flexDirection: 'row',
