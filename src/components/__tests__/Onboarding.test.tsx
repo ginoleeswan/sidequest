@@ -15,10 +15,24 @@ let store: Record<string, string>;
 beforeAll(() => {
   store = useFakeStorage();
   process.env.EXPO_PUBLIC_RAWG_API_KEY = 'test-key';
+  /**
+   * The must-play FEED shape, not a plain page of games.
+   *
+   * Onboarding seeds itself from `collections/must-play/feed`, where a
+   * result is a post that carries a game rather than being one — see
+   * `getMustPlayGames`. It reads `item.game`, so a flat list of games
+   * decodes to a list of `undefined`, gets filtered away, and the step
+   * renders with no tiles at all. Which is exactly how this test
+   * failed, and exactly what a reader would have seen.
+   */
   globalThis.fetch = jest.fn(
     async () =>
       new Response(
-        JSON.stringify({ count: picks.length, next: null, results: picks })
+        JSON.stringify({
+          count: picks.length,
+          next: null,
+          results: picks.map((game) => ({ id: game.id, game })),
+        })
       )
   ) as unknown as typeof fetch;
 });

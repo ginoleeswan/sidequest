@@ -18,8 +18,8 @@ import { CoverImage } from './CoverImage';
 import { FadeInView } from './FadeInView';
 import { Textured } from './Textured';
 import { queryKeys } from '@/api/queryClient';
+import { getMustPlayGames } from '@/api/rawg';
 import type { Game, Paged } from '@/api/types';
-import { DISCOVER } from '@/constants/categories';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useHydrated } from '@/hooks/useHydrated';
 import { usePersistedState } from '@/hooks/usePersistedState';
@@ -144,8 +144,9 @@ function PickTile({
 
 /**
  * First visit: three short acts instead of a brochure. The promise, then
- * your real pace (it seeds The Plan), then a handful of trending games to
- * save — so the product is already personal before the first browse.
+ * your real pace (it seeds The Plan), then a handful of games with known
+ * lengths to save — so the product is already personal, and already
+ * plannable, before the first browse.
  * Shows once, skippable at every step, persisted.
  */
 export function Onboarding() {
@@ -175,13 +176,35 @@ export function Onboarding() {
    */
   const readingAbout = PUBLIC_ROUTES.some((route) => pathname === route);
 
-  const trending = useQuery({
-    queryKey: queryKeys.shelf(DISCOVER[0].key),
-    queryFn: () => DISCOVER[0].fetch(1),
+  /**
+   * Must-play, not trending — and the difference decides whether the
+   * app works on first run.
+   *
+   * Trending on RAWG means recently added, which means mostly
+   * unreleased, and an unreleased game has no reported length. Six of
+   * those are six games the scheduler cannot place: measured on a fresh
+   * install, saving all six produced a plan reading "This window is too
+   * tight" over five rows of "Length unknown". The first thing the app
+   * ever does was tell the reader it could not help them.
+   *
+   * `LandingTry` hit this and wrote it down — must-play is the opposite
+   * population, games people finished and logged real hours against —
+   * but the fix never reached the one screen where it matters most.
+   *
+   * Belt and braces: the filter stays even on this population, because
+   * "no reported length" is a property of a game, not of a shelf, and
+   * one slipping through would put an unplaceable game in somebody's
+   * first plan.
+   */
+  const seeds = useQuery({
+    queryKey: queryKeys.shelf('onboarding-picks'),
+    queryFn: () => getMustPlayGames(1),
     select: (page: Paged<Game>) => page.results,
     enabled: mounted && !done,
   });
-  const picks: Game[] = (trending.data ?? []).slice(0, PICKS);
+  const picks: Game[] = (seeds.data ?? [])
+    .filter((game) => game.playtime > 0)
+    .slice(0, PICKS);
 
   if (!mounted || done || readingAbout) return null;
 
@@ -349,7 +372,7 @@ export function Onboarding() {
             <View style={styles.copyColumn}>
               <FadeInView key={step}>{acts[step]}</FadeInView>
             </View>
-            <CoverWall games={trending.data ?? []} />
+            <CoverWall games={seeds.data ?? []} />
           </View>
         ) : (
           <View style={[styles.stage, { width: contentWidth }]}>
