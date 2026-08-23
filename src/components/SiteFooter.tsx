@@ -8,6 +8,7 @@ import Svg, {
 } from 'react-native-svg';
 import { useState } from 'react';
 import {
+  Platform,
   useWindowDimensions,
   Pressable,
   StyleSheet,
@@ -224,6 +225,28 @@ export function SiteFooter({
   mascot = true,
   shore = true,
 }: Props) {
+  /**
+   * Web only, now that native has a tab bar and a You screen.
+   *
+   * A footer is a web affordance: a page has no persistent chrome, so
+   * the bottom of a long document is the only place to put site-wide
+   * navigation, legal and identity. An app has a tab bar that is always
+   * there — and this footer's Explore column is Home, My Library and
+   * The Plan, which is that tab bar offered a second time at the end of
+   * a scroll, on thirteen screens.
+   *
+   * It could not simply be deleted, because it was the ONLY route to
+   * Terms and Privacy on native. `/you` is where those live now, which
+   * is what made removing this safe rather than orphaning them.
+   *
+   * Returning null rather than editing thirteen call sites: every one of
+   * them is correct on the web, which is the platform a footer is for.
+   *
+   * Below the hooks, not above them. `Platform.OS` never changes at
+   * runtime so an early return would be safe in practice, but it would
+   * still be a conditional hook call — and a rule that is bent once for
+   * a constant is a rule nobody can trust the next time.
+   */
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   /**
@@ -232,6 +255,8 @@ export function SiteFooter({
    * whole word spanning the band is the design, at every width.
    */
   const ghost = Math.round(Math.min(Math.max(width * 0.155, 54), 128));
+
+  if (Platform.OS !== 'web') return null;
 
   return (
     <View style={inset > 0 ? { marginHorizontal: -inset } : undefined}>
