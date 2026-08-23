@@ -379,14 +379,10 @@ export function Onboarding() {
         {/* "Set me up — 20 seconds" bargained before the reader had
             agreed to anything, and About already settled this argument
             on its own cap: a cabinet does not explain itself, it says
-            START. "Skip the tour" underneath is the reassurance, and it
-            is one the reader can act on rather than one they have to
-            take on trust. */}
+            START. Nothing hedges underneath it either — the way out is
+            "Skip", top right, on all three acts. */}
         <Text style={styles.ctaText}>Set me up</Text>
         <Ionicons name="arrow-forward" size={16} color={COLORS.darkGrey} />
-      </Pressable>
-      <Pressable onPress={() => finish(false)}>
-        <Text style={styles.quiet}>Skip the tour</Text>
       </Pressable>
     </View>,
 

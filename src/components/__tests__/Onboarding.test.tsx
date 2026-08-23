@@ -63,7 +63,10 @@ describe('onboarding', () => {
 
   it('remembers being skipped, and does not send you anywhere', async () => {
     await renderApp(<Onboarding />);
-    await fireEvent.press(screen.getByText('Skip the tour'));
+    // One way out, top right, the same on every act. Act one carried a
+    // second "Skip the tour" under its button until it was noticed that
+    // the screen offered the same escape twice.
+    await fireEvent.press(screen.getByText('Skip'));
     await waitFor(() =>
       expect(store['sidequest.onboarded.v1']).toBe(JSON.stringify(true))
     );
