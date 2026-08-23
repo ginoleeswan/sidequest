@@ -27,7 +27,8 @@
     "build:prod": "eas build --profile production",
     "update:preview": "eas update --channel preview",
     "update:prod": "eas update --channel production",
-    "fingerprint:generate": "expo-updates fingerprint:generate"
+    "fingerprint:generate": "expo-updates fingerprint:generate",
+    "apple:secret": "node scripts/apple-client-secret.mjs"
   },
   "engines": {
     "node": ">=20.19.4"
