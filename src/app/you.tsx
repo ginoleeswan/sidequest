@@ -1,219 +1,369 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppHeader } from '@/components/AppHeader';
 import { BackButton } from '@/components/BackButton';
+import { CoverImage } from '@/components/CoverImage';
+import { FadeInView } from '@/components/FadeInView';
+import { Mark } from '@/components/Mark';
 import { PageTitle } from '@/components/PageTitle';
 import { Screen } from '@/components/Screen';
-import { useToast } from '@/components/Toast';
-import { SignInRows } from '@/components/SignInRows';
 import { SiteFooter } from '@/components/SiteFooter';
 import { Textured } from '@/components/Textured';
+import { useToast } from '@/components/Toast';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useHydrated } from '@/hooks/useHydrated';
 import { usePersistedState } from '@/hooks/usePersistedState';
-import { useDurations } from '@/lib/durations';
+import { useAuth } from '@/lib/auth';
+import { CAN_COPY, handOff } from '@/lib/clipboard';
 import { formatHours } from '@/lib/duration';
+import { useDurations } from '@/lib/durations';
+import { readDrops, totalDrops } from '@/lib/drops';
 import { useLibrary } from '@/lib/library';
 import { libraryStats } from '@/lib/libraryStats';
-import { readDrops, totalDrops } from '@/lib/drops';
 import { COLORS } from '@/styles/colors';
 import { GUTTER, LAYOUT, RADIUS, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 /**
- * You — the one place the app is about the reader rather than the games.
+ * You — the shelf turned around.
  *
- * It exists because two things had nowhere to live. The legal pages were
- * reachable only through the site footer, which is a web device this app
- * repeats on thirteen native screens where a tab bar already does the
- * navigating; and the reader's own numbers were scattered across three
- * screens that each computed a slice of them.
+ * Two versions of this screen failed the same way. The first was three
+ * stat boxes over two identical lists of chevrons: every number on it
+ * was borrowed from another screen, and the whole page was hairline
+ * rectangles on navy in an app otherwise made of cover art. The second
+ * kept the structure and made it worse, because giving the sign-in
+ * buttons a solid white fill made the one OPTIONAL thing on the page
+ * the loudest thing on it — an app whose hero promises "no account"
+ * cannot have two white slabs of sign-in as its account screen.
  *
- * Profile and settings are one screen here, and that is not a shortcut.
- * With no account there is nothing to a profile except your pace, your
- * numbers and your data — which is exactly what a settings screen holds.
- * Splitting them would be one screen cut in half.
+ * So: the reader's own library is the material. It sits behind the
+ * masthead, graded to the app's navy and dissolved into the page, and
+ * it is the only place a profile screen can honestly get a face from
+ * when there is no account and no photograph. Under it the three
+ * figures are not a scoreboard but three doors — what is ahead, what
+ * you finished, what you let go — which are the three things a
+ * deliberate player does with a game and the three screens that hold
+ * them. A stat that navigates is not a duplicate of the screen it
+ * counts; it is the way in.
  *
- * It is also where signing in will appear, and the shape is chosen for
- * that: every row here works with no account, and an account adds one
- * more row rather than unlocking any of these. The app's own hero says
- * "no account" in capitals, and the only honest way to add sign-in under
- * that promise is for it to buy sync and never features.
+ * Signing in is one quiet row near the bottom that opens when asked.
+ * That is the honest weight for something that buys sync and never a
+ * feature.
  */
+
+/**
+ * The masthead's ground: one of your own covers, out of focus.
+ *
+ * This was a three-by-three mosaic first, which is the obvious way to
+ * put a whole library behind a heading and the wrong one — nine tiles
+ * blur individually, so every tile keeps a hard edge and the band reads
+ * as a gallery that failed to load rather than as a backdrop. One
+ * picture has no seams.
+ *
+ * The most recent save, because that is the one thing about a shelf
+ * that is true today, and because a profile screen with no account and
+ * no photograph has to get its face from somewhere. It is never legible
+ * as a game: forty points of blur, a navy veil to give whatever the
+ * publisher graded a black point of ours, and a gradient that ends at
+ * the page colour exactly, so the band has no bottom edge — it simply
+ * stops being artwork.
+ */
+function Wall({ cover }: { cover: string }) {
+  return (
+    <View style={styles.wall} pointerEvents="none">
+      <CoverImage
+        uri={cover}
+        size="hero"
+        blurRadius={40}
+        style={styles.wallImage}
+        iconSize={0}
+      />
+    </View>
+  );
+}
+
+/** One of the three doors. A number, what it counts, where it goes. */
+function Door({
+  value,
+  label,
+  colour,
+  onPress,
+  first = false,
+}: {
+  value: string;
+  label: string;
+  colour: string;
+  onPress: () => void;
+  first?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${value} ${label}`}
+      style={({ pressed }) => [
+        styles.door,
+        !first && styles.doorDivided,
+        pressed && styles.doorPressed,
+      ]}
+    >
+      <Text style={[styles.doorValue, { color: colour }]}>{value}</Text>
+      <Text style={styles.doorLabel}>{label}</Text>
+    </Pressable>
+  );
+}
 
 function Row({
   icon,
   label,
   value,
   onPress,
-  last = false,
 }: {
   icon: React.ComponentProps<typeof Ionicons>['name'];
   label: string;
   value?: string;
   onPress?: () => void;
-  last?: boolean;
 }) {
   const body = (
-    <View style={[styles.row, last && styles.rowLast]}>
-      <Ionicons name={icon} size={18} color={COLORS.mediumGrey} />
+    <View style={styles.row}>
+      <Ionicons name={icon} size={17} color={COLORS.mediumGrey} />
       <Text style={styles.rowLabel}>{label}</Text>
       {value ? <Text style={styles.rowValue}>{value}</Text> : null}
       {onPress ? (
-        <Ionicons name="chevron-forward" size={16} color={COLORS.mediumGrey} />
+        <Ionicons name="chevron-forward" size={15} color={COLORS.mediumGrey} />
       ) : null}
     </View>
   );
   if (!onPress) return body;
   return (
-    <Pressable onPress={onPress} accessibilityRole="button">
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      style={({ pressed }) => (pressed ? styles.rowPressed : undefined)}
+    >
       {body}
     </Pressable>
   );
 }
 
-/** One number and what it counts. The screen's only ornament. */
-function Figure({ n, label }: { n: string; label: string }) {
-  return (
-    <View style={styles.figure}>
-      <Text style={styles.figureNumber}>{n}</Text>
-      <Text style={styles.figureLabel}>{label}</Text>
-    </View>
-  );
-}
+const LEGAL = [
+  { label: 'About', href: '/about' },
+  { label: 'Terms', href: '/terms' },
+  { label: 'Privacy', href: '/privacy' },
+] as const;
 
 export default function YouScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isExpanded } = useBreakpoint();
   const { entries, count, exportJson } = useLibrary();
-  const toast = useToast();
-
-  /** Straight to the clipboard, and it says whether that worked. */
-  const copyLibrary = async () => {
-    try {
-      await navigator.clipboard?.writeText(exportJson());
-      toast('Library copied — paste it on another device', 'copy');
-    } catch {
-      toast(
-        'Copy failed — your browser blocked clipboard access',
-        'alert-circle'
-      );
-    }
-  };
+  const { session, available } = useAuth();
   const { durationOf } = useDurations();
   const hydrated = useHydrated();
   const [pace] = usePersistedState('sidequest.plan.pace', 6);
+  const toast = useToast();
+
+  /**
+   * Out of the app, and it says whether that worked.
+   *
+   * The web copies; native opens the share sheet, where copying is one
+   * of the choices. The row and the message both say which, because a
+   * control called "Copy" that opens a share sheet is a small lie.
+   */
+  const sendLibrary = async () => {
+    const done = await handOff(exportJson());
+    if (!done) {
+      toast('Nothing left the app — try again', 'alert-circle');
+      return;
+    }
+    toast(
+      CAN_COPY
+        ? 'Library copied — paste it on another device'
+        : 'Library sent — open it on your other device',
+      CAN_COPY ? 'copy' : 'share-outline'
+    );
+  };
 
   const all = useMemo(() => Object.values(entries), [entries]);
   const stats = useMemo(
     () => libraryStats(all, (game) => durationOf(game).hours),
     [all, durationOf]
   );
+  /** The most recently saved cover, which is what the masthead wears. */
+  const cover = useMemo(
+    () =>
+      [...all]
+        .sort((a, b) => b.addedAt - a.addedAt)
+        .map((entry) => entry.game.background_image)
+        .find(Boolean) ?? null,
+    [all]
+  );
   // Drops live in their own store and are only readable once storage has
   // been hydrated — before that the honest answer is none, not a guess.
   const dropped = hydrated ? totalDrops(readDrops()) : 0;
 
+  const email = session?.user.email ?? null;
+  /** The name a screen can use when there is no name: the local part. */
+  const who = email ? (email.split('@')[0] ?? 'You') : 'You';
+
   return (
     <Textured style={styles.background}>
       <PageTitle>You — Sidequest</PageTitle>
+      {/* A pushed screen, so it keeps its back button on BOTH platforms.
+          This used to render one on web only, which left the native
+          version with no header, no tab bar and no way out — while
+          still reserving the clearance the missing button would have
+          needed. A hundred and twenty points of nothing, above a dead
+          end. */}
       {isExpanded ? (
         <AppHeader />
-      ) : Platform.OS === 'web' ? (
+      ) : (
         <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
-          <BackButton />
+          <BackButton onImage={Boolean(cover)} />
         </View>
-      ) : null}
+      )}
 
       <Screen>
-        <View
-          style={[
-            styles.inner,
-            {
-              paddingTop: isExpanded
-                ? SPACING.xl * 1.5
-                : insets.top + SPACING.xl * 2,
-            },
-          ]}
-        >
-          <Text style={styles.eyebrow}>NO ACCOUNT NEEDED</Text>
-          <Text style={styles.title}>You</Text>
+        <FadeInView>
+          <View
+            style={[
+              styles.masthead,
+              isExpanded && styles.mastheadExpanded,
+              { paddingTop: isExpanded ? SPACING.xl : insets.top + SPACING.xl },
+            ]}
+          >
+            {cover ? <Wall cover={cover} /> : null}
+            {/* The veil and the dissolve. Two layers, because they do
+                different jobs: the veil gives a few thousand publishers'
+                key art one black point to share, and the gradient ends
+                the band without drawing a line under it. */}
+            <View style={styles.wallVeil} pointerEvents="none" />
+            <LinearGradient
+              colors={['transparent', COLORS.darkGrey]}
+              locations={[0, 0.94]}
+              style={StyleSheet.absoluteFill}
+              pointerEvents="none"
+            />
+            {/* And one downwards, because the status bar and the back
+                button sit on whatever the publisher graded. */}
+            <LinearGradient
+              colors={['rgba(39,47,63,0.8)', 'transparent']}
+              locations={[0, 0.45]}
+              style={StyleSheet.absoluteFill}
+              pointerEvents="none"
+            />
 
-          {/* The numbers first, because they are the only part of this
-              screen anybody opens it to see. Everything below is a
-              control, and controls can wait their turn. */}
-          <View style={styles.figures}>
-            <Figure n={String(stats.waiting + stats.playing)} label="SAVED" />
-            <Figure n={String(stats.finishedThisYear)} label="FINISHED" />
-            <Figure n={formatHours(stats.hoursAhead)} label="AHEAD" />
+            <View style={styles.identity}>
+              <View style={[styles.avatar, session && styles.avatarSynced]}>
+                {session ? (
+                  <Text style={styles.monogram}>
+                    {who.slice(0, 1).toUpperCase()}
+                  </Text>
+                ) : (
+                  <Mark size={30} />
+                )}
+              </View>
+              <Text style={styles.who} numberOfLines={1}>
+                {who}
+              </Text>
+              <Text style={styles.where}>
+                {email ?? 'No account. Nothing has left this device.'}
+              </Text>
+            </View>
           </View>
 
-          {dropped > 0 ? (
-            <Text style={styles.dropLine}>
-              And {dropped} you decided against — which is the point of the app,
-              not a failure of it.
-            </Text>
-          ) : null}
+          <View style={styles.inner}>
+            {/* Three doors, not three stats. */}
+            <View style={styles.doors}>
+              <Door
+                first
+                value={formatHours(stats.hoursAhead)}
+                label="AHEAD"
+                colour={
+                  stats.hoursAhead > 0 ? COLORS.accent : COLORS.mediumGrey
+                }
+                onPress={() => router.push('/library')}
+              />
+              <Door
+                value={String(stats.finished)}
+                label="FINISHED"
+                colour={stats.finished > 0 ? COLORS.mint : COLORS.mediumGrey}
+                onPress={() => router.push('/memcard')}
+              />
+              <Door
+                value={String(dropped)}
+                label="LET GO"
+                colour={dropped > 0 ? COLORS.coral : COLORS.mediumGrey}
+                onPress={() => router.push('/tidy')}
+              />
+            </View>
 
-          <View style={styles.group}>
-            <Row
-              icon="speedometer"
-              label="Your pace"
-              value={`${pace}h a week`}
-              onPress={() => router.push('/plan')}
-            />
-            <Row
-              icon="download"
-              label="Import from Steam"
-              onPress={() => router.push('/import')}
-            />
-            {/* Moved off the Library page, where it sat at the foot
-                below every game you own — fine at two, unreachable at
-                two hundred. Exporting is a settings action, and this is
-                where the settings are. */}
-            <Row
-              icon="copy"
-              label="Copy library"
-              value={count > 0 ? `${count} games` : undefined}
-              onPress={count > 0 ? copyLibrary : undefined}
-              last
-            />
+            <Text style={styles.groupLabel}>YOUR SETUP</Text>
+            <View style={styles.group}>
+              <Row
+                icon="speedometer"
+                label="Your pace"
+                value={`${pace}h a week`}
+                onPress={() => router.push('/plan')}
+              />
+              <Row
+                icon="download"
+                label="Import from Steam"
+                onPress={() => router.push('/import')}
+              />
+              {/* Moved off the Library page, where it sat at the foot
+                  below every game you own — fine at two, unreachable at
+                  two hundred. Exporting is a settings action, and this
+                  is where the settings are. */}
+              <Row
+                icon={CAN_COPY ? 'copy' : 'share-outline'}
+                label={CAN_COPY ? 'Copy library' : 'Send my library'}
+                value={count > 0 ? `${count} games` : undefined}
+                onPress={count > 0 ? sendLibrary : undefined}
+              />
+            </View>
+
+            {available ? (
+              <>
+                <Text style={styles.groupLabel}>ACCOUNT</Text>
+                <View style={styles.group}>
+                  {/* A chevron to a screen, like every other row here.
+                      This opened in place for a while, which has no URL
+                      to link to on the web, nowhere to put the states
+                      that come after a magic link, and no room for the
+                      account deletion an app with accounts has to
+                      offer. See app/account. */}
+                  <Row
+                    icon={session ? 'cloud-done' : 'cloud-outline'}
+                    label={session ? 'Synced' : 'Sync to another device'}
+                    value={session ? (email ?? undefined) : 'Not signed in'}
+                    onPress={() => router.push('/account')}
+                  />
+                </View>
+              </>
+            ) : null}
+
+            <View style={styles.legal}>
+              {LEGAL.map((page, i) => (
+                <View key={page.href} style={styles.legalItem}>
+                  {i > 0 ? <Text style={styles.legalDot}>·</Text> : null}
+                  <Pressable
+                    onPress={() => router.push(page.href)}
+                    accessibilityRole="link"
+                    hitSlop={8}
+                  >
+                    <Text style={styles.legalLink}>{page.label}</Text>
+                  </Pressable>
+                </View>
+              ))}
+            </View>
           </View>
-
-          <View style={styles.group}>
-            <Row
-              icon="information-circle"
-              label="About Sidequest"
-              onPress={() => router.push('/about')}
-            />
-            <Row
-              icon="document-text"
-              label="Terms"
-              onPress={() => router.push('/terms')}
-            />
-            {/* The reason this screen exists at all: on native these two
-                were reachable only through the footer, and a privacy
-                policy nobody can open is a submission problem as well as
-                a bad answer. */}
-            <Row
-              icon="lock-closed"
-              label="Privacy"
-              onPress={() => router.push('/privacy')}
-              last
-            />
-          </View>
-
-          <SignInRows />
-
-          <Text style={styles.promise}>
-            Everything here is on this device unless you sign in — and signing
-            in only syncs it, it never unlocks anything.
-          </Text>
-        </View>
+        </FadeInView>
 
         {/* Web keeps its footer; native does not — see SiteFooter. */}
         <SiteFooter />
@@ -222,61 +372,131 @@ export default function YouScreen() {
   );
 }
 
+/**
+ * How tall the band is. Three hundred left a third of the screen empty
+ * above the avatar on a phone — a masthead is a ground for the identity
+ * to stand on, not a void to fall through.
+ */
+const WALL_HEIGHT = 260;
+
 const styles = StyleSheet.create({
   background: { flex: 1, backgroundColor: COLORS.darkGrey },
   backButton: { position: 'absolute', left: GUTTER, zIndex: 10 },
+
+  masthead: {
+    minHeight: WALL_HEIGHT,
+    justifyContent: 'flex-end',
+    paddingHorizontal: GUTTER,
+    paddingBottom: SPACING.md,
+    overflow: 'hidden',
+  },
+  mastheadExpanded: {
+    width: '100%',
+    maxWidth: LAYOUT.maxContentWidth,
+    alignSelf: 'center',
+    borderRadius: RADIUS.lg,
+    marginTop: SPACING.lg,
+  },
+  wall: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  wallImage: { width: '100%', height: '100%' },
+  wallVeil: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(39,47,63,0.42)',
+  },
+
+  identity: { gap: SPACING.xs },
+  avatar: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.plate,
+    borderWidth: 1,
+    borderColor: COLORS.strokeOnImage,
+    marginBottom: SPACING.sm,
+  },
+  avatarSynced: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
+  monogram: { fontFamily: 'Noah-Black', fontSize: 24, color: COLORS.navy },
+  who: { ...TYPE.display, color: COLORS.white },
+  where: { ...TYPE.caption, color: COLORS.lightGrey },
+
   inner: {
     width: '100%',
     maxWidth: LAYOUT.maxContentWidth,
     alignSelf: 'center',
     paddingHorizontal: GUTTER,
     paddingBottom: SPACING.xl,
-    gap: SPACING.md,
   },
-  eyebrow: { ...TYPE.micro, color: COLORS.accent },
-  title: { ...TYPE.h1, color: COLORS.white, marginBottom: SPACING.sm },
 
-  figures: { flexDirection: 'row', gap: SPACING.sm },
-  figure: {
-    flex: 1,
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.sm,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.stroke,
-    gap: 2,
+  /**
+   * The three doors.
+   *
+   * Set on the page rather than in a box: a bordered card around three
+   * numbers is the stat-grid this screen has already failed at twice.
+   * The colours are the app's own semantics — amber is time, mint is
+   * finishing, coral is letting go — and they go grey at zero, because
+   * a bright nought is a reprimand.
+   */
+  doors: {
+    flexDirection: 'row',
+    marginTop: SPACING.md,
+    marginBottom: SPACING.xs,
   },
-  figureNumber: {
-    fontFamily: 'Noah-Black',
-    fontSize: 26,
-    color: COLORS.white,
+  door: { flex: 1, gap: 3, paddingVertical: SPACING.xs },
+  doorDivided: {
+    borderLeftWidth: 1,
+    borderLeftColor: COLORS.stroke,
+    paddingLeft: SPACING.md,
   },
-  figureLabel: { ...TYPE.micro, color: COLORS.mediumGrey },
-  dropLine: { ...TYPE.caption, color: COLORS.mediumGrey },
+  doorPressed: { opacity: 0.6 },
+  doorValue: { fontFamily: 'Noah-Black', fontSize: 30, letterSpacing: -0.8 },
+  doorLabel: { ...TYPE.micro, color: COLORS.mediumGrey },
 
-  group: {
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.stroke,
-    overflow: 'hidden',
-    marginTop: SPACING.sm,
+  groupLabel: {
+    ...TYPE.micro,
+    color: COLORS.mediumGrey,
+    marginBottom: SPACING.sm,
+    marginTop: SPACING.lg,
   },
+  /**
+   * Hairline rows on the page, not a bordered box.
+   *
+   * Every container on this screen used to be the same 8%-white
+   * rectangle, so the page read as three grey slabs regardless of what
+   * was in them. Rules between rows say the same thing and draw a
+   * quarter as much.
+   */
+  group: { borderTopWidth: 1, borderTopColor: COLORS.stroke },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.md,
     paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.md,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.stroke,
   },
-  rowLast: { borderBottomWidth: 0 },
+  rowPressed: { opacity: 0.6 },
   rowLabel: { ...TYPE.body, color: COLORS.lightGrey, flex: 1 },
   rowValue: { ...TYPE.body, color: COLORS.mediumGrey },
 
-  promise: {
-    ...TYPE.caption,
-    color: COLORS.mediumGrey,
-    marginTop: SPACING.md,
+  legal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginTop: SPACING.lg,
   },
+  legalItem: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  legalDot: { ...TYPE.caption, color: COLORS.mediumGrey },
+  legalLink: { ...TYPE.caption, color: COLORS.mediumGrey, paddingVertical: 12 },
 });

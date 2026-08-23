@@ -31,6 +31,13 @@ interface Props {
   /** Which slot this fills, so the right derivative is requested. */
   size?: keyof typeof SLOT_WIDTH;
   /**
+   * Softens the picture in place. For artwork used as a ground rather
+   * than as a thing to look at — the You masthead builds its colour
+   * field out of the reader's own covers, and sharp covers there read
+   * as a broken gallery instead of as a backdrop.
+   */
+  blurRadius?: number;
+  /**
    * What this artwork is, for a screen reader. Pass the game's name where
    * the image is the only thing identifying it. Leave unset where a title
    * sits next to it: the cover then adds nothing but noise, and is hidden
@@ -50,6 +57,7 @@ export function CoverImage({
   contentFit = 'cover',
   iconSize = 32,
   size = 'tile',
+  blurRadius,
   label,
 }: Props) {
   const [failed, setFailed] = useState(false);
@@ -81,6 +89,7 @@ export function CoverImage({
         source={{ uri: src }}
         style={StyleSheet.absoluteFill}
         contentFit={contentFit}
+        blurRadius={blurRadius}
         transition={DURATION.base}
         onError={() => setFailed(true)}
         accessible={!!label}

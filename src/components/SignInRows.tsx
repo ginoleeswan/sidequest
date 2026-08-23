@@ -18,15 +18,18 @@ import { RADIUS, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 /**
- * The account, as one optional row rather than a gate.
+ * The account, as controls and nothing else.
  *
- * Everything above this on the You screen works signed out and keeps
- * working signed in. What an account adds is that the same library
- * appears on the next device — which is worth offering plainly and
- * never worth interrupting anybody for.
+ * This used to carry its own eyebrow, heading and paragraph — which put
+ * the promise ("signing in only syncs, it never unlocks") on the You
+ * screen three times, once here, once in the eyebrow at the top and
+ * once in the closing line. The words belong to the screen; the buttons
+ * belong here. Whoever renders this says who you are and what signing
+ * in would do.
  *
- * So: no modal, no full-screen wall, no "sign in to continue". A
- * section that can be ignored forever.
+ * Everything above it works signed out and keeps working signed in, so
+ * there is no modal, no wall and no "sign in to continue" — a section
+ * that can be ignored forever.
  */
 
 function Provider({
@@ -49,9 +52,9 @@ function Provider({
       accessibilityLabel={label}
     >
       {busy ? (
-        <ActivityIndicator size="small" color={COLORS.white} />
+        <ActivityIndicator size="small" color={COLORS.navy} />
       ) : (
-        <Ionicons name={icon} size={18} color={COLORS.white} />
+        <Ionicons name={icon} size={18} color={COLORS.navy} />
       )}
       <Text style={styles.providerLabel}>{label}</Text>
     </Pressable>
@@ -115,36 +118,26 @@ export function SignInRows() {
 
   if (session) {
     return (
-      <View style={styles.section}>
-        <Text style={styles.eyebrow}>SYNCED</Text>
-        <Text style={styles.signedIn}>{session.user.email ?? 'Signed in'}</Text>
-        <Text style={styles.blurb}>
-          Your library and plan follow you to any device you sign in on.
+      <Pressable
+        onPress={() =>
+          run('out', signOut, 'Signed out — everything stayed here')
+        }
+        accessibilityRole="button"
+        style={styles.signOut}
+      >
+        <Text style={styles.signOutLabel}>
+          {busy === 'out' ? 'Signing out…' : 'Sign out'}
         </Text>
-        <Pressable
-          onPress={() =>
-            run('out', signOut, 'Signed out — everything stayed here')
-          }
-          accessibilityRole="button"
-          style={styles.signOut}
-        >
-          <Text style={styles.signOutLabel}>
-            {busy === 'out' ? 'Signing out…' : 'Sign out'}
-          </Text>
-        </Pressable>
-      </View>
+      </Pressable>
     );
   }
 
   return (
     <View style={styles.section}>
-      <Text style={styles.eyebrow}>OPTIONAL</Text>
-      <Text style={styles.title}>Use this on another device?</Text>
-      <Text style={styles.blurb}>
-        Signing in syncs your library and plan. It doesn’t unlock anything —
-        everything here already works without it.
-      </Text>
-
+      {/* Solid, not outlined. Two hairline ghosts on a dark card read as
+          disabled controls; a provider button is the one thing on this
+          screen somebody might be looking for, and both Apple and
+          Google publish a light button as a supported style. */}
       <View style={styles.providers}>
         {appleReady && (
           <Provider
@@ -166,7 +159,7 @@ export function SignInRows() {
         <TextInput
           value={email}
           onChangeText={setEmail}
-          placeholder="your@email.com"
+          placeholder="or your@email.com"
           placeholderTextColor={COLORS.mediumGrey}
           keyboardType="email-address"
           autoCapitalize="none"
@@ -190,7 +183,7 @@ export function SignInRows() {
           accessibilityRole="button"
           accessibilityLabel="Send sign-in link"
         >
-          <Ionicons name="arrow-forward" size={16} color={COLORS.darkGrey} />
+          <Ionicons name="arrow-forward" size={16} color={COLORS.navy} />
         </Pressable>
       </View>
     </View>
@@ -198,15 +191,7 @@ export function SignInRows() {
 }
 
 const styles = StyleSheet.create({
-  section: { marginTop: SPACING.xl, gap: SPACING.xs },
-  eyebrow: { ...TYPE.micro, color: COLORS.accent },
-  title: { ...TYPE.h3, color: COLORS.white },
-  blurb: {
-    ...TYPE.caption,
-    color: COLORS.mediumGrey,
-    marginBottom: SPACING.sm,
-  },
-  signedIn: { ...TYPE.body, color: COLORS.white },
+  section: { gap: SPACING.sm },
 
   providers: { gap: SPACING.sm },
   provider: {
@@ -214,22 +199,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: SPACING.sm,
-    paddingVertical: SPACING.md,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.stroke,
+    paddingVertical: SPACING.md - 2,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.white,
   },
-  pressed: { opacity: 0.6 },
-  providerLabel: { ...TYPE.body, color: COLORS.white },
+  pressed: { opacity: 0.7 },
+  providerLabel: { ...TYPE.label, color: COLORS.navy },
 
-  emailRow: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.sm },
+  emailRow: { flexDirection: 'row', gap: SPACING.sm },
   emailInput: {
     flex: 1,
-    paddingVertical: SPACING.md,
+    paddingVertical: SPACING.md - 2,
     paddingHorizontal: SPACING.md,
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: COLORS.stroke,
+    borderColor: COLORS.strokeStrong,
     ...TYPE.body,
     color: COLORS.white,
   },
@@ -237,11 +221,11 @@ const styles = StyleSheet.create({
     width: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.md,
     backgroundColor: COLORS.white,
   },
   emailSendOff: { opacity: 0.3 },
 
-  signOut: { paddingVertical: SPACING.sm },
-  signOutLabel: { ...TYPE.body, color: COLORS.mediumGrey },
+  signOut: { paddingVertical: SPACING.sm, alignSelf: 'flex-start' },
+  signOutLabel: { ...TYPE.label, color: COLORS.mediumGrey },
 });
