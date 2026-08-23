@@ -63,7 +63,8 @@
           "defaultChannel": "evenings",
           "enableBackgroundRemoteNotifications": false
         }
-      ]
+      ],
+      "@bacons/apple-targets"
     ],
     "experiments": {
       "typedRoutes": true,

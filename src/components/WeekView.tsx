@@ -4,6 +4,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useToast } from '@/components/Toast';
 import { buildIcs, downloadIcs, planEvents } from '@/lib/ics';
 import { insertEvents } from '@/lib/nativeCalendar';
+import { REMINDER_LEAD_MINUTES, scheduleEvenings } from '@/lib/reminders';
 import type { ScheduledItem } from '@/lib/scheduler';
 import { formatHours } from '@/lib/duration';
 import { eveningLabel, planWeek, type PlannedEvening } from '@/lib/week';
@@ -103,10 +104,29 @@ export function WeekView({
     // store — no file hand-off, still no account: see nativeCalendar.
     try {
       await insertEvents(events);
+      /**
+       * And a nudge before each one, asked for in the same breath.
+       *
+       * This is the only place the app schedules a notification, and it
+       * is deliberately here rather than behind a settings toggle
+       * nobody visits: the reader has just said "put these evenings in
+       * my week", and a reminder is that sentence finished. The
+       * permission sheet therefore arrives while they are asking for
+       * exactly this, instead of at launch with no context.
+       *
+       * Awaited but not guarded: a decline returns 0 rather than
+       * throwing, and the calendar write above has already succeeded,
+       * so there is nothing to undo and nothing to apologise for. The
+       * toast simply does not mention reminders that were never set.
+       */
+      const nudges = await scheduleEvenings(events);
       toast(
-        events.length === 1
+        (events.length === 1
           ? 'One evening, filed in your calendar'
-          : `${events.length} evenings, filed in your calendar`,
+          : `${events.length} evenings, filed in your calendar`) +
+          (nudges > 0
+            ? ` · reminders ${REMINDER_LEAD_MINUTES} min before`
+            : ''),
         'calendar-outline'
       );
     } catch (error) {

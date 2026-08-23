@@ -5,8 +5,8 @@
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
@@ -19,12 +19,20 @@
     "test:a11y": "node e2e/a11y.mjs",
     "test:perf": "node e2e/perf.mjs",
     "test:icons": "node e2e/icons.mjs",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "prebuild": "expo prebuild --clean",
+    "build:dev": "eas build --profile development",
+    "build:preview": "eas build --profile preview",
+    "build:prod": "eas build --profile production",
+    "update:preview": "eas update --channel preview",
+    "update:prod": "eas update --channel production",
+    "fingerprint": "expo-updates fingerprint:generate"
   },
   "engines": {
     "node": ">=20.19.4"
   },
   "dependencies": {
+    "@bacons/apple-targets": "^5.0.0",
     "@expo/metro-runtime": "~57.0.11",
     "@expo/vector-icons": "^15.0.2",
     "@tanstack/query-sync-storage-persister": "^5.101.4",

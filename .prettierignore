@@ -1,0 +1,21 @@
+# Build output and caches.
+dist
+.expo
+coverage
+node_modules
+package-lock.json
+
+# Generated native projects. `expo prebuild` writes these from app.json
+# and they are gitignored; formatting them is churn on files nobody edits.
+ios
+android
+
+# Xcode asset catalogues inside the widget target.
+#
+# `@bacons/apple-targets` writes these from the `colors` block in
+# expo-target.config.js, in Xcode's own JSON style — so Prettier and the
+# plugin would take turns reformatting them, and `format:check` would
+# fail on any machine that had run prebuild more recently than the last
+# format. The Swift beside them is still ours; only the generated
+# catalogue is exempt.
+targets/**/Assets.xcassets
