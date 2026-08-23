@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import type { RatingBucket } from '@/api/types';
 import { compact } from '@/lib/format';
-import { COLORS, RATING_COLORS } from '@/styles/colors';
+import { COLORS } from '@/styles/colors';
 import { SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
@@ -13,14 +13,44 @@ const LABELS: Record<string, string> = {
   skip: 'Skip',
 };
 
+/**
+ * Down the scale, not down the leaderboard.
+ *
+ * RAWG returns the buckets in count order, so the rows moved every time
+ * you opened a different game — exceptional third here, first there —
+ * and the one thing a distribution is for, comparing its shape against
+ * another, was impossible. A scale reads top to bottom.
+ */
+const ORDER = ['exceptional', 'recommended', 'meh', 'skip'];
+
+/**
+ * The app's own palette, not the four-colour set this arrived with.
+ *
+ * Blue, yellow, green and red made the loudest thing on a game page a
+ * third-party rating widget, in colours that appear nowhere else in the
+ * product. These are the semantics the rest of the app already speaks:
+ * mint is finishing something, amber is worth your time, coral is
+ * letting go, and grey is a shrug.
+ */
+const BAR_COLORS: Record<string, string> = {
+  exceptional: COLORS.mint,
+  recommended: COLORS.accent,
+  meh: COLORS.mediumGrey,
+  skip: COLORS.coral,
+};
+
 /** Community verdict as thin distribution bars. */
 export function RatingsBreakdown({ ratings }: { ratings: RatingBucket[] }) {
   const total = ratings.reduce((sum, r) => sum + r.count, 0);
   if (total === 0) return null;
 
+  const ordered = [...ratings].sort(
+    (a, b) => ORDER.indexOf(a.title) - ORDER.indexOf(b.title)
+  );
+
   return (
     <View style={styles.container}>
-      {ratings.map((bucket) => (
+      {ordered.map((bucket) => (
         <View key={bucket.id} style={styles.row}>
           <Text style={styles.label}>
             {LABELS[bucket.title] ?? bucket.title}
@@ -31,7 +61,8 @@ export function RatingsBreakdown({ ratings }: { ratings: RatingBucket[] }) {
                 styles.fill,
                 {
                   width: `${Math.max(bucket.percent, 1.5)}%`,
-                  backgroundColor: RATING_COLORS[bucket.title] ?? COLORS.blue,
+                  backgroundColor:
+                    BAR_COLORS[bucket.title] ?? COLORS.mediumGrey,
                 },
               ]}
             />

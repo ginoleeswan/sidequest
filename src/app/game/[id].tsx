@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
+  Linking,
   Animated,
   Modal,
   Pressable,
@@ -40,7 +41,7 @@ import { ScorePill } from '@/components/ScorePill';
 import { SectionHeader } from '@/components/SectionHeader';
 import { SkeletonDetail, SkeletonDetailExpanded } from '@/components/Skeleton';
 import { StatusActions } from '@/components/StatusActions';
-import { LinkPill, StoreLinks } from '@/components/StoreLinks';
+import { StoreLinks } from '@/components/StoreLinks';
 import { DurationSheet } from '@/components/DurationSheet';
 import { SiteFooter } from '@/components/SiteFooter';
 import { GrainScrim, Textured } from '@/components/Textured';
@@ -445,9 +446,12 @@ export default function GameInfoScreen() {
   const about = summary ? (
     <View style={styles.block}>
       <SectionHeader title="About" />
+      {/* At reading size. This is the only prose on the page and it was
+          set two steps below the app's body copy, so the one block
+          somebody actually reads was the smallest text on the screen. */}
       <ReadMoreText
-        style={[TYPE.p, styles.aboutText]}
-        numberOfLines={isExpanded ? 6 : 4}
+        style={[TYPE.body, styles.aboutText]}
+        numberOfLines={isExpanded ? 8 : 6}
       >
         {summary}
       </ReadMoreText>
@@ -489,7 +493,25 @@ export default function GameInfoScreen() {
     <>
       {screenshots.length > 0 && (
         <View style={mediaBlock}>
-          <SectionHeader title="Screenshots" />
+          {/* The trailer link was a lone pill floating between two
+              rails, belonging to neither. It is what you do with this
+              section, so it sits where every other section in the app
+              puts its action. */}
+          <SectionHeader
+            title="Screenshots"
+            actionLabel={trailers.length === 0 ? 'Trailer →' : undefined}
+            actionAccessibilityLabel="Watch the trailer on YouTube"
+            onAction={
+              trailers.length === 0
+                ? () =>
+                    Linking.openURL(
+                      `https://www.youtube.com/results?search_query=${encodeURIComponent(
+                        `${game.name} trailer`
+                      )}`
+                    )
+                : undefined
+            }
+          />
           <Rail<Screenshot>
             data={screenshots}
             keyExtractor={(item) => String(item.id)}
@@ -519,21 +541,7 @@ export default function GameInfoScreen() {
             renderItem={(item) => <TrailerCard trailer={item} />}
           />
         </View>
-      ) : (
-        <View
-          style={[
-            styles.trailerFallback,
-            isExpanded && { paddingHorizontal: gutter },
-          ]}
-        >
-          <LinkPill
-            label="Watch trailer on YouTube"
-            url={`https://www.youtube.com/results?search_query=${encodeURIComponent(
-              `${game.name} trailer`
-            )}`}
-          />
-        </View>
-      )}
+      ) : null}
 
       {/* Below the trailers on purpose. A trailer is what the publisher
           wants this game to look like; a live stream is what it looks
@@ -558,10 +566,30 @@ export default function GameInfoScreen() {
     </>
   );
 
+  /**
+   * The finding, then the evidence.
+   *
+   * Four bars and a count is data; it leaves the reader to work out
+   * what it says. The heading's eyebrow now carries the conclusion —
+   * the way the Plan's does — so the section can be read at a glance
+   * and studied only if you want to.
+   */
+  const topBucket = game.ratings?.length
+    ? [...game.ratings].sort((a, b) => b.count - a.count)[0]
+    : null;
+  const VERDICT: Record<string, string> = {
+    exceptional: 'Mostly exceptional',
+    recommended: 'Mostly recommended',
+    meh: 'Mostly a shrug',
+    skip: 'Mostly a skip',
+  };
   const ratingsBreakdown =
     game.ratings && game.ratings.length > 0 ? (
       <View style={styles.block}>
-        <SectionHeader title="Player verdict" />
+        <SectionHeader
+          title="Player verdict"
+          eyebrow={topBucket ? VERDICT[topBucket.title] : undefined}
+        />
         <RatingsBreakdown ratings={game.ratings} />
       </View>
     ) : null;
@@ -938,7 +966,7 @@ const styles = StyleSheet.create({
   fileSectionLast: { borderBottomWidth: 0 },
   /** A label, at the size of a label — not a fourth headline. */
   fileLabel: { ...TYPE.micro, color: COLORS.mediumGrey },
-  aboutText: { ...TYPE.p },
+  aboutText: { ...TYPE.body, color: COLORS.lightGrey, lineHeight: 23 },
   genreRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -969,11 +997,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   skeletonShellWide: { width: '100%' },
-  trailerFallback: {
-    flexDirection: 'row',
-    marginTop: SPACING.xs,
-    marginBottom: SPACING.md,
-  },
   lightbox: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.95)',

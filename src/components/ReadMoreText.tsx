@@ -17,7 +17,10 @@ export function ReadMoreText({ children, numberOfLines = 3, style }: Props) {
       <Text style={style} numberOfLines={expanded ? undefined : numberOfLines}>
         {children}
       </Text>
-      <Text style={[style, { color: COLORS.blue, fontFamily: 'Noah-Bold' }]}>
+      {/* The app's accent, not the link blue. Blue appears nowhere else
+          in this palette, so "Read More" was the only cornflower thing
+          on a navy-and-amber page. */}
+      <Text style={[style, { color: COLORS.accent, fontFamily: 'Noah-Bold' }]}>
         {expanded ? 'Show Less' : 'Read More'}
       </Text>
     </Pressable>
