@@ -315,6 +315,21 @@ export default function GameInfoScreen() {
       )
     : SPACING.md;
   const railInset = gutter;
+
+  /**
+   * Screenshots at the size of the thing they are.
+   *
+   * They were three hundred points wide in a rail, which on a phone is
+   * a thumbnail with two more peeking — the same scale as a related-game
+   * card, for the only asset on this page that shows you what playing
+   * it actually looks like. A lead frame nearly the width of the
+   * viewport, with the next one showing at the edge to say the rail
+   * scrolls, is how a feature opens a photo essay.
+   */
+  const shotWidth = isExpanded
+    ? LAYOUT.mediaWidth * 1.4
+    : Math.min(width - gutter * 2 - SPACING.xl, 460);
+  const shotHeight = Math.round(shotWidth / (16 / 9));
   const mediaBlock = [
     styles.block,
     isExpanded && { paddingHorizontal: gutter },
@@ -531,8 +546,11 @@ export default function GameInfoScreen() {
             renderItem={(item) => (
               <Pressable onPress={() => setLightboxUri(item.image)}>
                 <Image
-                  source={{ uri: mediaUri(item.image, 300) }}
-                  style={styles.screenshot}
+                  source={{ uri: mediaUri(item.image, 640) }}
+                  style={[
+                    styles.screenshot,
+                    { width: shotWidth, height: shotHeight },
+                  ]}
                   contentFit="cover"
                   transition={DURATION.base}
                 />
@@ -585,23 +603,17 @@ export default function GameInfoScreen() {
    * the way the Plan's does — so the section can be read at a glance
    * and studied only if you want to.
    */
-  const topBucket = game.ratings?.length
-    ? [...game.ratings].sort((a, b) => b.count - a.count)[0]
-    : null;
-  const VERDICT: Record<string, string> = {
-    exceptional: 'Mostly exceptional',
-    recommended: 'Mostly recommended',
-    meh: 'Mostly a shrug',
-    skip: 'Mostly a skip',
-  };
   const ratingsBreakdown =
     game.ratings && game.ratings.length > 0 ? (
       <View style={styles.block}>
-        <SectionHeader
-          title="Player verdict"
-          eyebrow={topBucket ? VERDICT[topBucket.title] : undefined}
-        />
-        <RatingsBreakdown ratings={game.ratings} />
+        <SectionHeader title="Player verdict" />
+        {/* On a plane, because it is data. The prose above it and the
+            artwork below need no frame — a page where every block is a
+            card has no rhythm, and the rhythm is what tells you which
+            kind of thing you are looking at. */}
+        <View style={styles.panel}>
+          <RatingsBreakdown ratings={game.ratings} />
+        </View>
       </View>
     ) : null;
 
@@ -968,6 +980,14 @@ const styles = StyleSheet.create({
    * meets one rhythm rather than three.
    */
   block: { gap: SPACING.sm + 2, marginBottom: SPACING.xl },
+  panel: {
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.stroke,
+    backgroundColor: COLORS.raised,
+    padding: SPACING.lg,
+    ...SHADOW.card,
+  },
   genreText: { ...TYPE.labelSmall, color: COLORS.mediumGrey },
   genreLink: { color: COLORS.lightGrey },
 
@@ -1012,9 +1032,11 @@ const styles = StyleSheet.create({
   },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.xs + 2 },
   screenshot: {
-    width: LAYOUT.mediaWidth,
-    height: LAYOUT.mediaHeight,
     borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.stroke,
+    backgroundColor: COLORS.navy,
+    ...SHADOW.card,
   },
 
   // skeleton / lightbox

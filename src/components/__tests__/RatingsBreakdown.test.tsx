@@ -34,7 +34,19 @@ describe('the ratings breakdown', () => {
   it('abbreviates the counts and totals them', async () => {
     await render(<RatingsBreakdown ratings={buckets} />);
     expect(screen.getByText('12.9k')).toBeTruthy();
-    expect(screen.getByText('18.6k player ratings')).toBeTruthy();
+    expect(screen.getByText(/18\.6k player ratings/)).toBeTruthy();
+  });
+
+  /**
+   * The share who rated it recommended or better — the one number that
+   * answers "are these hours worth spending", which is the question the
+   * bars leave the reader to work out for themselves.
+   */
+  it('leads with the share who liked it', async () => {
+    await render(<RatingsBreakdown ratings={buckets} />);
+    // 12,926 + 5,400 of 18,626.
+    expect(screen.getByText('98%')).toBeTruthy();
+    expect(screen.getByText('rated it recommended or better')).toBeTruthy();
   });
 
   it('falls back to the raw title for a bucket it does not know', async () => {

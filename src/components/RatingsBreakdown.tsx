@@ -39,7 +39,19 @@ const BAR_COLORS: Record<string, string> = {
   skip: COLORS.coral,
 };
 
-/** Community verdict as thin distribution bars. */
+/**
+ * The finding, the evidence, and where it came from.
+ *
+ * Four bars and a count is a chart, and a chart makes the reader do the
+ * arithmetic. The question anybody actually brings to this page is
+ * whether the hours are worth spending, so the block leads with the
+ * only number that answers it — the share who rated it recommended or
+ * better — and keeps the distribution underneath for anyone who wants
+ * to see the shape rather than take the summary.
+ *
+ * Phrased as what the buckets literally are. "Worth finishing" would be
+ * a nicer sentence and a claim RAWG's data does not make.
+ */
 export function RatingsBreakdown({ ratings }: { ratings: RatingBucket[] }) {
   const total = ratings.reduce((sum, r) => sum + r.count, 0);
   if (total === 0) return null;
@@ -48,8 +60,22 @@ export function RatingsBreakdown({ ratings }: { ratings: RatingBucket[] }) {
     (a, b) => ORDER.indexOf(a.title) - ORDER.indexOf(b.title)
   );
 
+  const liked = ratings
+    .filter((r) => r.title === 'exceptional' || r.title === 'recommended')
+    .reduce((sum, r) => sum + r.count, 0);
+  const share = Math.round((liked / total) * 100);
+  /* The app's own semantics: mint is a good use of your time, amber is
+     a maybe, coral is letting it go. */
+  const shareColor =
+    share >= 70 ? COLORS.mint : share >= 45 ? COLORS.accent : COLORS.coral;
+
   return (
     <View style={styles.container}>
+      <View style={styles.lead}>
+        <Text style={[styles.share, { color: shareColor }]}>{share}%</Text>
+        <Text style={styles.shareLabel}>rated it recommended or better</Text>
+      </View>
+      <View style={styles.rule} />
       {ordered.map((bucket) => (
         <View key={bucket.id} style={styles.row}>
           <Text style={styles.label}>
@@ -70,13 +96,28 @@ export function RatingsBreakdown({ ratings }: { ratings: RatingBucket[] }) {
           <Text style={styles.count}>{compact(bucket.count)}</Text>
         </View>
       ))}
-      <Text style={styles.total}>{compact(total)} player ratings</Text>
+      <Text style={styles.total}>
+        {compact(total)} player ratings, from RAWG
+      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { gap: SPACING.sm },
+  lead: { flexDirection: 'row', alignItems: 'baseline', gap: SPACING.sm },
+  share: {
+    fontFamily: 'Noah-Black',
+    fontSize: 34,
+    lineHeight: 38,
+    letterSpacing: -0.6,
+  },
+  shareLabel: { ...TYPE.body, color: COLORS.lightGrey, flexShrink: 1 },
+  rule: {
+    height: 1,
+    backgroundColor: COLORS.stroke,
+    marginVertical: SPACING.sm,
+  },
   row: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm + 2 },
   label: {
     ...TYPE.labelTiny,
