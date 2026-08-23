@@ -128,12 +128,50 @@ export default function RootLayout() {
                 <StatusBar style="light" />
                 <ScrollToTop />
                 <ScreenFade>
+                  {/**
+                   * Native headers, so the back button is the platform's
+                   * own.
+                   *
+                   * Every pushed screen used to hand-draw a chevron in a
+                   * Pressable and reserve its own clearance for it —
+                   * which meant no navigation bar existed anywhere in
+                   * the app, and so none of what comes with one: the
+                   * system back gesture's matching affordance, the
+                   * title that appears on scroll, and on iOS 26 the
+                   * glass material UIKit gives a bar for free. We were
+                   * imitating a material in CSS.
+                   *
+                   * Transparent, because several of these screens open
+                   * on full-bleed artwork that must run under the
+                   * status bar. UIKit still floats the back control on
+                   * its own glass capsule, which is the App Store's
+                   * pattern and the reason this is worth doing.
+                   *
+                   * Web keeps the hand-drawn button: there is no
+                   * navigation bar in a browser, and no history stack
+                   * the platform will draw for us.
+                   */}
                   <Stack
                     screenOptions={{
-                      headerShown: false,
+                      headerShown: Platform.OS !== 'web',
+                      headerTransparent: true,
+                      headerTitle: '',
+                      /* Chevron only. Without this the capsule reads
+                         "(tabs)" — UIKit labels the back button with the
+                         previous route's name, and the previous route is
+                         a group. */
+                      headerBackButtonDisplayMode: 'minimal',
+                      headerBackTitle: '',
+                      headerTintColor: COLORS.white,
                       contentStyle: { backgroundColor: COLORS.darkGrey },
                     }}
-                  />
+                  >
+                    {/* The tab bar is the chrome inside this one. */}
+                    <Stack.Screen
+                      name="(tabs)"
+                      options={{ headerShown: false }}
+                    />
+                  </Stack>
                 </ScreenFade>
                 <Onboarding />
                 <CommandPalette />

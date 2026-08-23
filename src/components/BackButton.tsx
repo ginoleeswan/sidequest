@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
 import { ScaleButton } from './ScaleButton';
 import { COLORS } from '@/styles/colors';
@@ -14,6 +14,22 @@ import { OVER_IMAGE } from '@/styles/typography';
  */
 export function BackButton({ onImage = false }: { onImage?: boolean }) {
   const router = useRouter();
+
+  /**
+   * Web only, now that the platform draws its own.
+   *
+   * Every pushed screen used to hand-draw this chevron because the root
+   * Stack ran with `headerShown: false` — no navigation bar existed in
+   * the app, so nothing gave us the system back gesture's matching
+   * affordance, the title that appears on scroll, or the material UIKit
+   * puts behind a bar on iOS 26. We were imitating glass in CSS.
+   *
+   * A browser has no navigation bar and no history stack the platform
+   * will draw for us, so the hand-drawn one stays exactly where it was.
+   * Rendering null here rather than editing nine call sites keeps the
+   * decision in one place, where it cannot drift.
+   */
+  if (Platform.OS !== 'web') return null;
   // Deep links (shared URLs, fresh tabs) have no history to pop - fall
   // back to home instead of a button that silently does nothing.
   const goBack = () => {

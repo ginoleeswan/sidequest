@@ -1,5 +1,6 @@
 import { fireEvent, screen } from '@testing-library/react-native';
 import { router } from 'expo-router';
+import { Platform } from 'react-native';
 
 import { BackButton } from '../BackButton';
 import { renderApp } from '@/test-utils';
@@ -9,9 +10,29 @@ import { renderApp } from '@/test-utils';
  * that silently does nothing is worse than no back button.
  */
 describe('the back button', () => {
+  /**
+   * This control is the WEB one. On native the Stack draws a real
+   * navigation bar and this renders nothing, so the tests below have to
+   * ask for the platform that still uses it.
+   */
+  const ORIGINAL = Platform.OS;
+  beforeAll(() => {
+    Platform.OS = 'web';
+  });
+  afterAll(() => {
+    Platform.OS = ORIGINAL;
+  });
+
   beforeEach(() => {
     jest.mocked(router.back).mockClear();
     jest.mocked(router.replace).mockClear();
+  });
+
+  it('leaves the chevron to the platform where there is a navigation bar', async () => {
+    Platform.OS = ORIGINAL;
+    await renderApp(<BackButton />);
+    expect(screen.queryByLabelText('Go back')).toBeNull();
+    Platform.OS = 'web';
   });
 
   it('goes back when there is somewhere to go back to', async () => {
