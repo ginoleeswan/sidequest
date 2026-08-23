@@ -119,29 +119,61 @@ const FAN_TILT = [-12, -6, 0, 6, 12];
 const FAN_LIFT = [18, 5, 0, 5, 18];
 /** The two you would actually get to. Everything else goes out. */
 const FAN_KEEPS = [1, 2];
-const FAN_DIM = 0.16;
+/**
+ * Dimmed, not deleted.
+ *
+ * Set at 0.16 first, which took the other three down to smudges — and a
+ * pile you cannot see is not a pile you are being given permission to
+ * skip. They have to stay legible as games for the sentence to land.
+ */
+const FAN_DIM = 0.3;
+/** The survivors come forward as the rest recede. */
+const FAN_KEEP_SCALE = 1.06;
 
 function BacklogFan({ games }: { games: Game[] }) {
   const reduced = useReducedMotion();
   const run = useAnimatedValue(reduced ? 1 : 0);
-  const cards = games.slice(0, FAN_TILT.length);
-  const enough = cards.length === FAN_TILT.length;
+  /**
+   * Five cards from the first frame, with or without their artwork.
+   *
+   * The hand is dealt on mount rather than on the network. Waiting for
+   * covers meant the fan arrived a beat late on a cold start, and —
+   * before the box was reserved — shoved the headline down when it
+   * landed. `CoverImage` already draws a textured fallback for a missing
+   * uri, so the shapes carry the composition and the art fades into
+   * them whenever the request returns.
+   */
+  const cards = Array.from(
+    { length: FAN_TILT.length },
+    (_, i) => games[i] as Game | undefined
+  );
 
   useEffect(() => {
-    if (reduced || !enough) return;
+    if (reduced) return;
     const animation = Animated.timing(run, {
       toValue: 1,
       duration: 1900,
-      delay: 260,
+      // No delay. It was 260ms to let the copy land first, which read
+      // as considered on a warm reload and as a stall on a cold start —
+      // the covers are already waiting on a network round trip, and
+      // this was being added on top of it.
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     });
     animation.start();
     return () => animation.stop();
-  }, [run, reduced, enough]);
+  }, [run, reduced]);
 
-  if (!enough) return null;
-  const span = FAN_W + FAN_STEP * (cards.length - 1);
+  /**
+   * The box is the same size whether the covers have arrived or not.
+   *
+   * Returning null until all five had loaded meant the screen laid out
+   * without this, drew the headline high, and then shoved it down when
+   * the artwork appeared — a jump on the one screen that gets a first
+   * impression. Reserving the space costs an empty rectangle for as long
+   * as the request takes and moves nothing.
+   */
+  const span = FAN_W + FAN_STEP * (FAN_TILT.length - 1);
 
   return (
     <View
@@ -161,7 +193,7 @@ function BacklogFan({ games }: { games: Game[] }) {
           });
         return (
           <Animated.View
-            key={game.id}
+            key={game?.id ?? i}
             style={[
               styles.fanCard,
               {
@@ -169,6 +201,18 @@ function BacklogFan({ games }: { games: Game[] }) {
                 top: FAN_LIFT[i],
                 transform: [
                   { translateY: deal(26, 0) },
+                  // The two that stay grow a little as the others go
+                  // out, so the beat reads as a shortlist being chosen
+                  // rather than as a light being turned down.
+                  {
+                    scale: keeps
+                      ? run.interpolate({
+                          inputRange: [0.55, 0.85],
+                          outputRange: [1, FAN_KEEP_SCALE],
+                          extrapolate: 'clamp',
+                        })
+                      : 1,
+                  },
                   // Lands flat and settles into its tilt, so the run
                   // arrives as a hand rather than as five fading boxes.
                   {
@@ -197,7 +241,7 @@ function BacklogFan({ games }: { games: Game[] }) {
             ]}
           >
             <CoverImage
-              uri={game.background_image}
+              uri={game?.background_image}
               style={styles.fanArt}
               contentFit="cover"
               size="tile"
