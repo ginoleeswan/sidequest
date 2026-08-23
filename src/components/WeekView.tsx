@@ -1,10 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useEffect } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useToast } from '@/components/Toast';
 import { buildIcs, downloadIcs, planEvents } from '@/lib/ics';
 import { insertEvents } from '@/lib/nativeCalendar';
 import { REMINDER_LEAD_MINUTES, scheduleEvenings } from '@/lib/reminders';
+import { publishPlan } from '@/lib/widgetBridge';
 import type { ScheduledItem } from '@/lib/scheduler';
 import { formatHours } from '@/lib/duration';
 import { eveningLabel, planWeek, type PlannedEvening } from '@/lib/week';
@@ -72,6 +74,30 @@ export function WeekView({
 }) {
   const toast = useToast();
   const week = planWeek(scheduled, now, 7, leadId);
+
+  /**
+   * The home-screen widgets read the plan from here.
+   *
+   * This is the one place the week is actually computed, so it is the
+   * one place that can publish it — anywhere else would be a second
+   * copy of `planWeek`'s rules, and the drift between them would only
+   * ever be visible on somebody's Lock Screen.
+   *
+   * Keyed on what the widgets are shown rather than on the array
+   * identity: `planWeek` returns a fresh array every render, so an
+   * effect watching `week` would write to the app group and reload
+   * three widget timelines on every keystroke that touches this screen.
+   */
+  const signature = week
+    .map((evening) => `${evening.weekday}:${evening.games[0]?.name ?? ''}`)
+    .join('|');
+  useEffect(() => {
+    void publishPlan(week);
+    // `week` is rebuilt on every render; `signature` is what actually
+    // changes when the plan does.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signature]);
+
   if (week.every((evening) => evening.games.length === 0)) return null;
 
   /**

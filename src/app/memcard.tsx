@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -22,6 +22,7 @@ import { useDurations } from '@/lib/durations';
 import { useLibrary } from '@/lib/library';
 import { dropInsight, readDrops, totalDrops } from '@/lib/drops';
 import { buildMemcard, memcardYears } from '@/lib/memcard';
+import { publishYear } from '@/lib/widgetBridge';
 import { formatMinutes } from '@/lib/sessions';
 import { yearStats } from '@/lib/yearStats';
 import { celebrate } from '@/lib/haptics';
@@ -62,6 +63,23 @@ export default function MemcardScreen() {
     () => buildMemcard(all, (game) => durationOf(game).hours, shown),
     [all, durationOf, shown]
   );
+
+  /**
+   * The year widget reads this card.
+   *
+   * Published from here rather than from the library, because this is
+   * where `buildMemcard` decides what counts as finished and which
+   * month it landed in — the widget must never hold a second copy of
+   * that rule.
+   *
+   * Only the year the reader is actually looking at, and only when it
+   * is the current one: a widget showing 2024 because somebody browsed
+   * back through their history is a widget lying about today.
+   */
+  useEffect(() => {
+    if (shown !== thisYear) return;
+    void publishYear(card);
+  }, [card, shown, thisYear]);
 
   /** Cover art for the save slots, by game id. */
   const byId = useMemo(
