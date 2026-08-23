@@ -55,7 +55,27 @@ import { COLORS } from '@/styles/colors';
  */
 
 /** Matches `imageWidth` in the splash config. Both, or the hand-off jumps. */
-const MARK = 180;
+const MARK = 145;
+
+/**
+ * Where the static splash left things, in points from the screen centre.
+ *
+ * Mirrored from scripts/brand-assets.mjs, which draws the same two
+ * offsets into splash.png. The storyboard centres that file and scales
+ * it by width, so the centre is the one anchor both sides can agree on
+ * regardless of device — everything here is measured from it.
+ *
+ * The curtain therefore opens on exactly the picture the reader was
+ * already looking at, and animates away from it. Change either number
+ * without changing the other and the wordmark jumps the instant the app
+ * finishes loading, which is the one frame this whole component exists
+ * to make invisible.
+ */
+const MARK_RISE = 70;
+const WORD_DROP = 300;
+
+/** Where `foot` puts the wordmark once it has arrived. */
+const FOOT_FRACTION = 0.11;
 
 /** The whole thing, start to gone. */
 const RUN = 1250;
@@ -394,14 +414,35 @@ export function SplashCurtain() {
         style={[
           styles.foot,
           {
-            opacity: at(shaped(WORD, 0, 1, easeOutCubic)),
+            /**
+             * Visible from the first frame, because the static splash
+             * already showed it. Fading it in here would fade in
+             * something the reader is looking at.
+             */
+            opacity: 1,
             transform: reduced
-              ? []
+              ? [{ translateY: 0 }]
               : [
-                  // Rises past its resting place and settles back onto
-                  // it, growing the last few percent as it lands.
-                  { translateY: at(shaped(WORD, 26, 0, springOut(2, 6))) },
-                  { scale: at(shaped(WORD, 0.9, 1, backOut(1.9))) },
+                  /**
+                   * Travels from where the image put it down to the
+                   * foot, rather than rising into place from nothing.
+                   *
+                   * `foot` is anchored 11% off the bottom, so its
+                   * distance from the centre is a fraction of THIS
+                   * screen — computed rather than guessed, which is the
+                   * whole reason the curtain can match an image it
+                   * cannot see.
+                   */
+                  {
+                    translateY: at(
+                      shaped(
+                        WORD,
+                        screen.h * (0.5 - FOOT_FRACTION) * -1 + WORD_DROP,
+                        0,
+                        springOut(2, 6)
+                      )
+                    ),
+                  },
                 ],
           },
         ]}
@@ -426,14 +467,23 @@ const styles = StyleSheet.create({
     // the app not having opened yet.
     zIndex: 100,
   },
-  /** Centred, and the origin every spark is thrown from. */
-  stage: { alignItems: 'center', justifyContent: 'center' },
+  /**
+   * Centred, and the origin every spark is thrown from — then lifted to
+   * where the static splash drew the mark, so the first frame matches.
+   */
+  stage: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: MARK_RISE * 2,
+  },
   spark: { position: 'absolute' },
   foot: { position: 'absolute', bottom: '11%' },
   wordmark: {
     fontFamily: 'Noah-Black',
-    fontSize: 17,
-    letterSpacing: 6,
+    // 20/7, matching the static splash. At 17 it read as fine print on
+    // a launch screen, which is not what a wordmark is for.
+    fontSize: 20,
+    letterSpacing: 7,
     color: COLORS.white,
   },
 });
