@@ -12,7 +12,7 @@ import type { ScheduledItem } from '@/lib/scheduler';
 import { formatHours } from '@/lib/duration';
 import { eveningHours, eveningLabel, planWeek } from '@/lib/week';
 import { COLORS } from '@/styles/colors';
-import { SPACING } from '@/styles/theme';
+import { RADIUS, SHADOW, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 /**
@@ -227,6 +227,8 @@ export function WeekView({
         })}
       </View>
 
+      <View style={styles.rule} />
+
       <View style={styles.legend}>
         {legend.map((row) => (
           <View key={row.id} style={styles.legendRow}>
@@ -249,10 +251,13 @@ export function WeekView({
         ))}
       </View>
 
+      <View style={styles.rule} />
+
       {/* Quiet, and last: the plan is the thing, this is what you do
           with it. Text-and-icon rather than a button, because a second
           filled control here would compete with the plan's own
-          actions. */}
+          actions — and inside the panel rather than under it, because
+          it acts on the week the panel is holding. */}
       <Pressable
         onPress={putInCalendar}
         style={styles.toCalendar}
@@ -267,7 +272,28 @@ export function WeekView({
 }
 
 const styles = StyleSheet.create({
-  week: { gap: SPACING.md },
+  /**
+   * One object, with three tiers inside it.
+   *
+   * The strip, the names and the calendar hand-off used to float
+   * separately on the page, which made a week look like three unrelated
+   * things that happened to be adjacent. A panel groups them, and the
+   * rules inside say which is which — picture, then key, then what you
+   * can do with it.
+   *
+   * `raised` rather than `surface`: surface is a step down from the
+   * page's navy and reads as a recess.
+   */
+  week: {
+    gap: SPACING.md,
+    padding: SPACING.lg,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.stroke,
+    backgroundColor: COLORS.raised,
+    ...SHADOW.card,
+  },
+  rule: { height: 1, backgroundColor: COLORS.stroke },
   strip: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -275,7 +301,7 @@ const styles = StyleSheet.create({
   },
   column: { flex: 1, alignItems: 'center', gap: SPACING.xs },
   /** Reserved whether or not a flag lands here, so nothing jumps. */
-  flagSlot: { height: 13, justifyContent: 'center' },
+  flagSlot: { height: 12, justifyContent: 'center' },
   track: {
     width: '100%',
     borderRadius: 5,
@@ -302,7 +328,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.xs,
-    paddingVertical: SPACING.sm,
     alignSelf: 'flex-start',
   },
   toCalendarText: { ...TYPE.labelSmall, color: COLORS.mediumGrey },

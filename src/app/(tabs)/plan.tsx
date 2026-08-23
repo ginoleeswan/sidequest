@@ -48,7 +48,7 @@ import {
   type ScheduledItem,
 } from '@/lib/scheduler';
 import { COLORS } from '@/styles/colors';
-import { GUTTER, LAYOUT, RADIUS, SPACING } from '@/styles/theme';
+import { GUTTER, LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
 import { OVER_IMAGE, TYPE } from '@/styles/typography';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -126,7 +126,10 @@ function QuestRow({
 }) {
   const colour = planColour(index);
   return (
-    <Pressable style={styles.quest} onPress={onPress}>
+    <Pressable
+      style={[styles.quest, isLast && styles.questLast]}
+      onPress={onPress}
+    >
       {/* the path: a node per game, a thread connecting them */}
       <View style={styles.questRail}>
         {index > 0 && <View style={styles.questThreadTop} />}
@@ -505,20 +508,29 @@ export default function PlanScreen() {
                                 ? 'Chip away at it — progress counts.'
                                 : 'The shortest thing you’ve saved.'}
                           </Text>
+
+                          {/* Inside the card, not under it.
+                              This is the one control on the page that
+                              belongs to tonight rather than to the
+                              plan, and floating loose between the card
+                              and the week it made three objects out of
+                              two. On the artwork it takes a plate of
+                              its own — see Segmented's onImage. */}
+                          <View
+                            style={styles.tonightControl}
+                            // The card navigates; the control does not.
+                            onStartShouldSetResponder={() => true}
+                          >
+                            <Segmented
+                              label="I have"
+                              options={SESSION_OPTIONS}
+                              value={sessionMinutes}
+                              onChange={setSession}
+                              onImage
+                            />
+                          </View>
                         </View>
                       </Pressable>
-                    )}
-
-                    {/* The one control that belongs to tonight rather
-                        than to the plan, directly under the answer it
-                        changes. */}
-                    {tonightPick && (
-                      <Segmented
-                        label="I have"
-                        options={SESSION_OPTIONS}
-                        value={sessionMinutes}
-                        onChange={setSession}
-                      />
                     )}
 
                     {/* 2 — THIS WEEK. */}
@@ -557,7 +569,7 @@ export default function PlanScreen() {
                               } yours, and the plan trusts those over the estimates.`
                             : '  Tap any length to correct it.'}
                         </Text>
-                        <View>
+                        <View style={styles.panel}>
                           {schedule.scheduled.map((item, index) => (
                             <QuestRow
                               key={item.id}
@@ -739,17 +751,26 @@ const styles = StyleSheet.create({
     maxWidth: LAYOUT.maxContentWidth,
     alignSelf: 'center',
     paddingHorizontal: GUTTER,
-    gap: SPACING.lg,
+    /**
+     * Sections need room to read as sections.
+     *
+     * At twenty points every block on this page was the same distance
+     * from the next as a heading is from its own body, so the page had
+     * no groups in it — just a column of things. Thirty-two between
+     * blocks against ten inside one is the difference between a list
+     * and a structure.
+     */
+    gap: SPACING.xl,
   },
   innerWide: { maxWidth: 1120, paddingHorizontal: SPACING.xl },
-  stack: { gap: SPACING.lg },
+  stack: { gap: SPACING.xl },
   columns: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: SPACING.xl * 1.5,
   },
-  colLeft: { width: 400, gap: SPACING.lg },
-  colRight: { flex: 1, gap: SPACING.lg },
+  colLeft: { width: 400, gap: SPACING.xl },
+  colRight: { flex: 1, gap: SPACING.xl },
   routeNote: {
     ...TYPE.p,
     color: COLORS.mediumGrey,
@@ -759,18 +780,24 @@ const styles = StyleSheet.create({
   /**
    * The dial, and the sentence it produces.
    *
-   * A card rather than loose controls, because these two are the only
+   * A panel rather than loose controls, because these two are the only
    * things on the page that CHANGE the plan — everything above them
    * reports it. Keeping the verdict inside the same box is the point:
    * move a segment, watch the sentence rewrite itself.
+   *
+   * `raised`, not `surface`. Surface is a step DOWN from the page's
+   * navy, so a card drawn on it reads as a hole rather than as a card —
+   * which is why the old verdict box looked recessed. Three per cent of
+   * white and a shadow is what lifting looks like on this ground.
    */
   dial: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.raised,
     borderWidth: 1,
     borderColor: COLORS.stroke,
     borderRadius: RADIUS.md,
     padding: SPACING.lg,
     gap: SPACING.lg,
+    ...SHADOW.card,
   },
   dialResult: {
     gap: SPACING.xs,
@@ -779,7 +806,7 @@ const styles = StyleSheet.create({
     borderTopColor: COLORS.stroke,
   },
   dialVerdict: {
-    ...TYPE.h3,
+    ...TYPE.h2,
     color: COLORS.white,
   },
   pinCost: {
@@ -792,7 +819,7 @@ const styles = StyleSheet.create({
   },
 
   tonight: {
-    minHeight: 208,
+    minHeight: 260,
     justifyContent: 'flex-end',
     overflow: 'hidden',
     borderWidth: 1,
@@ -801,6 +828,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.navy,
   },
   tonightBody: { gap: SPACING.xs + 2, padding: SPACING.lg },
+  tonightControl: { marginTop: SPACING.md },
   tonightHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   tonightEyebrow: {
     ...TYPE.tag,
@@ -828,6 +856,24 @@ const styles = StyleSheet.create({
   },
 
   section: { gap: SPACING.sm + 2 },
+  /**
+   * The shared plane.
+   *
+   * Three of the four blocks on this page sit on one — the week, the
+   * route and the dial — and the fourth is a photograph, which is
+   * contrast enough. Consistent material is not monotony: what varies
+   * between them is what is inside, and a page whose every block used a
+   * different treatment would read as four pages.
+   */
+  panel: {
+    padding: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.stroke,
+    backgroundColor: COLORS.raised,
+    ...SHADOW.card,
+  },
   rows: { gap: SPACING.sm },
   row: {
     flexDirection: 'row',
@@ -852,17 +898,36 @@ const styles = StyleSheet.create({
   },
 
   // the route: nodes on a thread
+  /**
+   * A stop, ruled off from the next one.
+   *
+   * The rail threads the nodes together, which says "these are in
+   * order" and nothing about where one row ends. Without a rule the
+   * list was four floating pairs of lines; with one it is a list.
+   */
   quest: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.md,
-    paddingVertical: SPACING.sm + 2,
+    paddingVertical: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.stroke,
   },
+  questLast: { borderBottomWidth: 0 },
   questRail: {
     width: 28,
     alignSelf: 'stretch',
     alignItems: 'center',
     justifyContent: 'center',
+    /**
+     * Out through the row's padding, so the thread actually joins.
+     *
+     * `stretch` fills the content box, which stops sixteen points short
+     * at each end — leaving a thirty-two point gap at every join and a
+     * route that looked severed at exactly the places it claims to
+     * connect.
+     */
+    marginVertical: -SPACING.md,
   },
   questThreadTop: {
     position: 'absolute',
