@@ -20,6 +20,7 @@ import { Message } from '@/components/Message';
 import { PageTitle } from '@/components/PageTitle';
 import { Screen } from '@/components/Screen';
 import { SectionHeader } from '@/components/SectionHeader';
+import { Segmented, type SegmentedOption } from '@/components/Segmented';
 import { SteamConnect } from '@/components/SteamConnect';
 import { WeekView } from '@/components/WeekView';
 import { Textured } from '@/components/Textured';
@@ -33,6 +34,9 @@ import {
 import { useToast } from '@/components/Toast';
 import { useDurations } from '@/lib/durations';
 import { buildAlerts } from '@/lib/alerts';
+import { planColour } from '@/lib/planColours';
+import { CAN_COPY, handOff } from '@/lib/clipboard';
+import { SITE_ORIGIN } from '@/constants/site';
 import { useHydrated } from '@/hooks/useHydrated';
 import { encodePlan } from '@/lib/planLink';
 import { useLibrary } from '@/lib/library';
@@ -49,53 +53,29 @@ import { OVER_IMAGE, TYPE } from '@/styles/typography';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
-const PACE_OPTIONS = [2, 4, 6, 8, 12, 20];
-const WINDOW_OPTIONS = [
-  { label: 'whenever', weeks: null },
-  { label: 'in 2 weeks', weeks: 2 },
-  { label: 'in a month', weeks: 4.35 },
-  { label: 'in 3 months', weeks: 13 },
-];
-const SESSION_OPTIONS = [30, 60, 90, 180];
-
-/** Step to the next option, wrapping — one tap, no grid of chips. */
-function cycle<T>(options: readonly T[], current: T): T {
-  const index = options.indexOf(current);
-  return options[(index + 1) % options.length] ?? options[0];
-}
-
 /**
- * A value you can tap, living inside a sentence. Each tap steps to the
- * next option — the plan reads as a sentence you finish, not a form you
- * fill in.
+ * The plan's two dials, and the evening's one.
+ *
+ * These used to live inside the sentence that described them, one tap
+ * advancing to the next value. See components/Segmented for why that
+ * had to go: six options behind a single blind control is a slot
+ * machine, not a setting.
  */
-function InlineValue({
-  label,
-  hint,
-  onPress,
-}: {
-  label: string;
-  hint: string;
-  onPress: () => void;
-}) {
-  return (
-    <Text>
-      {'  '}
-      <Text
-        style={styles.inlineValue}
-        onPress={onPress}
-        accessibilityRole="button"
-        accessibilityLabel={`${hint}: ${label}. Tap to change.`}
-        suppressHighlighting
-      >
-        {'\u00A0'}
-        {label} <Text style={styles.inlineCaret}>▾</Text>
-        {'\u00A0'}
-      </Text>
-      {'  '}
-    </Text>
-  );
-}
+const PACE_OPTIONS: SegmentedOption<number>[] = [2, 4, 6, 8, 12, 20].map(
+  (hours) => ({ value: hours, label: `${hours}h` })
+);
+const WINDOW_OPTIONS: SegmentedOption<number | null>[] = [
+  { label: 'whenever', value: null },
+  { label: '2 weeks', value: 2 },
+  { label: 'a month', value: 4.35 },
+  { label: '3 months', value: 13 },
+];
+const SESSION_OPTIONS: SegmentedOption<number>[] = [
+  { value: 30, label: '30m' },
+  { value: 60, label: '1h' },
+  { value: 90, label: '1½h' },
+  { value: 180, label: '3h' },
+];
 
 const finishDate = (ms: number) =>
   new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -118,11 +98,19 @@ interface Entry {
   source: DurationSource;
 }
 
+/**
+ * One stop on the route.
+ *
+ * The bar that used to sit here measured this game against the longest
+ * one in the plan — a comparison nobody asked for, unlabelled, and easy
+ * to read as progress through the game itself. In its place: the colour
+ * this game wears in the week above, so the block on Tuesday and this
+ * row are visibly the same thing.
+ */
 function QuestRow({
   item,
   index,
   isLast,
-  maxHours,
   game,
   entry,
   onPress,
@@ -131,21 +119,22 @@ function QuestRow({
   item: ScheduledItem;
   index: number;
   isLast: boolean;
-  maxHours: number;
   game?: Game;
   entry?: Entry;
   onPress: () => void;
   onEditLength: () => void;
 }) {
-  const barPct = Math.max(6, Math.round((item.hours / maxHours) * 100));
+  const colour = planColour(index);
   return (
     <Pressable style={styles.quest} onPress={onPress}>
       {/* the path: a node per game, a thread connecting them */}
       <View style={styles.questRail}>
         {index > 0 && <View style={styles.questThreadTop} />}
         {!isLast && <View style={styles.questThreadBottom} />}
-        <View style={styles.questNode}>
-          <Text style={styles.questNodeText}>{index + 1}</Text>
+        <View style={[styles.questNode, { borderColor: colour }]}>
+          <Text style={[styles.questNodeText, { color: colour }]}>
+            {index + 1}
+          </Text>
         </View>
       </View>
       <CoverImage
@@ -163,35 +152,28 @@ function QuestRow({
             {item.name}
           </Text>
         </View>
-        <View style={styles.questMetaRow}>
-          <View style={styles.questBarTrack}>
-            <View style={[styles.questBarFill, { width: `${barPct}%` }]} />
-          </View>
-          <Text
-            style={[
-              styles.questMeta,
-              (entry?.source === 'yours' || entry?.source === 'reported') &&
-                styles.questMetaYours,
-            ]}
-            onPress={(event) => {
-              event.stopPropagation();
-              onEditLength();
-            }}
-            suppressHighlighting
-            accessibilityRole="button"
-            accessibilityLabel={`Change how long ${item.name} takes`}
-          >
-            {entry?.source === 'yours' || entry?.source === 'reported'
-              ? ''
-              : '~'}
-            {formatHours(item.hours)}
-            {entry?.played != null && entry.totalHours > 0
-              ? ` left of ${formatHours(entry.totalHours)}`
-              : ''}
-            {entry?.rough ? ' ?' : ''}
-            <Text style={styles.questPencil}> ✎</Text>
-          </Text>
-        </View>
+        <Text
+          style={[
+            styles.questMeta,
+            (entry?.source === 'yours' || entry?.source === 'reported') &&
+              styles.questMetaYours,
+          ]}
+          onPress={(event) => {
+            event.stopPropagation();
+            onEditLength();
+          }}
+          suppressHighlighting
+          accessibilityRole="button"
+          accessibilityLabel={`Change how long ${item.name} takes`}
+        >
+          {entry?.source === 'yours' || entry?.source === 'reported' ? '' : '~'}
+          {formatHours(item.hours)}
+          {entry?.played != null && entry.totalHours > 0
+            ? ` left of ${formatHours(entry.totalHours)}`
+            : ' left'}
+          {entry?.rough ? ' ?' : ''}
+          <Text style={styles.questPencil}> ✎</Text>
+        </Text>
       </View>
       <View style={styles.questWhen}>
         <Text style={styles.questDate}>{finishDate(item.finishAt)}</Text>
@@ -304,11 +286,12 @@ export default function PlanScreen() {
 
   /**
    * The plan travels in the link: no account, no server, no copy of
-   * anyone's library anywhere. Native has no location at all, so the
-   * link degrades to a path rather than throwing.
+   * anyone's library anywhere. Native has no document to read an origin
+   * from, so it names the site instead — a link is only worth copying
+   * if the person you send it to can open it.
    */
   const sharePlan = async () => {
-    const origin = globalThis.location?.origin ?? '';
+    const origin = globalThis.location?.origin ?? SITE_ORIGIN;
     const link = `${origin}/shared?p=${encodePlan({
       pace,
       games: schedule.scheduled.map((item) => ({
@@ -316,15 +299,15 @@ export default function PlanScreen() {
         hours: item.hours,
       })),
     })}`;
-    try {
-      await navigator.clipboard?.writeText(link);
-      toast('Plan link copied', 'link');
-    } catch {
-      toast(
-        'Copy failed — your browser blocked clipboard access',
-        'alert-circle'
-      );
-    }
+    const done = await handOff(link);
+    toast(
+      done
+        ? CAN_COPY
+          ? 'Plan link copied'
+          : 'Plan link sent'
+        : 'Nothing left the app — try again',
+      done ? 'link' : 'alert-circle'
+    );
   };
   const canShare = schedule.scheduled.length > 0;
 
@@ -365,15 +348,47 @@ export default function PlanScreen() {
       ? 'Continue'
       : 'Start';
 
-  const maxRouteHours = Math.max(
-    1,
-    ...schedule.scheduled.map((item) => item.hours)
-  );
-
   const empty = entries.length === 0;
   const allFit = schedule.dropped.length === 0 && schedule.scheduled.length > 0;
   const lastFinish =
     schedule.scheduled[schedule.scheduled.length - 1]?.finishAt;
+
+  /**
+   * The verdict, said twice and in two registers.
+   *
+   * It used to be a bordered card at the top holding three statistics —
+   * "2/2 games fit", "~9h of play", "Aug 31 last credits" — every one of
+   * which was repeated further down the page by the week or the route.
+   * A verdict is one fact: whether this works. Up top it is the page's
+   * eyebrow, costing no height at all; beside the dials that produce it
+   * it is a sentence, so changing a dial visibly changes the answer.
+   */
+  const fits = schedule.scheduled.length;
+  const verdictEyebrow =
+    fits === 0
+      ? 'Nothing fits this window'
+      : allFit && lastFinish
+        ? `All of it, done by ${finishDate(lastFinish)}`
+        : `${fits} of ${entries.length} fit`;
+  const verdictSentence =
+    fits === 0
+      ? 'Nothing fits. Give it more time or a wider window — or let a few of these go. That’s allowed.'
+      : allFit && lastFinish
+        ? fits === 1
+          ? `You can finish it by ${finishDate(lastFinish)}.`
+          : `You can finish ${fits === 2 ? 'both' : `all ${fits}`}, the last by ${finishDate(lastFinish)}.`
+        : lastFinish
+          ? `${fits} of these ${entries.length} will get done, the last by ${finishDate(lastFinish)}.`
+          : `${fits} of these ${entries.length} will get done.`;
+
+  /**
+   * A pace measured off Steam is a real number, not one of the six on
+   * the dial, and a control with nothing selected looks broken. It
+   * earns a seventh option, named for where it came from.
+   */
+  const paceOptions = PACE_OPTIONS.some((option) => option.value === pace)
+    ? PACE_OPTIONS
+    : [...PACE_OPTIONS, { value: pace, label: `${pace}h · Steam` }];
 
   return (
     <Textured style={styles.background}>
@@ -418,7 +433,11 @@ export default function PlanScreen() {
                   measure exactly that. */}
               <SectionHeader
                 title="The Plan"
-                eyebrow={empty ? undefined : `${entries.length} in your queue`}
+                /* The verdict, as the page's eyebrow. It was a bordered
+                   card of three statistics, all of them repeated below
+                   by the week or the route; here it is one line and
+                   costs no height at all. */
+                eyebrow={empty ? undefined : verdictEyebrow}
                 onAccount={() => router.push('/you')}
                 actionLabel={canShare ? 'Share →' : undefined}
                 actionAccessibilityLabel="Copy a link to this plan"
@@ -438,120 +457,19 @@ export default function PlanScreen() {
                   <View style={isExpanded ? styles.colLeft : styles.stack}>
                     <Alerts alerts={alerts} />
 
-                    {/* the answer, first */}
-                    <View style={styles.verdict}>
-                      <View style={styles.verdictBar} />
-                      <Text style={styles.verdictTitle}>
-                        {schedule.scheduled.length === 0
-                          ? 'This window is too tight'
-                          : allFit
-                            ? 'You can finish all of it'
-                            : `${schedule.scheduled.length} of these will get done`}
-                      </Text>
-                      {schedule.scheduled.length > 0 && lastFinish ? (
-                        <View style={styles.verdictStats}>
-                          <View style={styles.vStat}>
-                            <Text style={styles.vStatValue}>
-                              {schedule.scheduled.length}
-                              <Text style={styles.vStatDim}>
-                                /{entries.length}
-                              </Text>
-                            </Text>
-                            <Text style={styles.vStatLabel}>games fit</Text>
-                          </View>
-                          <View style={styles.vStat}>
-                            <Text style={styles.vStatValue}>
-                              ~{Math.round(schedule.totalHours)}h
-                            </Text>
-                            <Text style={styles.vStatLabel}>of play</Text>
-                          </View>
-                          <View style={styles.vStat}>
-                            <Text style={styles.vStatValue}>
-                              {finishDate(lastFinish)}
-                            </Text>
-                            <Text style={styles.vStatLabel}>last credits</Text>
-                          </View>
-                        </View>
-                      ) : (
-                        <Text style={styles.verdictDetail}>
-                          Give it more time or a wider window — or let a few of
-                          these go. That’s allowed.
-                        </Text>
-                      )}
-
-                      {schedule.costOfPins > 0 && (
-                        <Text style={styles.pinCost}>
-                          Keeping what you marked must-play costs you{' '}
-                          {schedule.costOfPins} other{' '}
-                          {schedule.costOfPins === 1 ? 'game' : 'games'} in this
-                          window. Worth it, probably.
-                        </Text>
-                      )}
-
-                      {/* the whole setup is one sentence */}
-                      <Text style={styles.sentence}>
-                        I play about
-                        <InlineValue
-                          label={
-                            PACE_OPTIONS.includes(pace)
-                              ? `${pace}h`
-                              : `${pace}h · Steam`
-                          }
-                          hint="Hours per week"
-                          onPress={() => setPace(cycle(PACE_OPTIONS, pace))}
-                        />
-                        a week, and I want these done
-                        <InlineValue
-                          label={
-                            WINDOW_OPTIONS.find((o) => o.weeks === windowWeeks)
-                              ?.label ?? 'whenever'
-                          }
-                          hint="Finish window"
-                          onPress={() =>
-                            setWindowWeeks(
-                              cycle(
-                                WINDOW_OPTIONS.map((o) => o.weeks),
-                                windowWeeks
-                              )
-                            )
-                          }
-                        />
-                      </Text>
-
-                      <Text
-                        style={styles.steamLink}
-                        onPress={() => setSteamOpen((open) => !open)}
-                        accessibilityRole="button"
-                        suppressHighlighting
-                      >
-                        {steamOpen
-                          ? 'Hide Steam'
-                          : 'Not sure? Measure your real pace with Steam →'}
-                      </Text>
-                    </View>
-
-                    {steamOpen && (
-                      <SteamConnect
-                        onUsePace={(measured) => {
-                          setPace(measured);
-                          setSteamOpen(false);
-                        }}
-                        onImport={() => router.push('/import')}
-                      />
-                    )}
-
-                    {/* tonight */}
+                    {/* 1 — TONIGHT.
+                        The page opens on the question somebody actually
+                        has at eight o'clock on a Tuesday. It used to
+                        open on "can I finish all of it?", which is
+                        feedback on a setting, and it pushed this below
+                        the fold. */}
                     {tonightPick && (
                       <Pressable
                         style={styles.tonight}
                         onPress={() => router.push(`/game/${tonightPick.id}`)}
                       >
-                        {/* The picture, not a stamp of one.
-                          This card is the answer the page exists to give
-                          and it was a paragraph with a 96px thumbnail
-                          beside it, on a screen with no other image on
-                          it. The home stage already established what an
-                          answer looks like here; this borrows it. */}
+                        {/* The picture, not a stamp of one. This card is
+                            the answer the page exists to give. */}
                         <CoverImage
                           uri={gamesById.get(tonightPick.id)?.background_image}
                           style={StyleSheet.absoluteFill}
@@ -577,25 +495,8 @@ export default function PlanScreen() {
                             />
                             <Text style={styles.tonightEyebrow}>TONIGHT</Text>
                           </View>
-                          <Text style={[styles.sentence, styles.onArt]}>
-                            I have
-                            <InlineValue
-                              label={
-                                sessionMinutes >= 60
-                                  ? `${sessionMinutes / 60}h`
-                                  : `${sessionMinutes}m`
-                              }
-                              hint="Session length"
-                              onPress={() =>
-                                setSession(
-                                  cycle(SESSION_OPTIONS, sessionMinutes)
-                                )
-                              }
-                            />
-                            → {tonightVerb}{' '}
-                            <Text style={styles.tonightName}>
-                              {tonightPick.name}
-                            </Text>
+                          <Text style={styles.tonightTitle} numberOfLines={2}>
+                            {tonightVerb} {tonightPick.name}
                           </Text>
                           <Text style={styles.tonightWhy}>
                             {tonight.finishable
@@ -607,15 +508,25 @@ export default function PlanScreen() {
                         </View>
                       </Pressable>
                     )}
-                  </View>
 
-                  <View style={isExpanded ? styles.colRight : styles.stack}>
-                    {/* the route */}
+                    {/* The one control that belongs to tonight rather
+                        than to the plan, directly under the answer it
+                        changes. */}
+                    {tonightPick && (
+                      <Segmented
+                        label="I have"
+                        options={SESSION_OPTIONS}
+                        value={sessionMinutes}
+                        onChange={setSession}
+                      />
+                    )}
+
+                    {/* 2 — THIS WEEK. */}
                     {schedule.scheduled.length > 0 && (
                       <View style={styles.section}>
                         <SectionHeader
                           title="This week"
-                          eyebrow="THE NEXT SEVEN EVENINGS"
+                          eyebrow="The next seven evenings"
                         />
                         <WeekView
                           scheduled={schedule.scheduled}
@@ -624,10 +535,18 @@ export default function PlanScreen() {
                         />
                       </View>
                     )}
+                  </View>
 
+                  <View style={isExpanded ? styles.colRight : styles.stack}>
+                    {/* 3 — THE ROUTE. */}
                     {schedule.scheduled.length > 0 && (
                       <View style={styles.section}>
-                        <SectionHeader title="Your route" />
+                        <SectionHeader
+                          title="Your route"
+                          eyebrow={`${schedule.scheduled.length} ${
+                            schedule.scheduled.length === 1 ? 'game' : 'games'
+                          }, shortest first`}
+                        />
                         <Text style={styles.routeNote}>
                           Quick wins first — momentum is the strategy.
                           {correctionCount > 0
@@ -645,7 +564,6 @@ export default function PlanScreen() {
                               item={item}
                               index={index}
                               isLast={index === schedule.scheduled.length - 1}
-                              maxHours={maxRouteHours}
                               game={gamesById.get(item.id)}
                               entry={entriesById.get(item.id)}
                               onPress={() => router.push(`/game/${item.id}`)}
@@ -735,6 +653,67 @@ export default function PlanScreen() {
                         </View>
                       </View>
                     )}
+
+                    {/* 4 — THE DIAL, and the verdict it produces.
+                        Last, because it is the least-touched thing on
+                        the page and the most consequential: everything
+                        above is what these two numbers decided. Putting
+                        the answer next to the controls is the whole
+                        point — move a dial and watch the sentence
+                        change. */}
+                    <View style={styles.section}>
+                      <SectionHeader
+                        title="Your pace"
+                        eyebrow="The two numbers behind all of this"
+                      />
+                      <View style={styles.dial}>
+                        <Segmented
+                          label="Hours a week"
+                          options={paceOptions}
+                          value={pace}
+                          onChange={setPace}
+                        />
+                        <Segmented
+                          label="Finish them"
+                          options={WINDOW_OPTIONS}
+                          value={windowWeeks}
+                          onChange={setWindowWeeks}
+                        />
+                        <View style={styles.dialResult}>
+                          <Text style={styles.dialVerdict}>
+                            {verdictSentence}
+                          </Text>
+                          {schedule.costOfPins > 0 && (
+                            <Text style={styles.pinCost}>
+                              Keeping what you marked must-play costs you{' '}
+                              {schedule.costOfPins} other{' '}
+                              {schedule.costOfPins === 1 ? 'game' : 'games'} in
+                              this window. Worth it, probably.
+                            </Text>
+                          )}
+                        </View>
+                        <Text
+                          style={styles.steamLink}
+                          onPress={() => setSteamOpen((open) => !open)}
+                          accessibilityRole="button"
+                          suppressHighlighting
+                        >
+                          {steamOpen
+                            ? 'Hide Steam'
+                            : 'Not sure? Measure your real pace with Steam →'}
+                        </Text>
+                      </View>
+
+                      {steamOpen && (
+                        <SteamConnect
+                          onUsePace={(measured) => {
+                            setPace(measured);
+                            setSteamOpen(false);
+                          }}
+                          onImport={() => router.push('/import')}
+                        />
+                      )}
+                    </View>
                   </View>
                 </View>
               )}
@@ -771,74 +750,45 @@ const styles = StyleSheet.create({
   },
   colLeft: { width: 400, gap: SPACING.lg },
   colRight: { flex: 1, gap: SPACING.lg },
-  verdict: {
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.stroke,
-    borderRadius: RADIUS.md,
-    padding: SPACING.lg,
-    gap: SPACING.sm,
-    overflow: 'hidden',
-  },
-  verdictBar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-    backgroundColor: COLORS.accent,
-  },
-  verdictTitle: {
-    ...TYPE.h2,
-    color: COLORS.white,
-  },
-  verdictStats: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.xl,
-    marginTop: 2,
-  },
-  vStat: { gap: 2, alignItems: 'flex-start' },
-  vStatValue: {
-    ...TYPE.h3,
-    color: COLORS.white,
-  },
-  vStatDim: { color: COLORS.mediumGrey, fontSize: 14 },
-  vStatLabel: {
-    ...TYPE.micro,
-    color: COLORS.mediumGrey,
-  },
   routeNote: {
     ...TYPE.p,
     color: COLORS.mediumGrey,
     marginTop: -SPACING.xs,
   },
-  verdictDetail: {
-    ...TYPE.p,
-    color: COLORS.mediumGrey,
+
+  /**
+   * The dial, and the sentence it produces.
+   *
+   * A card rather than loose controls, because these two are the only
+   * things on the page that CHANGE the plan — everything above them
+   * reports it. Keeping the verdict inside the same box is the point:
+   * move a segment, watch the sentence rewrite itself.
+   */
+  dial: {
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.stroke,
+    borderRadius: RADIUS.md,
+    padding: SPACING.lg,
+    gap: SPACING.lg,
+  },
+  dialResult: {
+    gap: SPACING.xs,
+    paddingTop: SPACING.md,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.stroke,
+  },
+  dialVerdict: {
+    ...TYPE.h3,
+    color: COLORS.white,
   },
   pinCost: {
     ...TYPE.caption,
     color: COLORS.accent,
   },
-  sentence: {
-    ...TYPE.body,
-    color: COLORS.lightGrey,
-  },
-  inlineValue: {
-    ...TYPE.h3,
-    color: COLORS.white,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    borderRadius: 8,
-  },
-  inlineCaret: {
-    ...TYPE.labelTiny,
-    color: COLORS.accent,
-  },
   steamLink: {
     ...TYPE.labelTiny,
     color: COLORS.mediumGrey,
-    marginTop: 2,
   },
 
   tonight: {
@@ -852,8 +802,6 @@ const styles = StyleSheet.create({
   },
   tonightBody: { gap: SPACING.xs + 2, padding: SPACING.lg },
   tonightHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  /** Anything set over the artwork rather than over the page. */
-  onArt: { ...OVER_IMAGE.body, color: COLORS.white },
   tonightEyebrow: {
     ...TYPE.tag,
     // The evening's colour, the same one the landing page uses for it.
@@ -865,7 +813,19 @@ const styles = StyleSheet.create({
     ...OVER_IMAGE.body,
     color: COLORS.lightGrey,
   },
-  tonightName: { fontFamily: 'Noah-Black', color: COLORS.white },
+  /**
+   * The verb and the game, at display size.
+   *
+   * This was a sentence with the session length embedded in it — "I
+   * have [2h] → Start Oxenfree" — which made the answer the quiet half
+   * of a line about a setting. The answer is "Start Oxenfree"; how long
+   * you have is the control underneath it.
+   */
+  tonightTitle: {
+    ...TYPE.title,
+    ...OVER_IMAGE.heading,
+    color: COLORS.white,
+  },
 
   section: { gap: SPACING.sm + 2 },
   rows: { gap: SPACING.sm },
@@ -939,25 +899,6 @@ const styles = StyleSheet.create({
     ...TYPE.label,
     color: COLORS.lightGrey,
     flexShrink: 1,
-  },
-  questMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    marginTop: 3,
-  },
-  questBarTrack: {
-    flex: 1,
-    maxWidth: 160,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    overflow: 'hidden',
-  },
-  questBarFill: {
-    height: '100%',
-    borderRadius: 2,
-    backgroundColor: COLORS.accent,
   },
   questMeta: {
     ...TYPE.caption,

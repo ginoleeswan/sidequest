@@ -1,4 +1,5 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { Share } from 'react-native';
 
 import PlanScreen from '../(tabs)/plan';
 import type { Game } from '@/api/types';
@@ -66,26 +67,28 @@ describe('the plan screen', () => {
     expect(screen.getByLabelText('Change how long Celeste takes')).toBeTruthy();
   });
 
+  /**
+   * Both dials show every option at once. They used to be single
+   * controls that advanced on tap — six values behind one chip, no way
+   * to see them and no way back — which is why the labels below name a
+   * value rather than an instruction.
+   */
   it('offers the pace and the deadline as things you can change', async () => {
     seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
     await renderApp(<PlanScreen />);
-    expect(
-      screen.getByLabelText('Hours per week: 6h. Tap to change.')
-    ).toBeTruthy();
-    expect(
-      screen.getByLabelText('Finish window: whenever. Tap to change.')
-    ).toBeTruthy();
+    expect(screen.getByLabelText('Hours a week: 6h')).toBeTruthy();
+    expect(screen.getByLabelText('Finish them: whenever')).toBeTruthy();
   });
 
-  it('cycles the pace on each tap, so the sentence stays a sentence', async () => {
+  it('changes the pace in one tap, to the value you actually pressed', async () => {
     seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
     await renderApp(<PlanScreen />);
-    await fireEvent.press(
-      screen.getByLabelText('Hours per week: 6h. Tap to change.')
-    );
+    await fireEvent.press(screen.getByLabelText('Hours a week: 20h'));
+    // Selected, not merely present — the control has to show which one.
     expect(
-      screen.getByLabelText('Hours per week: 8h. Tap to change.')
-    ).toBeTruthy();
+      screen.getByLabelText('Hours a week: 20h').props.accessibilityState
+        .selected
+    ).toBe(true);
   });
 
   it('is honest about what will not fit, rather than hiding it', async () => {
@@ -96,9 +99,7 @@ describe('the plan screen', () => {
     await renderApp(<PlanScreen />);
     // 6h a week against a "whenever" window still drops a 300h game only
     // when a deadline exists, so pick one: two weeks.
-    await fireEvent.press(
-      screen.getByLabelText('Finish window: whenever. Tap to change.')
-    );
+    await fireEvent.press(screen.getByLabelText('Finish them: 2 weeks'));
     expect(screen.getByText('Side quests — for later')).toBeTruthy();
     expect(screen.getByText('Enormous')).toBeTruthy();
   });
@@ -144,14 +145,8 @@ describe('the plan screen', () => {
     await renderApp(<PlanScreen />);
     // 20h a week for two weeks is exactly 40 hours: room for the game
     // that was insisted on, or for both short ones, but not both.
-    for (const pace of ['6h', '8h', '12h']) {
-      await fireEvent.press(
-        screen.getByLabelText(`Hours per week: ${pace}. Tap to change.`)
-      );
-    }
-    await fireEvent.press(
-      screen.getByLabelText('Finish window: whenever. Tap to change.')
-    );
+    await fireEvent.press(screen.getByLabelText('Hours a week: 20h'));
+    await fireEvent.press(screen.getByLabelText('Finish them: 2 weeks'));
     expect(screen.getByText(/costs you/)).toBeTruthy();
   });
 
@@ -195,7 +190,13 @@ describe('the plan screen', () => {
   it('says the week is one game rather than repeating its name', async () => {
     seed([{ game: game(1, 'Grand Theft Auto V', 74), status: 'playing' }]);
     await renderApp(<PlanScreen />);
-    expect(screen.getByText(/across 7 evenings/)).toBeTruthy();
+    // One row per game in the legend, carrying that game's OWN hours —
+    // the run view used to add up every game in the evenings it spanned.
+    // Fourteen: two three-hour weekend evenings, four weeknights at an
+    // hour and a half, and a two-hour Sunday. The run view reported
+    // this as the game's length instead, and disagreed with the route.
+    expect(screen.getByText(/14h/)).toBeTruthy();
+    expect(screen.getAllByText('Grand Theft Auto V')).toHaveLength(2);
   });
 
   it('marks the evening the credits roll', async () => {
@@ -211,16 +212,15 @@ describe('the plan screen', () => {
   });
 
   it('hands the plan over as a link that carries itself', async () => {
-    const writeText = jest.fn().mockResolvedValue(undefined);
-    Object.defineProperty(globalThis, 'navigator', {
-      configurable: true,
-      value: { clipboard: { writeText } },
-    });
     seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
     await renderApp(<PlanScreen />);
     await fireEvent.press(screen.getByLabelText('Copy a link to this plan'));
-    await waitFor(() => expect(writeText).toHaveBeenCalled());
-    expect(writeText.mock.calls[0][0]).toContain('/shared?p=');
+    await waitFor(() => expect(Share.share).toHaveBeenCalled());
+    const link = jest.mocked(Share.share).mock.calls[0][0].message as string;
+    expect(link).toContain('/shared?p=');
+    // Off a phone there is no document to read an origin from, and a
+    // path on its own is not a link anybody can open.
+    expect(link.startsWith('http')).toBe(true);
   });
 
   it('offers no link when there is no plan to share', async () => {

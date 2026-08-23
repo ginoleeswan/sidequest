@@ -9,4 +9,12 @@
  * separate they drifted within a week — the generator baked the
  * test's own denylist strings into the font as icons.
  */
-export const NOT_ICONS = ['resize', 'radio', 'filter', 'card'] as const;
+export const NOT_ICONS = [
+  'resize',
+  'radio',
+  'filter',
+  'card',
+  // The module that puts text on the clipboard. Copying is drawn with
+  // the copy glyph; this one has never been used.
+  'clipboard',
+] as const;
