@@ -46,12 +46,13 @@
       ],
       "expo-font",
       "expo-image",
+      "./plugins/withSplashWordmark",
       [
         "expo-splash-screen",
         {
           "backgroundColor": "#272F3F",
           "image": "./assets/splash.png",
-          "imageWidth": 191
+          "imageWidth": 145
         }
       ],
       "expo-status-bar",

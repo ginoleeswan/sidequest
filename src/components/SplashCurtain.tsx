@@ -18,7 +18,6 @@ import {
   easeInCubic,
   easeOutCubic,
   shaped,
-  springOut,
   stops,
   type Keyframes,
 } from '@/lib/curves';
@@ -58,24 +57,20 @@ import { COLORS } from '@/styles/colors';
 const MARK = 145;
 
 /**
- * Where the static splash left things, in points from the screen centre.
+ * The static splash, mirrored.
  *
- * Mirrored from scripts/brand-assets.mjs, which draws the same two
- * offsets into splash.png. The storyboard centres that file and scales
- * it by width, so the centre is the one anchor both sides can agree on
- * regardless of device — everything here is measured from it.
+ * The launch storyboard centres the mark and pins the wordmark to a
+ * fixed margin off the bottom — see plugins/withSplashWordmark.js. This
+ * curtain opens on exactly that picture and animates away from it, so
+ * the two have to agree on three numbers: MARK above, and these two.
  *
- * The curtain therefore opens on exactly the picture the reader was
- * already looking at, and animates away from it. Change either number
- * without changing the other and the wordmark jumps the instant the app
- * finishes loading, which is the one frame this whole component exists
- * to make invisible.
+ * The wordmark lives in a box the size of the storyboard's image view
+ * rather than being positioned by its baseline, because that is what
+ * the storyboard positions: the IMAGE, with the type centred inside it.
+ * Matching the box is how the letters land in the same place.
  */
-const MARK_RISE = 70;
-const WORD_DROP = 300;
-
-/** Where `foot` puts the wordmark once it has arrived. */
-const FOOT_FRACTION = 0.11;
+const WORDMARK_BOTTOM = 60;
+const WORDMARK_BOX_H = 32;
 
 /** The whole thing, start to gone. */
 const RUN = 1250;
@@ -83,14 +78,16 @@ const RUN = 1250;
 /**
  * Windows of the run, as fractions.
  *
- * They overlap on purpose. The throw leaves at the top of the pop rather
- * than after it, and the wordmark starts while the objects are still in
- * the air — beats that queue politely read as a list of things
- * happening, not as one event.
+ * They overlap on purpose: the throw leaves at the top of the pop rather
+ * than after it, because beats that queue politely read as a list of
+ * things happening rather than as one event.
+ *
+ * There is no window for the wordmark any more. It is already on screen
+ * when this starts — the launch storyboard drew it — so it has nothing
+ * to arrive from.
  */
 const WINDUP = [0.05, 0.16] as const;
 const FLIGHT = [0.17, 0.64] as const;
-const WORD = [0.3, 0.6] as const;
 const EXIT = [0.7, 1] as const;
 
 /**
@@ -415,35 +412,19 @@ export function SplashCurtain() {
           styles.foot,
           {
             /**
-             * Visible from the first frame, because the static splash
-             * already showed it. Fading it in here would fade in
-             * something the reader is looking at.
+             * Already on screen, so it neither fades nor moves.
+             *
+             * The storyboard drew this word, at this size, in this box,
+             * a moment ago. Animating it in would animate in something
+             * the reader is looking at — and the point of matching the
+             * splash was to make the hand-over invisible, not to have
+             * something to play.
+             *
+             * The mark still dips and squashes above it. One element
+             * moving reads as the app waking up; both moving reads as a
+             * loading screen.
              */
             opacity: 1,
-            transform: reduced
-              ? [{ translateY: 0 }]
-              : [
-                  /**
-                   * Travels from where the image put it down to the
-                   * foot, rather than rising into place from nothing.
-                   *
-                   * `foot` is anchored 11% off the bottom, so its
-                   * distance from the centre is a fraction of THIS
-                   * screen — computed rather than guessed, which is the
-                   * whole reason the curtain can match an image it
-                   * cannot see.
-                   */
-                  {
-                    translateY: at(
-                      shaped(
-                        WORD,
-                        screen.h * (0.5 - FOOT_FRACTION) * -1 + WORD_DROP,
-                        0,
-                        springOut(2, 6)
-                      )
-                    ),
-                  },
-                ],
           },
         ]}
       >
@@ -471,13 +452,14 @@ const styles = StyleSheet.create({
    * Centred, and the origin every spark is thrown from — then lifted to
    * where the static splash drew the mark, so the first frame matches.
    */
-  stage: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: MARK_RISE * 2,
-  },
+  stage: { alignItems: 'center', justifyContent: 'center' },
   spark: { position: 'absolute' },
-  foot: { position: 'absolute', bottom: '11%' },
+  foot: {
+    position: 'absolute',
+    bottom: WORDMARK_BOTTOM,
+    height: WORDMARK_BOX_H,
+    justifyContent: 'center',
+  },
   wordmark: {
     fontFamily: 'Noah-Black',
     // 20/7, matching the static splash. At 17 it read as fine print on

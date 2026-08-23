@@ -279,120 +279,80 @@ await shoot(wrap(icon(), 64), {
 });
 
 /**
- * The splash image: the mark, and the wordmark under it.
+ * The splash: two images, because a launch screen is a storyboard.
  *
- * The platform gives you ONE image. It centres that image and scales it
- * to `imageWidth` on a flat colour — there is no second layer and no way
- * to anchor anything to the foot of the screen, so a wordmark on this
- * screen has to be part of the same picture as the mark.
+ * The mark is centred and the wordmark sits at the foot — the shape
+ * every launch screen with a name on it uses. expo-splash-screen's
+ * config cannot express it: it builds one image view of `imageWidth`
+ * BY `imageWidth`, aspect-fitted and centred, so a tall file holding
+ * both is fitted by its height and comes out narrow. Built that way
+ * once, the artwork drew 58pt wide instead of 191.
  *
- * Which means the canvas has to stay tight around the artwork. Shipped
- * once as a full 1284x2778 phone-shaped canvas, the whole canvas was
- * what got scaled to those 200 points: the mark inside it came out at
- * 28% of that width, and the app opened on a 56-point joystick adrift
- * in the middle of the screen. The canvas is the artwork. Empty space
- * in the file is empty space you paid for.
- *
- * So this is a lockup rather than a screen: the mark at its full width,
- * a measured gap, then SIDEQUEST at the same letterspacing SplashCurtain
- * uses. It sits higher than the curtain's wordmark, which lives at 11%
- * off the bottom — nothing can put it there in a centred image — and the
- * curtain's first frame animates from here rather than popping the word
- * in from nothing, which was the whole complaint.
- */
-/**
- * The splash lockup, positioned from the screen's centre.
- *
- * The iOS storyboard centres this image and scales it to `imageWidth`.
- * That is the whole API: no bottom anchor, no second layer. So a
- * wordmark cannot be pinned a fixed percentage off the foot of the
- * screen — that distance from the centre depends on how tall the device
- * is, and one image cannot be right for all of them.
- *
- * What IS device-independent is the centre. This file and SplashCurtain
- * both lay out as offsets from it, in points, so the static image and
- * the curtain's first frame land on the same pixels everywhere.
- *
- * The subtlety that bit once: everything in this file scales together,
- * because the platform scales the FILE. Shrinking the mark from 180pt
- * to 130 also shrank the wordmark by 28%, since its size was expressed
- * in the mark's units. The two are decoupled here by sizing the canvas
- * for the type and deriving `imageWidth` from the mark instead — so the
- * wordmark stays at the 17pt SplashCurtain draws, whatever the mark does.
+ * The limitation is in the plugin's options, not in the platform. A
+ * storyboard holds as many image views as you like, each with its own
+ * constraints, so `plugins/withSplashWordmark.js` adds a second one
+ * pinned to the safe area's bottom. This file just draws the two
+ * pictures it needs.
  *
  * SPLASH_MARK_PT is mirrored as MARK in SplashCurtain.tsx, and
- * SPLASH_IMAGE_WIDTH must equal app.json's imageWidth. All three, or the
- * hand-off jumps.
+ * WORDMARK_BOTTOM_PT as the inset its wordmark sits at. Those two, or
+ * the hand-off jumps.
  */
-// The 94-unit BOX, matching Mark.tsx's `size` prop — not the visible
-// glyph, which is ~77% of it because the plinth does not fill the box.
-// 145 here is the 112pt joystick the composition was chosen at.
-const SPLASH_MARK_PT = 145;
-const WORD_PT = 20; // matches SplashCurtain's wordmark
-const TRACK_PT = 7; // matches its letterSpacing
-const MARK_RISE_PT = 70; // mark centre, above screen centre
-/**
- * Low, and deliberately not derived from the foot.
- *
- * SplashCurtain pins its wordmark 11% off the bottom, which is a
- * fraction of the screen and therefore a different number of points on
- * every device. A centred image cannot express that. 300 puts it at
- * roughly 85% on a phone, which reads as "at the foot" there and drifts
- * to 73% on an iPad and 95% on an SE. That drift is the accepted cost
- * of this composition, not an oversight.
- */
-const WORD_DROP_PT = 300;
+const SPLASH_MARK_PT = 145; // the 94-unit box, as Mark.tsx's `size` means it
+const WORD_PT = 20;
+const TRACK_PT = 7;
 
-// The mark is 94 units wide by construction, and that must come out at
-// SPLASH_MARK_PT — which fixes the scale for everything else.
-const PT_PER_UNIT = SPLASH_MARK_PT / 94;
-// Wide enough for the type at full size. SIDEQUEST at 17pt tracked 6pt
-// is wider than the mark, and a viewBox clips rather than shrinking to
-// fit: set too narrow once, it shipped a splash reading IDEQUES1.
-const VB_W = 124;
-const SPLASH_IMAGE_WIDTH = Math.round(VB_W * PT_PER_UNIT);
-
-// 50, not 51. The viewBox the mark is normally drawn in starts at x=4,
-// which invites the assumption that its centre is 51 — but the glyph
-// itself is built around x=50: the plinth spans 13.63..86.37 and the
-// ball sits at cx=50. Centring the box is not centring the mark, and
-// the one-unit difference showed up as 11px of drift in the file.
-const MARK_CENTRE_X = 50;
-const MARK_CENTRE_Y = 53;
-const riseU = MARK_RISE_PT / PT_PER_UNIT;
-const dropU = WORD_DROP_PT / PT_PER_UNIT;
-const centreY = MARK_CENTRE_Y + riseU;
-const wordY = centreY + dropU;
-const halfH = Math.max(centreY - 6, wordY + 10 - centreY);
-const vbX = MARK_CENTRE_X - VB_W / 2;
-const vbY = centreY - halfH;
-const vbH = halfH * 2;
-const SPLASH_PX_W = 1400;
-const SPLASH_PX_H = Math.round((SPLASH_PX_W * vbH) / VB_W);
-
+/** Square and mark-only: exactly what the plugin's image view expects. */
 await shoot(
   `<!doctype html><meta charset="utf-8"><style>*{margin:0}` +
-    `@font-face { font-family: Noah; font-weight: 900; src: url(data:font/ttf;base64,${FONT}); }` +
-    `body{width:${SPLASH_PX_W}px;height:${SPLASH_PX_H}px}` +
-    `svg{display:block;width:${SPLASH_PX_W}px;height:${SPLASH_PX_H}px}</style>` +
-    `<svg viewBox="${vbX} ${vbY} ${VB_W} ${vbH}">` +
-    `${mark({ lift: false })}` +
-    /**
-     * The x nudge is measured, not derived. `text-anchor="middle"`
-     * centres the full advance width, which includes the letter-space
-     * trailing the final T, and Noah's side bearings are not symmetric
-     * either — together they left the word visibly off centre. Verify
-     * with the pixel bbox check, not by eye.
-     */
-    `<text x="${MARK_CENTRE_X + TRACK_PT / PT_PER_UNIT / 2}" y="${wordY}"` +
-    ` font-family="Noah" font-weight="900"` +
-    ` font-size="${WORD_PT / PT_PER_UNIT}" letter-spacing="${TRACK_PT / PT_PER_UNIT}"` +
-    ` fill="${WHITE}" text-anchor="middle" dominant-baseline="middle">SIDEQUEST</text>` +
-    `</svg>`,
-  { width: SPLASH_PX_W, height: SPLASH_PX_H, out: 'splash.png', dir: ASSETS }
+    `body{width:1024px;height:1024px}svg{display:block;width:1024px;height:1024px}</style>` +
+    `<svg viewBox="${TIGHT}">${mark({ lift: false })}</svg>`,
+  { width: 1024, height: 1024, out: 'splash.png', dir: ASSETS }
 );
+
+/**
+ * The wordmark, drawn at its real size for the storyboard to place.
+ *
+ * Rendered at 1x, 2x and 3x rather than scaled at build time, so the
+ * type is rasterised from the outline at every density instead of
+ * resampled from one bitmap. Nine tracked capitals at 20pt is exactly
+ * the case where resampling shows.
+ *
+ * The box is padded rather than tight: a bitmap cropped hard to the
+ * glyphs has no consistent baseline to constrain against, and the
+ * storyboard positions the IMAGE, not the letters inside it.
+ */
+const WORDMARK_W = 200;
+const WORDMARK_H = 32;
+for (const density of [1, 2, 3]) {
+  await shoot(
+    `<!doctype html><meta charset="utf-8"><style>*{margin:0}` +
+      `@font-face { font-family: Noah; font-weight: 900; src: url(data:font/ttf;base64,${FONT}); }` +
+      `body{width:${WORDMARK_W * density}px;height:${WORDMARK_H * density}px}` +
+      `svg{display:block;width:${WORDMARK_W * density}px;height:${WORDMARK_H * density}px}</style>` +
+      `<svg viewBox="0 0 ${WORDMARK_W} ${WORDMARK_H}">` +
+      // x is nudged by half a letter-space: `text-anchor="middle"` centres
+      // the full advance width, which includes the space trailing the
+      // final T. Left alone the word sits visibly left of centre.
+      `<text x="${WORDMARK_W / 2 + TRACK_PT / 2}" y="${WORDMARK_H / 2}"` +
+      ` font-family="Noah" font-weight="900" font-size="${WORD_PT}"` +
+      ` letter-spacing="${TRACK_PT}" fill="${WHITE}"` +
+      ` text-anchor="middle" dominant-baseline="central">SIDEQUEST</text>` +
+      `</svg>`,
+    {
+      width: WORDMARK_W * density,
+      height: WORDMARK_H * density,
+      out:
+        density === 1
+          ? 'splash-wordmark.png'
+          : `splash-wordmark@${density}x.png`,
+      dir: ASSETS,
+    }
+  );
+}
 console.log(
-  `splash: mark ${SPLASH_MARK_PT}pt, set app.json imageWidth = ${SPLASH_IMAGE_WIDTH}`
+  `splash: mark ${((86.37 - 13.63) * (SPLASH_MARK_PT / 94)).toFixed(0)}pt visible ` +
+    `(app.json imageWidth = ${SPLASH_MARK_PT}), wordmark ${WORDMARK_W}x${WORDMARK_H}pt`
 );
 
 /**
