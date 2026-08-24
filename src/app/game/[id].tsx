@@ -32,7 +32,7 @@ import { Screen } from '@/components/Screen';
 import { PersonalNote } from '@/components/PersonalNote';
 import { SessionTimer } from '@/components/SessionTimer';
 import { rememberGame } from '@/lib/recent';
-import { PlatformIcons } from '@/components/PlatformIcons';
+import { DynamicIcon } from '@/components/DynamicIcon';
 import { Rail } from '@/components/Rail';
 import { LiveStreams } from '@/components/LiveStreams';
 import { RatingsBreakdown } from '@/components/RatingsBreakdown';
@@ -84,9 +84,11 @@ function decodeEntities(text: string): string {
 function StatStrip({
   game,
   onEditLength,
+  onOpenGenre,
 }: {
   game: GameDetail;
   onEditLength: () => void;
+  onOpenGenre: (genre: Named) => void;
 }) {
   const { durationOf } = useDurations();
   const duration = durationOf(game);
@@ -106,7 +108,49 @@ function StatStrip({
    * things you glance at to place a game, in one run, none of them
    * pretending to be the headline.
    */
+  /**
+   * One byline: what kind of game, then how it landed.
+   *
+   * The masthead had grown to five stacked rows — eight platform
+   * glyphs, the title, the hours, the sentence, and a run of four
+   * statistics — with the genres in a sixth row further down, wedged
+   * between the session clock and the page's first heading. Every one
+   * of those is a fact somebody might want and none of them is the
+   * point, which is what "heavy" means: no line yielding to another.
+   *
+   * The platform glyphs, the release year and the age rating are all in
+   * the file box at the foot, which is where you look a thing up. What
+   * stays is identity and reception, on one line.
+   */
   const meta: React.ReactNode[] = [];
+  for (const genre of game.genres?.slice(0, 3) ?? []) {
+    const section = genre.slug ? findSection(genre.slug) : undefined;
+    meta.push(
+      <Pressable
+        key={`genre-${genre.id}`}
+        onPress={section ? () => onOpenGenre(genre) : undefined}
+        disabled={!section}
+        accessibilityRole={section ? 'link' : undefined}
+        accessibilityLabel={section ? `Browse ${genre.name} games` : undefined}
+        style={styles.metaItem}
+      >
+        {/* The app's own icons. Every genre it browses already carries
+            one in `constants/categories` — a compass for Adventure, a
+            shield for RPG — and they were going unused on the one
+            screen that names a game's genres. Nothing is invented for a
+            genre this app has no section for. */}
+        {section ? (
+          <DynamicIcon
+            type={section.iconType}
+            name={section.iconName}
+            size={13}
+            color={COLORS.lightGrey}
+          />
+        ) : null}
+        <Text style={styles.metaBit}>{genre.name}</Text>
+      </Pressable>
+    );
+  }
   if (game.rating > 0) {
     meta.push(
       <Text key="rating" style={styles.metaBit}>
@@ -116,20 +160,6 @@ function StatStrip({
   }
   if (game.metacritic != null) {
     meta.push(<ScorePill key="mc" score={game.metacritic} />);
-  }
-  if (game.released) {
-    meta.push(
-      <Text key="year" style={styles.metaBit}>
-        {game.released.slice(0, 4)}
-      </Text>
-    );
-  }
-  if (game.esrb_rating?.name) {
-    meta.push(
-      <Text key="esrb" style={styles.metaBit}>
-        {game.esrb_rating.name}
-      </Text>
-    );
   }
 
   return (
@@ -367,17 +397,15 @@ export default function GameInfoScreen() {
       <GrainScrim style={styles.heroGrain} />
       <ChromeWeld height={insets.top + WELD_HEIGHT} />
       <View style={styles.heroCopy}>
-        {/* Meta, at meta weight. At the default twenty points a game
-            on one platform put a single 35pt white glyph over the art
-            above the title, where it read as a mark somebody had
-            stamped there rather than as "runs on PC". */}
-        <PlatformIcons
-          platforms={game.parent_platforms ?? []}
-          size={14}
-          color={COLORS.lightGrey}
-        />
+        {/* No platform glyphs here any more: eight of them opened the
+            masthead with a row of noise, and every one is spelled out
+            in the file box under PLATFORMS. */}
         <Text style={styles.heroTitle}>{game.name}</Text>
-        <StatStrip game={game} onEditLength={() => setEditingLength(true)} />
+        <StatStrip
+          game={game}
+          onEditLength={() => setEditingLength(true)}
+          onOpenGenre={openGenre}
+        />
       </View>
     </View>
   );
@@ -440,13 +468,12 @@ export default function GameInfoScreen() {
       </View>
       <View style={styles.deskHeroInner}>
         <View style={styles.deskHeroCopy}>
-          <PlatformIcons
-            platforms={game.parent_platforms ?? []}
-            size={14}
-            color={COLORS.lightGrey}
-          />
           <Text style={styles.deskTitle}>{game.name}</Text>
-          <StatStrip game={game} onEditLength={() => setEditingLength(true)} />
+          <StatStrip
+            game={game}
+            onEditLength={() => setEditingLength(true)}
+            onOpenGenre={openGenre}
+          />
           <StatusActions game={game} />
           <SessionTimer game={game} />
           <Commitment gameId={game.id} />
@@ -483,37 +510,6 @@ export default function GameInfoScreen() {
       </ReadMoreText>
     </View>
   ) : null;
-
-  /**
-   * Genres as a byline, not a fourth row of pills.
-   *
-   * Under the masthead sat four consecutive rows of rounded outlines —
-   * status, session, commitment, then these — and by the fourth the eye
-   * has stopped reading them as different kinds of thing. Genres are
-   * not something you press to change the page; they say what kind of
-   * game this is, which is identity, and identity is set in text.
-   */
-  const genres =
-    game.genres && game.genres.length > 0 ? (
-      <View style={styles.genreRow}>
-        {game.genres.map((genre, i) => {
-          const to = genre.slug && findSection(genre.slug);
-          return (
-            <React.Fragment key={genre.id}>
-              {i > 0 ? <Text style={styles.metaDot}>·</Text> : null}
-              <Text
-                style={[styles.genreText, to && styles.genreLink]}
-                onPress={to ? () => openGenre(genre) : undefined}
-                accessibilityRole={to ? 'link' : undefined}
-                suppressHighlighting
-              >
-                {genre.name}
-              </Text>
-            </React.Fragment>
-          );
-        })}
-      </View>
-    ) : null;
 
   const media = (
     <>
@@ -657,6 +653,12 @@ export default function GameInfoScreen() {
             label="Platforms"
             items={game.platforms?.map(({ platform }) => platform)}
           />
+          {game.esrb_rating?.name ? (
+            <View style={styles.metaRow}>
+              <Text style={styles.metaLabel}>Rated</Text>
+              <Text style={styles.metaValue}>{game.esrb_rating.name}</Text>
+            </View>
+          ) : null}
           <MetaRow label="Developers" items={game.developers} />
           <MetaRow label="Publishers" items={game.publishers} />
           {game.released ? (
@@ -708,7 +710,6 @@ export default function GameInfoScreen() {
                 {deskHero}
                 <Animated.View style={[styles.twoColumn, { opacity }]}>
                   <View style={styles.columnMain}>
-                    {genres}
                     {yourTake}
                     {about}
                     {ratingsBreakdown}
@@ -729,7 +730,6 @@ export default function GameInfoScreen() {
                       game you have not played it is an empty box in the
                       most valuable position on the screen. It is a
                       response, so it follows what it responds to. */}
-                  {genres}
                   {about}
                   {ratingsBreakdown}
                   {media}
@@ -876,6 +876,7 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     marginTop: SPACING.xs,
   },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   metaBit: {
     ...TYPE.labelSmall,
     ...OVER_IMAGE.body,
@@ -988,8 +989,6 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     ...SHADOW.card,
   },
-  genreText: { ...TYPE.labelSmall, color: COLORS.mediumGrey },
-  genreLink: { color: COLORS.lightGrey },
 
   /**
    * The fact box, on the plane the rest of the app puts panels on.
@@ -1014,13 +1013,6 @@ const styles = StyleSheet.create({
   /** A label, at the size of a label — not a fourth headline. */
   fileLabel: { ...TYPE.micro, color: COLORS.mediumGrey },
   aboutText: { ...TYPE.body, color: COLORS.lightGrey, lineHeight: 23 },
-  genreRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: SPACING.sm,
-    marginBottom: SPACING.xl,
-  },
   metaRow: { gap: 2, marginBottom: SPACING.sm },
   metaLabel: {
     ...TYPE.micro,
