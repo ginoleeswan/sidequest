@@ -19,7 +19,6 @@ export const COLORS = {
   violet: '#9D8FFF',
   mint: '#3ECF8E',
   coral: '#F87168',
-  blue: '#1E69E1',
   lightGrey: '#D8DAE4',
   // 4.6:1 on darkGrey, AA for body text on every surface.
   mediumGrey: '#A3A9B8',

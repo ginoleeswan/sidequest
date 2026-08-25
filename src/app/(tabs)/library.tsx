@@ -807,7 +807,9 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   modalButton: {
-    backgroundColor: COLORS.blue,
+    // The primary action in a sheet, so it wears the app's primary
+    // colour rather than the blue that belonged to nothing.
+    backgroundColor: COLORS.accent,
     borderRadius: SPACING.md,
     paddingVertical: SPACING.sm + 3,
     alignItems: 'center',
@@ -815,7 +817,9 @@ const styles = StyleSheet.create({
   modalButtonDisabled: { opacity: 0.45 },
   modalButtonText: {
     ...TYPE.label,
-    color: COLORS.white,
+    // Navy, not white: white on the amber face is about 1.9:1 and
+    // fails AA outright. The amber is light, so its label is dark.
+    color: COLORS.navy,
   },
 });
 

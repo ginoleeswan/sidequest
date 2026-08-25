@@ -34,6 +34,7 @@ const styles = StyleSheet.create({
   link: { alignSelf: 'center', paddingVertical: SPACING.md },
   linkText: {
     ...TYPE.label,
-    color: COLORS.blue,
+    // The only thing to do on an otherwise empty page.
+    color: COLORS.accent,
   },
 });
