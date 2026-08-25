@@ -9,14 +9,6 @@ import { Platform } from 'react-native';
  * carries it at all.
  */
 
-/** A light tick under a deliberate tap — a tab, a chip, a toggle. */
-export function tickle(): void {
-  if (Platform.OS === 'web') return;
-  import('expo-haptics')
-    .then((haptics) => haptics.selectionAsync())
-    .catch(() => {});
-}
-
 /** The firm double-tap of something completed. */
 export function celebrate(): void {
   if (Platform.OS === 'web') return;

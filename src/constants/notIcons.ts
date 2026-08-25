@@ -17,4 +17,7 @@ export const NOT_ICONS = [
   // The module that puts text on the clipboard. Copying is drawn with
   // the copy glyph; this one has never been used.
   'clipboard',
+  // The ARIA role, asserted on in tests. The icons in use are
+  // alert-circle and alert-circle-outline, which are their own names.
+  'alert',
 ] as const;

@@ -155,16 +155,3 @@ export async function scheduleEvenings(
   return queued;
 }
 
-/** Take them all back — one deletion, like the calendar. */
-export async function cancelEvenings(): Promise<void> {
-  if (Platform.OS === 'web') return;
-  const Notifications = await import('expo-notifications');
-  const queued = await Notifications.getAllScheduledNotificationsAsync();
-  await Promise.all(
-    queued
-      .filter((item) => item.identifier.startsWith('sidequest-evening-'))
-      .map((item) =>
-        Notifications.cancelScheduledNotificationAsync(item.identifier)
-      )
-  );
-}

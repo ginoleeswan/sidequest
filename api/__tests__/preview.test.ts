@@ -2,7 +2,7 @@ import handler, {
   escapeHtml,
   previewDescription,
   renderPreview,
-} from '../../../api/preview';
+} from '../preview';
 
 const game = (over: Partial<Parameters<typeof renderPreview>[0]> = {}) => ({
   name: 'Hollow Knight: Silksong',

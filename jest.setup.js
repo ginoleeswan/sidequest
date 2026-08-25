@@ -18,8 +18,9 @@ jest.mock('expo-video', () => {
 });
 
 jest.mock('expo-splash-screen', () => ({
-  preventAutoHideAsync: jest.fn(),
-  hideAsync: jest.fn(),
+  // Promises, as the real module returns: the app chains .catch on both.
+  preventAutoHideAsync: jest.fn(async () => true),
+  hideAsync: jest.fn(async () => true),
 }));
 
 /**

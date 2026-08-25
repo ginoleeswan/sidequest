@@ -3,6 +3,7 @@ import { Animated, StyleSheet, Text, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 
 import { CoverImage } from './CoverImage';
+import { memcardShellPath, notchFor } from './MemcardPanel';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import type { Memcard as MemcardModel } from '@/lib/memcard';
@@ -116,20 +117,6 @@ export function landingCardHeight(width: number): number {
   return headerFor(width) + rows * (w * 0.74 + GAP) - GAP + pad;
 }
 
-/**
- * The shell: a rounded card with one corner cut off on the diagonal —
- * the memory-card silhouette, which is the whole reason this object
- * reads as saved progress rather than as a calendar widget.
- */
-function shellPath(w: number, h: number, notch: number): string {
-  const r = 18;
-  return (
-    `M ${r} 0 H ${w - notch} L ${w} ${notch} V ${h - r} ` +
-    `Q ${w} ${h} ${w - r} ${h} H ${r} Q 0 ${h} 0 ${h - r} ` +
-    `V ${r} Q 0 0 ${r} 0 Z`
-  );
-}
-
 export function LandingMemcard({
   card,
   width,
@@ -173,7 +160,7 @@ export function LandingMemcard({
   });
 
   const height = landingCardHeight(width);
-  const notch = Math.max(30, Math.min(52, width * 0.055));
+  const notch = notchFor(width);
 
   return (
     /**
@@ -194,7 +181,7 @@ export function LandingMemcard({
         pointerEvents="none"
       >
         <Path
-          d={shellPath(width, height, notch)}
+          d={memcardShellPath(width, height, notch)}
           fill="#1D2431"
           stroke="rgba(255,255,255,0.12)"
           strokeWidth={2}

@@ -83,8 +83,11 @@ describe('SaveErrorNotice', () => {
 
   it('renders nothing of its own', async () => {
     stubStores(null);
-    const view = await mount();
-    expect(view.toJSON()).toBeTruthy();
+    await mount();
+    // The child alone, no notice around it: the previous assertion here
+    // (toJSON() is truthy) passed whenever ANYTHING rendered — which is
+    // the opposite of what the test's name promises.
     expect(screen.getByText('app')).toBeTruthy();
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });

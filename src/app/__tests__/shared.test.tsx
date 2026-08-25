@@ -4,7 +4,7 @@ import SharedPlanScreen from '../shared';
 import { encodePlan } from '@/lib/planLink';
 import { renderApp, useFakeStorage } from '@/test-utils';
 
-beforeAll(() => {
+beforeEach(() => {
   useFakeStorage();
 });
 afterAll(() => {

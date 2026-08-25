@@ -63,7 +63,7 @@ async function fontCss(): Promise<string> {
 }
 
 /** Draw the card and hand back PNG bytes. */
-export async function memcardPng(card: Memcard): Promise<Blob> {
+async function memcardPng(card: Memcard): Promise<Blob> {
   const svg = memcardSvg(card, { fontCss: await fontCss() });
   const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
 

@@ -1,8 +1,7 @@
-import { Platform } from 'react-native';
-
 import type { Memcard } from './memcard';
 import type { PlannedEvening } from './week';
 import { tonightShape, weekShape, yearShape } from './widgetData';
+import { widgetStore } from './widgetStore';
 
 /**
  * The one door between the app and its widgets.
@@ -26,45 +25,12 @@ import { tonightShape, weekShape, yearShape } from './widgetData';
  * loudly.
  */
 
-const APP_GROUP = 'group.com.glstudio.sidequest';
-
 /** The widget `kind`s, matching the Swift `StaticConfiguration` strings. */
 const KINDS = {
   tonight: 'Tonight',
   week: 'ThisWeek',
   year: 'TheYear',
 } as const;
-
-type Storage = {
-  set(key: string, value: string): void;
-  remove(key: string): void;
-};
-
-/**
- * Loaded on demand, and never on web.
- *
- * The module is an iOS native module; importing it at the top level
- * would put it in the web bundle, where it resolves to nothing useful
- * and costs bytes on the one platform that has no widgets at all.
- */
-async function storage(): Promise<{
-  store: Storage;
-  reload: (kind: string) => void;
-} | null> {
-  if (Platform.OS !== 'ios') return null;
-  try {
-    const { ExtensionStorage } = await import('@bacons/apple-targets');
-    return {
-      store: new ExtensionStorage(APP_GROUP) as unknown as Storage,
-      reload: (kind: string) => ExtensionStorage.reloadWidget(kind),
-    };
-  } catch {
-    // A build without the native module — Expo Go, or a web export that
-    // slipped past the platform check. Nothing to update, and nothing
-    // worth saying about it.
-    return null;
-  }
-}
 
 /**
  * Publish the plan: tonight, and the week it sits in.
@@ -75,7 +41,7 @@ async function storage(): Promise<{
  * iOS next feels like asking, which can be hours.
  */
 export async function publishPlan(week: readonly PlannedEvening[]) {
-  const bridge = await storage();
+  const bridge = widgetStore();
   if (!bridge) return;
 
   const tonight = tonightShape(week);
@@ -94,7 +60,7 @@ export async function publishPlan(week: readonly PlannedEvening[]) {
 
 /** Publish the year's card — the twelve slots and what fills them. */
 export async function publishYear(card: Memcard) {
-  const bridge = await storage();
+  const bridge = widgetStore();
   if (!bridge) return;
   bridge.store.set('year', JSON.stringify(yearShape(card)));
   bridge.reload(KINDS.year);
@@ -109,7 +75,7 @@ export async function publishYear(card: Memcard) {
  * the plan outlives the plan.
  */
 export async function clearWidgets() {
-  const bridge = await storage();
+  const bridge = widgetStore();
   if (!bridge) return;
   for (const key of ['tonight', 'week', 'year']) bridge.store.remove(key);
   for (const kind of Object.values(KINDS)) bridge.reload(kind);
