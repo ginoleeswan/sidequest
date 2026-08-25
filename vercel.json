@@ -40,7 +40,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://media.rawg.io https://avatars.steamstatic.com https://avatars.akamai.steamstatic.com; media-src 'self' blob: https://media.rawg.io; font-src 'self' data:; connect-src 'self' https://media.rawg.io; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; manifest-src 'self'; worker-src 'self'"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://media.rawg.io https://avatars.steamstatic.com https://avatars.akamai.steamstatic.com https://static-cdn.jtvnw.net; media-src 'self' blob: https://media.rawg.io; font-src 'self' data:; connect-src 'self' https://media.rawg.io https://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; manifest-src 'self'; worker-src 'self'"
         },
         {
           "key": "X-Content-Type-Options",
@@ -61,6 +61,14 @@
         {
           "key": "Strict-Transport-Security",
           "value": "max-age=63072000; includeSubDomains; preload"
+        },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin-allow-popups"
+        },
+        {
+          "key": "Cross-Origin-Resource-Policy",
+          "value": "same-site"
         }
       ]
     },

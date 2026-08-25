@@ -38,7 +38,15 @@ function overLimit(ip: string, now: number): boolean {
   const entry = hits.get(ip);
   if (!entry || now > entry.resetAt) {
     hits.set(ip, { count: 1, resetAt: now + WINDOW_MS });
-    if (hits.size > 5_000) hits.clear();
+    // Evict only what has expired. `clear()` was a bypass with a
+    // doorbell: five thousand and one requests behind spoofed
+    // forwarded-for headers wiped every REAL client's counter too, and
+    // the attacker resumed against an empty table.
+    if (hits.size > 5_000) {
+      for (const [key, value] of hits) {
+        if (now > value.resetAt) hits.delete(key);
+      }
+    }
     return false;
   }
   entry.count += 1;
@@ -127,9 +135,13 @@ export default async function handler(
     return;
   }
 
+  // x-real-ip is set by Vercel itself; the forwarded-for chain's first
+  // hop is whatever the caller wrote into it. Trust the platform first.
+  const real = req.headers?.['x-real-ip'];
   const forwarded = req.headers?.['x-forwarded-for'];
   const ip = (
-    Array.isArray(forwarded) ? forwarded[0] : (forwarded ?? 'unknown')
+    (Array.isArray(real) ? real[0] : real) ??
+    (Array.isArray(forwarded) ? forwarded[0] : (forwarded ?? 'unknown'))
   )
     .split(',')[0]
     .trim();

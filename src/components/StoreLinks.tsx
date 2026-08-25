@@ -13,11 +13,25 @@ interface Props {
   website?: string;
 }
 
+/**
+ * Only the web's own schemes get opened.
+ *
+ * Every URL rendered here comes from RAWG's community-editable data, so
+ * it is third-party input wearing a button. On react-native-web
+ * `openURL` is `window.open`, and a `javascript:` URL there runs in the
+ * app's origin — which holds the session. On native an arbitrary custom
+ * scheme is a free trampoline into any installed app. A store link is
+ * https or it is nothing.
+ */
+const openSafely = (url: string) => {
+  if (/^https?:\/\//i.test(url)) Linking.openURL(url);
+};
+
 export function LinkPill({ label, url }: { label: string; url: string }) {
   const [hovered, setHovered] = useState(false);
   return (
     <Pressable
-      onPress={() => Linking.openURL(url)}
+      onPress={() => openSafely(url)}
       onHoverIn={() => setHovered(true)}
       onHoverOut={() => setHovered(false)}
       style={[styles.pill, hovered && styles.pillHovered]}
