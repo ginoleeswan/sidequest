@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { useDurations } from '@/lib/durations';
@@ -30,6 +30,19 @@ import { widgetPlan } from '@/lib/widgetPlan';
  * build without the app group, `widgetStore()` is null and every call
  * below returns immediately.
  */
+
+/**
+ * How long an edit has to stop before it reaches the widgets.
+ *
+ * iOS meters widget reloads, and PRODUCT.md §6 makes a point of the
+ * timeline sidestepping that budget — which it does not do if the app
+ * spends the budget itself. Tidying a shelf or importing from Steam is
+ * a burst of library writes, and each one would otherwise be two
+ * reloads. Long enough to collapse a burst into one, short enough that
+ * putting the phone down straight after a change still publishes it.
+ */
+const SETTLE_MS = 1_500;
+
 export function WidgetPublisher() {
   const { entries } = useLibrary();
   const { durationOf, overrides } = useDurations();
@@ -39,25 +52,52 @@ export function WidgetPublisher() {
     null
   );
 
-  useEffect(() => {
-    // Read per run rather than captured once: a `now` taken at mount
-    // goes stale on a phone left open for days, and the timeline it
-    // produced would start in the past.
-    const now = Date.now();
-    const all = Object.values(entries);
-    const hoursOf = (entry: (typeof all)[number]) =>
-      durationOf(entry.game).hours;
+  /**
+   * What was last handed over, so an unchanged plan is not re-sent.
+   *
+   * Several things here are rebuilt on every render and a few change
+   * without changing what a widget would show — a re-fetched duration
+   * that lands on the same number, a pace read back from storage. Each
+   * of those would otherwise cost a write and two reloads for no
+   * visible difference.
+   */
+  const published = useRef<{ plan: string; year: string } | null>(null);
 
-    void publishPlan(
-      widgetPlan({ entries: all, hoursOf, pace, windowWeeks, now })
-    );
-    void publishYear(
-      buildMemcard(
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Read per run rather than captured once: a `now` taken at mount
+      // goes stale on a phone left open for days, and the timeline it
+      // produced would start in the past.
+      const now = Date.now();
+      const all = Object.values(entries);
+      const hoursOf = (entry: (typeof all)[number]) =>
+        durationOf(entry.game).hours;
+
+      const days = widgetPlan({
+        entries: all,
+        hoursOf,
+        pace,
+        windowWeeks,
+        now,
+      });
+      const card = buildMemcard(
         all,
         (game) => durationOf(game).hours,
         new Date(now).getFullYear()
-      )
-    );
+      );
+
+      const plan = JSON.stringify(days);
+      const year = JSON.stringify(card);
+      const last = published.current;
+      // The dates move every midnight even when nothing else does, so
+      // the first publish after a day turns over is a real change.
+      if (last?.plan === plan && last?.year === year) return;
+      published.current = { plan, year };
+
+      void publishPlan(days);
+      void publishYear(card);
+    }, SETTLE_MS);
+    return () => clearTimeout(timer);
     // `overrides` is here because a corrected length changes every
     // number the widgets show while leaving the library untouched.
   }, [entries, overrides, durationOf, pace, windowWeeks]);
