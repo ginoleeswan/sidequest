@@ -86,26 +86,26 @@ export function buildAlerts(
             days,
             hoursLeft: left,
             /*
-             * Names the two things the card actually offers.
+             * Names the two escapes, both of which are on the card.
              *
-             * It used to say "Move the date, or let it go", and neither
-             * was on it: "let it go" is this app's own phrase for
-             * dropping a GAME (see the You screen's LET GO, and coral
-             * in the palette), which happens on the amnesty screen with
-             * a reason attached — while the button beside this sentence
-             * clears the DEADLINE and keeps the game. Offering a reader
-             * relief in words the buttons cannot deliver is the exact
-             * way §11.3's guilt reading creeps in.
+             * This sentence promised "let it go" for a long time while
+             * the card had no such button — "let it go" being this
+             * app's own phrase for dropping a GAME, which lived only on
+             * the amnesty screen. Telling somebody a thing is hopeless
+             * and then leaving them to find the exit is exactly how
+             * §11.3's guilt reading creeps in.
              *
-             * The permission stays, because that is the point of the
-             * sentence. It is just permission for something real.
+             * Both are real now. Drop the date keeps the game without
+             * one; Let it go asks why, the same way the amnesty screen
+             * does, because the reason is the only thing the shelves
+             * ever learn from a drop.
              */
             message:
               days <= 0
-                ? `${name} is past the date you set. Drop the date, or open it and set a new one — both are allowed.`
+                ? `${name} is past the date you set. Drop the date, or let it go — both are allowed.`
                 : `${name} needs ${round(left)}h and there is only room for about ${round(
                     capacity
-                  )}h before your date. Drop the date, or open it and give yourself longer — both are allowed.`,
+                  )}h before your date. Drop the date, or let it go — both are allowed.`,
           });
           continue;
         }

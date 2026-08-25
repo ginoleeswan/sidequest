@@ -80,3 +80,47 @@ describe('alerts', () => {
     expect(router.push).toHaveBeenCalledWith('/game/1');
   });
 });
+
+describe('letting a game go from the alert', () => {
+  const DROPS = 'sidequest.drops.v1';
+
+  it('offers it, because the sentence promises it', async () => {
+    // PRODUCT.md §6.4 calls "you can't finish this, drop it?" the
+    // honest notification. This card is where the app says it.
+    await renderApp(<Alerts alerts={[alert()]} />);
+    expect(screen.getByText('Let it go')).toBeTruthy();
+  });
+
+  it('asks why before it does anything', async () => {
+    // The reason is the only thing the shelves ever learn from a drop,
+    // and a one-tap delete would throw it away.
+    await renderApp(<Alerts alerts={[alert()]} />);
+    await fireEvent.press(screen.getByText('Let it go'));
+    expect(screen.getByText('Why this one? Optional.')).toBeTruthy();
+    // And nothing has gone yet.
+    expect(saved()).toBeTruthy();
+  });
+
+  it('lets it go, and learns from the answer', async () => {
+    await renderApp(<Alerts alerts={[alert()]} />);
+    await fireEvent.press(screen.getByText('Let it go'));
+    await fireEvent.press(screen.getByText('Too long for me'));
+    await waitFor(() => expect(saved()).toBeUndefined());
+    expect(JSON.parse(store[DROPS] ?? '{}')['too-long']).toBe(1);
+  });
+
+  it('takes “rather not say” for an answer', async () => {
+    // Nothing here may trap somebody who has already decided.
+    await renderApp(<Alerts alerts={[alert()]} />);
+    await fireEvent.press(screen.getByText('Let it go'));
+    await fireEvent.press(screen.getByText('Rather not say'));
+    await waitFor(() => expect(saved()).toBeUndefined());
+    expect(store[DROPS]).toBeUndefined();
+  });
+
+  it('offers it only where it makes sense', async () => {
+    // A game an evening from its credits is not one to let go of.
+    await renderApp(<Alerts alerts={[alert({ kind: 'nearly-done' })]} />);
+    expect(screen.queryByText('Let it go')).toBeNull();
+  });
+});

@@ -49,12 +49,9 @@ describe('what to say when the app opens', () => {
       NOW
     );
     expect(alerts[0].kind).toBe('at-risk');
-    // Names the two things the card offers, and only those: the
-    // button beside it clears the deadline, and Open goes to the game.
-    expect(alerts[0].message).toMatch(/Drop the date, or open it/);
-    // Never the app's word for dropping a GAME, which this card
-    // cannot do — that lives on the amnesty screen, with a reason.
-    expect(alerts[0].message).not.toMatch(/let it go/i);
+    // Both escapes are named, and both are buttons on the card: one
+    // keeps the game without a date, the other lets the game go.
+    expect(alerts[0].message).toMatch(/Drop the date, or let it go/);
   });
 
   it('reassures when a date can be met', () => {
