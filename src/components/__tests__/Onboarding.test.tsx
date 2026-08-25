@@ -11,6 +11,11 @@ const picks: Game[] = [1, 2, 3, 4, 5, 6].map(
 
 const ORIGINAL_KEY = process.env.EXPO_PUBLIC_RAWG_API_KEY;
 
+/** The route the test is standing on. See jest.setup's usePathname. */
+const at = (pathname: string) => {
+  (globalThis as { routePathname?: string }).routePathname = pathname;
+};
+
 let store: Record<string, string>;
 beforeAll(() => {
   store = useFakeStorage();
@@ -53,6 +58,38 @@ describe('onboarding', () => {
   it('opens on the promise', async () => {
     await renderApp(<Onboarding />);
     expect(screen.getByText('Set me up')).toBeTruthy();
+  });
+
+  it.each([
+    ['a shared game link', '/game/3498'],
+    ['a browse page', '/by/developer'],
+    ['the about page', '/about'],
+    ['the privacy policy', '/privacy'],
+    ['the terms', '/terms'],
+    ['a shared plan', '/shared'],
+  ])('stays out of the way of %s', async (_name, pathname) => {
+    // Somebody who followed a link is being shown the thing they
+    // clicked. Game pages are the ones this originally missed and the
+    // worst ones to miss: they are the main shareable surface, they
+    // have link previews built for them, and the sitemap submits them
+    // to search engines — so every search result led to a carousel
+    // about backlogs rather than to the game just searched for.
+    at(pathname);
+    await renderApp(<Onboarding />);
+    expect(screen.queryByText(/Your backlog isn/)).toBeNull();
+    at('/');
+  });
+
+  it.each([
+    ['the home screen', '/'],
+    ['the plan', '/plan'],
+    ['the library', '/library'],
+    ['you', '/you'],
+  ])('still opens on %s, which is somebody using the app', async (_n, path) => {
+    at(path);
+    await renderApp(<Onboarding />);
+    expect(screen.getByText(/Your backlog isn/)).toBeTruthy();
+    at('/');
   });
 
   it('stays away once it has been seen', async () => {
