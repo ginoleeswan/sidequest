@@ -59,6 +59,7 @@ Open in [Expo Go](https://expo.dev/go), an emulator, or press `w` for web.
 | `npm run test:hydration`             | builds nothing — runs `e2e/hydration.mjs` over `dist/` |
 | `npm run test:a11y`                  | axe (WCAG A/AA) over `dist/`, both widths              |
 | `npm run test:icons`                 | every named icon draws from the subset font            |
+| `npm run test:data`                  | data-full screens say the sentences a reader acts on   |
 | `npm run test:perf`                  | 4G + 4x CPU: bytes, FCP, LCP, CLS against budgets      |
 | `npm run test:live`                  | sync against a real Supabase project (see below)       |
 | `npm run build`                      | sitemap + static web export into `dist/`               |
