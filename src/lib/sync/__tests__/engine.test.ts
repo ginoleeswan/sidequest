@@ -392,6 +392,77 @@ describe('syncOnce', () => {
     });
   });
 
+  describe('a library too big for one statement', () => {
+    // The asymmetry that was a real bug: the pull has been paged since
+    // it was written, the push was not. CSV import has no cap on it, so
+    // a long backlog went up as a single upsert — over the request size
+    // limit, refused for a reason that is not a constraint violation,
+    // and therefore retried forever.
+    const shelf = (count: number) =>
+      Object.fromEntries(
+        Array.from({ length: count }, (_, i) => [
+          String(i + 1),
+          entry({ game: game(i + 1, `Game ${i + 1}`) }),
+        ])
+      );
+
+    it('sends a long backlog in statements the server will take', async () => {
+      const { backend, calls } = fakeBackend();
+      const result = await syncOnce(backend, state({ entries: shelf(1000) }));
+      if (!result.ok) throw new Error('expected a finished round');
+      expect(result.pushed).toBe(1000);
+      expect(calls.library.length).toBeGreaterThan(1);
+      for (const batch of calls.library) {
+        expect(batch.length).toBeLessThanOrEqual(200);
+      }
+      // Every row, once, across the batches.
+      const ids = calls.library.flat().map((row) => row.game_id);
+      expect(new Set(ids).size).toBe(1000);
+    });
+
+    it('chunks the games cache too', async () => {
+      const { backend, calls } = fakeBackend();
+      await syncOnce(backend, state({ entries: shelf(500) }));
+      expect(calls.games.length).toBeGreaterThan(1);
+      for (const batch of calls.games) {
+        expect(batch.length).toBeLessThanOrEqual(200);
+      }
+    });
+
+    it('still finds one bad row in a long backlog', async () => {
+      const { backend } = fakeBackend({
+        pushLibrary: async (rows) => {
+          if (rows.some((row) => row.game_id === 777)) {
+            throw new SyncError('refused', '23514');
+          }
+        },
+      });
+      const result = await syncOnce(backend, state({ entries: shelf(1000) }));
+      if (!result.ok) throw new Error('expected a finished round');
+      expect(result.stuck.map((s) => s.key)).toEqual(['777']);
+      expect(result.pushed).toBe(999);
+    });
+
+    it('a network failure part way through changes nothing', async () => {
+      // Earlier chunks are already on the server, which is safe rather
+      // than merely tolerable: the upserts are idempotent and `known`
+      // does not move for a round that did not finish, so the next
+      // round sends them again and reaches the same place.
+      let batches = 0;
+      const { backend } = fakeBackend({
+        pushLibrary: async () => {
+          batches += 1;
+          if (batches === 3) throw new SyncError('connection reset', '08006');
+        },
+      });
+      const before = state({ entries: shelf(1000) });
+      const result = await syncOnce(backend, before);
+      expect(result.ok).toBe(false);
+      expect(before.cursors).toEqual(NO_CURSORS);
+      expect(Object.keys(before.entries)).toHaveLength(1000);
+    });
+  });
+
   describe('a row the server will never accept', () => {
     // The failure this exists for: a round is one statement per table,
     // so without it a single impossible value stops every other game

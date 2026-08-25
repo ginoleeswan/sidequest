@@ -157,6 +157,51 @@ const hours = (row: { value?: number }) => row.value ?? 0;
  * request into a storm of them — so those are rethrown untouched and
  * the round ends the way it always has, changing nothing.
  */
+/**
+ * How many rows go up in one statement.
+ *
+ * The pull has been paged since it was written; the push was not, and
+ * the asymmetry was a real bug. A CSV import has no cap on it, so a
+ * person moving a long backlog in would have sent every row as a single
+ * upsert — over the request size limit, refused for a reason that is
+ * not a constraint violation, and therefore classified as temporary and
+ * retried forever. Sync permanently broken for precisely the people
+ * with the most to sync, which is who this app is for.
+ *
+ * Smaller than the pull's page because these rows are much fatter: a
+ * library entry carries a note and a tag array, where a pulled row is
+ * read back into a fixed shape.
+ */
+const CHUNK = 200;
+
+/**
+ * Send everything, a chunk at a time, and report what landed.
+ *
+ * Sequential rather than parallel on purpose. Fifteen simultaneous
+ * upserts from a phone on a train is a worse way to fail than fifteen
+ * one after another, and it buys nothing: the round is not waiting on
+ * anything else.
+ *
+ * A chunk that fails on the network ends the round with earlier chunks
+ * already on the server. That is safe rather than merely tolerable —
+ * the upserts are idempotent and `known` is not updated for a round
+ * that did not finish, so the next round sends them again and reaches
+ * the same place.
+ */
+async function pushEverything<T extends Row>(
+  rows: T[],
+  send: (batch: T[]) => Promise<void>
+): Promise<{ sent: T[]; rejected: { row: T; reason: string }[] }> {
+  const sent: T[] = [];
+  const rejected: { row: T; reason: string }[] = [];
+  for (let from = 0; from < rows.length; from += CHUNK) {
+    const part = await pushSurvivors(rows.slice(from, from + CHUNK), send);
+    sent.push(...part.sent);
+    rejected.push(...part.rejected);
+  }
+  return { sent, rejected };
+}
+
 async function pushSurvivors<T extends Row>(
   rows: T[],
   send: (batch: T[]) => Promise<void>
@@ -270,7 +315,7 @@ export async function syncOnce(
       // The games cache gets the same treatment: one malformed release
       // date should cost that one game, not the whole shelf.
       if (named.length > 0) {
-        await pushSurvivors(
+        await pushEverything(
           named.map((game, index) => ({
             key: String(game.id),
             clientUpdatedAt: index,
@@ -279,7 +324,7 @@ export async function syncOnce(
           (batch) => backend.pushGames(batch.map((row) => row.game))
         );
       }
-      const outcome = await pushSurvivors(libraryTry, (batch) =>
+      const outcome = await pushEverything(libraryTry, (batch) =>
         backend.pushLibrary(libraryUpload(batch))
       );
       librarySent = outcome.sent;
@@ -314,7 +359,7 @@ export async function syncOnce(
       reason: string;
     }[] = [];
     if (durationsTry.length > 0) {
-      const outcome = await pushSurvivors(durationsTry, (batch) =>
+      const outcome = await pushEverything(durationsTry, (batch) =>
         backend.pushDurations(durationsUpload(batch))
       );
       durationsSent = outcome.sent;
