@@ -87,7 +87,7 @@ export function pickShelves(
  * so an id is not enough. Articles and punctuation go, because that is
  * the whole of the difference in every case seen so far.
  */
-export function gameKey(game: Game): string {
+function gameKey(game: Game): string {
   return game.name
     .toLowerCase()
     .replace(/^(the|a|an)\s+/, '')

@@ -5,7 +5,9 @@ import { renderApp, useFakeStorage } from '@/test-utils';
 import type { Game } from '@/api/types';
 import type { Section } from '@/constants/categories';
 
-beforeAll(() => useFakeStorage());
+// Per test, not per suite: a write in one test must not be visible to
+// the next, or the suite is order-dependent by construction.
+beforeEach(() => useFakeStorage());
 
 const games = (n: number): Game[] =>
   Array.from({ length: n }, (_, i) => ({

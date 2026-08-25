@@ -60,7 +60,7 @@ export function GameCard({ game, wide = false }: Props) {
             {game.name}
           </Text>
           <View style={styles.metaRow}>
-            <Ionicons name="star" size={12} color="#FFD300" />
+            <Ionicons name="star" size={12} color={COLORS.starGold} />
             <Text style={styles.meta}>{game.rating.toFixed(1)}</Text>
             {year ? <Text style={styles.meta}>· {year}</Text> : null}
           </View>

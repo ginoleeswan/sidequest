@@ -85,7 +85,16 @@ export function SignInRows() {
    */
   useEffect(() => {
     if (Platform.OS !== 'ios') return;
-    AppleAuthentication.isAvailableAsync().then(setAppleReady);
+    // The probe itself can throw where the native module is missing
+    // (Expo Go) — the exact situation it exists to detect — and it can
+    // resolve after this screen is gone.
+    let alive = true;
+    AppleAuthentication.isAvailableAsync()
+      .then((ready) => alive && setAppleReady(ready))
+      .catch(() => alive && setAppleReady(false));
+    return () => {
+      alive = false;
+    };
   }, []);
 
   if (!available) return null;

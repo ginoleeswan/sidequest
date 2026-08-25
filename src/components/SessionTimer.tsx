@@ -33,7 +33,7 @@ const TICK_MS = 15_000;
  */
 export function SessionTimer({ game }: { game: Game }) {
   const hydrated = useHydrated();
-  const { addPlayTime, setStatus } = useLibrary();
+  const { addPlayTime, entries, setStatus } = useLibrary();
   const toast = useToast();
 
   const [running, setRunning] = useState<RunningSession | null>(null);
@@ -133,6 +133,21 @@ export function SessionTimer({ game }: { game: Game }) {
   return (
     <Pressable
       onPress={() => {
+        // The label says "stops X", so stopping must mean what it means
+        // everywhere else: the other game's time is logged and credited,
+        // not thrown away. startSession alone would overwrite the
+        // running record — ninety unlogged minutes gone on one tap.
+        if (running) {
+          const logged = endSession();
+          if (logged) {
+            const other = entries[String(logged.gameId)];
+            if (other) addPlayTime(other.game, logged.minutes / 60);
+            toast(
+              `Logged ${formatMinutes(logged.minutes)} on ${running.name}`,
+              'checkmark-circle'
+            );
+          }
+        }
         setRunning(startSession(game.id, game.name));
         setNow(Date.now());
       }}

@@ -5,14 +5,11 @@ import { Rail } from './Rail';
 import { SectionHeader } from './SectionHeader';
 import type { Game } from '@/api/types';
 import type { Section } from '@/constants/categories';
+import { calendarDate } from '@/lib/format';
 import { LAYOUT, SPACING } from '@/styles/theme';
 
 const shortDate = (iso: string | null | undefined) =>
-  iso
-    ? new Date(iso)
-        .toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-        .toUpperCase()
-    : undefined;
+  iso ? calendarDate(iso, 'short').toUpperCase() : undefined;
 
 interface Props {
   section: Section;

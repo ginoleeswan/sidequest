@@ -205,7 +205,7 @@ export function memcardEvents(
 }
 
 /** Where an evening starts, when nobody has said otherwise. */
-export const EVENING_START_HOUR = 20;
+const EVENING_START_HOUR = 20;
 
 /**
  * The week's plan as real appointments.

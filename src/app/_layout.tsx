@@ -51,7 +51,9 @@ function ScrollToTop() {
   return null;
 }
 
-SplashScreen.preventAutoHideAsync();
+// Rejects where no native splash is registered (web, some dev clients);
+// that is a no-op, not a startup error.
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 /**
  * The same three weights in the format each platform can read.
@@ -110,7 +112,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     // Don't hold the splash hostage to a font that will never arrive.
-    if (fontsLoaded || fontError) SplashScreen.hideAsync();
+    if (fontsLoaded || fontError) SplashScreen.hideAsync().catch(() => {});
   }, [fontsLoaded, fontError]);
 
   if (!fontsLoaded && !fontError) return null;

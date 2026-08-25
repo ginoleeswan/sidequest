@@ -30,9 +30,6 @@ export const easeOutCubic = (t: number): number => 1 - Math.pow(1 - t, 3);
 /** Slow to leave, then gone. For exits that accelerate past you. */
 export const easeInCubic = (t: number): number => t * t * t;
 
-export const easeInOut = (t: number): number =>
-  t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-
 /**
  * Past the target, then back to it. `pull` is how far past.
  *

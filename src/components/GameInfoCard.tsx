@@ -47,7 +47,7 @@ export function GameInfoCard({ game }: { game: Game }) {
         <View style={styles.metaRow}>
           {game.rating > 0 && (
             <>
-              <Ionicons name="star" size={13} color="#FFD300" />
+              <Ionicons name="star" size={13} color={COLORS.starGold} />
               <Text style={styles.meta}>{game.rating.toFixed(1)}</Text>
             </>
           )}

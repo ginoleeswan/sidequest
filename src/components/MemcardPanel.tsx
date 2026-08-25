@@ -29,7 +29,8 @@ import { RADIUS } from '@/styles/theme';
  */
 
 /** Where the cut corner starts, clamped so it is a chamfer at any size. */
-const notchFor = (width: number) => Math.max(30, Math.min(52, width * 0.055));
+export const notchFor = (width: number) =>
+  Math.max(30, Math.min(52, width * 0.055));
 
 /**
  * The outline: rounded everywhere except the top right, which is cut

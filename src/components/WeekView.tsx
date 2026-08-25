@@ -147,12 +147,15 @@ export function WeekView({
        * permission sheet therefore arrives while they are asking for
        * exactly this, instead of at launch with no context.
        *
-       * Awaited but not guarded: a decline returns 0 rather than
-       * throwing, and the calendar write above has already succeeded,
-       * so there is nothing to undo and nothing to apologise for. The
-       * toast simply does not mention reminders that were never set.
+       * A decline returns 0 rather than throwing — but the module
+       * itself CAN throw (Expo Go, notifications unavailable), and an
+       * uncaught throw here used to fall into the calendar catch below
+       * and report "Couldn't reach your calendar" about a write that
+       * had already succeeded. The calendar's toast tells the
+       * calendar's truth; reminders that could not be set are simply
+       * not mentioned, same as reminders that were declined.
        */
-      const nudges = await scheduleEvenings(events);
+      const nudges = await scheduleEvenings(events).catch(() => 0);
       toast(
         (events.length === 1
           ? 'One evening, filed in your calendar'

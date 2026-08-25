@@ -59,6 +59,53 @@ describe('LibraryProvider', () => {
     expect(result.current.byStatus('wishlist')).toHaveLength(0);
   });
 
+  it('keeps the note, rating, tags and flags through a status change', async () => {
+    const { result } = await setup();
+    await act(async () => {
+      result.current.setStatus(game(1), 'playing');
+      result.current.setNote(1, 'co-op with Sam');
+      result.current.setRating(1, 4);
+      result.current.addTag(1, 'co-op');
+      result.current.setDeadline(1, 1_700_000_000_000);
+      result.current.setWant(1, 3);
+    });
+    // The tap that used to eat the note: finishing the game.
+    await act(async () => {
+      result.current.setStatus(game(1), 'finished');
+    });
+    const entry = result.current.entries['1'];
+    expect(entry.note).toBe('co-op with Sam');
+    expect(entry.rating).toBe(4);
+    expect(entry.tags).toEqual(['co-op']);
+    expect(entry.deadline).toBe(1_700_000_000_000);
+    expect(entry.want).toBe(3);
+  });
+
+  it('re-importing a game keeps everything its owner gave it', async () => {
+    const { result } = await setup();
+    await act(async () => {
+      result.current.setStatus(game(1), 'playing');
+      result.current.setNote(1, 'almost at the end');
+      result.current.addTag(1, 'must-play');
+      result.current.setDeadline(1, 1_700_000_000_000);
+      result.current.setWant(1, 3);
+    });
+    // A Steam import that happens to include the same game.
+    await act(async () => {
+      result.current.addGames([
+        { game: game(1), status: 'wishlist', hoursPlayed: 12, steamAppId: 42 },
+      ]);
+    });
+    const entry = result.current.entries['1'];
+    expect(entry.status).toBe('playing');
+    expect(entry.note).toBe('almost at the end');
+    expect(entry.tags).toEqual(['must-play']);
+    expect(entry.deadline).toBe(1_700_000_000_000);
+    expect(entry.want).toBe(3);
+    expect(entry.hoursPlayed).toBe(12);
+    expect(entry.steamAppId).toBe(42);
+  });
+
   it('removes a game when its status is cleared', async () => {
     const { result } = await setup();
     await act(async () => {

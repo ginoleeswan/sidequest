@@ -33,7 +33,7 @@
  * the shortest of the three.
  */
 export const BEAT_ARRIVE = 0.16;
-export const BEAT_DWELL = 0.16;
+const BEAT_DWELL = 0.16;
 export const BEAT_EXIT = 0.18;
 
 /**

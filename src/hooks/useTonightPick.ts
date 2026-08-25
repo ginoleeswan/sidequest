@@ -15,7 +15,7 @@ import type { TonightPick } from '@/lib/stage';
  * pre-rendered HTML has no idea what day it is being read on, and a
  * Saturday's answer in Monday's markup is a hydration mismatch.
  */
-export function useSessionMinutes(): number {
+function useSessionMinutes(): number {
   const hydrated = useHydrated();
   const [minutes] = useState(() => sessionMinutesFor());
   return hydrated ? minutes : 90;
