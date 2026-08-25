@@ -68,7 +68,11 @@ export function remoteLibrary(rows: LibraryRow[]): Carried<LibraryEntry>[] {
   return rows.map((row) => {
     const stamp = new Date(row.client_updated_at).getTime();
     if (row.deleted_at != null) {
-      return { key: String(row.game_id), clientUpdatedAt: stamp, deleted: true };
+      return {
+        key: String(row.game_id),
+        clientUpdatedAt: stamp,
+        deleted: true,
+      };
     }
     return {
       key: String(row.game_id),
@@ -96,9 +100,7 @@ export function remoteLibrary(rows: LibraryRow[]): Carried<LibraryEntry>[] {
 }
 
 /** What goes up. `user_id` is added by the caller, which holds the session. */
-export function libraryUpload(
-  carried: Carried<LibraryEntry>[]
-): LibraryRow[] {
+export function libraryUpload(carried: Carried<LibraryEntry>[]): LibraryRow[] {
   return carried.map((row) => {
     const entry = row.value;
     if (!entry) {
@@ -152,7 +154,9 @@ export function applyLibrary(
       // Never trade a real game snapshot for the stub a pulled row
       // carries: the device's copy has the artwork, the name and the
       // platforms, and losing those turns a shelf into a row of blanks.
-      game: row.value.game.name ? row.value.game : (mine?.game ?? row.value.game),
+      game: row.value.game.name
+        ? row.value.game
+        : (mine?.game ?? row.value.game),
     };
   }
   return next;
@@ -227,7 +231,8 @@ export function applyDurations(
 ): Record<string, number> {
   const next: Record<string, number> = {};
   for (const row of merged) {
-    if (typeof row.value === 'number' && row.value > 0) next[row.key] = row.value;
+    if (typeof row.value === 'number' && row.value > 0)
+      next[row.key] = row.value;
   }
   return next;
 }

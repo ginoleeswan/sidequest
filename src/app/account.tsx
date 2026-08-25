@@ -256,7 +256,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   // Hollow, so the two lists read as opposites at a glance.
-  bulletOff: { backgroundColor: 'transparent', borderWidth: 1, borderColor: COLORS.mediumGrey },
+  bulletOff: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: COLORS.mediumGrey,
+  },
   listText: { ...TYPE.body, color: COLORS.lightGrey, flex: 1 },
   fine: { ...TYPE.caption, color: COLORS.mediumGrey, marginTop: SPACING.md },
   link: {

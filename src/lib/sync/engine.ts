@@ -148,7 +148,9 @@ export async function syncOnce(
     }
 
     /* -------------------------------------------------------- durations */
-    const pulledDurations = await backend.pullDurations(local.cursors.durations);
+    const pulledDurations = await backend.pullDurations(
+      local.cursors.durations
+    );
     const durationPlan = mergeRows(
       localDurations(local.durations, now),
       remoteDurations(pulledDurations)
@@ -177,9 +179,14 @@ export async function syncOnce(
       const theirs = new Date(remotePrefs.client_updated_at).getTime();
       const mine = local.preferences.updatedAt ?? 0;
       if (theirs > mine) {
-        preferences = { ...preferencesDownload(remotePrefs), updatedAt: theirs };
+        preferences = {
+          ...preferencesDownload(remotePrefs),
+          updatedAt: theirs,
+        };
       } else {
-        await backend.pushPreferences(preferencesUpload(local.preferences, now));
+        await backend.pushPreferences(
+          preferencesUpload(local.preferences, now)
+        );
       }
     } else {
       await backend.pushPreferences(preferencesUpload(local.preferences, now));

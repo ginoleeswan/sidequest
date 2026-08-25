@@ -362,7 +362,11 @@ export default function YouScreen() {
                             ? 'cloud-done'
                             : 'cloud-outline'
                     }
-                    label={session ? SYNC_LABEL[syncStatus.state] : 'Sync to another device'}
+                    label={
+                      session
+                        ? SYNC_LABEL[syncStatus.state]
+                        : 'Sync to another device'
+                    }
                     value={session ? (email ?? undefined) : 'Not signed in'}
                     onPress={() => router.push('/account')}
                   />

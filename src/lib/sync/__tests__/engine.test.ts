@@ -112,7 +112,10 @@ const pulledEntry = (over: Partial<Stamped<LibraryRow>> = {}) =>
 describe('syncOnce', () => {
   it('pushes a local library up to an empty account', async () => {
     const { backend, calls } = fakeBackend();
-    const result = await syncOnce(backend, state({ entries: { '42': entry() } }));
+    const result = await syncOnce(
+      backend,
+      state({ entries: { '42': entry() } })
+    );
     expect(result.ok).toBe(true);
     expect(calls.library[0]).toHaveLength(1);
     expect(calls.library[0][0].game_id).toBe(42);
@@ -123,7 +126,9 @@ describe('syncOnce', () => {
     // game the table has never heard of fails the whole batch.
     const { backend, order } = fakeBackend();
     await syncOnce(backend, state({ entries: { '42': entry() } }));
-    expect(order.indexOf('pushGames')).toBeLessThan(order.indexOf('pushLibrary'));
+    expect(order.indexOf('pushGames')).toBeLessThan(
+      order.indexOf('pushLibrary')
+    );
   });
 
   it('adopts what a fresh device pulls', async () => {
@@ -152,7 +157,9 @@ describe('syncOnce', () => {
     const { backend, calls } = fakeBackend();
     await syncOnce(
       backend,
-      state({ cursors: { library: '2026-01-01T00:00:00.000Z', durations: null } })
+      state({
+        cursors: { library: '2026-01-01T00:00:00.000Z', durations: null },
+      })
     );
     expect(calls.pulledSince[0]).toBe('2026-01-01T00:00:00.000Z');
   });
@@ -195,7 +202,10 @@ describe('syncOnce', () => {
     const { backend } = fakeBackend({
       pullLibrary: async () => [pulledEntry()],
     });
-    const result = await syncOnce(backend, state({ entries: { '42': entry() } }));
+    const result = await syncOnce(
+      backend,
+      state({ entries: { '42': entry() } })
+    );
     if (!result.ok) throw new Error('expected a finished round');
     expect(result.pulled).toBe(1);
     expect(result.pushed).toBe(1);
@@ -208,7 +218,10 @@ describe('syncOnce', () => {
           throw new Error('offline');
         },
       });
-      const result = await syncOnce(backend, state({ entries: { '42': entry() } }));
+      const result = await syncOnce(
+        backend,
+        state({ entries: { '42': entry() } })
+      );
       expect(result.ok).toBe(false);
       if (result.ok) return;
       expect(result.reason).toBe('offline');
@@ -238,7 +251,10 @@ describe('syncOnce', () => {
           throw new Error('row level security');
         },
       });
-      const result = await syncOnce(backend, state({ entries: { '42': entry() } }));
+      const result = await syncOnce(
+        backend,
+        state({ entries: { '42': entry() } })
+      );
       expect(result.ok).toBe(false);
     });
   });
@@ -289,7 +305,9 @@ describe('syncOnce', () => {
       const second = fakeBackend();
       await syncOnce(second.backend, {
         ...one.state,
-        entries: { '42': entry({ status: 'finished', updatedAt: 1_900_000_000_000 }) },
+        entries: {
+          '42': entry({ status: 'finished', updatedAt: 1_900_000_000_000 }),
+        },
       });
       expect(second.calls.library[0]).toHaveLength(1);
       expect(second.calls.library[0][0].status).toBe('finished');
@@ -356,12 +374,18 @@ describe('syncOnce', () => {
           throw new Error('row level security');
         },
       });
-      const result = await syncOnce(backend, state({ entries: { '42': entry() } }));
+      const result = await syncOnce(
+        backend,
+        state({ entries: { '42': entry() } })
+      );
       expect(result.ok).toBe(false);
 
       // The next round, against a backend that works, still sends it.
       const retry = fakeBackend();
-      const again = await syncOnce(retry.backend, state({ entries: { '42': entry() } }));
+      const again = await syncOnce(
+        retry.backend,
+        state({ entries: { '42': entry() } })
+      );
       expect(again.ok).toBe(true);
       expect(retry.calls.library[0]).toHaveLength(1);
     });

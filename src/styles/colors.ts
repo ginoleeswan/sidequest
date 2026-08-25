@@ -60,4 +60,3 @@ export const COLORS = {
    */
   grade: 'rgba(39,47,63,0.14)',
 } as const;
-

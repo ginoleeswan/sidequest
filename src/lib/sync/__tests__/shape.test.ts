@@ -104,7 +104,9 @@ describe('a library entry, round tripped', () => {
   });
 
   it('a tombstone still satisfies the columns the table demands', () => {
-    const [row] = libraryUpload([{ key: '42', clientUpdatedAt: 1_700_000_000_000 }]);
+    const [row] = libraryUpload([
+      { key: '42', clientUpdatedAt: 1_700_000_000_000 },
+    ]);
     expect(row.deleted_at).not.toBeNull();
     expect(row.game_id).toBe(42);
     expect(row.status).toBeTruthy();
@@ -138,17 +140,27 @@ describe('applyLibrary', () => {
   it('keeps the device’s own artwork rather than a pulled stub', () => {
     // The regression this exists to stop: a shelf of blanks. A pulled
     // row knows the game id and nothing else.
-    const stub = { game: { id: 42 } as Game, status: 'playing' as const, addedAt: 1 };
-    const next = applyLibrary([{ key: '42', clientUpdatedAt: 2, value: stub }], {
-      '42': entry(),
-    });
+    const stub = {
+      game: { id: 42 } as Game,
+      status: 'playing' as const,
+      addedAt: 1,
+    };
+    const next = applyLibrary(
+      [{ key: '42', clientUpdatedAt: 2, value: stub }],
+      {
+        '42': entry(),
+      }
+    );
     expect(next['42'].game.name).toBe('Hades');
     expect(next['42'].game.background_image).toContain('hades');
   });
 
   it('takes a pulled game whole when the device has never seen it', () => {
     const named = entry({ game: game({ id: 7, name: 'Tunic' }) });
-    const next = applyLibrary([{ key: '7', clientUpdatedAt: 2, value: named }], {});
+    const next = applyLibrary(
+      [{ key: '7', clientUpdatedAt: 2, value: named }],
+      {}
+    );
     expect(next['7'].game.name).toBe('Tunic');
   });
 
@@ -181,9 +193,9 @@ describe('durations', () => {
   });
 
   it('discard a correction of zero rather than storing a nonsense length', () => {
-    expect(applyDurations([{ key: '42', clientUpdatedAt: 1, value: 0 }])).toEqual(
-      {}
-    );
+    expect(
+      applyDurations([{ key: '42', clientUpdatedAt: 1, value: 0 }])
+    ).toEqual({});
   });
 
   it('mark a removed correction as a tombstone', () => {
@@ -201,7 +213,10 @@ describe('preferences', () => {
       1_700_000_000_000
     );
     expect(row).toMatchObject({ pace: 8, plan_window: '4w' });
-    expect(preferencesDownload(row)).toMatchObject({ pace: 8, planWindow: '4w' });
+    expect(preferencesDownload(row)).toMatchObject({
+      pace: 8,
+      planWindow: '4w',
+    });
   });
 
   it('send an unset pace as null rather than dropping the column', () => {

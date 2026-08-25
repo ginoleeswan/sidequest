@@ -54,7 +54,9 @@ export function fakeReq(over: Record<string, unknown> = {}) {
   return {
     method: 'GET',
     query: {},
-    headers: { 'x-real-ip': `10.0.${Math.floor(nextIp / 250)}.${nextIp % 250}` },
+    headers: {
+      'x-real-ip': `10.0.${Math.floor(nextIp / 250)}.${nextIp % 250}`,
+    },
     ...over,
   };
 }

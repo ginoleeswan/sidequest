@@ -1,7 +1,4 @@
-import type {
-  Stamped,
-  SyncBackend,
-} from './engine';
+import type { Stamped, SyncBackend } from './engine';
 import type { DurationRow, LibraryRow, PreferencesRow } from './shape';
 import { supabase } from '../supabase';
 
@@ -84,22 +81,18 @@ export function supabaseBackend(userId: string): SyncBackend {
     },
 
     async pushLibrary(rows) {
-      const { error } = await supabase
-        .from('library_entries')
-        .upsert(
-          rows.map((row) => ({ ...row, user_id: userId })),
-          { onConflict: 'user_id,game_id' }
-        );
+      const { error } = await supabase.from('library_entries').upsert(
+        rows.map((row) => ({ ...row, user_id: userId })),
+        { onConflict: 'user_id,game_id' }
+      );
       rethrow(error);
     },
 
     async pushDurations(rows) {
-      const { error } = await supabase
-        .from('game_durations')
-        .upsert(
-          rows.map((row) => ({ ...row, user_id: userId })),
-          { onConflict: 'user_id,game_id' }
-        );
+      const { error } = await supabase.from('game_durations').upsert(
+        rows.map((row) => ({ ...row, user_id: userId })),
+        { onConflict: 'user_id,game_id' }
+      );
       rethrow(error);
     },
 

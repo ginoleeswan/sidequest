@@ -1,4 +1,10 @@
-import { advanceCursor, knownAfter, mergeRows, pendingPush, type Row } from '../merge';
+import {
+  advanceCursor,
+  knownAfter,
+  mergeRows,
+  pendingPush,
+  type Row,
+} from '../merge';
 
 /**
  * The rules that decide whether somebody keeps their library.
@@ -131,7 +137,10 @@ describe('advanceCursor', () => {
 
 describe('pendingPush', () => {
   const held = (...keys: string[]) => new Set(keys);
-  const row = (key: string, clientUpdatedAt: number) => ({ key, clientUpdatedAt });
+  const row = (key: string, clientUpdatedAt: number) => ({
+    key,
+    clientUpdatedAt,
+  });
 
   it('drops what the server is already known to hold', () => {
     const send = pendingPush(held('a'), [row('a', 5)], { a: 5 }, 9);

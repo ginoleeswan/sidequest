@@ -288,29 +288,32 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     [setEntries]
   );
 
-  const addGames = useCallback<LibraryContextValue['addGames']>((games) => {
-    if (games.length === 0) return 0;
-    setEntries((prev) => {
-      const next = { ...prev };
-      for (const { game, status, hoursPlayed, steamAppId } of games) {
-        const existing = next[String(game.id)];
-        // Spread first, for the same reason as setStatus: an import
-        // adds games, it does not overrule them — and "them" includes
-        // the note, rating, tags, deadline and want flag this used to
-        // silently drop from every re-imported game.
-        next[String(game.id)] = {
-          ...existing,
-          game: slim(game),
-          status: existing?.status ?? status,
-          addedAt: existing?.addedAt ?? Date.now(),
-          hoursPlayed: hoursPlayed ?? existing?.hoursPlayed,
-          steamAppId: steamAppId ?? existing?.steamAppId,
-        };
-      }
-      return next;
-    });
-    return games.length;
-  }, [setEntries]);
+  const addGames = useCallback<LibraryContextValue['addGames']>(
+    (games) => {
+      if (games.length === 0) return 0;
+      setEntries((prev) => {
+        const next = { ...prev };
+        for (const { game, status, hoursPlayed, steamAppId } of games) {
+          const existing = next[String(game.id)];
+          // Spread first, for the same reason as setStatus: an import
+          // adds games, it does not overrule them — and "them" includes
+          // the note, rating, tags, deadline and want flag this used to
+          // silently drop from every re-imported game.
+          next[String(game.id)] = {
+            ...existing,
+            game: slim(game),
+            status: existing?.status ?? status,
+            addedAt: existing?.addedAt ?? Date.now(),
+            hoursPlayed: hoursPlayed ?? existing?.hoursPlayed,
+            steamAppId: steamAppId ?? existing?.steamAppId,
+          };
+        }
+        return next;
+      });
+      return games.length;
+    },
+    [setEntries]
+  );
 
   const adoptSynced = useCallback((next: Entries) => commit(next), []);
 

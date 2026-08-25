@@ -36,8 +36,14 @@ jest.mock('../../supabase', () => ({
         Promise.resolve({ data: mockResult.data, error: mockResult.error });
       const builder: Record<string, unknown> = {
         select: (cols: string) => ((call.select = cols), builder),
-        eq: (col: string, val: unknown) => (call.ops.push(['eq', col, val]), builder),
-        gt: (col: string, val: unknown) => (call.ops.push(['gt', col, val]), builder),
+        eq: (col: string, val: unknown) => (
+          call.ops.push(['eq', col, val]),
+          builder
+        ),
+        gt: (col: string, val: unknown) => (
+          call.ops.push(['gt', col, val]),
+          builder
+        ),
         order: (col: string) => (call.ops.push(['order', col]), builder),
         limit: (n: number) => ((call.limit = n), builder),
         maybeSingle: settled,
@@ -175,9 +181,12 @@ describe('supabaseBackend', () => {
       ['pushLibrary', () => backend.pushLibrary([])],
       ['pushDurations', () => backend.pushDurations([])],
       ['pushPreferences', () => backend.pushPreferences({} as never)],
-    ])('%s throws so syncOnce can decide what it means', async (_name, call) => {
-      mockResult.error = { message: 'row level security' };
-      await expect(call()).rejects.toThrow('row level security');
-    });
+    ])(
+      '%s throws so syncOnce can decide what it means',
+      async (_name, call) => {
+        mockResult.error = { message: 'row level security' };
+        await expect(call()).rejects.toThrow('row level security');
+      }
+    );
   });
 });
