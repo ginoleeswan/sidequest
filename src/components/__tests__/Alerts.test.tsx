@@ -53,7 +53,9 @@ describe('alerts', () => {
     expect(screen.getByText('Date cleared. Nothing owed.')).toBeTruthy();
   });
 
-  it('offers the other truth about a game an evening from done', async () => {
+  it('says nothing about a game an evening from done', async () => {
+    // That nudge is Tonight's story now — this section is only for
+    // what actually needs a person.
     await renderApp(
       <Alerts
         alerts={[
@@ -64,14 +66,42 @@ describe('alerts', () => {
         ]}
       />
     );
-    await fireEvent.press(screen.getByLabelText('Mark Pentiment finished'));
-    await waitFor(() => expect(saved().status).toBe('finished'));
+    expect(screen.queryByText('Pentiment')).toBeNull();
   });
 
-  it('does not offer to drop a date that is going to be met', async () => {
+  it('says nothing about a date that is going to be met', async () => {
+    // "That fits" is the route's story. A section named "what doesn't
+    // fit" holding a row about something that does would be the soup
+    // this replaced.
     await renderApp(<Alerts alerts={[alert({ kind: 'due-soon' })]} />);
+    expect(screen.queryByText('Pentiment')).toBeNull();
+  });
+
+  it('holds the window overflow too, in the same calm voice', async () => {
+    await renderApp(
+      <Alerts
+        alerts={[]}
+        overflow={[{ id: 9, name: 'Enormous', hours: 300 }]}
+      />
+    );
+    expect(screen.getByText('Enormous')).toBeTruthy();
+    expect(screen.getByText(/more than the window has/)).toBeTruthy();
+    // Overflow has no date to drop, but letting go is always on offer.
     expect(screen.queryByText('Drop the date')).toBeNull();
-    expect(screen.getByText('Open')).toBeTruthy();
+    expect(screen.getByText('Let it go')).toBeTruthy();
+  });
+
+  it('gives a game one row, even when it fails both ways', async () => {
+    // The old page's defining bug: a game that missed its date AND
+    // overflowed the window appeared twice, in two sections, with two
+    // framings of the same fact.
+    await renderApp(
+      <Alerts
+        alerts={[alert()]}
+        overflow={[{ id: 1, name: 'Pentiment', hours: 40 }]}
+      />
+    );
+    expect(screen.getAllByText('Pentiment')).toHaveLength(1);
   });
 
   it('opens the game it is talking about', async () => {

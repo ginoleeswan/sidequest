@@ -175,7 +175,12 @@ function QuestRow({
       </View>
       <View style={styles.questWhen}>
         <Text style={styles.questDate}>{finishDate(item.finishAt)}</Text>
-        <Text style={styles.questDateLabel}>done by</Text>
+        {/* "on track", not "done by": this date is the plan's
+            projection of when the credits roll, and "done by" is
+            deadline language — an obligation this app promised never
+            to invent. Deadlines the person set themselves are a
+            different thing, and they live on the alerts. */}
+        <Text style={styles.questDateLabel}>on track</Text>
       </View>
     </Pressable>
   );
@@ -330,6 +335,18 @@ export default function PlanScreen() {
       ),
     [libraryEntries, durationOf, pace, now]
   );
+  /**
+   * What the "doesn't fit" section will hold, counted here so the
+   * header can be honest about it. A game can miss its own date AND
+   * overflow the window; it gets one row, which is the whole point of
+   * merging the two old sections — it used to get two.
+   */
+  const atRiskIds = new Set(
+    alerts.filter((a) => a.kind === 'at-risk').map((a) => a.gameId)
+  );
+  const misfitCount =
+    atRiskIds.size +
+    schedule.dropped.filter((item) => !atRiskIds.has(item.id)).length;
 
   const tonight = useMemo(
     () =>
@@ -369,12 +386,6 @@ export default function PlanScreen() {
    * it is a sentence, so changing a dial visibly changes the answer.
    */
   const fits = schedule.scheduled.length;
-  const verdictEyebrow =
-    fits === 0
-      ? 'Nothing fits this window'
-      : allFit && lastFinish
-        ? `All of it, done by ${finishDate(lastFinish)}`
-        : `${fits} of ${entries.length} fit`;
   const verdictSentence =
     fits === 0
       ? 'Nothing fits. Give it more time or a wider window — or let a few of these go. That’s allowed.'
@@ -438,16 +449,22 @@ export default function PlanScreen() {
                   measure exactly that. */}
               <SectionHeader
                 title="The Plan"
-                /* The verdict, as the page's eyebrow. It was a bordered
-                   card of three statistics, all of them repeated below
-                   by the week or the route; here it is one line and
-                   costs no height at all. */
-                eyebrow={empty ? undefined : verdictEyebrow}
                 onAccount={() => router.push('/you')}
                 actionLabel={canShare ? 'Share →' : undefined}
                 actionAccessibilityLabel="Copy a link to this plan"
                 onAction={canShare ? sharePlan : undefined}
               />
+              {/* The verdict, in words, before anything else.
+                  It was the eyebrow — "3 OF 5 FIT" — which reads as
+                  nothing until you have already understood the page,
+                  and the sentence that explains it sat at the very
+                  bottom inside the pace card. The page's one thesis
+                  was its last line. It is the first now; the copy by
+                  the dials stays, because there it is live feedback —
+                  the same verdict in two registers, on purpose. */}
+              {!empty && (
+                <Text style={styles.standfirst}>{verdictSentence}</Text>
+              )}
 
               {empty ? (
                 <Message
@@ -460,14 +477,14 @@ export default function PlanScreen() {
               ) : (
                 <View style={isExpanded ? styles.columns : styles.stack}>
                   <View style={isExpanded ? styles.colLeft : styles.stack}>
-                    <Alerts alerts={alerts} />
-
                     {/* 1 — TONIGHT.
                         The page opens on the question somebody actually
-                        has at eight o'clock on a Tuesday. It used to
-                        open on "can I finish all of it?", which is
-                        feedback on a setting, and it pushed this below
-                        the fold. */}
+                        has at eight o'clock on a Tuesday. The comment
+                        above this card has said so from the start —
+                        and then the alerts were mounted on top of it,
+                        so the first thing a reader met was two
+                        warnings about games they saved. The answer
+                        leads; what needs deciding follows it. */}
                     {tonightPick && (
                       <Pressable
                         style={styles.tonight}
@@ -535,31 +552,46 @@ export default function PlanScreen() {
                       </Pressable>
                     )}
 
-                    {/* 2 — THIS WEEK. */}
-                    {schedule.scheduled.length > 0 && (
+                    {/* 2 — WHAT DOESN'T FIT.
+                        One calm section where there used to be two loud
+                        ones: unnamed warning cards floating at the top
+                        of the page, and a "Side quests" list far below
+                        repeating the same games. One fact, one place,
+                        one row per game, each with its ways out. After
+                        Tonight, because the answer leads and the
+                        exceptions follow it. */}
+                    {misfitCount > 0 && (
                       <View style={styles.section}>
                         <SectionHeader
-                          title="This week"
-                          eyebrow="The next seven evenings"
+                          title="What doesn’t fit"
+                          eyebrow={`${misfitCount} ${
+                            misfitCount === 1 ? 'game' : 'games'
+                          } — and that’s allowed`}
                         />
-                        <WeekView
-                          scheduled={schedule.scheduled}
-                          now={now}
-                          leadId={tonightPick?.id}
+                        <Alerts
+                          alerts={alerts}
+                          overflow={schedule.dropped}
+                          gamesById={gamesById}
                         />
                       </View>
                     )}
                   </View>
 
                   <View style={isExpanded ? styles.colRight : styles.stack}>
-                    {/* 3 — THE ROUTE. */}
+                    {/* 3 — WHAT YOU'LL PLAY.
+                        The schedule, once. It used to render three
+                        times — the week bars, a legend under them, and
+                        a separate numbered route — and the legend was
+                        literally the route repeated: same games, same
+                        order, same colours. Now the bars sit on top and
+                        the route sits where the legend was, being the
+                        legend, with the calendar hand-off at the foot.
+                        One card, one story: this week, then the rest. */}
                     {schedule.scheduled.length > 0 && (
                       <View style={styles.section}>
                         <SectionHeader
-                          title="Your route"
-                          eyebrow={`${schedule.scheduled.length} ${
-                            schedule.scheduled.length === 1 ? 'game' : 'games'
-                          }, shortest first`}
+                          title="What you’ll play"
+                          eyebrow={`This week, then the rest — shortest first`}
                         />
                         <Text style={styles.routeNote}>
                           Quick wins first — momentum is the strategy.
@@ -571,63 +603,29 @@ export default function PlanScreen() {
                               } yours, and the plan trusts those over the estimates.`
                             : '  Tap any length to correct it.'}
                         </Text>
-                        <View style={styles.panel}>
-                          {schedule.scheduled.map((item, index) => (
-                            <QuestRow
-                              key={item.id}
-                              item={item}
-                              index={index}
-                              isLast={index === schedule.scheduled.length - 1}
-                              game={gamesById.get(item.id)}
-                              entry={entriesById.get(item.id)}
-                              onPress={() => router.push(`/game/${item.id}`)}
-                              onEditLength={() => {
-                                const target = gamesById.get(item.id);
-                                if (target) setEditing(target);
-                              }}
-                            />
-                          ))}
-                        </View>
-                      </View>
-                    )}
-
-                    {/* the honest part */}
-                    {schedule.dropped.length > 0 && (
-                      <View style={styles.section}>
-                        <SectionHeader
-                          title="Side quests — for later"
-                          eyebrow={`${schedule.dropped.length} games`}
-                        />
-                        <Text style={styles.droppedNote}>
-                          At {pace}h a week these need more room than the window
-                          has. They’ll still be here.
-                        </Text>
-                        <View style={styles.rows}>
-                          {schedule.dropped.map((item) => (
-                            <Pressable
-                              key={item.id}
-                              style={[styles.row, styles.rowMuted]}
-                              onPress={() => router.push(`/game/${item.id}`)}
-                            >
-                              <CoverImage
-                                uri={gamesById.get(item.id)?.background_image}
-                                style={styles.rowThumb}
-                                size="thumb"
-                                iconSize={16}
+                        <WeekView
+                          scheduled={schedule.scheduled}
+                          now={now}
+                          leadId={tonightPick?.id}
+                        >
+                          <View>
+                            {schedule.scheduled.map((item, index) => (
+                              <QuestRow
+                                key={item.id}
+                                item={item}
+                                index={index}
+                                isLast={index === schedule.scheduled.length - 1}
+                                game={gamesById.get(item.id)}
+                                entry={entriesById.get(item.id)}
+                                onPress={() => router.push(`/game/${item.id}`)}
+                                onEditLength={() => {
+                                  const target = gamesById.get(item.id);
+                                  if (target) setEditing(target);
+                                }}
                               />
-                              <View style={styles.rowBody}>
-                                <Text style={styles.rowTitle} numberOfLines={1}>
-                                  {item.name}
-                                </Text>
-                                <Text style={styles.rowMeta}>
-                                  {item.hours > 0
-                                    ? `needs ~${Math.round(item.hours)}h`
-                                    : 'length unknown'}
-                                </Text>
-                              </View>
-                            </Pressable>
-                          ))}
-                        </View>
+                            ))}
+                          </View>
+                        </WeekView>
                       </View>
                     )}
 
@@ -857,6 +855,15 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
 
+  standfirst: {
+    ...TYPE.body,
+    color: COLORS.mediumGrey,
+    // Pulled up under the header it belongs to, and held to a measure
+    // a sentence is comfortable at.
+    marginTop: -SPACING.sm,
+    marginBottom: SPACING.md,
+    maxWidth: 520,
+  },
   section: { gap: SPACING.sm + 2 },
   /**
    * The shared plane.

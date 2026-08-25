@@ -3,197 +3,246 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { CoverImage } from './CoverImage';
 import { LetGoBar } from './LetGoBar';
 import { useToast } from './Toast';
 import type { Alert } from '@/lib/alerts';
 import { recordDrop, type DropReason } from '@/lib/drops';
 import { useLibrary } from '@/lib/library';
+import type { Game } from '@/api/types';
 import { COLORS } from '@/styles/colors';
 import { RADIUS, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
-const ICON: Record<Alert['kind'], keyof typeof Ionicons.glyphMap> = {
-  'at-risk': 'alert-circle',
-  'due-soon': 'calendar',
-  'nearly-done': 'flag',
-};
-
 /**
- * What the app would have sent you, if it could send you anything.
+ * What doesn't fit — one calm place instead of two loud ones.
  *
- * Real notifications need a server to push from and an app on a
- * homescreen to receive them; neither exists yet, and asking for
- * notification permission that leads nowhere is worse than staying
- * quiet. So these are worked out when the plan opens.
+ * This used to be two features that were secretly one fact. A game
+ * whose deadline could not be met got a bordered warning card, four
+ * lines of prose, floating at the very top of the page with no title;
+ * a game that did not fit the plan's window got a muted row in a
+ * section called "Side quests", far below. Elden Ring routinely
+ * qualified for BOTH, and appeared on the page twice with two
+ * different framings of the same problem: it doesn't fit.
  *
- * Every one of them carries the way out with it. The point of the
- * product is permission to drop things, and an alert that only says "you
- * are behind" is the opposite of that.
+ * So: one section, deduped, and every row is a single line of fact
+ * with its ways out beside it. The relief stance (§2.1) is carried by
+ * the actions, not by paragraphs — a reader in this section has
+ * already been told the truth by the numbers, and what they need is
+ * the exits: give it more room, or let it go. Nothing here is a
+ * confirmation dialogue; letting go asks why, exactly as the amnesty
+ * screen does, because the reason is the only thing the shelves learn
+ * from a drop.
+ *
+ * Due-soon ("that fits") and nearly-done alerts no longer render here
+ * at all: a date that is going to be met is the route's story, and a
+ * game one evening from credits is Tonight's. This section is only
+ * for what actually needs a person.
  */
-export function Alerts({ alerts }: { alerts: Alert[] }) {
+
+/** A game the window has no room for, from `schedule.dropped`. */
+export interface Overflow {
+  id: number;
+  name: string;
+  hours: number;
+}
+
+export function Alerts({
+  alerts,
+  overflow = [],
+  gamesById,
+}: {
+  alerts: Alert[];
+  overflow?: Overflow[];
+  /** For the thumbnails; absent covers draw their placeholder. */
+  gamesById?: Map<number, Game>;
+}) {
   const router = useRouter();
-  const { setDeadline, setStatus, removeMany, entries } = useLibrary();
+  const { setDeadline, removeMany } = useLibrary();
   const toast = useToast();
 
   /**
-   * The game somebody has just said they might let go of.
-   *
-   * Held rather than acted on, because letting go is asked about
-   * before it is done — the reason is the only thing the shelves ever
-   * learn from a drop, and a one-tap delete would throw it away.
+   * The game somebody has just said they might let go of. Held rather
+   * than acted on: the reason is asked for before anything happens.
    */
-  const [letting, setLetting] = useState<Alert | null>(null);
+  const [letting, setLetting] = useState<number | null>(null);
 
   const letGo = (reason?: DropReason) => {
-    if (!letting) return;
-    const count = removeMany([letting.gameId]);
+    if (letting == null) return;
+    const count = removeMany([letting]);
     if (reason && count > 0) recordDrop(reason);
     setLetting(null);
     if (count > 0) toast('Let go. Nothing owed.', 'checkmark-circle');
   };
 
-  if (alerts.length === 0) return null;
+  const atRisk = alerts.filter((alert) => alert.kind === 'at-risk');
+  // Deduped: a game can miss its date AND overflow the window, and one
+  // problem row per game is the point of merging these.
+  const shown = new Set(atRisk.map((alert) => alert.gameId));
+  const spilled = overflow.filter((item) => !shown.has(item.id));
+
+  if (atRisk.length + spilled.length === 0) return null;
+
+  const round = (hours: number) => Math.max(1, Math.round(hours));
+
+  const total = atRisk.length + spilled.length;
+
+  const row = (
+    id: number,
+    name: string,
+    fact: string,
+    warm: boolean,
+    position: number,
+    actions: React.ReactNode
+  ) => (
+    <View
+      key={id}
+      style={[styles.row, position === total - 1 && styles.rowLast]}
+    >
+      <CoverImage
+        uri={gamesById?.get(id)?.background_image}
+        style={styles.thumb}
+        size="thumb"
+        iconSize={16}
+      />
+      <View style={styles.body}>
+        <View style={styles.titleRow}>
+          {warm && (
+            <Ionicons name="alert-circle" size={13} color={COLORS.accent} />
+          )}
+          <Text style={styles.title} numberOfLines={1}>
+            {name}
+          </Text>
+        </View>
+        <Text style={styles.fact} numberOfLines={2}>
+          {fact}
+        </Text>
+        <View style={styles.actions}>{actions}</View>
+      </View>
+    </View>
+  );
+
+  const action = (
+    label: string,
+    onPress: () => void,
+    tone: 'accent' | 'coral' | 'muted' = 'accent',
+    accessibilityLabel?: string
+  ) => (
+    <Pressable
+      key={label}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
+    >
+      <Text style={[styles.action, styles[tone]]}>{label}</Text>
+    </Pressable>
+  );
 
   return (
     <View style={styles.list}>
-      {alerts.map((alert) => (
-        <View
-          key={`${alert.kind}-${alert.gameId}`}
-          style={[styles.card, alert.kind === 'at-risk' && styles.cardWarn]}
-        >
-          <View style={styles.head}>
-            {/* The icon sits on the first line's optical centre, not at
-                the top of the text block. Flush to the block's top it
-                floated in the leading above the cap line — measured 12
-                points high, and unmistakable once the message wrapped
-                to two lines. The box is one line tall and centres its
-                own contents, so it stays right if the type scale
-                changes. */}
-            <View style={styles.headIcon}>
-              <Ionicons
-                name={ICON[alert.kind]}
-                size={ICON_SIZE}
-                color={
-                  alert.kind === 'at-risk' ? COLORS.accent : COLORS.mediumGrey
-                }
-              />
-            </View>
-            <Text style={styles.message}>{alert.message}</Text>
-          </View>
-
-          <View style={styles.actions}>
-            <Pressable
-              onPress={() => router.push(`/game/${alert.gameId}`)}
-              accessibilityRole="link"
-            >
-              <Text style={styles.action}>Open</Text>
-            </Pressable>
-
-            {alert.kind === 'at-risk' && (
-              <Pressable
-                onPress={() => {
-                  setDeadline(alert.gameId, null);
-                  toast('Date cleared. Nothing owed.', 'checkmark-circle');
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`Clear the date on ${alert.name}`}
-              >
-                <Text style={styles.action}>Drop the date</Text>
-              </Pressable>
+      {atRisk.map((alert, index) =>
+        row(
+          alert.gameId,
+          alert.name,
+          alert.days != null && alert.days <= 0
+            ? 'Past the date you set.'
+            : `Needs ${round(alert.hoursLeft)}h — room for about ${round(
+                alert.roomHours ?? 0
+              )}h before your date.`,
+          true,
+          index,
+          <>
+            {action(
+              'Drop the date',
+              () => {
+                setDeadline(alert.gameId, null);
+                toast('Date cleared. Nothing owed.', 'checkmark-circle');
+              },
+              'accent',
+              `Clear the date on ${alert.name}`
             )}
-
-            {alert.kind === 'at-risk' && (
-              /*
-               * The one the product is named after.
-               *
-               * PRODUCT.md §6.4 calls "you can't finish this, drop it?"
-               * the honest notification, and this card is where the app
-               * finally says it. Offering the sentence without the
-               * button was the version that read as nagging: told you
-               * it was hopeless, then left you to find the exit.
-               */
-              <Pressable
-                onPress={() => setLetting(alert)}
-                accessibilityRole="button"
-                accessibilityLabel={`Let ${alert.name} go`}
-              >
-                <Text style={[styles.action, styles.actionLetGo]}>
-                  Let it go
-                </Text>
-              </Pressable>
+            {action(
+              'Let it go',
+              () => setLetting(alert.gameId),
+              'coral',
+              `Let ${alert.name} go`
             )}
-
-            {alert.kind === 'nearly-done' && (
-              <Pressable
-                onPress={() => {
-                  // Toast only what happened: the entry can be gone by
-                  // the time this is tapped (removed since the alert
-                  // list was computed), and celebrating a no-op tells
-                  // the user their tap worked when it did not.
-                  const entry = entries[String(alert.gameId)];
-                  if (!entry) return;
-                  setStatus(entry.game, 'finished');
-                  toast('Credits rolled', 'checkmark-circle');
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={`Mark ${alert.name} finished`}
-              >
-                <Text style={styles.action}>Already finished it</Text>
-              </Pressable>
+            {action(
+              'Open',
+              () => router.push(`/game/${alert.gameId}`),
+              'muted',
+              `Open ${alert.name}`
             )}
-          </View>
-        </View>
-      ))}
+          </>
+        )
+      )}
 
-      {letting && <LetGoBar count={1} onLetGo={letGo} />}
+      {spilled.map((item, index) =>
+        row(
+          item.id,
+          item.name,
+          item.hours > 0
+            ? `Needs ~${Math.round(item.hours)}h — more than the window has. It'll still be here.`
+            : 'Length unknown, so the window cannot place it.',
+          false,
+          atRisk.length + index,
+          <>
+            {action(
+              'Let it go',
+              () => setLetting(item.id),
+              'coral',
+              `Let ${item.name} go`
+            )}
+            {action(
+              'Open',
+              () => router.push(`/game/${item.id}`),
+              'muted',
+              `Open ${item.name}`
+            )}
+          </>
+        )
+      )}
+
+      {letting != null && <LetGoBar count={1} onLetGo={letGo} />}
     </View>
   );
 }
 
-/** One size for the leading icon, shared by the icon and the indent. */
-const ICON_SIZE = 14;
-
 const styles = StyleSheet.create({
-  list: { gap: SPACING.sm },
-  card: {
+  list: {
+    borderRadius: RADIUS.md,
     borderWidth: 1,
     borderColor: COLORS.stroke,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    gap: SPACING.sm,
     backgroundColor: COLORS.raised,
+    paddingHorizontal: SPACING.lg,
   },
-  cardWarn: { borderColor: 'rgba(245,165,36,0.45)' },
-  head: { flexDirection: 'row', alignItems: 'flex-start', gap: SPACING.sm },
-  headIcon: {
-    width: ICON_SIZE,
-    height: TYPE.p.lineHeight,
-    alignItems: 'center',
-    justifyContent: 'center',
+  row: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+    paddingVertical: SPACING.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.stroke,
   },
-  message: {
-    ...TYPE.p,
-    color: COLORS.lightGrey,
-    flex: 1,
+  rowLast: { borderBottomWidth: 0 },
+  thumb: {
+    width: 44,
+    height: 44,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.navy,
   },
+  body: { flex: 1, gap: 3 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  title: { ...TYPE.label, color: COLORS.white, flexShrink: 1 },
+  fact: { ...TYPE.caption, color: COLORS.mediumGrey },
   actions: {
     flexDirection: 'row',
-    gap: SPACING.lg,
-    // A hanging indent, derived rather than guessed: the actions line
-    // up under the message, so the offset is exactly the icon and the
-    // gap beside it. It was a hand-picked 22, which happened to be
-    // right until either of those two numbers moved.
-    paddingLeft: ICON_SIZE + SPACING.sm,
+    flexWrap: 'wrap',
+    gap: SPACING.md,
+    marginTop: 3,
   },
-  action: {
-    ...TYPE.labelTiny,
-    color: COLORS.accent,
-  },
-  /**
-   * Letting go is coral everywhere else in this app — the drops, the
-   * amnesty, the LET GO figure on You — so it is coral here. It also
-   * separates the two escapes on this card at a glance: the amber one
-   * keeps the game, the coral one does not.
-   */
-  actionLetGo: { color: COLORS.coral },
+  action: { ...TYPE.labelTiny },
+  accent: { color: COLORS.accent },
+  /** Letting go is coral everywhere in this app; it is coral here. */
+  coral: { color: COLORS.coral },
+  muted: { color: COLORS.mediumGrey },
 });

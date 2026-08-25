@@ -46,11 +46,23 @@ export function WeekView({
   scheduled,
   now,
   leadId,
+  children,
 }: {
   scheduled: ScheduledItem[];
   now: number;
   /** Tonight's pick, so the first evening agrees with the card above. */
   leadId?: number;
+  /**
+   * What sits where the legend would.
+   *
+   * The plan page passes the route here, because the route already IS
+   * the legend: same games, same order, same colours (both sides key
+   * off planColour by route position). Rendering both meant every name
+   * on the page twice, a bar chart's key repeated as a list directly
+   * beneath itself. With children the built-in legend stays out of the
+   * way; without, standalone use keeps it.
+   */
+  children?: React.ReactNode;
 }) {
   const toast = useToast();
   const week = planWeek(scheduled, now, 7, leadId);
@@ -207,27 +219,36 @@ export function WeekView({
 
       <View style={styles.rule} />
 
-      <View style={styles.legend}>
-        {legend.map((row) => (
-          <View key={row.id} style={styles.legendRow}>
-            <View
-              style={[styles.swatch, { backgroundColor: colourOf(row.id) }]}
-            />
-            <Text style={styles.legendName} numberOfLines={1}>
-              {row.name}
-            </Text>
-            <Text style={styles.legendMeta}>
-              {formatHours(row.hours)} this week
-              {row.creditsOn != null
-                ? ` · credits ${eveningLabel(
-                    { date: row.creditsOn, weekday: 0, hours: 0, games: [] },
-                    now
-                  )}`
-                : ''}
-            </Text>
+      {children ?? (
+        <>
+          <View style={styles.legend}>
+            {legend.map((row) => (
+              <View key={row.id} style={styles.legendRow}>
+                <View
+                  style={[styles.swatch, { backgroundColor: colourOf(row.id) }]}
+                />
+                <Text style={styles.legendName} numberOfLines={1}>
+                  {row.name}
+                </Text>
+                <Text style={styles.legendMeta}>
+                  {formatHours(row.hours)} this week
+                  {row.creditsOn != null
+                    ? ` · credits ${eveningLabel(
+                        {
+                          date: row.creditsOn,
+                          weekday: 0,
+                          hours: 0,
+                          games: [],
+                        },
+                        now
+                      )}`
+                    : ''}
+                </Text>
+              </View>
+            ))}
           </View>
-        ))}
-      </View>
+        </>
+      )}
 
       <View style={styles.rule} />
 

@@ -56,8 +56,7 @@ describe('the plan screen', () => {
       { game: game(2, 'Hades II', 30), status: 'playing' },
     ]);
     await renderApp(<PlanScreen />);
-    expect(screen.getByText('Your route')).toBeTruthy();
-    // Once in the week, once in the route.
+    expect(screen.getByText('What you’ll play')).toBeTruthy();
     expect(screen.getAllByText('Celeste').length).toBeGreaterThan(0);
   });
 
@@ -100,8 +99,12 @@ describe('the plan screen', () => {
     // 6h a week against a "whenever" window still drops a 300h game only
     // when a deadline exists, so pick one: two weeks.
     await fireEvent.press(screen.getByLabelText('Finish them: 2 weeks'));
-    expect(screen.getByText('Side quests — for later')).toBeTruthy();
+    // One section for everything that doesn't fit — window overflow and
+    // missed dates alike — where there used to be two, with the same
+    // games in both.
+    expect(screen.getByText('What doesn’t fit')).toBeTruthy();
     expect(screen.getByText('Enormous')).toBeTruthy();
+    expect(screen.getByText(/more than the window has/)).toBeTruthy();
   });
 
   it('asks for the lengths nobody has reported', async () => {
@@ -165,7 +168,11 @@ describe('the plan screen', () => {
       },
     ]);
     await renderApp(<PlanScreen />);
-    expect(screen.getByText(/Drop the date, or let it go/)).toBeTruthy();
+    // A one-line fact with its ways out beside it, not a paragraph:
+    // the prose sentence belonged to the old warning cards.
+    expect(screen.getByText(/room for about/)).toBeTruthy();
+    expect(screen.getByText('Drop the date')).toBeTruthy();
+    expect(screen.getByText('Let it go')).toBeTruthy();
   });
 
   /**
@@ -176,10 +183,9 @@ describe('the plan screen', () => {
   it('spreads the plan across the evenings you have', async () => {
     seed([{ game: game(1, 'Celeste', 6), status: 'wishlist' }]);
     await renderApp(<PlanScreen />);
-    expect(screen.getByText('This week')).toBeTruthy();
-    // Consecutive evenings on one game are a single run, labelled with
-    // the span they cover — six hours of Celeste is not four cards. The
-    // card above the week says TONIGHT too, and now agrees with it.
+    expect(screen.getByText('What you’ll play')).toBeTruthy();
+    // The evenings are the bars; each one narrates itself.
+    expect(screen.getAllByLabelText(/on Celeste/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/^TONIGHT/).length).toBeGreaterThan(0);
   });
 
@@ -190,13 +196,11 @@ describe('the plan screen', () => {
   it('says the week is one game rather than repeating its name', async () => {
     seed([{ game: game(1, 'Grand Theft Auto V', 74), status: 'playing' }]);
     await renderApp(<PlanScreen />);
-    // One row per game in the legend, carrying that game's OWN hours —
-    // the run view used to add up every game in the evenings it spanned.
-    // Fourteen: two three-hour weekend evenings, four weeknights at an
-    // hour and a half, and a two-hour Sunday. The run view reported
-    // this as the game's length instead, and disagreed with the route.
-    expect(screen.getByText(/14h/)).toBeTruthy();
-    expect(screen.getAllByText('Grand Theft Auto V')).toHaveLength(2);
+    // The route IS the week's key now — same games, same order, same
+    // colours — so a game's name appears on the page exactly once,
+    // where it used to appear in a legend and again in the route
+    // directly beneath it.
+    expect(screen.getAllByText('Grand Theft Auto V')).toHaveLength(1);
   });
 
   it('marks the evening the credits roll', async () => {
@@ -208,7 +212,7 @@ describe('the plan screen', () => {
   it('shows no week at all when there is nothing scheduled', async () => {
     seed([{ game: game(1, 'Unknown length', 0), status: 'wishlist' }]);
     await renderApp(<PlanScreen />);
-    expect(screen.queryByText('This week')).toBeNull();
+    expect(screen.queryByText('What you’ll play')).toBeNull();
   });
 
   it('hands the plan over as a link that carries itself', async () => {
