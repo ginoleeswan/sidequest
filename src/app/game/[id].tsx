@@ -475,7 +475,19 @@ export default function GameInfoScreen() {
             onEditLength={() => setEditingLength(true)}
             onOpenGenre={openGenre}
           />
-          <StatusActions game={game} />
+          {/*
+            Stretched on purpose. The copy column top-aligns its
+            children so pills and links keep their natural width — but
+            the status control's three segments are flex-basis zero,
+            which makes its intrinsic width almost nothing, and in a
+            non-stretching column it collapsed until "Want to play"
+            read "Want t…" in the page's primary control. Capped so
+            three words do not become a metre of button on a wide
+            monitor.
+          */}
+          <View style={styles.deskStatus}>
+            <StatusActions game={game} />
+          </View>
           <SessionTimer game={game} />
           <Commitment gameId={game.id} />
         </View>
@@ -928,6 +940,10 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: SPACING.sm,
     alignItems: 'flex-start',
+  },
+  deskStatus: {
+    alignSelf: 'stretch',
+    maxWidth: 430,
   },
   /** The one display size the scale does not carry: a desktop masthead. */
   deskTitle: {

@@ -20,6 +20,7 @@
     "test:a11y": "node e2e/a11y.mjs",
     "test:perf": "node e2e/perf.mjs",
     "test:icons": "node e2e/icons.mjs",
+    "test:data": "node e2e/data.mjs",
     "lint:fix": "eslint . --fix",
     "prebuild": "expo prebuild --clean",
     "build:dev": "eas build --profile development",
