@@ -161,7 +161,10 @@ export function SyncProvider({
    * session, which is a cascading render the compiler is right to
    * refuse.
    */
-  const status: SyncStatus = userId ? runStatus : { state: 'idle' };
+  const status = useMemo<SyncStatus>(
+    () => (userId ? runStatus : { state: 'idle' }),
+    [userId, runStatus]
+  );
 
   // A local change, once it has stopped. The library and durations
   // objects are new on every edit, which is exactly the signal wanted.

@@ -1,4 +1,5 @@
 import { act, render, screen } from '@testing-library/react-native';
+import { useEffect } from 'react';
 import { Text } from 'react-native';
 
 import { SyncProvider, useSync } from '../SyncProvider';
@@ -155,9 +156,17 @@ describe('SyncProvider', () => {
 
   it('waits for a local change to stop before sending it', async () => {
     const { backend, rounds } = backendSpy();
-    let library: ReturnType<typeof useLibrary> | null = null;
+    const grabbed: { library: ReturnType<typeof useLibrary> | null } = {
+      library: null,
+    };
     function Grab() {
-      library = useLibrary();
+      const library = useLibrary();
+      // Written in an effect rather than during render: assigning
+      // outside the component while rendering is the side effect the
+      // compiler exists to catch.
+      useEffect(() => {
+        grabbed.library = library;
+      });
       return null;
     }
     await render(
@@ -173,7 +182,7 @@ describe('SyncProvider', () => {
     const afterSignIn = rounds();
 
     await act(async () => {
-      library?.setStatus(game(1), 'wishlist');
+      grabbed.library?.setStatus(game(1), 'wishlist');
     });
     // Still quiet: the change has not settled.
     expect(rounds()).toBe(afterSignIn);
