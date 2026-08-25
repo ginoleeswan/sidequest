@@ -28,7 +28,8 @@
     "update:preview": "eas update --channel preview",
     "update:prod": "eas update --channel production",
     "fingerprint:generate": "expo-updates fingerprint:generate",
-    "apple:secret": "node scripts/apple-client-secret.mjs"
+    "apple:secret": "node scripts/apple-client-secret.mjs",
+    "test:coverage": "jest --coverage"
   },
   "engines": {
     "node": ">=22"
@@ -118,6 +119,14 @@
       "^react-native($|/.*)": "<rootDir>/node_modules/react-native/$1",
       "^react-native-vector-icons$": "@expo/vector-icons",
       "^react-native-vector-icons/(.*)": "@expo/vector-icons/$1"
+    },
+    "coverageThreshold": {
+      "global": {
+        "lines": 85,
+        "statements": 83,
+        "branches": 73,
+        "functions": 78
+      }
     }
   }
 }
