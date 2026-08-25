@@ -90,5 +90,19 @@
         }
       ]
     }
+  ],
+  "redirects": [
+    {
+      "source": "/shared",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|Twitterbot|Slackbot|Slack-ImgProxy|Discordbot|WhatsApp|LinkedInBot|TelegramBot|redditbot|Googlebot|bingbot|DuckDuckBot|Applebot|Pinterest|Mastodon|Bluesky|SkypeUriPreview|vkShare|embedly|iframely|Iframely|nuzzel|Qwantify|Yeti|BingPreview).*"
+        }
+      ],
+      "destination": "/api/plan-preview",
+      "permanent": false
+    }
   ]
 }
