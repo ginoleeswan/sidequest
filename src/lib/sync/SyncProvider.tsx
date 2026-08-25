@@ -168,6 +168,21 @@ export function SyncProvider({
     inFlight.current = false;
   }, [userId, makeBackend]);
 
+  /**
+   * The retry, which has to mean something for a refused row too.
+   *
+   * Automatic rounds skip what the server already rejected, and that is
+   * right: re-sending the same row to get the same answer is a waste of
+   * somebody's battery. But a person pressing Sync now is explicitly
+   * asking for another go — often because they just changed something
+   * elsewhere, or because the constraint itself moved — and a button
+   * that quietly does nothing is worse than no button.
+   */
+  const syncNow = useCallback(() => {
+    kv.removeItem(STUCK_KEY);
+    void run();
+  }, [run]);
+
   // Signing in: catch up immediately, in both directions.
   useEffect(() => {
     if (userId) void run();
@@ -207,9 +222,9 @@ export function SyncProvider({
       status,
       stuck: userId ? stuck : [],
       active: Boolean(userId),
-      syncNow: () => void run(),
+      syncNow,
     }),
-    [status, stuck, userId, run]
+    [status, stuck, userId, syncNow]
   );
 
   return <SyncContext.Provider value={value}>{children}</SyncContext.Provider>;
