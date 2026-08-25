@@ -32,6 +32,7 @@ import { Screen } from '@/components/Screen';
 import { PersonalNote } from '@/components/PersonalNote';
 import { SessionTimer } from '@/components/SessionTimer';
 import { rememberGame } from '@/lib/recent';
+import { calendarDate } from '@/lib/format';
 import { DynamicIcon } from '@/components/DynamicIcon';
 import { Rail } from '@/components/Rail';
 import { LiveStreams } from '@/components/LiveStreams';
@@ -665,11 +666,7 @@ export default function GameInfoScreen() {
             <View style={styles.metaRow}>
               <Text style={styles.metaLabel}>Release date</Text>
               <Text style={styles.metaValue}>
-                {new Date(game.released).toLocaleDateString('en-US', {
-                  month: 'long',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
+                {calendarDate(game.released)}
               </Text>
             </View>
           ) : null}

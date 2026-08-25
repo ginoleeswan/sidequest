@@ -44,11 +44,21 @@ export const authConfigured = Boolean(url && key);
 const storage = {
   getItem: (k: string) => Promise.resolve(kv.getItem(k)),
   setItem: (k: string, v: string) => {
-    kv.setItem(k, v);
+    // Never throw into supabase-js. On web, kv.setItem throws when
+    // localStorage is unusable (Safari private browsing) — and a user
+    // who just authenticated upstream would be shown a sign-in error
+    // over a storage detail. The session still works for this visit;
+    // it just will not survive a reload, which is what private
+    // browsing asked for anyway.
+    try {
+      kv.setItem(k, v);
+    } catch {
+      // Deliberate: an unpersisted session beats a failed sign-in.
+    }
     return Promise.resolve();
   },
   removeItem: (k: string) => {
-    kv.removeItem?.(k);
+    kv.removeItem(k);
     return Promise.resolve();
   },
 };

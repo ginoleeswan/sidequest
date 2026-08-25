@@ -85,8 +85,13 @@ export function Alerts({ alerts }: { alerts: Alert[] }) {
             {alert.kind === 'nearly-done' && (
               <Pressable
                 onPress={() => {
+                  // Toast only what happened: the entry can be gone by
+                  // the time this is tapped (removed since the alert
+                  // list was computed), and celebrating a no-op tells
+                  // the user their tap worked when it did not.
                   const entry = entries[String(alert.gameId)];
-                  if (entry) setStatus(entry.game, 'finished');
+                  if (!entry) return;
+                  setStatus(entry.game, 'finished');
                   toast('Credits rolled', 'checkmark-circle');
                 }}
                 accessibilityRole="button"

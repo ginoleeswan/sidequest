@@ -67,6 +67,10 @@ async function sidequestCalendarId(Calendar: CalendarModule): Promise<string> {
  * counting the ones that were already there.
  */
 export async function insertEvents(events: IcsEvent[]): Promise<number> {
+  // Math.min of nothing is Infinity, and new Date(Infinity) is an
+  // Invalid Date the calendar module throws on — an empty week must be
+  // a quiet zero, not a crash dressed as a calendar error.
+  if (events.length === 0) return 0;
   const Calendar = await import('expo-calendar');
   const { status } = await Calendar.requestCalendarPermissionsAsync();
   if (status !== 'granted') {

@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 
 import { authConfigured, supabase } from './supabase';
+import { kv } from './storage';
 
 /**
  * Signing in, as something the app can live without.
@@ -37,16 +38,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!authConfigured) return;
 
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
+    // Guarded on both ends: a rejected read (corrupt persisted session,
+    // storage briefly unavailable) must resolve to "not signed in", not
+    // an unhandled rejection at startup — and neither branch may touch
+    // state after this provider has unmounted.
+    let alive = true;
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (!alive) return;
+        setSession(data.session);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setSession(null);
+        setLoading(false);
+      });
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
       setSession(next);
       setLoading(false);
     });
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      alive = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   const value = useMemo<AuthValue>(
@@ -137,6 +154,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
        */
       signOut: async () => {
         await supabase.auth.signOut();
+        // The persisted query cache is the one thing that DOES go: it
+        // can hold synced shelves, and on a shared browser the next
+        // person would see the previous person's games painted on first
+        // frame. It is a cache — dropping it costs a refetch, nothing
+        // more, and the device-owned library above is untouched.
+        kv.removeItem('sidequest.query-cache.v1');
       },
     }),
     [session, loading]
