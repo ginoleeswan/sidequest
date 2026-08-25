@@ -238,6 +238,13 @@ export interface Preferences {
   pace?: number;
   planWindow?: string | null;
   steam?: unknown;
+  /**
+   * When this device last changed any of them, epoch ms.
+   *
+   * Preferences are one row rather than a set, so they need no merge —
+   * but they need the same last-write-wins, and that needs a stamp.
+   */
+  updatedAt?: number;
 }
 
 export interface PreferencesRow {
