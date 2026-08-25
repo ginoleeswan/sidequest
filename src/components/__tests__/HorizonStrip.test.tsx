@@ -1,0 +1,76 @@
+import { screen } from '@testing-library/react-native';
+
+import { HorizonStrip } from '../HorizonStrip';
+import type { ScheduledItem } from '@/lib/scheduler';
+import { renderApp } from '@/test-utils';
+
+const DAY = 24 * 60 * 60 * 1000;
+const NOW = new Date(2026, 7, 17, 18).getTime();
+
+const lands = (id: number, name: string, finishAt: number): ScheduledItem =>
+  ({ id, name, hours: 10, endHours: 10, finishAt }) as ScheduledItem;
+
+/**
+ * The month is a timeline, never a grid.
+ *
+ * Its only facts are when each game's credits land and whether every
+ * date can be met, so that is all it draws: today at one end, a flag
+ * on each landing, and a doomed deadline as coral weather. Thirty
+ * boxes, twenty-six of them empty, would bury both facts under
+ * obligation — which is the one register this app refuses.
+ */
+describe('the horizon', () => {
+  it('plants each landing on its date, with its name', async () => {
+    await renderApp(
+      <HorizonStrip
+        scheduled={[
+          lands(1, 'Hades', NOW + 5 * DAY),
+          lands(2, 'Tunic', NOW + 19 * DAY),
+        ]}
+        now={NOW}
+      />
+    );
+    expect(screen.getByText('Aug 22')).toBeTruthy();
+    expect(screen.getByText('Sep 5')).toBeTruthy();
+    expect(screen.getByText('Hades')).toBeTruthy();
+    expect(screen.getByText('Tunic')).toBeTruthy();
+  });
+
+  it('anchors the strip at today', async () => {
+    await renderApp(
+      <HorizonStrip scheduled={[lands(1, 'Hades', NOW + 5 * DAY)]} now={NOW} />
+    );
+    expect(screen.getByText('TODAY')).toBeTruthy();
+  });
+
+  it('draws a date that cannot be met as weather, on its day', async () => {
+    await renderApp(
+      <HorizonStrip
+        scheduled={[lands(1, 'Hades', NOW + 5 * DAY)]}
+        now={NOW}
+        troubled={[{ id: 2, name: 'Elden Ring', deadline: NOW + 3 * DAY }]}
+      />
+    );
+    // The date itself, in coral, above the spine. The sentence and the
+    // ways out belong to "What doesn't fit", not here.
+    expect(screen.getByText('Aug 20')).toBeTruthy();
+  });
+
+  it('reads its whole story aloud', async () => {
+    await renderApp(
+      <HorizonStrip
+        scheduled={[lands(1, 'Hades', NOW + 5 * DAY)]}
+        now={NOW}
+        troubled={[{ id: 2, name: 'Elden Ring', deadline: NOW + 3 * DAY }]}
+      />
+    );
+    expect(
+      screen.getByLabelText(/Credits land: Hades Aug 22.*can’t be met/)
+    ).toBeTruthy();
+  });
+
+  it('renders nothing without a schedule', async () => {
+    await renderApp(<HorizonStrip scheduled={[]} now={NOW} />);
+    expect(screen.queryByText('TODAY')).toBeNull();
+  });
+});

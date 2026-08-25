@@ -56,7 +56,7 @@ describe('the plan screen', () => {
       { game: game(2, 'Hades II', 30), status: 'playing' },
     ]);
     await renderApp(<PlanScreen />);
-    expect(screen.getByText('What you’ll play')).toBeTruthy();
+    expect(screen.getByText('This week')).toBeTruthy();
     expect(screen.getAllByText('Celeste').length).toBeGreaterThan(0);
   });
 
@@ -183,8 +183,8 @@ describe('the plan screen', () => {
   it('spreads the plan across the evenings you have', async () => {
     seed([{ game: game(1, 'Celeste', 6), status: 'wishlist' }]);
     await renderApp(<PlanScreen />);
-    expect(screen.getByText('What you’ll play')).toBeTruthy();
-    // The evenings are the bars; each one narrates itself.
+    expect(screen.getByText('This week')).toBeTruthy();
+    // The evenings are agenda rows; each one narrates itself.
     expect(screen.getAllByLabelText(/on Celeste/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/^TONIGHT/).length).toBeGreaterThan(0);
   });
@@ -196,23 +196,39 @@ describe('the plan screen', () => {
   it('says the week is one game rather than repeating its name', async () => {
     seed([{ game: game(1, 'Grand Theft Auto V', 74), status: 'playing' }]);
     await renderApp(<PlanScreen />);
-    // The route IS the week's key now — same games, same order, same
-    // colours — so a game's name appears on the page exactly once,
-    // where it used to appear in a legend and again in the route
-    // directly beneath it.
-    expect(screen.getAllByText('Grand Theft Auto V')).toHaveLength(1);
+    // The agenda names a run of one game once — the other evenings
+    // carry its colour and their own hours. Bare, the name appears
+    // exactly twice, in two different sentences: the flag where its
+    // credits land, and its stop on the route. Never seven cards.
+    expect(screen.getAllByText('Grand Theft Auto V')).toHaveLength(2);
   });
 
   it('marks the evening the credits roll', async () => {
     seed([{ game: game(1, 'Short', 1), status: 'wishlist' }]);
     await renderApp(<PlanScreen />);
-    expect(screen.getAllByText(/credits/).length).toBeGreaterThan(0);
+    expect(screen.getAllByLabelText(/the credits roll/).length).toBeGreaterThan(
+      0
+    );
+  });
+
+  /**
+   * The month is the same schedule at horizon scale: a timeline with
+   * today at one end and a flag where each game's credits land — never
+   * a 30-box grid, whose empty boxes read as days you failed to fill.
+   */
+  it('shows the month as a horizon with the credits on it', async () => {
+    seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
+    await renderApp(<PlanScreen />);
+    expect(screen.getByText('This month')).toBeTruthy();
+    expect(screen.getByText('TODAY')).toBeTruthy();
+    expect(screen.getByLabelText(/Credits land: Celeste/)).toBeTruthy();
   });
 
   it('shows no week at all when there is nothing scheduled', async () => {
     seed([{ game: game(1, 'Unknown length', 0), status: 'wishlist' }]);
     await renderApp(<PlanScreen />);
-    expect(screen.queryByText('What you’ll play')).toBeNull();
+    expect(screen.queryByText('This week')).toBeNull();
+    expect(screen.queryByText('This month')).toBeNull();
   });
 
   it('hands the plan over as a link that carries itself', async () => {

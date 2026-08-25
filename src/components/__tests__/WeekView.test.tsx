@@ -11,25 +11,28 @@ const item = (id: number, name: string, hours: number): ScheduledItem =>
 const MONDAY = new Date(2026, 7, 17, 18).getTime();
 
 /**
- * The week is drawn, not narrated.
+ * The week is an agenda, because the question is "what am I doing
+ * Thursday?".
  *
- * It has been a grid of named boxes and a column of collapsed runs;
- * both described a shape in words, and the run version added up every
- * game in the evenings a run spanned — so a game that ended halfway
- * through Tuesday claimed the hour the next one took, and the same game
- * carried two different lengths on one screen. What the strip shows is
- * seven columns; what it SAYS is one line per game, with that game's
- * own hours.
+ * It has been a grid of named boxes, a column of collapsed runs, and a
+ * strip of seven vertical bars with a legend — every one of which asked
+ * the reader to decode a picture. A row that says "MON 17 · Short One ·
+ * 1.5h" is the answer said outright. These pin the agenda's promises:
+ * real dates, each game's own hours, free evenings drawn as free, and
+ * a run of one game named once rather than seven times.
  */
 describe('the week', () => {
   it('names a game once, however many evenings it covers', async () => {
     await renderApp(
       <WeekView scheduled={[item(1, 'Grand Theft Auto V', 74)]} now={MONDAY} />
     );
-    expect(screen.getAllByText('Grand Theft Auto V')).toHaveLength(1);
+    // Tonight's block carries the name; the other six evenings carry
+    // its colour and their own hours. Seven rows all reading "Grand
+    // Theft Aut…" is a worse way to say "this week is one game".
+    expect(screen.getAllByText(/Grand Theft Auto V/)).toHaveLength(1);
   });
 
-  it('counts only the hours that game actually gets', async () => {
+  it('gives each block that game’s own hours', async () => {
     await renderApp(
       <WeekView
         scheduled={[item(1, 'Short One', 1.5), item(2, 'The Next One', 40)]}
@@ -37,25 +40,37 @@ describe('the week', () => {
       />
     );
     // Monday is an hour and a half and Short One takes all of it. The
-    // run view reported this evening's whole capacity against whichever
-    // game led it.
-    expect(screen.getByText(/1\.5h this week/)).toBeTruthy();
+    // old run view reported the evening's whole capacity against
+    // whichever game led it.
+    expect(screen.getByText('Short One · 1.5h')).toBeTruthy();
+  });
+
+  it('is a calendar: it names dates, not just days', async () => {
+    await renderApp(
+      <WeekView scheduled={[item(1, 'Short One', 1.5)]} now={MONDAY} />
+    );
+    expect(screen.getByText('MON')).toBeTruthy();
+    expect(screen.getByText('17')).toBeTruthy();
   });
 
   it('says which evening the credits roll on', async () => {
     await renderApp(
       <WeekView scheduled={[item(1, 'Short One', 1.5)]} now={MONDAY} />
     );
-    expect(screen.getByText(/credits Tonight/)).toBeTruthy();
+    expect(screen.getByLabelText(/^Tonight, .*the credits roll/)).toBeTruthy();
   });
 
-  /** Seven evenings, always — an empty one is information. */
+  /**
+   * Seven evenings, always — and a free one is DRAWN as free, because
+   * a night the plan gives back has to look given back, not missed.
+   */
   it('draws every evening whether or not it is spoken for', async () => {
     await renderApp(
       <WeekView scheduled={[item(1, 'Short One', 1.5)]} now={MONDAY} />
     );
     expect(screen.getByLabelText(/^Tonight, 1\.5h on Short One/)).toBeTruthy();
     expect(screen.getByLabelText('Tomorrow, free')).toBeTruthy();
+    expect(screen.getAllByText('free evening').length).toBeGreaterThan(0);
   });
 
   it('shows nothing rather than an empty frame', async () => {

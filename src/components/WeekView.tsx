@@ -14,85 +14,101 @@ import { RADIUS, SHADOW, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 /**
- * The next seven evenings, drawn as seven evenings.
+ * The next seven evenings, written as an agenda.
  *
- * This has been a grid of named boxes and then a column of collapsed
- * runs, and both were the same mistake in different clothes: a week is
- * a shape, and both of them described the shape in words. "5h across 3
- * evenings" is a sentence about a bar chart.
+ * This has been a grid of named boxes, a column of collapsed runs, and
+ * most recently a strip of seven vertical bars with the route standing
+ * in as its legend — and the bars still asked the reader to decode: a
+ * mint sliver in Thursday's column is a puzzle, where "THU 28 · Hades ·
+ * 1.5h" is an answer. The question a week view exists for is "what am
+ * I doing Thursday?", and an agenda answers it literally.
  *
- * Worse, the run version added up every game in the evenings it
- * spanned, so a run that ended halfway through Tuesday claimed the hour
- * the NEXT game took — the reader saw "Oxenfree · 5h" here and
- * "Oxenfree · ~4h" on the route below, with nothing to explain the
- * difference. One number per game, and it is that game's own.
+ * So: one row per evening, in reading order. The date on the left makes
+ * it a calendar — a calendar is a thing that names dates, not a thing
+ * that draws boxes. The block's width is the evening you actually have
+ * (a Saturday is twice a Tuesday), it wears the game's plan colour, and
+ * it says the game's name and hours inside itself, so there is no
+ * legend anywhere to cross-reference.
  *
- * So: one column per evening. Its height is the evening you actually
- * have — a Saturday is twice a Tuesday, which is the single most useful
- * thing a week can tell someone with a job — and it fills with the
- * colour of whatever the plan puts there. The names go underneath, once
- * each, next to their colour.
+ * Two deliberate quietnesses. A free evening is DRAWN — dashed, and
+ * labelled "free evening" — because an empty row reads as a gap you
+ * failed to fill, and a row that says free reads as a night you get
+ * back; that is the relief stance (§2.1) made visible, and it is the
+ * most important decision in this file. And a game that spans several
+ * evenings is named once, on the evening it starts: seven rows all
+ * reading "Grand Theft Aut…" is a worse way to say "this week is one
+ * game" than one named block and six in its colour.
  */
 
-/** The longest evening in `lib/week`, and so the tallest column. */
+/** The longest evening in `lib/week`, and so the full track width. */
 const MAX_EVENING_HOURS = 3;
-const TRACK_HEIGHT = 84;
-/** Small enough to read as "barely anything", big enough to see. */
-const MIN_SEGMENT = 4;
 
-const DAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'] as const;
+const DAY_NAMES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'] as const;
+
+/** Anything shorter reads as a sliver, not as time worth drawing. */
+const MIN_DRAWN_HOURS = 0.5;
+
+/**
+ * Name each game's run exactly once, in a block wide enough to hold
+ * the name. A run often starts as the tail of a shared evening — half
+ * an hour of Sunday after something else finished — and naming it
+ * there prints "Tu…" in a sliver while the full evening below goes
+ * unlabelled. So: the first block of the run that is at least an hour
+ * wide gets the name, or the run's widest block when none is.
+ * (A plain function, not inline in render — the walk carries state
+ * between evenings.)
+ */
+function nameRuns(week: ReturnType<typeof planWeek>) {
+  const flat: { evening: number; seg: number; id: number; hours: number }[] =
+    [];
+  week.forEach((evening, e) =>
+    evening.games.forEach((game, s) =>
+      flat.push({ evening: e, seg: s, id: game.id, hours: game.hours })
+    )
+  );
+
+  const named = new Set<string>();
+  let start = 0;
+  for (let i = 1; i <= flat.length; i++) {
+    if (i === flat.length || flat[i].id !== flat[start].id) {
+      const run = flat.slice(start, i);
+      const best =
+        run.find((block) => block.hours >= 1) ??
+        run.reduce((a, b) => (b.hours > a.hours ? b : a));
+      named.add(`${best.evening}-${best.seg}`);
+      start = i;
+    }
+  }
+
+  return week.map((evening, e) => ({
+    ...evening,
+    segments: evening.games.map((game, s) => ({
+      ...game,
+      named: named.has(`${e}-${s}`),
+    })),
+  }));
+}
 
 export function WeekView({
   scheduled,
   now,
   leadId,
-  children,
 }: {
   scheduled: ScheduledItem[];
   now: number;
   /** Tonight's pick, so the first evening agrees with the card above. */
   leadId?: number;
-  /**
-   * What sits where the legend would.
-   *
-   * The plan page passes the route here, because the route already IS
-   * the legend: same games, same order, same colours (both sides key
-   * off planColour by route position). Rendering both meant every name
-   * on the page twice, a bar chart's key repeated as a list directly
-   * beneath itself. With children the built-in legend stays out of the
-   * way; without, standalone use keeps it.
-   */
-  children?: React.ReactNode;
 }) {
   const toast = useToast();
   const week = planWeek(scheduled, now, 7, leadId);
 
   if (week.every((evening) => evening.games.length === 0)) return null;
 
-  /** Route position decides the colour, so the week and the list agree. */
+  /** Route position decides the colour, so the week and the month agree. */
   const colourOf = (id: number) =>
     planColour(scheduled.findIndex((item) => item.id === id));
 
-  /**
-   * What each game gets out of the week — its OWN hours, and the
-   * evening it ends on. This is the number the legend prints, and the
-   * reason the legend exists at all.
-   */
-  const legend: {
-    id: number;
-    name: string;
-    hours: number;
-    creditsOn?: number;
-  }[] = [];
-  for (const evening of week) {
-    for (const game of evening.games) {
-      const seen = legend.find((row) => row.id === game.id);
-      const row = seen ?? { id: game.id, name: game.name, hours: 0 };
-      row.hours += game.hours;
-      if (game.finishes) row.creditsOn = evening.date;
-      if (!seen) legend.push(row);
-    }
-  }
+  const rows = nameRuns(week);
 
   /**
    * The week, moved somewhere it can actually interrupt you.
@@ -162,18 +178,18 @@ export function WeekView({
 
   return (
     <View style={styles.week}>
-      <View style={styles.strip}>
-        {week.map((evening, index) => {
+      <View style={styles.agenda}>
+        {rows.map((evening, index) => {
           const capacity = eveningHours(evening.weekday);
-          const height = (capacity / MAX_EVENING_HOURS) * TRACK_HEIGHT;
           const planned = evening.games.reduce((sum, g) => sum + g.hours, 0);
           const credits = evening.games.some((g) => g.finishes);
           const label = eveningLabel(evening, now);
+          const spare = capacity - planned;
 
           return (
             <View
               key={evening.date}
-              style={styles.column}
+              style={styles.eveningRow}
               accessible
               accessibilityRole="image"
               accessibilityLabel={
@@ -181,74 +197,76 @@ export function WeekView({
                   ? `${label}, free`
                   : `${label}, ${formatHours(planned)} on ${evening.games
                       .map((g) => g.name)
-                      .join(' then ')}`
+                      .join(' then ')}${credits ? ' — the credits roll' : ''}`
               }
             >
+              <View style={styles.dayCell}>
+                <Text style={[styles.dayName, index === 0 && styles.dayToday]}>
+                  {DAY_NAMES[evening.weekday]}
+                </Text>
+                <Text style={styles.dayDate}>
+                  {new Date(evening.date).getDate()}
+                </Text>
+              </View>
+
+              <View style={styles.track}>
+                {evening.games.length === 0 ? (
+                  /* Drawn, not skipped: a free evening is the plan
+                     giving a night back, and it has to LOOK given
+                     back rather than missed. */
+                  <View
+                    style={[
+                      styles.freeBlock,
+                      { width: `${(capacity / MAX_EVENING_HOURS) * 100}%` },
+                    ]}
+                  >
+                    <Text style={styles.freeText}>free evening</Text>
+                  </View>
+                ) : (
+                  <>
+                    {evening.segments.map((game, at) => (
+                      <View
+                        key={`${game.id}-${at}`}
+                        style={[
+                          styles.block,
+                          {
+                            width: `${(game.hours / MAX_EVENING_HOURS) * 100}%`,
+                            backgroundColor: colourOf(game.id),
+                          },
+                        ]}
+                      >
+                        <Text style={styles.blockText} numberOfLines={1}>
+                          {game.named
+                            ? `${game.name} · ${formatHours(game.hours)}`
+                            : formatHours(game.hours)}
+                        </Text>
+                      </View>
+                    ))}
+                    {/* An evening the plan only half fills ends in
+                        free time, and that remainder is drawn the way
+                        a whole free evening is. */}
+                    {spare >= MIN_DRAWN_HOURS && (
+                      <View
+                        style={[
+                          styles.freeBlock,
+                          { width: `${(spare / MAX_EVENING_HOURS) * 100}%` },
+                        ]}
+                      />
+                    )}
+                  </>
+                )}
+              </View>
+
+              {/* Reserved whether or not a flag lands, so rows align. */}
               <View style={styles.flagSlot}>
                 {credits ? (
-                  <Ionicons name="flag" size={11} color={COLORS.accent} />
+                  <Ionicons name="flag" size={12} color={COLORS.accent} />
                 ) : null}
               </View>
-              <View
-                style={[
-                  styles.track,
-                  { height },
-                  evening.games.length === 0 && styles.trackFree,
-                ]}
-              >
-                {evening.games.map((game, at) => (
-                  <View
-                    key={`${game.id}-${at}`}
-                    style={{
-                      height: Math.max(
-                        MIN_SEGMENT,
-                        (game.hours / capacity) * height
-                      ),
-                      backgroundColor: colourOf(game.id),
-                    }}
-                  />
-                ))}
-              </View>
-              <Text style={[styles.day, index === 0 && styles.dayTonight]}>
-                {DAY_LETTERS[evening.weekday]}
-              </Text>
             </View>
           );
         })}
       </View>
-
-      <View style={styles.rule} />
-
-      {children ?? (
-        <>
-          <View style={styles.legend}>
-            {legend.map((row) => (
-              <View key={row.id} style={styles.legendRow}>
-                <View
-                  style={[styles.swatch, { backgroundColor: colourOf(row.id) }]}
-                />
-                <Text style={styles.legendName} numberOfLines={1}>
-                  {row.name}
-                </Text>
-                <Text style={styles.legendMeta}>
-                  {formatHours(row.hours)} this week
-                  {row.creditsOn != null
-                    ? ` · credits ${eveningLabel(
-                        {
-                          date: row.creditsOn,
-                          weekday: 0,
-                          hours: 0,
-                          games: [],
-                        },
-                        now
-                      )}`
-                    : ''}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </>
-      )}
 
       <View style={styles.rule} />
 
@@ -272,13 +290,7 @@ export function WeekView({
 
 const styles = StyleSheet.create({
   /**
-   * One object, with three tiers inside it.
-   *
-   * The strip, the names and the calendar hand-off used to float
-   * separately on the page, which made a week look like three unrelated
-   * things that happened to be adjacent. A panel groups them, and the
-   * rules inside say which is which — picture, then key, then what you
-   * can do with it.
+   * One panel: the agenda, then what you can do with it.
    *
    * `raised` rather than `surface`: surface is a step down from the
    * page's navy and reads as a recess.
@@ -293,35 +305,52 @@ const styles = StyleSheet.create({
     ...SHADOW.card,
   },
   rule: { height: 1, backgroundColor: COLORS.stroke },
-  strip: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: SPACING.sm - 2,
-  },
-  column: { flex: 1, alignItems: 'center', gap: SPACING.xs },
-  /** Reserved whether or not a flag lands here, so nothing jumps. */
-  flagSlot: { height: 12, justifyContent: 'center' },
-  track: {
-    width: '100%',
-    borderRadius: 5,
-    overflow: 'hidden',
-    backgroundColor: COLORS.raised,
-    borderWidth: 1,
-    borderColor: COLORS.stroke,
-    // First game at the bottom: earlier in the evening reads as lower.
-    flexDirection: 'column-reverse',
-  },
-  /** An empty evening is information, so it is drawn rather than skipped. */
-  trackFree: { backgroundColor: 'transparent', borderStyle: 'dashed' },
-  day: { ...TYPE.micro, color: COLORS.mediumGrey },
-  /** Seven identical letters need one of them to be today. */
-  dayTonight: { color: COLORS.accent },
 
-  legend: { gap: SPACING.sm },
-  legendRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  swatch: { width: 8, height: 8, borderRadius: 2 },
-  legendName: { ...TYPE.labelSmall, color: COLORS.lightGrey, flexShrink: 1 },
-  legendMeta: { ...TYPE.fine, color: COLORS.mediumGrey, flexShrink: 1 },
+  agenda: { gap: SPACING.sm },
+  eveningRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm + 2,
+  },
+  /**
+   * The date, because a calendar is a thing that names dates. Wide
+   * enough for "WED 30", fixed so the tracks share a left edge —
+   * without which the widths stop being comparable, which is the
+   * whole point of drawing them.
+   */
+  dayCell: { width: 44, flexDirection: 'row', alignItems: 'baseline', gap: 4 },
+  dayName: { ...TYPE.micro, color: COLORS.mediumGrey, letterSpacing: 0.5 },
+  /** Seven near-identical rows need one of them to be tonight. */
+  dayToday: { color: COLORS.accent },
+  dayDate: { ...TYPE.labelSmall, color: COLORS.lightGrey },
+
+  track: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    height: 30,
+  },
+  block: {
+    height: '100%',
+    borderRadius: 7,
+    justifyContent: 'center',
+    paddingHorizontal: SPACING.sm,
+    overflow: 'hidden',
+  },
+  /** Dark on amber, violet and mint alike — the one ink all three take. */
+  blockText: { ...TYPE.labelTiny, color: COLORS.navy },
+  freeBlock: {
+    height: '100%',
+    borderRadius: 7,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: COLORS.strokeStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  freeText: { ...TYPE.micro, color: COLORS.mediumGrey },
+  flagSlot: { width: 16, alignItems: 'center' },
 
   toCalendar: {
     flexDirection: 'row',
