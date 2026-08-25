@@ -1,6 +1,5 @@
 import type { Memcard } from './memcard';
-import type { PlannedEvening } from './week';
-import { tonightShape, weekShape, yearShape } from './widgetData';
+import { yearShape, type PlanDay } from './widgetData';
 import { widgetStore } from './widgetStore';
 
 /**
@@ -33,26 +32,30 @@ const KINDS = {
 } as const;
 
 /**
- * Publish the plan: tonight, and the week it sits in.
+ * Publish the week: every morning of it, already decided.
  *
- * Called wherever the schedule is known and whenever it changes. The
- * reload is what makes it visible — a widget's timeline is the system's
- * to schedule, and without the nudge the new plan waits for whenever
- * iOS next feels like asking, which can be hours.
+ * A whole timeline rather than today's snapshot. The widget then shows
+ * the right day without the app running, which is the only version of
+ * this feature worth having — the previous shape wrote one entry and
+ * asked to be reloaded at midnight, and the reload re-read the same
+ * stale plan.
+ *
+ * The reload call is still what makes a NEW plan visible. A widget's
+ * timeline is the system's to schedule, and without the nudge a plan
+ * changed just now waits for whenever iOS next feels like asking,
+ * which can be hours.
  */
-export async function publishPlan(week: readonly PlannedEvening[]) {
+export async function publishPlan(days: readonly PlanDay[]) {
   const bridge = widgetStore();
   if (!bridge) return;
 
-  const tonight = tonightShape(week);
   // Removed rather than written empty. The widget's own empty state is
   // better than a card claiming a game called "".
-  if (tonight) {
-    bridge.store.set('tonight', JSON.stringify(tonight));
+  if (days.length > 0) {
+    bridge.store.set('plan', JSON.stringify(days));
   } else {
-    bridge.store.remove('tonight');
+    bridge.store.remove('plan');
   }
-  bridge.store.set('week', JSON.stringify(weekShape(week)));
 
   bridge.reload(KINDS.tonight);
   bridge.reload(KINDS.week);
@@ -77,6 +80,11 @@ export async function publishYear(card: Memcard) {
 export async function clearWidgets() {
   const bridge = widgetStore();
   if (!bridge) return;
-  for (const key of ['tonight', 'week', 'year']) bridge.store.remove(key);
+  // 'tonight' and 'week' are what builds before the timeline wrote;
+  // cleared too, so an upgrade does not leave a copy of somebody's plan
+  // in the container with nothing left that reads it.
+  for (const key of ['plan', 'tonight', 'week', 'year']) {
+    bridge.store.remove(key);
+  }
   for (const kind of Object.values(KINDS)) bridge.reload(kind);
 }

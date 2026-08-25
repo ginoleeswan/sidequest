@@ -51,6 +51,10 @@ struct YearProvider: TimelineProvider {
     in context: Context,
     completion: @escaping (Timeline<YearEntry>) -> Void
   ) {
+    // The year's card is the one thing here that genuinely does not
+    // change with the date — only with finishing something, which the
+    // app tells this widget about directly. One entry, refreshed at
+    // midnight so the "this year" it claims stays true on 1 January.
     completion(
       Timeline(
         entries: [YearEntry(date: Date(), year: Store.year())],

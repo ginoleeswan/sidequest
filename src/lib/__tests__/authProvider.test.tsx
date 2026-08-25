@@ -17,9 +17,14 @@ const mockSignOut = jest.fn(async () => ({ error: null }));
 let mockListener: Listener | null = null;
 let mockGetSession: jest.Mock;
 
+let mockStored = true;
+
 jest.mock('../supabase', () => ({
   authConfigured: true,
-  supabase: {
+  hasStoredSession: () => mockStored,
+  isAuthCallback: () => false,
+  somethingToRestore: () => mockStored,
+  getSupabase: async () => ({
     auth: {
       getSession: () => mockGetSession(),
       onAuthStateChange: (fn: Listener) => {
@@ -29,8 +34,9 @@ jest.mock('../supabase', () => ({
       signOut: () => mockSignOut(),
       signInWithIdToken: (args: unknown) => mockSignInWithIdToken(args),
       signInWithOtp: (args: unknown) => mockSignInWithOtp(args),
+      signInWithOAuth: (args: unknown) => mockSignInWithOAuth(args),
     },
-  },
+  }),
 }));
 
 const mockAppleSignIn = jest.fn();
@@ -55,6 +61,9 @@ const mockSignInWithIdToken = jest.fn(
 const mockSignInWithOtp = jest.fn(
   async (_args: unknown) => ({ error: null }) as { error: Error | null }
 );
+const mockSignInWithOAuth = jest.fn(
+  async (_args: unknown) => ({ error: null }) as { error: Error | null }
+);
 const mockRemoveItem = jest.fn();
 jest.mock('../storage', () => ({
   kv: {
@@ -73,6 +82,7 @@ function setup() {
 beforeEach(() => {
   jest.clearAllMocks();
   mockListener = null;
+  mockStored = true;
   mockGetSession = jest.fn(async () => ({ data: { session: SESSION } }));
 });
 
@@ -82,6 +92,20 @@ describe('AuthProvider', () => {
     await act(async () => {});
     expect(result.current.session).toEqual(SESSION);
     expect(result.current.loading).toBe(false);
+  });
+
+  it('a signed-out visitor never loads supabase at all', async () => {
+    // The whole point of the lazy import: the hero promises no account
+    // is needed, and until now every visitor downloaded the entire auth
+    // stack to be told so. Nothing stored and no redirect in the URL is
+    // an answer that costs nothing.
+    mockStored = false;
+    const { result } = await setup();
+    await act(async () => {});
+    expect(result.current.session).toBeNull();
+    expect(result.current.loading).toBe(false);
+    expect(mockGetSession).not.toHaveBeenCalled();
+    expect(mockListener).toBeNull();
   });
 
   it('a failed restore means signed out, not a crash', async () => {

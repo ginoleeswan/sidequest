@@ -1,5 +1,5 @@
 import { supabaseBackend } from '../supabaseBackend';
-import { supabase } from '../../supabase';
+import { getSupabase } from '../../supabase';
 
 /**
  * The half of sync that is only field names.
@@ -28,7 +28,7 @@ const mockResult: { data: unknown; error: { message: string } | null } = {
 };
 
 jest.mock('../../supabase', () => ({
-  supabase: {
+  getSupabase: jest.fn(async () => ({
     from: jest.fn((table: string) => {
       const call: Call = { table, ops: [] };
       mockCalls.push(call);
@@ -57,7 +57,7 @@ jest.mock('../../supabase', () => ({
       };
       return builder;
     }),
-  },
+  })),
 }));
 
 const backend = supabaseBackend('user-1');
@@ -67,7 +67,7 @@ beforeEach(() => {
   mockCalls.length = 0;
   mockResult.data = null;
   mockResult.error = null;
-  (supabase.from as jest.Mock).mockClear();
+  (getSupabase as jest.Mock).mockClear();
 });
 
 describe('supabaseBackend', () => {

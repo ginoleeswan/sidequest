@@ -1,3 +1,4 @@
+import type { Alert } from './alerts';
 import type { Memcard } from './memcard';
 import type { PlannedEvening } from './week';
 
@@ -46,6 +47,108 @@ export interface YearShape {
   hours: number;
   /** Twelve entries, January first: how many finished that month. */
   months: number[];
+}
+
+/**
+ * How pressed the plan is, in the three states the widget paints with.
+ *
+ * PRODUCT.md §6.1 asks for a calm → amber → red gradient and for the
+ * widget to say plainly when a plan cannot be met. Red is exactly the
+ * alert engine's `at-risk`: a deadline there is not room for, which is
+ * the one state where doing nothing is the wrong answer.
+ */
+export type Urgency = 'calm' | 'amber' | 'red';
+
+export interface Pressure {
+  urgency: Urgency;
+  /**
+   * One short line. Not the in-app alert sentence — those are written
+   * to be read on a screen somebody chose to open, and run to two
+   * clauses. A Lock Screen gets a handful of words or nothing.
+   */
+  note: string;
+  /**
+   * Days to the deadline the note is about, or null when there is not
+   * one to count down to.
+   *
+   * A number rather than only a sentence, because §6.1 asks the small
+   * and Lock Screen families for a days-remaining ring, and a ring
+   * needs a quantity. Negative when the date has already gone: that is
+   * a real state and rounding it up to zero would hide it.
+   */
+  days: number | null;
+}
+
+/** The plan in two numbers, for the calm state. */
+export interface PlanSummary {
+  /** How many games are actually scheduled. */
+  games: number;
+  /** When the last of them rolls its credits, epoch ms, or null. */
+  lastFinishAt: number | null;
+}
+
+const DAY_MS = 86_400_000;
+
+const daysBetween = (from: number, to: number) =>
+  Math.max(0, Math.ceil((to - from) / DAY_MS));
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+/**
+ * The colour and the sentence, from what the app already worked out.
+ *
+ * The calm line is the one §6.1 calls the marketing asset — a home
+ * screen reading "3 games · 12 days" says what the app is for without
+ * a word of explanation. It is only shown when there is nothing more
+ * pressing, because a deadline that cannot be met outranks a boast.
+ */
+export function pressureOf(
+  alerts: readonly Alert[],
+  summary: PlanSummary,
+  now: number
+): Pressure {
+  const risk = alerts.find((alert) => alert.kind === 'at-risk');
+  if (risk) {
+    return {
+      urgency: 'red',
+      note:
+        risk.days != null && risk.days <= 0
+          ? `${risk.name} is past its date`
+          : `${risk.name} won't fit`,
+      days: risk.days ?? null,
+    };
+  }
+
+  const due = alerts.find((alert) => alert.kind === 'due-soon');
+  if (due) {
+    return {
+      urgency: 'amber',
+      note:
+        due.days === 0
+          ? `${due.name} due today`
+          : `${due.name} due in ${due.days}d`,
+      days: due.days ?? null,
+    };
+  }
+
+  // Nothing to count down to. The calm families show the plan instead,
+  // and the ring has nothing honest to draw.
+  if (summary.games === 0) return { urgency: 'calm', note: '', days: null };
+  if (summary.lastFinishAt == null) {
+    return {
+      urgency: 'calm',
+      note: plural(summary.games, 'game'),
+      days: null,
+    };
+  }
+  return {
+    urgency: 'calm',
+    note: `${plural(summary.games, 'game')} · ${plural(
+      daysBetween(now, summary.lastFinishAt),
+      'day'
+    )}`,
+    days: null,
+  };
 }
 
 const DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
@@ -103,4 +206,75 @@ export function yearShape(card: Memcard): YearShape {
     hours: Math.round(card.hours),
     months,
   };
+}
+
+/* ------------------------------------------------------------ timeline */
+
+/**
+ * One day of the plan, as the widget will show it that day.
+ *
+ * The piece PRODUCT.md §6 asks for and the first build did not have:
+ * "the engine's output already is a widget timeline". A schedule is
+ * deterministic over time, so every day between here and the end of the
+ * week can be worked out now, in the language that already knows the
+ * rules, and handed over as a list of future-dated entries.
+ *
+ * What that buys is not efficiency. It is being right. The previous
+ * shape wrote one present-tense snapshot and asked WidgetKit to reload
+ * at midnight — which re-rendered the same stale JSON, so Monday's game
+ * sat on the Lock Screen through Wednesday for anybody who did not open
+ * the app. A widget that is confidently wrong is worse than one that
+ * admits it knows nothing.
+ */
+export interface PlanDay {
+  /** Local midnight this entry becomes the truth, epoch ms. */
+  at: number;
+  /** What to play that evening, or nothing left to play. */
+  tonight: TonightShape | null;
+  /** The seven-day strip as it stands that morning. */
+  nights: WeekNightShape[];
+  pressure: Pressure;
+}
+
+/** Local midnight on the day `at` falls in. */
+export const midnightOf = (at: number): number => {
+  const date = new Date(at);
+  date.setHours(0, 0, 0, 0);
+  return date.getTime();
+};
+
+/**
+ * The next `days` mornings, each already decided.
+ *
+ * Takes the two engines as functions rather than their inputs, so this
+ * stays pure and testable and holds no rule of its own — the same
+ * discipline as the shapes above. The caller owns what a week is and
+ * what an alert is; this owns only "once per morning, from here".
+ *
+ * The last entry is deliberately allowed to be empty. A plan that runs
+ * out on Thursday should leave Friday showing the widget's own empty
+ * state, not Thursday's game forever.
+ */
+export function planTimeline(
+  weekFor: (at: number) => readonly PlannedEvening[],
+  pressureFor: (at: number) => Pressure,
+  now: number,
+  days = 7
+): PlanDay[] {
+  const start = midnightOf(now);
+  const timeline: PlanDay[] = [];
+  for (let offset = 0; offset < days; offset++) {
+    // Built from the date rather than by adding milliseconds, so the
+    // two days a year that are not 24 hours long do not shift every
+    // entry after them by an hour.
+    const at = midnightOf(start + offset * DAY_MS + DAY_MS / 2);
+    const week = weekFor(at);
+    timeline.push({
+      at,
+      tonight: tonightShape(week),
+      nights: weekShape(week),
+      pressure: pressureFor(at),
+    });
+  }
+  return timeline;
 }

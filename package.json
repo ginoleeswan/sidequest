@@ -30,7 +30,8 @@
     "fingerprint:generate": "expo-updates fingerprint:generate",
     "apple:secret": "node scripts/apple-client-secret.mjs",
     "test:coverage": "jest --coverage",
-    "test:live": "jest --runInBand --config jest.live.config.js"
+    "test:live": "jest --runInBand --config jest.live.config.js",
+    "test:tz": "TZ=Europe/London jest --config jest.tz.config.js"
   },
   "engines": {
     "node": ">=22"
@@ -98,7 +99,8 @@
     "testTimeout": 20000,
     "testPathIgnorePatterns": [
       "/node_modules/",
-      "\\.integration\\.test\\.ts$"
+      "\\.integration\\.test\\.ts$",
+      "\\.tz\\.test\\.ts$"
     ],
     "setupFilesAfterEnv": [
       "<rootDir>/jest.setup.js"

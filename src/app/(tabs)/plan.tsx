@@ -26,11 +26,7 @@ import { WeekView } from '@/components/WeekView';
 import { Textured } from '@/components/Textured';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { DurationSheet } from '@/components/DurationSheet';
-import {
-  formatHours,
-  remainingHours,
-  type DurationSource,
-} from '@/lib/duration';
+import { formatHours, type DurationSource } from '@/lib/duration';
 import { useToast } from '@/components/Toast';
 import { useDurations } from '@/lib/durations';
 import { buildAlerts } from '@/lib/alerts';
@@ -41,12 +37,8 @@ import { useHydrated } from '@/hooks/useHydrated';
 import { encodePlan } from '@/lib/planLink';
 import { useLibrary } from '@/lib/library';
 import { sessionMinutesFor } from '@/lib/sessions';
-import {
-  pickTonight,
-  planSchedule,
-  type PlanItem,
-  type ScheduledItem,
-} from '@/lib/scheduler';
+import { hoursLeft, planItems } from '@/lib/planning';
+import { pickTonight, planSchedule, type ScheduledItem } from '@/lib/scheduler';
 import { COLORS } from '@/styles/colors';
 import { GUTTER, LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
 import { OVER_IMAGE, TYPE } from '@/styles/typography';
@@ -85,7 +77,7 @@ const finishDate = (ms: number) =>
 
 interface Entry {
   game: Game;
-  /** Hours left, not hours long — see lib/duration remainingHours. */
+  /** Hours left, not hours long — see lib/planning hoursLeft. */
   hours: number;
   /** The whole game's length, for saying "10h left of 40h". */
   totalHours: number;
@@ -225,10 +217,7 @@ export default function PlanScreen() {
         const duration = durationOf(e.game);
         return {
           game: e.game,
-          hours: remainingHours(duration.hours, {
-            hoursPlayed: e.hoursPlayed,
-            playing: true,
-          }),
+          hours: hoursLeft(e, () => duration.hours),
           totalHours: duration.hours,
           played: e.hoursPlayed,
           playing: true,
@@ -242,9 +231,7 @@ export default function PlanScreen() {
         const duration = durationOf(e.game);
         return {
           game: e.game,
-          hours: remainingHours(duration.hours, {
-            hoursPlayed: e.hoursPlayed,
-          }),
+          hours: hoursLeft(e, () => duration.hours),
           totalHours: duration.hours,
           played: e.hoursPlayed,
           playing: false,
@@ -277,22 +264,30 @@ export default function PlanScreen() {
   // projected dates steady while you fiddle with the controls.
   const [now] = useState(() => Date.now());
 
-  const schedule = useMemo(() => {
-    const items: PlanItem[] = entries
-      .filter((e) => e.hours > 0)
-      .map((e) => ({
-        id: e.game.id,
-        name: e.game.name,
-        hours: e.hours,
-        want: e.must ? 3 : 2,
-        deadline: e.deadline,
-      }));
-    return planSchedule(items, {
-      hoursPerWeek: pace,
-      now,
-      deadline: windowWeeks != null ? now + windowWeeks * WEEK_MS : undefined,
-    });
-  }, [entries, pace, windowWeeks, now]);
+  const schedule = useMemo(
+    () =>
+      /*
+       * Built from the library through `planItems`, not from the
+       * enriched list above — because the widgets build it the same
+       * way, and the two have to agree. Order is a silent input:
+       * `planSchedule` sorts by deadline then length and the sort is
+       * stable, so two games matching on both are separated by
+       * arrival order alone. See lib/planning.
+       */
+      planSchedule(
+        planItems(
+          Object.values(libraryEntries),
+          (entry) => durationOf(entry.game).hours
+        ),
+        {
+          hoursPerWeek: pace,
+          now,
+          deadline:
+            windowWeeks != null ? now + windowWeeks * WEEK_MS : undefined,
+        }
+      ),
+    [libraryEntries, durationOf, pace, windowWeeks, now]
+  );
 
   /**
    * The plan travels in the link: no account, no server, no copy of
