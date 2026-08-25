@@ -20,6 +20,7 @@ import WidgetKit
 struct TonightEntry: TimelineEntry {
   let date: Date
   let tonight: Tonight?
+  var pressure: Pressure = .calm
 }
 
 struct TonightProvider: TimelineProvider {
@@ -36,20 +37,41 @@ struct TonightProvider: TimelineProvider {
     in context: Context,
     completion: @escaping (TonightEntry) -> Void
   ) {
+    if context.isPreview {
+      completion(placeholder(in: context))
+      return
+    }
+    let today = Store.plan().first
     completion(
       TonightEntry(
         date: Date(),
-        tonight: context.isPreview ? placeholder(in: context).tonight : Store.tonight()
+        tonight: today?.tonight,
+        pressure: today?.pressure ?? .calm
       )
     )
   }
 
+  /**
+   * A week of mornings, not one snapshot and a reload.
+   *
+   * The app has already decided what every day of the week looks like,
+   * so each becomes its own entry dated at that morning and WidgetKit
+   * shows the right one without waking anybody. `.atEnd` asks for a
+   * fresh week once the last morning has passed, which is the only
+   * moment this widget genuinely needs the app again.
+   */
   func getTimeline(
     in context: Context,
     completion: @escaping (Timeline<TonightEntry>) -> Void
   ) {
-    let entry = TonightEntry(date: Date(), tonight: Store.tonight())
-    completion(Timeline(entries: [entry], policy: .after(nextMidnight())))
+    let entries = planEntries(Store.plan()) { date, day in
+      TonightEntry(
+        date: date,
+        tonight: day?.tonight,
+        pressure: day?.pressure ?? .calm
+      )
+    }
+    completion(Timeline(entries: entries, policy: .atEnd))
   }
 }
 
@@ -83,6 +105,22 @@ struct TonightHome: View {
         Waiting()
       }
       Spacer(minLength: 0)
+      /*
+       * The gradient, at the foot of the card.
+       *
+       * Below the evening rather than above it, because the evening is
+       * what somebody opened the widget for — a deadline they cannot
+       * meet is the second most important thing on this card, not the
+       * first. When nothing is pressing it is the plan in two numbers,
+       * which is the line §6.1 calls the marketing asset.
+       */
+      if !entry.pressure.note.isEmpty {
+        Text(entry.pressure.note)
+          .font(Brand.bold(wide ? 13 : 11))
+          .foregroundStyle(entry.pressure.tint)
+          .lineLimit(1)
+          .minimumScaleFactor(0.8)
+      }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
   }
@@ -112,9 +150,15 @@ struct TonightAccessory: View {
 
     case .accessoryInline:
       // One line, no styling of its own — the system owns the type here
-      // and fights anything that tries to.
+      // and fights anything that tries to. With no colour available,
+      // a pressing plan has to earn its place in the words: it replaces
+      // the hours, which are the least surprising thing on the line.
       Text(
-        entry.tonight.map { "\($0.title) · \($0.hours)h" } ?? "No plan yet"
+        entry.tonight.map { tonight in
+          entry.pressure.isPressing
+            ? "\(tonight.title) · \(entry.pressure.note)"
+            : "\(tonight.title) · \(tonight.hours)h"
+        } ?? "No plan yet"
       )
 
     default:
@@ -130,6 +174,14 @@ struct TonightAccessory: View {
             .font(.system(size: 12))
         } else {
           Text("No plan yet").font(.system(size: 15, weight: .semibold))
+        }
+        if entry.pressure.isPressing {
+          // Only when it is pressing. The Lock Screen rectangle is
+          // three lines tall and a boast is not worth one of them.
+          Text(entry.pressure.note)
+            .font(.system(size: 11, weight: .semibold))
+            .lineLimit(1)
+            .widgetAccentable()
         }
       }
       .frame(maxWidth: .infinity, alignment: .leading)

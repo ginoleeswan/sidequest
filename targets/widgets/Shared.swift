@@ -53,6 +53,54 @@ struct WeekNight: Codable, Identifiable {
   var isFree: Bool { title.isEmpty }
 }
 
+/**
+ * How pressed the plan is, decided by the app.
+ *
+ * The gradient PRODUCT.md §6.1 asks for. Decoded as a string and
+ * matched here rather than as a Swift enum with a raw value, because a
+ * value this side does not recognise must degrade to calm rather than
+ * failing the whole decode and blanking the widget.
+ */
+struct Pressure: Codable {
+  let urgency: String
+  /// One short line, already written for a Lock Screen by the app.
+  let note: String
+
+  var tint: Color {
+    switch urgency {
+    case "red": return Color("$violet")
+    case "amber": return Color("$accent")
+    default: return Color("$muted")
+    }
+  }
+
+  /// Whether this is worth spending the widget's loudest colour on.
+  var isPressing: Bool { urgency == "red" || urgency == "amber" }
+
+  static let calm = Pressure(urgency: "calm", note: "")
+}
+
+/**
+ * One morning of the plan, already decided.
+ *
+ * The app works out every day of the week at once — a schedule is
+ * deterministic over time, so it can — and writes them as a list. Each
+ * becomes a WidgetKit timeline entry dated at that morning, which is
+ * what makes the widget right all week without the app being opened.
+ * The previous shape wrote today only and asked to be reloaded at
+ * midnight, which re-rendered the same stale plan.
+ */
+struct PlanDay: Codable {
+  /// Local midnight this entry becomes the truth, epoch milliseconds.
+  let at: Double
+  /// Nothing left to play. An empty state, not a missing one.
+  let tonight: Tonight?
+  let nights: [WeekNight]
+  let pressure: Pressure
+
+  var date: Date { Date(timeIntervalSince1970: at / 1000) }
+}
+
 struct Year: Codable {
   let year: Int
   let count: Int
@@ -72,26 +120,46 @@ enum Store {
     return try? JSONDecoder().decode(T.self, from: data)
   }
 
-  static func tonight() -> Tonight? { decode(Tonight.self, "tonight") }
-  static func week() -> [WeekNight]? {
-    guard let nights = decode([WeekNight].self, "week"), !nights.isEmpty else {
-      return nil
-    }
-    return nights
+  /**
+   * The week the app last worked out, oldest morning first.
+   *
+   * Entries already in the past are dropped rather than trusted: a
+   * widget woken from a plan written last week should show what it can
+   * still stand behind, which may be nothing at all.
+   */
+  static func plan(now: Date = Date()) -> [PlanDay] {
+    guard let days = decode([PlanDay].self, "plan") else { return [] }
+    let today = Calendar.current.startOfDay(for: now)
+    return days.filter { $0.date >= today }.sorted { $0.at < $1.at }
   }
+
   static func year() -> Year? { decode(Year.self, "year") }
+}
+
+/**
+ * Timeline entries from the plan, and what to do when there are none.
+ *
+ * WidgetKit needs at least one entry and will happily keep showing the
+ * last one forever, so a plan that has run out is given a single
+ * present-dated empty entry rather than an empty list. Saying "no plan
+ * yet" is honest; leaving last Tuesday's game up is not.
+ */
+func planEntries<T>(_ days: [PlanDay], _ make: (Date, PlanDay?) -> T) -> [T] {
+  if days.isEmpty { return [make(Date(), nil)] }
+  return days.map { make($0.date, $0) }
 }
 
 // MARK: - The one shared piece of styling
 
 /**
- * When the widget stops trusting its own contents.
+ * Midnight, for the one widget that still needs it.
  *
- * A timeline entry has no expiry of its own: left alone, "tonight" is
- * still on the Lock Screen at four the next afternoon. Every provider
- * below asks to be refreshed at the next midnight, which is the moment
- * the word stops being true — the app also reloads directly whenever it
- * writes a new plan, so this is the backstop rather than the mechanism.
+ * The plan widgets are a week of dated entries now, so WidgetKit
+ * carries their day-to-day changes and they ask for a fresh week only
+ * once the last morning has passed. The year card is different: it does
+ * not change with the date at all, only with finishing something, which
+ * the app announces directly. It still turns over at midnight on one
+ * night of the year, so that the year it claims stays true.
  */
 func nextMidnight(after date: Date = Date()) -> Date {
   let calendar = Calendar.current

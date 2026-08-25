@@ -22,6 +22,7 @@ import WidgetKit
 struct WeekEntry: TimelineEntry {
   let date: Date
   let nights: [WeekNight]?
+  var pressure: Pressure = .calm
 }
 
 struct WeekProvider: TimelineProvider {
@@ -43,24 +44,39 @@ struct WeekProvider: TimelineProvider {
     in context: Context,
     completion: @escaping (WeekEntry) -> Void
   ) {
+    if context.isPreview {
+      completion(placeholder(in: context))
+      return
+    }
+    let today = Store.plan().first
     completion(
       WeekEntry(
         date: Date(),
-        nights: context.isPreview ? Self.sample : Store.week()
+        nights: today?.nights,
+        pressure: today?.pressure ?? .calm
       )
     )
   }
 
+  /**
+   * The strip re-cut for each morning of the week.
+   *
+   * Not one list shown for seven days: the app writes what the seven
+   * evenings look like from each morning, so the days that have gone
+   * fall off the front on their own.
+   */
   func getTimeline(
     in context: Context,
     completion: @escaping (Timeline<WeekEntry>) -> Void
   ) {
-    completion(
-      Timeline(
-        entries: [WeekEntry(date: Date(), nights: Store.week())],
-        policy: .after(nextMidnight())
+    let entries = planEntries(Store.plan()) { date, day in
+      WeekEntry(
+        date: date,
+        nights: day?.nights,
+        pressure: day?.pressure ?? .calm
       )
-    )
+    }
+    completion(Timeline(entries: entries, policy: .atEnd))
   }
 }
 
@@ -102,9 +118,19 @@ struct WeekView: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
-      Nameplate(text: "THIS WEEK")
+      HStack(spacing: 6) {
+        Nameplate(text: "THIS WEEK")
+        // Beside the label rather than under the chart, because on this
+        // widget the chart is the subject and a deadline is a caveat
+        // about it. Only when pressing: the calm line belongs on
+        // Tonight, where there is one thing to say and room to say it.
+        if entry.pressure.isPressing {
+          Nameplate(text: "· \(entry.pressure.note.uppercased())",
+                    tint: entry.pressure.tint)
+        }
+      }
 
-      if let nights = entry.nights {
+      if let nights = entry.nights, !nights.isEmpty {
         let tallest = nights.map(\.hours).max() ?? 0
         let planned = nights.filter { !$0.isFree }
 

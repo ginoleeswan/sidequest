@@ -16,6 +16,7 @@ import { SplashCurtain } from '@/components/SplashCurtain';
 import { SaveErrorNotice } from '@/components/SaveErrorNotice';
 import { ToastProvider } from '@/components/Toast';
 import { AuthProvider } from '@/lib/auth';
+import { WidgetPublisher } from '@/components/WidgetPublisher';
 import { SyncProvider } from '@/lib/sync/SyncProvider';
 import { DurationsProvider } from '@/lib/durations';
 import { LibraryProvider } from '@/lib/library';
@@ -130,6 +131,10 @@ export default function RootLayout() {
                 them; outside the screens, so a route change never
                 restarts a round in flight. */}
             <SyncProvider>
+              {/* Above the router, so the widgets follow the library
+                  rather than following whichever screen happens to be
+                  showing the same information. Renders nothing. */}
+              <WidgetPublisher />
               <SafeAreaProvider>
                 <ToastProvider>
                   <StatusBar style="light" />
