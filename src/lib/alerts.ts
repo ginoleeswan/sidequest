@@ -85,12 +85,27 @@ export function buildAlerts(
             name,
             days,
             hoursLeft: left,
+            /*
+             * Names the two things the card actually offers.
+             *
+             * It used to say "Move the date, or let it go", and neither
+             * was on it: "let it go" is this app's own phrase for
+             * dropping a GAME (see the You screen's LET GO, and coral
+             * in the palette), which happens on the amnesty screen with
+             * a reason attached — while the button beside this sentence
+             * clears the DEADLINE and keeps the game. Offering a reader
+             * relief in words the buttons cannot deliver is the exact
+             * way §11.3's guilt reading creeps in.
+             *
+             * The permission stays, because that is the point of the
+             * sentence. It is just permission for something real.
+             */
             message:
               days <= 0
-                ? `${name} is past the date you set. Let it go, or give it a new one.`
+                ? `${name} is past the date you set. Drop the date, or open it and set a new one — both are allowed.`
                 : `${name} needs ${round(left)}h and there is only room for about ${round(
                     capacity
-                  )}h before your date. Move the date, or let it go — both are allowed.`,
+                  )}h before your date. Drop the date, or open it and give yourself longer — both are allowed.`,
           });
           continue;
         }
