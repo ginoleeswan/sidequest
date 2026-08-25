@@ -72,7 +72,11 @@ const styles = StyleSheet.create({
   },
   action: {
     marginTop: SPACING.md,
-    backgroundColor: COLORS.blue,
+    // Amber, like every other primary in this app. It was a saturated
+    // blue that belonged to no part of the palette — and this is the
+    // one thing on an empty screen offering a way out of it, which is
+    // exactly what the accent is for.
+    backgroundColor: COLORS.accent,
     borderRadius: RADIUS.lg,
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.sm + 2,
@@ -80,6 +84,8 @@ const styles = StyleSheet.create({
   actionHovered: { opacity: 0.85 },
   actionText: {
     ...TYPE.labelSmall,
-    color: COLORS.white,
+    // Dark on the amber face, the same way every other amber control
+    // in the app reads.
+    color: COLORS.navy,
   },
 });

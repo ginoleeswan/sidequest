@@ -124,5 +124,5 @@ const styles = StyleSheet.create({
     ...TYPE.labelTiny,
     color: COLORS.mediumGrey,
   },
-  actionHovered: { color: COLORS.blue },
+  actionHovered: { color: COLORS.accent },
 });

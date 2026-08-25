@@ -285,10 +285,29 @@ const PACES: {
 ];
 
 /**
- * Routes that must never be covered by the setup flow: the pages whose
- * whole job is to be read by somebody who has not started yet.
+ * Pages a stranger can arrive at from outside, which the setup flow
+ * must never cover.
+ *
+ * The rule is about who is standing there, not about which screen it
+ * is. Somebody who opened the app is being set up; somebody who
+ * followed a link is being shown the thing they clicked, and answering
+ * a question they have not asked is how a first impression is wasted.
+ *
+ * Game pages are the ones this originally missed, and they were the
+ * worst ones to miss. They are the app's main shareable surface, they
+ * have link previews built for them on purpose, and
+ * `scripts/build-sitemap.mjs` submits them to search engines — so
+ * every search result led to a carousel about backlogs rather than to
+ * the game somebody had just searched for.
  */
 const PUBLIC_ROUTES = ['/about', '/privacy', '/terms', '/shared'];
+
+/** The same, for routes that carry an id. */
+const PUBLIC_PREFIXES = ['/game/', '/by/'];
+
+export const isPublicRoute = (pathname: string): boolean =>
+  PUBLIC_ROUTES.includes(pathname) ||
+  PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 
 /** How many games act three offers for the first saves. */
 const PICKS = 6;
@@ -349,16 +368,8 @@ export function Onboarding() {
   const { isExpanded } = useBreakpoint();
   const pathname = usePathname();
 
-  /**
-   * The pages that exist for people who have not used this yet.
-   *
-   * A stranger following a link to the about page is being asked to
-   * decide whether to try Sidequest at all, and covering that page with
-   * a setup flow answers a question they have not asked. The same goes
-   * for the legal pages, which people reach on purpose and from
-   * elsewhere.
-   */
-  const readingAbout = PUBLIC_ROUTES.some((route) => pathname === route);
+  /** See `isPublicRoute`: a stranger who followed a link is not a user to set up. */
+  const arrivedFromOutside = isPublicRoute(pathname);
 
   /**
    * Must-play, not trending — and the difference decides whether the
@@ -390,7 +401,7 @@ export function Onboarding() {
     .filter((game) => game.playtime > 0)
     .slice(0, PICKS);
 
-  if (!mounted || done || readingAbout) return null;
+  if (!mounted || done || arrivedFromOutside) return null;
 
   const finish = (toPlan: boolean) => {
     setDone(true);
