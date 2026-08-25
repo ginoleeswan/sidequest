@@ -31,6 +31,7 @@ beforeEach(() => {
   mockedAuth.mockReturnValue(unconfigured);
   mockedSync.mockReturnValue({
     status: { state: 'idle' },
+    stuck: [],
     active: false,
     syncNow: jest.fn(),
   });
@@ -63,6 +64,7 @@ describe('the account screen', () => {
       // they rely on it.
       mockedSync.mockReturnValue({
         status: { state: 'synced', at: 1_800_000_000_000 },
+        stuck: [],
         active: true,
         syncNow: jest.fn(),
       });
@@ -77,6 +79,7 @@ describe('the account screen', () => {
     it('does not say synced when it is not', async () => {
       mockedSync.mockReturnValue({
         status: { state: 'failed', reason: 'offline', at: 1 },
+        stuck: [],
         active: true,
         syncNow: jest.fn(),
       });
@@ -87,10 +90,38 @@ describe('the account screen', () => {
       expect(screen.getByText(/offline/)).toBeTruthy();
     });
 
+    it('names the game the server would not accept', async () => {
+      // A refusal is the one failure a retry cannot fix — only editing
+      // the game clears it — so "something went wrong" is useless here.
+      mockedSync.mockReturnValue({
+        status: { state: 'synced', at: 1 },
+        stuck: [{ key: '7', reason: 'violates check constraint' }],
+        active: true,
+        syncNow: jest.fn(),
+      });
+      await renderApp(<AccountScreen />);
+      expect(screen.getByText('One game is not on your account')).toBeTruthy();
+      expect(screen.getByText(/violates check constraint/)).toBeTruthy();
+      // And says the rest of the account is fine, because it is.
+      expect(screen.getByText(/Everything else on your account/)).toBeTruthy();
+    });
+
+    it('says nothing about refusals when there are none', async () => {
+      mockedSync.mockReturnValue({
+        status: { state: 'synced', at: 1 },
+        stuck: [],
+        active: true,
+        syncNow: jest.fn(),
+      });
+      await renderApp(<AccountScreen />);
+      expect(screen.queryByText(/not on your account/)).toBeNull();
+    });
+
     it('offers a retry that actually runs a round', async () => {
       const syncNow = jest.fn();
       mockedSync.mockReturnValue({
         status: { state: 'failed', reason: 'offline', at: 1 },
+        stuck: [],
         active: true,
         syncNow,
       });

@@ -336,7 +336,19 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       setEntries((prev) => {
         const entry = prev[String(id)];
         if (!entry) return prev;
-        return { ...prev, [String(id)]: { ...entry, want } };
+        return {
+          ...prev,
+          [String(id)]: {
+            ...entry,
+            // Clamped at the setter, and not only for tidiness: the
+            // column this reaches has a 1-to-3 check on it, and a row
+            // the server refuses stops that game syncing until it is
+            // edited again. Every caller passes 2 or 3 today; this is
+            // so the next one cannot quietly cost somebody a sync.
+            want:
+              want > 0 ? Math.min(3, Math.max(1, Math.round(want))) : undefined,
+          },
+        };
       });
     },
     [setEntries]

@@ -1,4 +1,5 @@
 import type { Stamped, SyncBackend } from './engine';
+import { SyncError } from './errors';
 import type { DurationRow, LibraryRow, PreferencesRow } from './shape';
 import { supabase } from '../supabase';
 
@@ -15,8 +16,12 @@ import { supabase } from '../supabase';
  * place that decides what a failure means and it already catches.
  */
 
-const rethrow = (error: { message: string } | null) => {
-  if (error) throw new Error(error.message);
+const rethrow = (error: { message: string; code?: string } | null) => {
+  // The code travels with the message. Without it the engine cannot
+  // tell a row Postgres will never accept from a network that dropped,
+  // and it has to treat both the same way — which means either
+  // discarding good data or retrying bad data forever.
+  if (error) throw new SyncError(error.message, error.code);
 };
 
 /**
