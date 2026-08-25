@@ -49,7 +49,9 @@ describe('what to say when the app opens', () => {
       NOW
     );
     expect(alerts[0].kind).toBe('at-risk');
-    expect(alerts[0].message).toMatch(/Move the date, or let it go/);
+    // Both escapes are named, and both are buttons on the card: one
+    // keeps the game without a date, the other lets the game go.
+    expect(alerts[0].message).toMatch(/Drop the date, or let it go/);
   });
 
   it('reassures when a date can be met', () => {

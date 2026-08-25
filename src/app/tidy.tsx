@@ -17,7 +17,7 @@ import { SiteFooter } from '@/components/SiteFooter';
 import { Textured } from '@/components/Textured';
 import { useToast } from '@/components/Toast';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
-import { DROP_REASONS, recordDrop, type DropReason } from '@/lib/drops';
+import { recordDrop, type DropReason } from '@/lib/drops';
 import { formatHours } from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
 import {
@@ -26,6 +26,7 @@ import {
   type LibraryEntry,
   type LibraryStatus,
 } from '@/lib/library';
+import { LetGoBar } from '@/components/LetGoBar';
 import { COLORS } from '@/styles/colors';
 import { GUTTER, LAYOUT, RADIUS, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
@@ -228,37 +229,7 @@ export default function TidyScreen() {
           )}
         </View>
 
-        {asking && (
-          <View
-            style={[styles.bar, { paddingBottom: insets.bottom + SPACING.md }]}
-          >
-            {/* Not a guilt trip: the shelves cannot learn anything from a
-              silent delete, and "too long" and "bounced off it" mean
-              opposite things about what to offer next. */}
-            <Text style={styles.barCount}>
-              Why {asking.length === 1 ? 'this one' : 'these'}? Optional.
-            </Text>
-            <View style={styles.barActions}>
-              {DROP_REASONS.map((reason) => (
-                <Pressable
-                  key={reason.key}
-                  onPress={() => letGo(reason.key)}
-                  style={styles.secondary}
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.secondaryText}>{reason.label}</Text>
-                </Pressable>
-              ))}
-              <Pressable
-                onPress={() => letGo()}
-                style={styles.primary}
-                accessibilityRole="button"
-              >
-                <Text style={styles.primaryText}>Rather not say</Text>
-              </Pressable>
-            </View>
-          </View>
-        )}
+        {asking && <LetGoBar count={asking.length} onLetGo={letGo} />}
 
         {picked.size > 0 && !asking && (
           <View

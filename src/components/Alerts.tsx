@@ -1,9 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { LetGoBar } from './LetGoBar';
 import { useToast } from './Toast';
 import type { Alert } from '@/lib/alerts';
+import { recordDrop, type DropReason } from '@/lib/drops';
 import { useLibrary } from '@/lib/library';
 import { COLORS } from '@/styles/colors';
 import { RADIUS, SPACING } from '@/styles/theme';
@@ -29,8 +32,25 @@ const ICON: Record<Alert['kind'], keyof typeof Ionicons.glyphMap> = {
  */
 export function Alerts({ alerts }: { alerts: Alert[] }) {
   const router = useRouter();
-  const { setDeadline, setStatus, entries } = useLibrary();
+  const { setDeadline, setStatus, removeMany, entries } = useLibrary();
   const toast = useToast();
+
+  /**
+   * The game somebody has just said they might let go of.
+   *
+   * Held rather than acted on, because letting go is asked about
+   * before it is done — the reason is the only thing the shelves ever
+   * learn from a drop, and a one-tap delete would throw it away.
+   */
+  const [letting, setLetting] = useState<Alert | null>(null);
+
+  const letGo = (reason?: DropReason) => {
+    if (!letting) return;
+    const count = removeMany([letting.gameId]);
+    if (reason && count > 0) recordDrop(reason);
+    setLetting(null);
+    if (count > 0) toast('Let go. Nothing owed.', 'checkmark-circle');
+  };
 
   if (alerts.length === 0) return null;
 
@@ -82,6 +102,27 @@ export function Alerts({ alerts }: { alerts: Alert[] }) {
               </Pressable>
             )}
 
+            {alert.kind === 'at-risk' && (
+              /*
+               * The one the product is named after.
+               *
+               * PRODUCT.md §6.4 calls "you can't finish this, drop it?"
+               * the honest notification, and this card is where the app
+               * finally says it. Offering the sentence without the
+               * button was the version that read as nagging: told you
+               * it was hopeless, then left you to find the exit.
+               */
+              <Pressable
+                onPress={() => setLetting(alert)}
+                accessibilityRole="button"
+                accessibilityLabel={`Let ${alert.name} go`}
+              >
+                <Text style={[styles.action, styles.actionLetGo]}>
+                  Let it go
+                </Text>
+              </Pressable>
+            )}
+
             {alert.kind === 'nearly-done' && (
               <Pressable
                 onPress={() => {
@@ -103,6 +144,8 @@ export function Alerts({ alerts }: { alerts: Alert[] }) {
           </View>
         </View>
       ))}
+
+      {letting && <LetGoBar count={1} onLetGo={letGo} />}
     </View>
   );
 }
@@ -146,4 +189,11 @@ const styles = StyleSheet.create({
     ...TYPE.labelTiny,
     color: COLORS.accent,
   },
+  /**
+   * Letting go is coral everywhere else in this app — the drops, the
+   * amnesty, the LET GO figure on You — so it is coral here. It also
+   * separates the two escapes on this card at a glance: the amber one
+   * keeps the game, the coral one does not.
+   */
+  actionLetGo: { color: COLORS.coral },
 });

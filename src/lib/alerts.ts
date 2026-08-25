@@ -85,12 +85,27 @@ export function buildAlerts(
             name,
             days,
             hoursLeft: left,
+            /*
+             * Names the two escapes, both of which are on the card.
+             *
+             * This sentence promised "let it go" for a long time while
+             * the card had no such button — "let it go" being this
+             * app's own phrase for dropping a GAME, which lived only on
+             * the amnesty screen. Telling somebody a thing is hopeless
+             * and then leaving them to find the exit is exactly how
+             * §11.3's guilt reading creeps in.
+             *
+             * Both are real now. Drop the date keeps the game without
+             * one; Let it go asks why, the same way the amnesty screen
+             * does, because the reason is the only thing the shelves
+             * ever learn from a drop.
+             */
             message:
               days <= 0
-                ? `${name} is past the date you set. Let it go, or give it a new one.`
+                ? `${name} is past the date you set. Drop the date, or let it go — both are allowed.`
                 : `${name} needs ${round(left)}h and there is only room for about ${round(
                     capacity
-                  )}h before your date. Move the date, or let it go — both are allowed.`,
+                  )}h before your date. Drop the date, or let it go — both are allowed.`,
           });
           continue;
         }

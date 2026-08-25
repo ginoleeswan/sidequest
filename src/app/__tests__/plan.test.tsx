@@ -165,7 +165,7 @@ describe('the plan screen', () => {
       },
     ]);
     await renderApp(<PlanScreen />);
-    expect(screen.getByText(/Move the date, or let it go/)).toBeTruthy();
+    expect(screen.getByText(/Drop the date, or let it go/)).toBeTruthy();
   });
 
   /**
