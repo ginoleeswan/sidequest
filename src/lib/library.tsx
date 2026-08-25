@@ -51,6 +51,15 @@ export interface LibraryEntry {
    * belongs to today.
    */
   finishedAt?: number;
+  /**
+   * When this device last changed this entry, epoch ms.
+   *
+   * Sync's tie-breaker, and nothing else reads it. Optional because
+   * every library saved before sync existed has none; lib/sync treats a
+   * missing stamp as `addedAt`, which is the one moment we know the
+   * person acted on that game.
+   */
+  updatedAt?: number;
 }
 
 export const STATUS_META: Record<
@@ -161,7 +170,37 @@ interface LibraryContextValue {
 const LibraryContext = createContext<LibraryContextValue | null>(null);
 
 export function LibraryProvider({ children }: { children: React.ReactNode }) {
-  const [stored, setEntries] = useState<Entries>(load);
+  const [stored, commit] = useState<Entries>(load);
+
+  /**
+   * Every mutation goes through here, and every changed entry comes out
+   * the other side stamped with when it changed.
+   *
+   * Sync breaks ties on `updatedAt`, so an entry edited without one is
+   * an entry that silently loses to a stale copy on another device.
+   * Thirteen mutations write to this store and a fourteenth will be
+   * added by somebody who has never read this file — so the stamp is
+   * applied centrally, by comparing what came back against what went
+   * in, rather than asked of each of them in turn.
+   *
+   * Reference equality is the test, and it is exact here: every
+   * mutation below builds a new object for the entry it touches and
+   * leaves the others alone.
+   */
+  const setEntries = useCallback((update: (prev: Entries) => Entries) => {
+    commit((prev) => {
+      const next = update(prev);
+      if (next === prev) return prev;
+      const now = Date.now();
+      let stamped: Entries | null = null;
+      for (const [id, entry] of Object.entries(next)) {
+        if (prev[id] === entry) continue;
+        stamped ??= { ...next };
+        stamped[id] = { ...entry, updatedAt: now };
+      }
+      return stamped ?? next;
+    });
+  }, []);
   const [saveError, setSaveError] = useState<string | null>(null);
   // The pre-rendered HTML was generated with an empty library, so the
   // hydration render must show one too. Writes still go to `stored`.
