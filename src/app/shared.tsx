@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppHeader } from '@/components/AppHeader';
@@ -92,6 +92,29 @@ export default function SharedPlanScreen() {
                 Build your own and Sidequest will tell you what you can actually
                 finish.
               </Text>
+
+              {/*
+                The sentence above has invited the reader to build one
+                since this screen shipped, and there was nothing to
+                press. The broken-link branch had a button and this one
+                did not, so the path that fails converted and the path
+                somebody's friend actually sends dead-ended on a
+                compliment.
+
+                This is the only screen a stranger reaches by being
+                given something, which makes it the one place the app
+                has earned the right to ask.
+              */}
+              <Pressable
+                onPress={() => router.push('/plan')}
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.build,
+                  pressed && styles.buildPressed,
+                ]}
+              >
+                <Text style={styles.buildText}>Build your own</Text>
+              </Pressable>
             </>
           )}
         </View>
@@ -141,6 +164,21 @@ const styles = StyleSheet.create({
   hours: {
     ...TYPE.caption,
     color: COLORS.mediumGrey,
+  },
+  build: {
+    marginTop: SPACING.lg,
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.accent,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm + 2,
+    ...Platform.select({ web: { cursor: 'pointer' } }),
+  },
+  buildPressed: { opacity: 0.85 },
+  buildText: {
+    ...TYPE.label,
+    // Dark on the amber face, like every other amber control here.
+    color: COLORS.navy,
   },
   note: {
     ...TYPE.caption,

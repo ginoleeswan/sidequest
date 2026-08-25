@@ -1,4 +1,5 @@
-import { screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { router } from 'expo-router';
 
 import SharedPlanScreen from '../shared';
 import { encodePlan } from '@/lib/planLink';
@@ -6,6 +7,7 @@ import { renderApp, useFakeStorage } from '@/test-utils';
 
 beforeEach(() => {
   useFakeStorage();
+  jest.mocked(router.push).mockClear();
 });
 afterAll(() => {
   delete (globalThis as { routeParams?: unknown }).routeParams;
@@ -61,5 +63,26 @@ describe('a shared plan', () => {
     await waitFor(() =>
       expect(screen.getByText(/this plan lives in the link/)).toBeTruthy()
     );
+  });
+
+  it('gives the reader a way to build one', async () => {
+    // The copy has invited them to since this screen shipped. This is
+    // the only screen a stranger reaches by being given something, so
+    // it is the one place the app has earned the right to ask — and
+    // for a long time the branch that FAILED to read a link converted
+    // while this one, the link a friend actually sends, did not.
+    open(encodePlan({ pace: 4, games: [{ name: 'Tunic', hours: 12 }] }));
+    await renderApp(<SharedPlanScreen />);
+    await waitFor(() =>
+      expect(screen.getByText('Build your own')).toBeTruthy()
+    );
+    fireEvent.press(screen.getByText('Build your own'));
+    expect(router.push).toHaveBeenCalledWith('/plan');
+  });
+
+  it('still offers the way out when the link is broken', async () => {
+    open('not-a-plan');
+    await renderApp(<SharedPlanScreen />);
+    await waitFor(() => expect(screen.getByText('Make your own')).toBeTruthy());
   });
 });
