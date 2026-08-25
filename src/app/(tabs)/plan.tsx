@@ -74,6 +74,9 @@ const SESSION_OPTIONS: SegmentedOption<number>[] = [
   { value: 30, label: '30m' },
   { value: 60, label: '1h' },
   { value: 90, label: '1½h' },
+  // 2h earns its chip because Sunday's day-aware default IS 120: without
+  // it the control opened with nothing highlighted one day in seven.
+  { value: 120, label: '2h' },
   { value: 180, label: '3h' },
 ];
 
@@ -206,8 +209,12 @@ export default function PlanScreen() {
   // wrong question two days in seven. Captured once, after hydration.
   const hydrated = useHydrated();
   const [weekendSession] = useState(() => sessionMinutesFor());
-  const [session, setSession] = useState(60);
-  const sessionMinutes = hydrated && session === 60 ? weekendSession : session;
+  // null = no explicit choice; the day-aware default fills in. The
+  // sentinel used to be 60 — a value that is also a chip — so tapping
+  // "1h" on a Friday read as "no choice" and snapped straight back to
+  // three hours. A choice must be distinguishable from its absence.
+  const [session, setSession] = useState<number | null>(null);
+  const sessionMinutes = session ?? (hydrated ? weekendSession : 60);
   const [steamOpen, setSteamOpen] = useState(false);
   const toast = useToast();
 

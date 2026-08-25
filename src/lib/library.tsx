@@ -201,16 +201,17 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
         delete next[String(game.id)];
       } else {
         const existing = prev[String(game.id)];
+        // Everything the entry already holds survives a status change:
+        // this used to rebuild the entry field-by-field, and the fields
+        // it forgot were the note, the rating and the tags — the only
+        // text the user ever writes, silently dropped by tapping
+        // "Finished". Spreading the existing entry means the next field
+        // added to LibraryEntry cannot repeat that bug.
         next[String(game.id)] = {
+          ...existing,
           game: slim(game),
           status,
           addedAt: existing?.addedAt ?? Date.now(),
-          // Measured progress outlives a status change: moving a game to
-          // "playing" does not un-know the thirty hours behind it.
-          hoursPlayed: existing?.hoursPlayed,
-          steamAppId: existing?.steamAppId,
-          deadline: existing?.deadline,
-          want: existing?.want,
           finishedAt:
             status === 'finished'
               ? (existing?.finishedAt ?? Date.now())
@@ -239,15 +240,17 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       const next = { ...prev };
       for (const { game, status, hoursPlayed, steamAppId } of games) {
         const existing = next[String(game.id)];
+        // Spread first, for the same reason as setStatus: an import
+        // adds games, it does not overrule them — and "them" includes
+        // the note, rating, tags, deadline and want flag this used to
+        // silently drop from every re-imported game.
         next[String(game.id)] = {
+          ...existing,
           game: slim(game),
-          // A game already in the library keeps the status its owner
-          // gave it; an import adds games, it does not overrule them.
           status: existing?.status ?? status,
           addedAt: existing?.addedAt ?? Date.now(),
           hoursPlayed: hoursPlayed ?? existing?.hoursPlayed,
           steamAppId: steamAppId ?? existing?.steamAppId,
-          finishedAt: existing?.finishedAt,
         };
       }
       return next;
