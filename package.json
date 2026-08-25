@@ -110,6 +110,14 @@
       "!src/**/*.d.ts",
       "!src/test-utils.tsx",
       "!api/test-utils.ts"
-    ]
+    ],
+    "moduleNameMapper": {
+      "\\.(woff|woff2)$": "<rootDir>/test/fileStub.js",
+      "^@/(.*)$": "<rootDir>/src/$1",
+      "^@/assets/(.*)$": "<rootDir>/assets/$1",
+      "^react-native($|/.*)": "<rootDir>/node_modules/react-native/$1",
+      "^react-native-vector-icons$": "@expo/vector-icons",
+      "^react-native-vector-icons/(.*)": "@expo/vector-icons/$1"
+    }
   }
 }
