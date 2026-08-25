@@ -27,6 +27,10 @@ jobs:
       - name: Test
         run: npm run test:coverage
         timeout-minutes: 8
+      - name: Timezone tests
+        # The date bugs a UTC runner cannot see. See jest.tz.config.js.
+        run: npm run test:tz
+        timeout-minutes: 3
       - name: Bundle (web export)
         run: npx expo export --platform web
         timeout-minutes: 10

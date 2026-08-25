@@ -1,6 +1,14 @@
+import type { Alert } from '../alerts';
 import type { Memcard } from '../memcard';
 import type { PlannedEvening } from '../week';
-import { tonightShape, weekShape, yearShape } from '../widgetData';
+import {
+  midnightOf,
+  planTimeline,
+  pressureOf,
+  tonightShape,
+  weekShape,
+  yearShape,
+} from '../widgetData';
 
 const night = (
   weekday: number,
@@ -134,5 +142,185 @@ describe('yearShape', () => {
     const shaped = yearShape(card([]));
     expect(shaped.count).toBe(0);
     expect(shaped.months).toEqual(Array(12).fill(0));
+  });
+});
+
+describe('pressureOf', () => {
+  const alert = (over: Partial<Alert> = {}): Alert => ({
+    kind: 'due-soon',
+    gameId: 1,
+    name: 'Hades',
+    message: 'in-app sentence',
+    days: 3,
+    hoursLeft: 4,
+    ...over,
+  });
+  const summary = { games: 3, lastFinishAt: null };
+
+  it('paints red for a deadline there is no room for', () => {
+    // The one state where doing nothing is the wrong answer, so it
+    // outranks everything else the widget could say.
+    const { urgency, note } = pressureOf(
+      [
+        alert({ kind: 'due-soon' }),
+        alert({ kind: 'at-risk', name: 'Elden Ring' }),
+      ],
+      summary,
+      0
+    );
+    expect(urgency).toBe('red');
+    expect(note).toBe("Elden Ring won't fit");
+  });
+
+  it('says plainly when the date has already gone', () => {
+    const { note } = pressureOf(
+      [alert({ kind: 'at-risk', days: -2 })],
+      summary,
+      0
+    );
+    expect(note).toBe('Hades is past its date');
+  });
+
+  it('paints amber for a deadline that still fits', () => {
+    const { urgency, note } = pressureOf([alert({ days: 3 })], summary, 0);
+    expect(urgency).toBe('amber');
+    expect(note).toBe('Hades due in 3d');
+  });
+
+  it('does not say “in 0d”', () => {
+    expect(pressureOf([alert({ days: 0 })], summary, 0).note).toBe(
+      'Hades due today'
+    );
+  });
+
+  it('is the plan itself when nothing is pressing', () => {
+    // The line §6.1 calls the marketing asset: a home screen that says
+    // what the app is for without a word of explanation.
+    const twelveDays = 12 * 86_400_000;
+    const { urgency, note } = pressureOf(
+      [],
+      { games: 3, lastFinishAt: twelveDays },
+      0
+    );
+    expect(urgency).toBe('calm');
+    expect(note).toBe('3 games · 12 days');
+  });
+
+  it('counts one game as one game', () => {
+    expect(pressureOf([], { games: 1, lastFinishAt: 86_400_000 }, 0).note).toBe(
+      '1 game · 1 day'
+    );
+  });
+
+  it('says nothing at all with nothing planned', () => {
+    expect(pressureOf([], { games: 0, lastFinishAt: null }, 0)).toEqual({
+      urgency: 'calm',
+      note: '',
+    });
+  });
+
+  it('ignores nearly-done, which is a nudge and not a pressure', () => {
+    const { urgency } = pressureOf(
+      [alert({ kind: 'nearly-done', days: undefined })],
+      { games: 2, lastFinishAt: null },
+      0
+    );
+    expect(urgency).toBe('calm');
+  });
+});
+
+describe('planTimeline', () => {
+  const DAY = 86_400_000;
+  const calm = { urgency: 'calm' as const, note: '' };
+  const daysApart = (from: number, to: number) =>
+    Math.round((new Date(to).setHours(12) - new Date(from).setHours(12)) / DAY);
+  // A Wednesday, mid-morning, so "today" is unambiguous.
+  const now = new Date('2026-03-04T10:00:00').getTime();
+
+  it('decides every morning of the week in advance', () => {
+    // The whole point: seven future-dated entries mean the widget is
+    // right all week without the app ever being opened.
+    const days = planTimeline(
+      () => [],
+      () => calm,
+      now
+    );
+    expect(days).toHaveLength(7);
+    expect(days[0].at).toBe(midnightOf(now));
+    // Consecutive calendar mornings, asserted as dates rather than as
+    // multiples of 24 hours — two days a year are not. The clock-change
+    // cases live in widgetTimeline.tz.test.ts, which needs a timezone
+    // this runner does not have.
+    for (const [index, day] of days.entries()) {
+      expect(new Date(day.at).getHours()).toBe(0);
+      if (index > 0) expect(daysApart(days[index - 1].at, day.at)).toBe(1);
+    }
+  });
+
+  it('asks the engine what the plan looks like on each of those days', () => {
+    // Not one snapshot re-rendered seven times — which is what the
+    // first build did, and why Monday's game sat on the Lock Screen
+    // through Wednesday.
+    const asked: number[] = [];
+    const days = planTimeline(
+      (at) => {
+        asked.push(at);
+        return [
+          night(new Date(at).getDay(), [
+            { name: `Game ${asked.length}`, hours: 2 },
+          ]),
+        ];
+      },
+      () => calm,
+      now
+    );
+    expect(asked).toHaveLength(7);
+    expect(new Set(asked).size).toBe(7);
+    expect(days.map((d) => d.tonight?.title)).toEqual([
+      'Game 1',
+      'Game 2',
+      'Game 3',
+      'Game 4',
+      'Game 5',
+      'Game 6',
+      'Game 7',
+    ]);
+  });
+
+  it('lets the plan run out instead of repeating the last game', () => {
+    // A widget that is confidently wrong is worse than one that admits
+    // it knows nothing.
+    const days = planTimeline(
+      (at) =>
+        at < midnightOf(now) + 2 * DAY
+          ? [night(0, [{ name: 'Hades', hours: 2 }])]
+          : [],
+      () => calm,
+      now
+    );
+    expect(days[0].tonight?.title).toBe('Hades');
+    expect(days[1].tonight?.title).toBe('Hades');
+    expect(days[2].tonight).toBeNull();
+    expect(days[6].tonight).toBeNull();
+  });
+
+  it('lets the pressure change as the dates approach', () => {
+    const days = planTimeline(
+      () => [night(0, [{ name: 'Hades', hours: 2 }])],
+      (at) =>
+        at >= midnightOf(now) + 3 * DAY
+          ? { urgency: 'red', note: "Hades won't fit" }
+          : calm,
+      now
+    );
+    expect(days.map((d) => d.pressure.urgency)).toEqual([
+      'calm',
+      'calm',
+      'calm',
+      'red',
+      'red',
+      'red',
+      'red',
+    ]);
   });
 });
