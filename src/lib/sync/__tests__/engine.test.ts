@@ -5,6 +5,7 @@ import {
   type SyncBackend,
   type SyncState,
 } from '../engine';
+import { SyncError } from '../errors';
 import { toStamp, type DurationRow, type LibraryRow } from '../shape';
 import type { LibraryEntry } from '../../library';
 import type { Game } from '@/api/types';
@@ -388,6 +389,196 @@ describe('syncOnce', () => {
       );
       expect(again.ok).toBe(true);
       expect(retry.calls.library[0]).toHaveLength(1);
+    });
+  });
+
+  describe('a row the server will never accept', () => {
+    // The failure this exists for: a round is one statement per table,
+    // so without it a single impossible value stops every other game
+    // the person owns from ever reaching their account — permanently,
+    // and with no way for them to tell which game did it.
+    const refuse = (bad: number) => async (rows: LibraryRow[]) => {
+      if (rows.some((row) => row.game_id === bad)) {
+        throw new SyncError(
+          'new row violates check constraint "library_entries_want_check"',
+          '23514'
+        );
+      }
+    };
+
+    const shelf = (...ids: number[]) =>
+      Object.fromEntries(
+        ids.map((id) => [String(id), entry({ game: game(id, `Game ${id}`) })])
+      );
+
+    it('places the rest of the shelf and names the one that failed', async () => {
+      const { backend } = fakeBackend({ pushLibrary: refuse(3) });
+      const result = await syncOnce(
+        backend,
+        state({ entries: shelf(1, 2, 3, 4) })
+      );
+      if (!result.ok) throw new Error('expected a finished round');
+      expect(result.pushed).toBe(3);
+      expect(result.stuck).toEqual([
+        { key: '3', reason: expect.stringContaining('check constraint') },
+      ]);
+    });
+
+    it('finds several bad rows in one batch', async () => {
+      const { backend } = fakeBackend({
+        pushLibrary: async (rows) => {
+          if (rows.some((row) => row.game_id === 2 || row.game_id === 5)) {
+            throw new SyncError('refused', '23514');
+          }
+        },
+      });
+      const result = await syncOnce(
+        backend,
+        state({ entries: shelf(1, 2, 3, 4, 5, 6) })
+      );
+      if (!result.ok) throw new Error('expected a finished round');
+      expect(result.stuck.map((s) => s.key).sort()).toEqual(['2', '5']);
+      expect(result.pushed).toBe(4);
+    });
+
+    it('bisects rather than trying every row on its own', async () => {
+      // Six round trips for one bad row in five hundred, not five
+      // hundred. The whole batch first, then halves.
+      let attempts = 0;
+      const { backend } = fakeBackend({
+        pushLibrary: async (rows) => {
+          attempts += 1;
+          if (rows.some((row) => row.game_id === 40)) {
+            throw new SyncError('refused', '23514');
+          }
+        },
+      });
+      const ids = Array.from({ length: 64 }, (_, i) => i + 1);
+      const result = await syncOnce(backend, state({ entries: shelf(...ids) }));
+      if (!result.ok) throw new Error('expected a finished round');
+      expect(result.stuck).toHaveLength(1);
+      expect(attempts).toBeLessThan(20);
+    });
+
+    it('does not offer a refused row again until it changes', async () => {
+      const first = fakeBackend({ pushLibrary: refuse(3) });
+      const one = await syncOnce(
+        first.backend,
+        state({ entries: shelf(1, 3) })
+      );
+      if (!one.ok) throw new Error('expected a finished round');
+      expect(one.state.quarantine?.library['3']).toBeTruthy();
+
+      // A second round with the same data: game 3 is not sent at all,
+      // so a permanently bad row costs one request, once.
+      const second = fakeBackend({ pushLibrary: refuse(3) });
+      const two = await syncOnce(second.backend, {
+        ...one.state,
+        entries: shelf(1, 3),
+      });
+      if (!two.ok) throw new Error('expected a finished round');
+      expect(second.calls.library).toHaveLength(0);
+      expect(two.state.quarantine?.library['3']).toBeTruthy();
+    });
+
+    it('tries again the moment the person edits it', async () => {
+      const first = fakeBackend({ pushLibrary: refuse(3) });
+      const one = await syncOnce(
+        first.backend,
+        state({ entries: shelf(1, 3) })
+      );
+      if (!one.ok) throw new Error('expected a finished round');
+
+      // Editing the entry restamps it, which is the retry: the only
+      // thing that can clear a refusal is the row becoming different.
+      const fixed = fakeBackend();
+      const two = await syncOnce(fixed.backend, {
+        ...one.state,
+        entries: {
+          ...shelf(1),
+          '3': entry({ game: game(3, 'Game 3'), updatedAt: 1_900_000_000_000 }),
+        },
+      });
+      if (!two.ok) throw new Error('expected a finished round');
+      expect(fixed.calls.library[0].map((row) => row.game_id)).toEqual([3]);
+      expect(two.state.quarantine?.library['3']).toBeUndefined();
+      expect(two.stuck).toEqual([]);
+    });
+
+    it('a refused row is never recorded as landed', async () => {
+      // If it were, `pendingPush` would filter it out on the next round
+      // and the row would be lost to the server for good.
+      const { backend } = fakeBackend({ pushLibrary: refuse(3) });
+      const result = await syncOnce(backend, state({ entries: shelf(1, 3) }));
+      if (!result.ok) throw new Error('expected a finished round');
+      expect(result.state.known?.library['1']).toBeTruthy();
+      expect(result.state.known?.library['3']).toBeUndefined();
+    });
+
+    it('quarantines a duration the server refuses, on its hours', async () => {
+      const { backend } = fakeBackend({
+        pushDurations: async (rows) => {
+          if (rows.some((row) => row.hours > 1000)) {
+            throw new SyncError('refused', '22003');
+          }
+        },
+      });
+      const result = await syncOnce(
+        backend,
+        state({ durations: { '1': 30, '2': 99_999 } }),
+        1_800_000_000_000
+      );
+      if (!result.ok) throw new Error('expected a finished round');
+      expect(result.stuck.map((s) => s.key)).toEqual(['2']);
+      expect(result.state.quarantine?.durations['2']?.fingerprint).toBe(99_999);
+    });
+
+    it('leaves a dropped connection alone instead of bisecting it', async () => {
+      // Splitting a batch because the network died turns one failed
+      // request into a storm of them, and the round should simply end.
+      let attempts = 0;
+      const { backend } = fakeBackend({
+        pushLibrary: async () => {
+          attempts += 1;
+          throw new SyncError('connection reset', '08006');
+        },
+      });
+      const result = await syncOnce(
+        backend,
+        state({ entries: shelf(1, 2, 3, 4) })
+      );
+      expect(result.ok).toBe(false);
+      expect(attempts).toBe(1);
+    });
+
+    it('treats an error with no code as the moment, not the row', async () => {
+      const { backend } = fakeBackend({
+        pushLibrary: async () => {
+          throw new Error('fetch failed');
+        },
+      });
+      const result = await syncOnce(backend, state({ entries: shelf(1) }));
+      expect(result.ok).toBe(false);
+    });
+
+    it('one unusable game does not cost the shelf its cache row', async () => {
+      const cached: number[] = [];
+      const { backend } = fakeBackend({
+        pushGames: async (rows) => {
+          if (rows.some((row) => row.id === 2)) {
+            throw new SyncError('invalid input syntax for type date', '22P02');
+          }
+          cached.push(...rows.map((row) => row.id));
+        },
+      });
+      const result = await syncOnce(
+        backend,
+        state({ entries: shelf(1, 2, 3) })
+      );
+      expect(result.ok).toBe(true);
+      // Games 1 and 3 still reach the shared cache.
+      expect(cached).toContain(1);
+      expect(cached).toContain(3);
     });
   });
 

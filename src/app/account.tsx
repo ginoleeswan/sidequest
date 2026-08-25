@@ -15,9 +15,10 @@ import { Textured } from '@/components/Textured';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useTopPad } from '@/hooks/useTopPad';
 import { useAuth } from '@/lib/auth';
+import { useLibrary } from '@/lib/library';
 import { useSync, type SyncStatus } from '@/lib/sync/SyncProvider';
 import { COLORS } from '@/styles/colors';
-import { GUTTER, LAYOUT, SPACING } from '@/styles/theme';
+import { GUTTER, LAYOUT, RADIUS, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 /**
@@ -77,6 +78,25 @@ function syncLine(status: SyncStatus, email: string | null): string {
   }
 }
 
+/**
+ * A refusal, named.
+ *
+ * A row the server will never accept is the one sync failure a retry
+ * cannot fix — only editing the game clears it — so the person has to
+ * be told which game, not just that something went wrong. Everything
+ * else on the account is fine, and saying so is half the message.
+ */
+function stuckLine(
+  stuck: { key: string; reason: string }[],
+  named: string[]
+): string {
+  const list =
+    named.length > 2
+      ? `${named.slice(0, 2).join(', ')} and ${named.length - 2} more`
+      : named.join(' and ');
+  return `${list} — the server would not accept ${stuck.length === 1 ? 'it' : 'them'} (${stuck[0].reason}). Everything else on your account is up to date. Editing the game tries again.`;
+}
+
 const EYEBROW: Record<SyncStatus['state'], string> = {
   idle: 'SIGNED IN',
   syncing: 'SYNCING',
@@ -90,7 +110,8 @@ export default function AccountScreen() {
   const { isExpanded } = useBreakpoint();
   const topPad = useTopPad(true);
   const { session, available } = useAuth();
-  const { status, syncNow } = useSync();
+  const { status, stuck, syncNow } = useSync();
+  const { entries } = useLibrary();
 
   const email = session?.user.email ?? null;
 
@@ -137,6 +158,23 @@ export default function AccountScreen() {
                     ? syncLine(status, email)
                     : 'Signing in syncs your library and your plan. It doesn’t unlock anything — everything in the app already works without it, and it always will.'}
                 </Text>
+                {session && stuck.length > 0 && (
+                  <View style={styles.stuck}>
+                    <Text style={styles.stuckTitle}>
+                      {stuck.length === 1
+                        ? 'One game is not on your account'
+                        : `${stuck.length} games are not on your account`}
+                    </Text>
+                    <Text style={styles.stuckBody}>
+                      {stuckLine(
+                        stuck,
+                        stuck.map(
+                          ({ key }) => entries[key]?.game?.name ?? `Game ${key}`
+                        )
+                      )}
+                    </Text>
+                  </View>
+                )}
                 {session && status.state !== 'syncing' && (
                   <Pressable
                     onPress={syncNow}
@@ -237,6 +275,16 @@ const styles = StyleSheet.create({
     color: COLORS.lightGrey,
     textDecorationLine: 'underline',
   },
+  stuck: {
+    marginTop: SPACING.md,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.mediumGrey,
+    gap: SPACING.xs,
+  },
+  stuckTitle: { ...TYPE.label, color: COLORS.white },
+  stuckBody: { ...TYPE.caption, color: COLORS.mediumGrey },
   rows: { marginTop: SPACING.xl },
 
   groupLabel: {

@@ -81,6 +81,22 @@ describe('LibraryProvider', () => {
     expect(entry.want).toBe(3);
   });
 
+  it('keeps want inside what the account will accept', async () => {
+    // Not tidiness: the column this reaches has a 1-to-3 check on it,
+    // and a row the server refuses stops that game syncing until it is
+    // edited again. Every caller passes 2 or 3 today — this is so the
+    // next one cannot quietly cost somebody a sync.
+    const { result } = await setup();
+    await act(async () => {
+      result.current.setStatus(game(1), 'playing');
+      result.current.setWant(1, 9);
+    });
+    expect(result.current.entries['1'].want).toBe(3);
+
+    await act(async () => result.current.setWant(1, 0));
+    expect(result.current.entries['1'].want).toBeUndefined();
+  });
+
   it('re-importing a game keeps everything its owner gave it', async () => {
     const { result } = await setup();
     await act(async () => {

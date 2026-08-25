@@ -1,4 +1,11 @@
-import { advanceCursor, knownAfter, mergeRows, pendingPush } from './merge';
+import { isPermanent, reasonOf } from './errors';
+import {
+  advanceCursor,
+  knownAfter,
+  mergeRows,
+  pendingPush,
+  type Row,
+} from './merge';
 import {
   applyDurations,
   applyLibrary,
@@ -11,6 +18,7 @@ import {
   preferencesUpload,
   remoteDurations,
   remoteLibrary,
+  type Carried,
   type DurationRow,
   type LibraryRow,
   type Preferences,
@@ -54,7 +62,29 @@ export interface SyncState {
    * did not keep this record will do exactly once.
    */
   known?: Known;
+  /**
+   * Rows the server has already refused, and what it said.
+   *
+   * Optional, and absent means nothing is stuck — which is the state
+   * every device is in until something goes wrong, and the state it
+   * returns to once the offending row is edited.
+   */
+  quarantine?: Quarantine;
 }
+
+/** What the server said about a row, and which version of it it said so about. */
+export interface Stuck {
+  reason: string;
+  /** The fingerprint that was refused. A different one gets a fresh try. */
+  fingerprint: number;
+}
+
+export interface Quarantine {
+  library: Record<string, Stuck>;
+  durations: Record<string, Stuck>;
+}
+
+export const NO_QUARANTINE: Quarantine = { library: {}, durations: {} };
 
 /** Key to fingerprint, per table. See `pendingPush` for what a fingerprint is. */
 export interface Known {
@@ -72,7 +102,14 @@ export interface Cursors {
 export const NO_CURSORS: Cursors = { library: null, durations: null };
 
 export type SyncOutcome =
-  | { ok: true; state: SyncState; pushed: number; pulled: number }
+  | {
+      ok: true;
+      state: SyncState;
+      pushed: number;
+      pulled: number;
+      /** Rows this round could not place, named so a screen can say which. */
+      stuck: { key: string; reason: string }[];
+    }
   | { ok: false; reason: string };
 
 /**
@@ -105,6 +142,77 @@ export type Stamped<T> = T & { updated_at: string };
  */
 const hours = (row: { value?: number }) => row.value ?? 0;
 
+/**
+ * Send a batch, and if the server refuses it, find out which row.
+ *
+ * A push is one statement, so a single impossible value takes the whole
+ * batch down with it — and because the engine retries what it could not
+ * place, that one row would stop every other game the person owns from
+ * ever reaching their account. This halves the batch and tries again,
+ * so the cost of finding one bad row among five hundred is nine round
+ * trips rather than five hundred, and the good rows still land.
+ *
+ * Only permanent refusals are worth bisecting. A dropped connection
+ * fails every half equally, and splitting it up would turn one failed
+ * request into a storm of them — so those are rethrown untouched and
+ * the round ends the way it always has, changing nothing.
+ */
+async function pushSurvivors<T extends Row>(
+  rows: T[],
+  send: (batch: T[]) => Promise<void>
+): Promise<{ sent: T[]; rejected: { row: T; reason: string }[] }> {
+  if (rows.length === 0) return { sent: [], rejected: [] };
+  try {
+    await send(rows);
+    return { sent: rows, rejected: [] };
+  } catch (error) {
+    if (!isPermanent(error)) throw error;
+    if (rows.length === 1) {
+      return {
+        sent: [],
+        rejected: [{ row: rows[0], reason: reasonOf(error) }],
+      };
+    }
+    const middle = Math.floor(rows.length / 2);
+    const first = await pushSurvivors(rows.slice(0, middle), send);
+    const second = await pushSurvivors(rows.slice(middle), send);
+    return {
+      sent: [...first.sent, ...second.sent],
+      rejected: [...first.rejected, ...second.rejected],
+    };
+  }
+}
+
+/** Rows the server refused in this exact shape, and has not been re-offered since. */
+const notRefused =
+  <T extends Row>(
+    held: Record<string, Stuck>,
+    fingerprint: (row: T) => number
+  ) =>
+  (row: T) =>
+    held[row.key]?.fingerprint !== fingerprint(row);
+
+/** The quarantine after a round: refusals that still stand, plus new ones. */
+function quarantineAfter<T extends Row>(
+  before: Record<string, Stuck>,
+  offered: readonly T[],
+  rejected: readonly { row: T; reason: string }[],
+  fingerprint: (row: T) => number
+): Record<string, Stuck> {
+  const after: Record<string, Stuck> = {};
+  // A refusal survives only while nothing has been sent that clears it.
+  // Anything offered this round either landed or was refused again, and
+  // either way this round's answer is the current one.
+  const answered = new Set(offered.map((row) => row.key));
+  for (const [key, stuck] of Object.entries(before)) {
+    if (!answered.has(key)) after[key] = stuck;
+  }
+  for (const { row, reason } of rejected) {
+    after[row.key] = { reason, fingerprint: fingerprint(row) };
+  }
+  return after;
+}
+
 export async function syncOnce(
   backend: SyncBackend,
   local: SyncState,
@@ -132,19 +240,50 @@ export async function syncOnce(
       now
     );
 
+    // Skip what the server already refused in this exact shape. Edit
+    // the game and the fingerprint changes, which is the retry: the
+    // person fixing the problem is the event worth waiting for.
+    const stuckLibrary = local.quarantine?.library ?? {};
+    const libraryTry = libraryPush.filter(
+      notRefused<Carried<LibraryEntry>>(
+        stuckLibrary,
+        (row) => row.clientUpdatedAt
+      )
+    );
+
     // Games before entries: a library_entries row references games(id),
     // so pushing an entry for a game the table has never heard of is a
     // foreign key violation that would fail the whole batch.
-    if (libraryPush.length > 0) {
+    let librarySent: typeof libraryTry = [];
+    let libraryRejected: {
+      row: (typeof libraryTry)[number];
+      reason: string;
+    }[] = [];
+    if (libraryTry.length > 0) {
       const named = gamesUpload(
         Object.fromEntries(
-          libraryPush
+          libraryTry
             .filter((row) => row.value?.game?.name)
             .map((row) => [row.key, row.value as LibraryEntry])
         )
       );
-      if (named.length > 0) await backend.pushGames(named);
-      await backend.pushLibrary(libraryUpload(libraryPush));
+      // The games cache gets the same treatment: one malformed release
+      // date should cost that one game, not the whole shelf.
+      if (named.length > 0) {
+        await pushSurvivors(
+          named.map((game, index) => ({
+            key: String(game.id),
+            clientUpdatedAt: index,
+            game,
+          })),
+          (batch) => backend.pushGames(batch.map((row) => row.game))
+        );
+      }
+      const outcome = await pushSurvivors(libraryTry, (batch) =>
+        backend.pushLibrary(libraryUpload(batch))
+      );
+      librarySent = outcome.sent;
+      libraryRejected = outcome.rejected;
     }
 
     /* -------------------------------------------------------- durations */
@@ -165,8 +304,21 @@ export async function syncOnce(
       now,
       hours
     );
-    if (durationsPush.length > 0) {
-      await backend.pushDurations(durationsUpload(durationsPush));
+    const stuckDurations = local.quarantine?.durations ?? {};
+    const durationsTry = durationsPush.filter(
+      notRefused<Carried<number>>(stuckDurations, hours)
+    );
+    let durationsSent: typeof durationsTry = [];
+    let durationsRejected: {
+      row: (typeof durationsTry)[number];
+      reason: string;
+    }[] = [];
+    if (durationsTry.length > 0) {
+      const outcome = await pushSurvivors(durationsTry, (batch) =>
+        backend.pushDurations(durationsUpload(batch))
+      );
+      durationsSent = outcome.sent;
+      durationsRejected = outcome.rejected;
     }
 
     /* ------------------------------------------------------ preferences */
@@ -192,10 +344,30 @@ export async function syncOnce(
       await backend.pushPreferences(preferencesUpload(local.preferences, now));
     }
 
+    const refusedLibrary = new Set(libraryRejected.map((r) => r.row.key));
+    const refusedDurations = new Set(durationsRejected.map((r) => r.row.key));
+    const quarantineLibrary = quarantineAfter(
+      stuckLibrary,
+      libraryTry,
+      libraryRejected,
+      (row) => row.clientUpdatedAt
+    );
+    const quarantineDurations = quarantineAfter(
+      stuckDurations,
+      durationsTry,
+      durationsRejected,
+      hours
+    );
+
     return {
       ok: true,
       pulled: pulledLibrary.length + pulledDurations.length,
-      pushed: libraryPush.length + durationsPush.length,
+      // What landed, not what was attempted. A round that placed
+      // nothing should not report progress it did not make.
+      pushed: librarySent.length + durationsSent.length,
+      stuck: [...libraryRejected, ...durationsRejected].map(
+        ({ row, reason }) => ({ key: row.key, reason })
+      ),
       state: {
         entries,
         durations,
@@ -203,12 +375,27 @@ export async function syncOnce(
         // Recorded from what is actually kept, not from the merge's
         // working set: a key remembered that the device did not retain
         // would read as a fresh delete on the very next round.
+        //
+        // A refused row is deliberately excluded. It is still on the
+        // device and still absent from the server, so calling it known
+        // would be a lie in the one direction that loses data — and the
+        // quarantine, not this, is what stops it being retried blindly.
         known: {
-          library: knownAfter(libraryPlan.next.filter((row) => row.value)),
+          library: knownAfter(
+            libraryPlan.next.filter(
+              (row) => row.value && !refusedLibrary.has(row.key)
+            )
+          ),
           durations: knownAfter(
-            durationPlan.next.filter((row) => (row.value ?? 0) > 0),
+            durationPlan.next.filter(
+              (row) => (row.value ?? 0) > 0 && !refusedDurations.has(row.key)
+            ),
             hours
           ),
+        },
+        quarantine: {
+          library: quarantineLibrary,
+          durations: quarantineDurations,
         },
         cursors: {
           library: advanceCursor(

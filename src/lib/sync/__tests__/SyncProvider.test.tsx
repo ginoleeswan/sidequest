@@ -7,6 +7,7 @@ import type { SyncBackend } from '../engine';
 import { useAuth } from '../../auth';
 import { DurationsProvider } from '../../durations';
 import { LibraryProvider, useLibrary } from '../../library';
+import { readJson, writeJson } from '../../storage';
 import { useFakeStorage } from '@/test-utils';
 import type { Game } from '@/api/types';
 
@@ -152,6 +153,50 @@ describe('SyncProvider', () => {
       jest.advanceTimersByTime(5_000);
     });
     expect(pushed.library).toBe(0);
+  });
+
+  it('a manual retry reconsiders a row the server refused', async () => {
+    // Automatic rounds skip a refused row, which is right. A person
+    // pressing Sync now is asking for another go, and a button that
+    // quietly does nothing is worse than no button.
+    const refused = { '7': { reason: 'refused', fingerprint: 1 } };
+    writeJson('sidequest.sync.stuck.v1', {
+      library: refused,
+      durations: {},
+    });
+
+    const { backend } = backendSpy();
+    let sync: ReturnType<typeof useSync> | null = null;
+    function Grab() {
+      const value = useSync();
+      useEffect(() => {
+        sync = value;
+      });
+      return null;
+    }
+    await render(
+      <LibraryProvider>
+        <DurationsProvider>
+          <SyncProvider makeBackend={() => backend}>
+            <Grab />
+          </SyncProvider>
+        </DurationsProvider>
+      </LibraryProvider>
+    );
+    await act(async () => {});
+    expect(readJson('sidequest.sync.stuck.v1', null)).toBeTruthy();
+
+    await act(async () => {
+      sync?.syncNow();
+    });
+    // The record of the refusal is gone, so the next round tries it.
+    expect(
+      (
+        readJson('sidequest.sync.stuck.v1', {
+          library: refused,
+        }) as { library: Record<string, unknown> }
+      ).library['7']
+    ).toBeUndefined();
   });
 
   it('waits for a local change to stop before sending it', async () => {

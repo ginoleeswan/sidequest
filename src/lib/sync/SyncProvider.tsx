@@ -11,9 +11,11 @@ import {
 import {
   NO_CURSORS,
   NO_KNOWN,
+  NO_QUARANTINE,
   syncOnce,
   type Cursors,
   type Known,
+  type Quarantine,
   type SyncBackend,
 } from './engine';
 import type { Preferences } from './shape';
@@ -47,6 +49,12 @@ const CURSOR_KEY = 'sidequest.sync.cursors.v1';
  * cursor, and simply re-pushes its library once.
  */
 const KNOWN_KEY = 'sidequest.sync.known.v1';
+/**
+ * Rows the server has refused, so they are not offered again until
+ * they change. Kept across launches because the refusal is a fact
+ * about the row, not about the session that discovered it.
+ */
+const STUCK_KEY = 'sidequest.sync.stuck.v1';
 const PREFS_KEYS = {
   pace: 'sidequest.plan.pace',
   planWindow: 'sidequest.plan.window',
@@ -71,6 +79,14 @@ export type SyncStatus =
 
 interface SyncValue {
   status: SyncStatus;
+  /**
+   * Games the server would not accept, named rather than counted.
+   *
+   * Empty almost always. When it is not, the account screen has to be
+   * able to say which game and what the server said, because the only
+   * thing that clears a refusal is the person editing the row.
+   */
+  stuck: { key: string; reason: string }[];
   /** Whether an account is signed in and sync is therefore possible. */
   active: boolean;
   /** Run a round now — the account screen's retry. */
@@ -108,6 +124,7 @@ export function SyncProvider({
   const library = useLibrary();
   const durations = useDurations();
   const [runStatus, setStatus] = useState<SyncStatus>({ state: 'idle' });
+  const [stuck, setStuck] = useState<{ key: string; reason: string }[]>([]);
 
   const userId = session?.user?.id ?? null;
 
@@ -131,6 +148,7 @@ export function SyncProvider({
       preferences: readPreferences(),
       cursors: readJson<Cursors>(CURSOR_KEY, NO_CURSORS),
       known: readJson<Known>(KNOWN_KEY, NO_KNOWN),
+      quarantine: readJson<Quarantine>(STUCK_KEY, NO_QUARANTINE),
     });
 
     if (result.ok) {
@@ -141,12 +159,29 @@ export function SyncProvider({
       writePreferences(result.state.preferences);
       writeJson(CURSOR_KEY, result.state.cursors);
       writeJson(KNOWN_KEY, result.state.known ?? NO_KNOWN);
+      writeJson(STUCK_KEY, result.state.quarantine ?? NO_QUARANTINE);
+      setStuck(result.stuck);
       setStatus({ state: 'synced', at: Date.now() });
     } else {
       setStatus({ state: 'failed', reason: result.reason, at: Date.now() });
     }
     inFlight.current = false;
   }, [userId, makeBackend]);
+
+  /**
+   * The retry, which has to mean something for a refused row too.
+   *
+   * Automatic rounds skip what the server already rejected, and that is
+   * right: re-sending the same row to get the same answer is a waste of
+   * somebody's battery. But a person pressing Sync now is explicitly
+   * asking for another go — often because they just changed something
+   * elsewhere, or because the constraint itself moved — and a button
+   * that quietly does nothing is worse than no button.
+   */
+  const syncNow = useCallback(() => {
+    kv.removeItem(STUCK_KEY);
+    void run();
+  }, [run]);
 
   // Signing in: catch up immediately, in both directions.
   useEffect(() => {
@@ -183,8 +218,13 @@ export function SyncProvider({
   }, [localVersion, userId, run]);
 
   const value = useMemo<SyncValue>(
-    () => ({ status, active: Boolean(userId), syncNow: () => void run() }),
-    [status, userId, run]
+    () => ({
+      status,
+      stuck: userId ? stuck : [],
+      active: Boolean(userId),
+      syncNow,
+    }),
+    [status, stuck, userId, syncNow]
   );
 
   return <SyncContext.Provider value={value}>{children}</SyncContext.Provider>;
@@ -195,11 +235,19 @@ export function useSync(): SyncValue {
   // Absent rather than throwing: the whole feature is optional, and a
   // screen that renders fine without an account must render fine
   // without this too.
-  return ctx ?? { status: { state: 'idle' }, active: false, syncNow: () => {} };
+  return (
+    ctx ?? {
+      status: { state: 'idle' },
+      stuck: [],
+      active: false,
+      syncNow: () => {},
+    }
+  );
 }
 
 /** Sign-out forgets where sync got to, so the next account starts clean. */
 export function forgetSyncCursors() {
   kv.removeItem(CURSOR_KEY);
   kv.removeItem(KNOWN_KEY);
+  kv.removeItem(STUCK_KEY);
 }
