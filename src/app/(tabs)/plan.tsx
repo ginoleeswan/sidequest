@@ -23,6 +23,7 @@ import { SectionHeader } from '@/components/SectionHeader';
 import { Segmented, type SegmentedOption } from '@/components/Segmented';
 import { SteamConnect } from '@/components/SteamConnect';
 import { WeekView } from '@/components/WeekView';
+import { HorizonStrip } from '@/components/HorizonStrip';
 import { Textured } from '@/components/Textured';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { DurationSheet } from '@/components/DurationSheet';
@@ -347,6 +348,15 @@ export default function PlanScreen() {
   const misfitCount =
     atRiskIds.size +
     schedule.dropped.filter((item) => !atRiskIds.has(item.id)).length;
+  /**
+   * The dates the month view draws as coral weather: deadlines the
+   * plan cannot meet, on the day they name. The month shows the
+   * geometry of the problem; the sentences and the ways out stay in
+   * "What doesn't fit".
+   */
+  const troubled = entries
+    .filter((e) => atRiskIds.has(e.game.id) && e.deadline != null)
+    .map((e) => ({ id: e.game.id, name: e.game.name, deadline: e.deadline! }));
 
   const tonight = useMemo(
     () =>
@@ -578,20 +588,41 @@ export default function PlanScreen() {
                   </View>
 
                   <View style={isExpanded ? styles.colRight : styles.stack}>
-                    {/* 3 — WHAT YOU'LL PLAY.
-                        The schedule, once. It used to render three
-                        times — the week bars, a legend under them, and
-                        a separate numbered route — and the legend was
-                        literally the route repeated: same games, same
-                        order, same colours. Now the bars sit on top and
-                        the route sits where the legend was, being the
-                        legend, with the calendar hand-off at the foot.
-                        One card, one story: this week, then the rest. */}
+                    {/* 3 — THIS WEEK.
+                        The plan at the scale a person lives at: one
+                        row per evening, with its real date, what it
+                        goes on and for how long — free evenings drawn
+                        as free, because a night given back has to look
+                        given back. The agenda answers "what am I doing
+                        Thursday?" literally, which is the question a
+                        week view exists for. */}
                     {schedule.scheduled.length > 0 && (
                       <View style={styles.section}>
                         <SectionHeader
-                          title="What you’ll play"
-                          eyebrow={`This week, then the rest — shortest first`}
+                          title="This week"
+                          eyebrow="Your evenings — the free ones count"
+                        />
+                        <WeekView
+                          scheduled={schedule.scheduled}
+                          now={now}
+                          leadId={tonightPick?.id}
+                        />
+                      </View>
+                    )}
+
+                    {/* 4 — THIS MONTH.
+                        The same schedule at the scale of the horizon:
+                        a timeline, never a 30-box grid, because the
+                        month's only facts are when the credits land
+                        and whether everything fits — and 26 empty
+                        boxes would bury both under obligation. The
+                        strip is the picture; the route beneath it is
+                        the sentences, one per game, shortest first. */}
+                    {schedule.scheduled.length > 0 && (
+                      <View style={styles.section}>
+                        <SectionHeader
+                          title="This month"
+                          eyebrow="Where the credits land"
                         />
                         <Text style={styles.routeNote}>
                           Quick wins first — momentum is the strategy.
@@ -603,11 +634,13 @@ export default function PlanScreen() {
                               } yours, and the plan trusts those over the estimates.`
                             : '  Tap any length to correct it.'}
                         </Text>
-                        <WeekView
-                          scheduled={schedule.scheduled}
-                          now={now}
-                          leadId={tonightPick?.id}
-                        >
+                        <View style={styles.monthCard}>
+                          <HorizonStrip
+                            scheduled={schedule.scheduled}
+                            now={now}
+                            troubled={troubled}
+                          />
+                          <View style={styles.monthRule} />
                           <View>
                             {schedule.scheduled.map((item, index) => (
                               <QuestRow
@@ -625,7 +658,7 @@ export default function PlanScreen() {
                               />
                             ))}
                           </View>
-                        </WeekView>
+                        </View>
                       </View>
                     )}
 
@@ -666,7 +699,7 @@ export default function PlanScreen() {
                       </View>
                     )}
 
-                    {/* 4 — THE DIAL, and the verdict it produces.
+                    {/* 5 — THE DIAL, and the verdict it produces.
                         Last, because it is the least-touched thing on
                         the page and the most consequential: everything
                         above is what these two numbers decided. Putting
@@ -776,6 +809,20 @@ const styles = StyleSheet.create({
     color: COLORS.mediumGrey,
     marginTop: -SPACING.xs,
   },
+  /**
+   * The month card: the horizon strip on top, the route beneath it —
+   * the picture, then its sentences, on the same plane the week uses.
+   */
+  monthCard: {
+    gap: SPACING.md,
+    padding: SPACING.lg,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.stroke,
+    backgroundColor: COLORS.raised,
+    ...SHADOW.card,
+  },
+  monthRule: { height: 1, backgroundColor: COLORS.stroke },
 
   /**
    * The dial, and the sentence it produces.

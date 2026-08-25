@@ -87,9 +87,15 @@ const SCENARIOS = [
     name: 'the plan, with a deadline that cannot be met',
     route: '/plan',
     seed: SEED,
-    // The misfit row offers every escape, and the page tells its story
-    // in order: tonight, then the one merged schedule card.
-    expect: ['Drop the date', 'Let it go', 'Tonight', 'What you’ll play'],
+    // The misfit row offers every escape, and the page tells time in
+    // order: tonight, the week as an agenda, the month as a horizon.
+    expect: [
+      'Drop the date',
+      'Let it go',
+      'Tonight',
+      'This week',
+      'Where the credits land',
+    ],
   },
   {
     name: 'a shared plan asks for something back',
