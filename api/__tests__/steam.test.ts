@@ -64,9 +64,7 @@ describe('api/steam', () => {
         json({
           response: {
             game_count: 1,
-            games: [
-              { appid: 620, name: 'Portal 2', playtime_forever: 754 },
-            ],
+            games: [{ appid: 620, name: 'Portal 2', playtime_forever: 754 }],
           },
         })
       )

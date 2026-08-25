@@ -69,7 +69,10 @@ describe('api/report', () => {
     for (let i = 0; i < 21; i++) {
       const { res, sent } = fakeRes();
       await handler(
-        fromIp('9.9.9.9', { method: 'POST', body: { message: 'hi' } }) as unknown as Req,
+        fromIp('9.9.9.9', {
+          method: 'POST',
+          body: { message: 'hi' },
+        }) as unknown as Req,
         res as unknown as Res
       );
       last = sent.code ?? 0;

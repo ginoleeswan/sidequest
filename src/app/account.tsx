@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppHeader } from '@/components/AppHeader';
@@ -15,6 +15,7 @@ import { Textured } from '@/components/Textured';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useTopPad } from '@/hooks/useTopPad';
 import { useAuth } from '@/lib/auth';
+import { useSync, type SyncStatus } from '@/lib/sync/SyncProvider';
 import { COLORS } from '@/styles/colors';
 import { GUTTER, LAYOUT, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
@@ -43,8 +44,45 @@ import { TYPE } from '@/styles/typography';
 const TRAVELS = [
   'Your library, and the shelves you sorted it into',
   'Your plan, your pace and the lengths you corrected',
-  'What you finished, and what you let go',
+  'Your notes, tags, deadlines and ratings',
 ];
+
+/**
+ * And what does not — which is the harder half to write and the half
+ * worth writing.
+ *
+ * Play sessions and drop reasons are counts and minutes kept in a shape
+ * that would lose detail crossing a table, so they are honestly
+ * device-local rather than dishonestly half-synced. Somebody who reads
+ * this list and then wipes their phone should not be surprised by what
+ * came back.
+ */
+const STAYS = [
+  'Play sessions, and the time they logged',
+  'Why you dropped what you dropped',
+  'Recently viewed, and anything you searched',
+];
+
+/** The status line, said plainly rather than reassuringly. */
+function syncLine(status: SyncStatus, email: string | null): string {
+  switch (status.state) {
+    case 'syncing':
+      return 'Catching up with your other devices now.';
+    case 'synced':
+      return `Everything below is on ${email ?? 'your account'} as well as this device. It syncs when you sign in and shortly after anything changes.`;
+    case 'failed':
+      return `Could not reach the server just now (${status.reason}). Nothing was lost — this device has all of it, and the next change will try again.`;
+    default:
+      return 'Signed in. Your library and plan will sync the next time anything changes.';
+  }
+}
+
+const EYEBROW: Record<SyncStatus['state'], string> = {
+  idle: 'SIGNED IN',
+  syncing: 'SYNCING',
+  synced: 'SYNCED',
+  failed: 'NOT SYNCED',
+};
 
 export default function AccountScreen() {
   const router = useRouter();
@@ -52,6 +90,7 @@ export default function AccountScreen() {
   const { isExpanded } = useBreakpoint();
   const topPad = useTopPad(true);
   const { session, available } = useAuth();
+  const { status, syncNow } = useSync();
 
   const email = session?.user.email ?? null;
 
@@ -80,8 +119,13 @@ export default function AccountScreen() {
               />
             ) : (
               <>
-                <Text style={styles.eyebrow}>
-                  {session ? 'SYNCED' : 'OPTIONAL'}
+                <Text
+                  style={[
+                    styles.eyebrow,
+                    status.state === 'failed' && styles.eyebrowOff,
+                  ]}
+                >
+                  {session ? EYEBROW[status.state] : 'OPTIONAL'}
                 </Text>
                 <Text style={styles.title}>
                   {session
@@ -90,9 +134,18 @@ export default function AccountScreen() {
                 </Text>
                 <Text style={styles.blurb}>
                   {session
-                    ? 'Your library and plan follow you to every device you sign in on. Signing out leaves all of it here.'
+                    ? syncLine(status, email)
                     : 'Signing in syncs your library and your plan. It doesn’t unlock anything — everything in the app already works without it, and it always will.'}
                 </Text>
+                {session && status.state !== 'syncing' && (
+                  <Pressable
+                    onPress={syncNow}
+                    accessibilityRole="button"
+                    style={styles.retry}
+                  >
+                    <Text style={styles.retryText}>Sync now</Text>
+                  </Pressable>
+                )}
 
                 {/* SignInRows draws its own spinner while the stored
                     session is being worked out — a second gate here
@@ -110,9 +163,19 @@ export default function AccountScreen() {
                     </View>
                   ))}
                 </View>
+                <Text style={styles.groupLabel}>STAYS ON THIS DEVICE</Text>
+                <View style={styles.list}>
+                  {STAYS.map((line) => (
+                    <View key={line} style={styles.listRow}>
+                      <View style={[styles.bullet, styles.bulletOff]} />
+                      <Text style={styles.listText}>{line}</Text>
+                    </View>
+                  ))}
+                </View>
                 <Text style={styles.fine}>
-                  Nothing else. No play history, no reading, no address book,
-                  and no email from us that you didn’t ask for.
+                  Nothing else leaves the device. No reading, no address book,
+                  and no email from us that you didn’t ask for. Signing out
+                  leaves every one of these lists here.
                 </Text>
 
                 {!session && (
@@ -157,11 +220,22 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.xl,
   },
   eyebrow: { ...TYPE.micro, color: COLORS.accent },
+  eyebrowOff: { color: COLORS.mediumGrey },
   title: { ...TYPE.title, color: COLORS.white, marginTop: SPACING.xs },
   blurb: {
     ...TYPE.body,
     color: COLORS.mediumGrey,
     marginTop: SPACING.sm,
+  },
+  retry: {
+    marginTop: SPACING.md,
+    alignSelf: 'flex-start',
+    ...Platform.select({ web: { cursor: 'pointer' } }),
+  },
+  retryText: {
+    ...TYPE.caption,
+    color: COLORS.lightGrey,
+    textDecorationLine: 'underline',
   },
   rows: { marginTop: SPACING.xl },
 
@@ -180,6 +254,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.accent,
     // Nudged onto the first line's optical centre rather than its top.
     marginTop: 8,
+  },
+  // Hollow, so the two lists read as opposites at a glance.
+  bulletOff: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: COLORS.mediumGrey,
   },
   listText: { ...TYPE.body, color: COLORS.lightGrey, flex: 1 },
   fine: { ...TYPE.caption, color: COLORS.mediumGrey, marginTop: SPACING.md },

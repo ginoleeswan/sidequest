@@ -26,16 +26,13 @@ const game = (id: number, playtime: number, name = `Game ${id}`): Game =>
   }) as unknown as Game;
 
 function harness() {
-  return renderHook(
-    () => ({ pick: useTonightPick(), library: useLibrary() }),
-    {
-      wrapper: ({ children }: { children: React.ReactNode }) => (
-        <LibraryProvider>
-          <DurationsProvider>{children}</DurationsProvider>
-        </LibraryProvider>
-      ),
-    }
-  );
+  return renderHook(() => ({ pick: useTonightPick(), library: useLibrary() }), {
+    wrapper: ({ children }: { children: React.ReactNode }) => (
+      <LibraryProvider>
+        <DurationsProvider>{children}</DurationsProvider>
+      </LibraryProvider>
+    ),
+  });
 }
 
 beforeEach(() => {

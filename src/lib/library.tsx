@@ -51,6 +51,15 @@ export interface LibraryEntry {
    * belongs to today.
    */
   finishedAt?: number;
+  /**
+   * When this device last changed this entry, epoch ms.
+   *
+   * Sync's tie-breaker, and nothing else reads it. Optional because
+   * every library saved before sync existed has none; lib/sync treats a
+   * missing stamp as `addedAt`, which is the one moment we know the
+   * person acted on that game.
+   */
+  updatedAt?: number;
 }
 
 export const STATUS_META: Record<
@@ -143,6 +152,15 @@ interface LibraryContextValue {
   addTag: (id: number, tag: string) => void;
   /** Take it off again. */
   removeTag: (id: number, tag: string) => void;
+  /**
+   * Sync's way in: adopt an already-merged map.
+   *
+   * Deliberately NOT stamped. Everything else here records when this
+   * device changed an entry; these entries were changed on another one,
+   * and restamping them would mark the whole pull as local news and
+   * push it straight back — a loop that grows by a round trip each time.
+   */
+  adoptSynced: (entries: Entries) => void;
   /** Every shelf in use, alphabetically — the filter list writes itself. */
   tags: string[];
   /**
@@ -161,7 +179,37 @@ interface LibraryContextValue {
 const LibraryContext = createContext<LibraryContextValue | null>(null);
 
 export function LibraryProvider({ children }: { children: React.ReactNode }) {
-  const [stored, setEntries] = useState<Entries>(load);
+  const [stored, commit] = useState<Entries>(load);
+
+  /**
+   * Every mutation goes through here, and every changed entry comes out
+   * the other side stamped with when it changed.
+   *
+   * Sync breaks ties on `updatedAt`, so an entry edited without one is
+   * an entry that silently loses to a stale copy on another device.
+   * Thirteen mutations write to this store and a fourteenth will be
+   * added by somebody who has never read this file — so the stamp is
+   * applied centrally, by comparing what came back against what went
+   * in, rather than asked of each of them in turn.
+   *
+   * Reference equality is the test, and it is exact here: every
+   * mutation below builds a new object for the entry it touches and
+   * leaves the others alone.
+   */
+  const setEntries = useCallback((update: (prev: Entries) => Entries) => {
+    commit((prev) => {
+      const next = update(prev);
+      if (next === prev) return prev;
+      const now = Date.now();
+      let stamped: Entries | null = null;
+      for (const [id, entry] of Object.entries(next)) {
+        if (prev[id] === entry) continue;
+        stamped ??= { ...next };
+        stamped[id] = { ...entry, updatedAt: now };
+      }
+      return stamped ?? next;
+    });
+  }, []);
   const [saveError, setSaveError] = useState<string | null>(null);
   // The pre-rendered HTML was generated with an empty library, so the
   // hydration render must show one too. Writes still go to `stored`.
@@ -194,237 +242,281 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     setSaveError(result.ok ? null : writeFailureMessage(result));
   }, [stored]);
 
-  const setStatus = useCallback((game: Game, status: LibraryStatus | null) => {
-    setEntries((prev) => {
-      const next = { ...prev };
-      if (status == null) {
-        delete next[String(game.id)];
-      } else {
+  const setStatus = useCallback(
+    (game: Game, status: LibraryStatus | null) => {
+      setEntries((prev) => {
+        const next = { ...prev };
+        if (status == null) {
+          delete next[String(game.id)];
+        } else {
+          const existing = prev[String(game.id)];
+          // Everything the entry already holds survives a status change:
+          // this used to rebuild the entry field-by-field, and the fields
+          // it forgot were the note, the rating and the tags — the only
+          // text the user ever writes, silently dropped by tapping
+          // "Finished". Spreading the existing entry means the next field
+          // added to LibraryEntry cannot repeat that bug.
+          next[String(game.id)] = {
+            ...existing,
+            game: slim(game),
+            status,
+            addedAt: existing?.addedAt ?? Date.now(),
+            finishedAt:
+              status === 'finished'
+                ? (existing?.finishedAt ?? Date.now())
+                : undefined,
+          };
+        }
+        return next;
+      });
+    },
+    [setEntries]
+  );
+
+  const setProgress = useCallback(
+    (progress: Record<number, number>) => {
+      setEntries((prev) => {
+        const next = { ...prev };
+        for (const [id, hours] of Object.entries(progress)) {
+          const entry = next[id];
+          if (!entry) continue;
+          next[id] = { ...entry, hoursPlayed: hours > 0 ? hours : undefined };
+        }
+        return next;
+      });
+    },
+    [setEntries]
+  );
+
+  const addGames = useCallback<LibraryContextValue['addGames']>(
+    (games) => {
+      if (games.length === 0) return 0;
+      setEntries((prev) => {
+        const next = { ...prev };
+        for (const { game, status, hoursPlayed, steamAppId } of games) {
+          const existing = next[String(game.id)];
+          // Spread first, for the same reason as setStatus: an import
+          // adds games, it does not overrule them — and "them" includes
+          // the note, rating, tags, deadline and want flag this used to
+          // silently drop from every re-imported game.
+          next[String(game.id)] = {
+            ...existing,
+            game: slim(game),
+            status: existing?.status ?? status,
+            addedAt: existing?.addedAt ?? Date.now(),
+            hoursPlayed: hoursPlayed ?? existing?.hoursPlayed,
+            steamAppId: steamAppId ?? existing?.steamAppId,
+          };
+        }
+        return next;
+      });
+      return games.length;
+    },
+    [setEntries]
+  );
+
+  const adoptSynced = useCallback((next: Entries) => commit(next), []);
+
+  const setDeadline = useCallback(
+    (id: number, deadline: number | null) => {
+      setEntries((prev) => {
+        const entry = prev[String(id)];
+        if (!entry) return prev;
+        return {
+          ...prev,
+          [String(id)]: { ...entry, deadline: deadline ?? undefined },
+        };
+      });
+    },
+    [setEntries]
+  );
+
+  const setWant = useCallback(
+    (id: number, want: number) => {
+      setEntries((prev) => {
+        const entry = prev[String(id)];
+        if (!entry) return prev;
+        return { ...prev, [String(id)]: { ...entry, want } };
+      });
+    },
+    [setEntries]
+  );
+
+  const setNote = useCallback(
+    (id: number, note: string) => {
+      setEntries((prev) => {
+        const entry = prev[String(id)];
+        if (!entry) return prev;
+        const trimmed = note.trim();
+        return {
+          ...prev,
+          [String(id)]: {
+            ...entry,
+            note: trimmed === '' ? undefined : trimmed,
+          },
+        };
+      });
+    },
+    [setEntries]
+  );
+
+  const setRating = useCallback(
+    (id: number, rating: number) => {
+      setEntries((prev) => {
+        const entry = prev[String(id)];
+        if (!entry) return prev;
+        return {
+          ...prev,
+          [String(id)]: {
+            ...entry,
+            rating: rating > 0 ? Math.min(5, Math.round(rating)) : undefined,
+          },
+        };
+      });
+    },
+    [setEntries]
+  );
+
+  const addPlayTime = useCallback(
+    (game: Game, hours: number) => {
+      if (hours <= 0) return;
+      setEntries((prev) => {
         const existing = prev[String(game.id)];
-        // Everything the entry already holds survives a status change:
-        // this used to rebuild the entry field-by-field, and the fields
-        // it forgot were the note, the rating and the tags — the only
-        // text the user ever writes, silently dropped by tapping
-        // "Finished". Spreading the existing entry means the next field
-        // added to LibraryEntry cannot repeat that bug.
-        next[String(game.id)] = {
-          ...existing,
-          game: slim(game),
-          status,
-          addedAt: existing?.addedAt ?? Date.now(),
-          finishedAt:
-            status === 'finished'
-              ? (existing?.finishedAt ?? Date.now())
-              : undefined,
+        return {
+          ...prev,
+          [String(game.id)]: {
+            game: slim(game),
+            // Playing something is the strongest signal there is that it
+            // is under way, so an unsaved game becomes one.
+            status: existing?.status ?? 'playing',
+            addedAt: existing?.addedAt ?? Date.now(),
+            hoursPlayed:
+              Math.round(((existing?.hoursPlayed ?? 0) + hours) * 10) / 10,
+            steamAppId: existing?.steamAppId,
+            deadline: existing?.deadline,
+            want: existing?.want,
+            note: existing?.note,
+            rating: existing?.rating,
+            tags: existing?.tags,
+            finishedAt: existing?.finishedAt,
+          },
         };
-      }
-      return next;
-    });
-  }, []);
+      });
+    },
+    [setEntries]
+  );
 
-  const setProgress = useCallback((progress: Record<number, number>) => {
-    setEntries((prev) => {
-      const next = { ...prev };
-      for (const [id, hours] of Object.entries(progress)) {
-        const entry = next[id];
-        if (!entry) continue;
-        next[id] = { ...entry, hoursPlayed: hours > 0 ? hours : undefined };
-      }
-      return next;
-    });
-  }, []);
-
-  const addGames = useCallback<LibraryContextValue['addGames']>((games) => {
-    if (games.length === 0) return 0;
-    setEntries((prev) => {
-      const next = { ...prev };
-      for (const { game, status, hoursPlayed, steamAppId } of games) {
-        const existing = next[String(game.id)];
-        // Spread first, for the same reason as setStatus: an import
-        // adds games, it does not overrule them — and "them" includes
-        // the note, rating, tags, deadline and want flag this used to
-        // silently drop from every re-imported game.
-        next[String(game.id)] = {
-          ...existing,
-          game: slim(game),
-          status: existing?.status ?? status,
-          addedAt: existing?.addedAt ?? Date.now(),
-          hoursPlayed: hoursPlayed ?? existing?.hoursPlayed,
-          steamAppId: steamAppId ?? existing?.steamAppId,
+  const addTag = useCallback(
+    (id: number, tag: string) => {
+      const clean = tag.trim().slice(0, 24);
+      if (clean === '') return;
+      setEntries((prev) => {
+        const entry = prev[String(id)];
+        if (!entry) return prev;
+        const existing = entry.tags ?? [];
+        // Case-insensitively unique: "Co-op" and "co-op" are one shelf.
+        if (existing.some((t) => t.toLowerCase() === clean.toLowerCase()))
+          return prev;
+        return {
+          ...prev,
+          [String(id)]: { ...entry, tags: [...existing, clean] },
         };
-      }
-      return next;
-    });
-    return games.length;
-  }, []);
+      });
+    },
+    [setEntries]
+  );
 
-  const setDeadline = useCallback((id: number, deadline: number | null) => {
-    setEntries((prev) => {
-      const entry = prev[String(id)];
-      if (!entry) return prev;
-      return {
-        ...prev,
-        [String(id)]: { ...entry, deadline: deadline ?? undefined },
-      };
-    });
-  }, []);
+  const removeTag = useCallback(
+    (id: number, tag: string) => {
+      setEntries((prev) => {
+        const entry = prev[String(id)];
+        if (!entry?.tags) return prev;
+        const next = entry.tags.filter(
+          (t) => t.toLowerCase() !== tag.toLowerCase()
+        );
+        return {
+          ...prev,
+          [String(id)]: { ...entry, tags: next.length > 0 ? next : undefined },
+        };
+      });
+    },
+    [setEntries]
+  );
 
-  const setWant = useCallback((id: number, want: number) => {
-    setEntries((prev) => {
-      const entry = prev[String(id)];
-      if (!entry) return prev;
-      return { ...prev, [String(id)]: { ...entry, want } };
-    });
-  }, []);
+  const removeMany = useCallback(
+    (ids: number[]) => {
+      const count = ids.filter((id) => entriesRef.current[String(id)]).length;
+      setEntries((prev) => {
+        const next = { ...prev };
+        for (const id of ids) delete next[String(id)];
+        /**
+         * An emptied library empties the widgets with it.
+         *
+         * The app group is a second copy of the reader's data, living
+         * outside the app's own storage in a container the app cannot see
+         * from any screen. Every other path keeps it current by
+         * republishing — the plan screen and the memory card both write
+         * whenever their data changes — but "delete everything" has no
+         * screen left to republish from, so the last plan would sit on a
+         * home screen after the library that produced it was gone.
+         *
+         * Only on the last one out. Removing some games is an edit, and
+         * the ordinary publish handles it.
+         */
+        if (Object.keys(next).length === 0) void clearWidgets();
+        return next;
+      });
+      return count;
+    },
+    [setEntries]
+  );
 
-  const setNote = useCallback((id: number, note: string) => {
-    setEntries((prev) => {
-      const entry = prev[String(id)];
-      if (!entry) return prev;
-      const trimmed = note.trim();
-      return {
-        ...prev,
-        [String(id)]: { ...entry, note: trimmed === '' ? undefined : trimmed },
-      };
-    });
-  }, []);
+  const moveMany = useCallback(
+    (ids: number[], status: LibraryStatus) => {
+      const count = ids.filter((id) => entriesRef.current[String(id)]).length;
+      setEntries((prev) => {
+        const next = { ...prev };
+        for (const id of ids) {
+          const entry = next[String(id)];
+          if (!entry) continue;
+          next[String(id)] = {
+            ...entry,
+            status,
+            finishedAt:
+              status === 'finished'
+                ? (entry.finishedAt ?? Date.now())
+                : undefined,
+          };
+        }
+        return next;
+      });
+      return count;
+    },
+    [setEntries]
+  );
 
-  const setRating = useCallback((id: number, rating: number) => {
-    setEntries((prev) => {
-      const entry = prev[String(id)];
-      if (!entry) return prev;
-      return {
-        ...prev,
-        [String(id)]: {
-          ...entry,
-          rating: rating > 0 ? Math.min(5, Math.round(rating)) : undefined,
-        },
-      };
-    });
-  }, []);
-
-  const addPlayTime = useCallback((game: Game, hours: number) => {
-    if (hours <= 0) return;
-    setEntries((prev) => {
-      const existing = prev[String(game.id)];
-      return {
-        ...prev,
-        [String(game.id)]: {
-          game: slim(game),
-          // Playing something is the strongest signal there is that it
-          // is under way, so an unsaved game becomes one.
-          status: existing?.status ?? 'playing',
-          addedAt: existing?.addedAt ?? Date.now(),
-          hoursPlayed:
-            Math.round(((existing?.hoursPlayed ?? 0) + hours) * 10) / 10,
-          steamAppId: existing?.steamAppId,
-          deadline: existing?.deadline,
-          want: existing?.want,
-          note: existing?.note,
-          rating: existing?.rating,
-          tags: existing?.tags,
-          finishedAt: existing?.finishedAt,
-        },
-      };
-    });
-  }, []);
-
-  const addTag = useCallback((id: number, tag: string) => {
-    const clean = tag.trim().slice(0, 24);
-    if (clean === '') return;
-    setEntries((prev) => {
-      const entry = prev[String(id)];
-      if (!entry) return prev;
-      const existing = entry.tags ?? [];
-      // Case-insensitively unique: "Co-op" and "co-op" are one shelf.
-      if (existing.some((t) => t.toLowerCase() === clean.toLowerCase()))
-        return prev;
-      return {
-        ...prev,
-        [String(id)]: { ...entry, tags: [...existing, clean] },
-      };
-    });
-  }, []);
-
-  const removeTag = useCallback((id: number, tag: string) => {
-    setEntries((prev) => {
-      const entry = prev[String(id)];
-      if (!entry?.tags) return prev;
-      const next = entry.tags.filter(
-        (t) => t.toLowerCase() !== tag.toLowerCase()
+  const importJson = useCallback(
+    (raw: string): number => {
+      const parsed = JSON.parse(raw) as Entries;
+      const incoming = Object.entries(parsed).filter(
+        ([, entry]) =>
+          entry &&
+          typeof entry.game?.id === 'number' &&
+          typeof entry.game?.name === 'string' &&
+          ['wishlist', 'playing', 'finished'].includes(entry.status)
       );
-      return {
-        ...prev,
-        [String(id)]: { ...entry, tags: next.length > 0 ? next : undefined },
-      };
-    });
-  }, []);
-
-  const removeMany = useCallback((ids: number[]) => {
-    const count = ids.filter((id) => entriesRef.current[String(id)]).length;
-    setEntries((prev) => {
-      const next = { ...prev };
-      for (const id of ids) delete next[String(id)];
-      /**
-       * An emptied library empties the widgets with it.
-       *
-       * The app group is a second copy of the reader's data, living
-       * outside the app's own storage in a container the app cannot see
-       * from any screen. Every other path keeps it current by
-       * republishing — the plan screen and the memory card both write
-       * whenever their data changes — but "delete everything" has no
-       * screen left to republish from, so the last plan would sit on a
-       * home screen after the library that produced it was gone.
-       *
-       * Only on the last one out. Removing some games is an edit, and
-       * the ordinary publish handles it.
-       */
-      if (Object.keys(next).length === 0) void clearWidgets();
-      return next;
-    });
-    return count;
-  }, []);
-
-  const moveMany = useCallback((ids: number[], status: LibraryStatus) => {
-    const count = ids.filter((id) => entriesRef.current[String(id)]).length;
-    setEntries((prev) => {
-      const next = { ...prev };
-      for (const id of ids) {
-        const entry = next[String(id)];
-        if (!entry) continue;
-        next[String(id)] = {
-          ...entry,
-          status,
-          finishedAt:
-            status === 'finished'
-              ? (entry.finishedAt ?? Date.now())
-              : undefined,
-        };
-      }
-      return next;
-    });
-    return count;
-  }, []);
-
-  const importJson = useCallback((raw: string): number => {
-    const parsed = JSON.parse(raw) as Entries;
-    const incoming = Object.entries(parsed).filter(
-      ([, entry]) =>
-        entry &&
-        typeof entry.game?.id === 'number' &&
-        typeof entry.game?.name === 'string' &&
-        ['wishlist', 'playing', 'finished'].includes(entry.status)
-    );
-    if (incoming.length === 0) throw new Error('No library entries found');
-    setEntries((prev) => {
-      const next = { ...prev };
-      for (const [key, entry] of incoming) {
-        next[key] = entry;
-      }
-      return next;
-    });
-    return incoming.length;
-  }, []);
+      if (incoming.length === 0) throw new Error('No library entries found');
+      setEntries((prev) => {
+        const next = { ...prev };
+        for (const [key, entry] of incoming) {
+          next[key] = entry;
+        }
+        return next;
+      });
+      return incoming.length;
+    },
+    [setEntries]
+  );
 
   const value = useMemo<LibraryContextValue>(
     () => ({
@@ -447,6 +539,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       addPlayTime,
       addTag,
       removeTag,
+      adoptSynced,
       tags: [
         ...new Set(Object.values(entries).flatMap((entry) => entry.tags ?? [])),
       ].sort((a, b) => a.localeCompare(b)),
@@ -467,6 +560,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       addPlayTime,
       addTag,
       removeTag,
+      adoptSynced,
       removeMany,
       moveMany,
       saveError,

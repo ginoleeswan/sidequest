@@ -106,6 +106,39 @@ describe('LibraryProvider', () => {
     expect(entry.steamAppId).toBe(42);
   });
 
+  it('stamps every change, so sync can tell which device edited last', async () => {
+    const { result } = await setup();
+    await act(async () => {
+      result.current.setStatus(game(1), 'wishlist');
+    });
+    const saved = result.current.entries['1'].updatedAt;
+    expect(saved).toBeGreaterThan(0);
+
+    await act(async () => {
+      result.current.setNote(1, 'a later thought');
+    });
+    // The stamp moves with the edit — without that, an entry loses a
+    // tie to a stale copy on another device.
+    expect(result.current.entries['1'].updatedAt).toBeGreaterThanOrEqual(
+      saved as number
+    );
+  });
+
+  it('leaves untouched entries untouched, stamp included', async () => {
+    const { result } = await setup();
+    await act(async () => {
+      result.current.setStatus(game(1), 'wishlist');
+      result.current.setStatus(game(2), 'wishlist');
+    });
+    const before = result.current.entries['2'];
+    await act(async () => {
+      result.current.setNote(1, 'only game one changed');
+    });
+    // Same object, not merely equal: a stamp applied to every entry on
+    // every write would push the whole library on every sync.
+    expect(result.current.entries['2']).toBe(before);
+  });
+
   it('removes a game when its status is cleared', async () => {
     const { result } = await setup();
     await act(async () => {

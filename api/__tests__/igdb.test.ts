@@ -63,9 +63,7 @@ describe('api/igdb', () => {
           { id: 1, slug: 'hades' },
           { id: 2, slug: 'celeste' },
         ]);
-      return ok([
-        { game_id: 1, normally: 72_000, hastily: 36_000, count: 40 },
-      ]);
+      return ok([{ game_id: 1, normally: 72_000, hastily: 36_000, count: 40 }]);
     });
     const sent = await call({ query: { slugs: 'hades,celeste' } });
     expect(sent.code).toBe(200);
