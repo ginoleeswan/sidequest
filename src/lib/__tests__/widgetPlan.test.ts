@@ -1,5 +1,6 @@
 import type { LibraryEntry } from '../library';
-import { planItems, widgetPlan } from '../widgetPlan';
+import { planItems } from '../planning';
+import { widgetPlan } from '../widgetPlan';
 import type { Game } from '@/api/types';
 
 /**

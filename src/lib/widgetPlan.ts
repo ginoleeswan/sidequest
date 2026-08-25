@@ -1,7 +1,7 @@
 import { buildAlerts } from './alerts';
-import { remainingHours } from './duration';
 import type { LibraryEntry } from './library';
-import { planSchedule, type PlanItem } from './scheduler';
+import { planItems } from './planning';
+import { planSchedule } from './scheduler';
 import { planWeek } from './week';
 import { planTimeline, pressureOf, type PlanDay } from './widgetData';
 
@@ -34,37 +34,6 @@ export interface PlanInput {
 }
 
 const WEEK_MS = 7 * 86_400_000;
-
-/**
- * Library entries as things that can be scheduled.
- *
- * Finished games are gone, and so is anything with no time left in it:
- * a game the person has already played to within an hour of the credits
- * is not a week's worth of evenings, and putting it in the plan as one
- * would be the app arguing with them.
- */
-export function planItems(
-  entries: readonly LibraryEntry[],
-  hoursOf: (entry: LibraryEntry) => number
-): PlanItem[] {
-  const items: PlanItem[] = [];
-  for (const entry of entries) {
-    if (entry.status === 'finished') continue;
-    const hours = remainingHours(hoursOf(entry), {
-      hoursPlayed: entry.hoursPlayed,
-      playing: entry.status === 'playing',
-    });
-    if (hours <= 0) continue;
-    items.push({
-      id: entry.game.id,
-      name: entry.game.name,
-      hours,
-      want: (entry.want ?? 2) >= 3 ? 3 : 2,
-      deadline: entry.deadline,
-    });
-  }
-  return items;
-}
 
 /**
  * The week ahead, one entry per morning.
