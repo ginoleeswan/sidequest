@@ -1,4 +1,4 @@
-import { remainingHours } from './duration';
+import { hoursLeft } from './planning';
 import type { LibraryEntry } from './library';
 
 /**
@@ -68,11 +68,7 @@ export function buildAlerts(
   for (const entry of entries) {
     if (entry.status === 'finished') continue;
 
-    const total = hoursOf(entry);
-    const left = remainingHours(total, {
-      hoursPlayed: entry.hoursPlayed,
-      playing: entry.status === 'playing',
-    });
+    const left = hoursLeft(entry, hoursOf);
     if (left <= 0) continue;
 
     const name = entry.game.name;

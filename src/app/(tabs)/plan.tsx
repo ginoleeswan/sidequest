@@ -26,11 +26,7 @@ import { WeekView } from '@/components/WeekView';
 import { Textured } from '@/components/Textured';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { DurationSheet } from '@/components/DurationSheet';
-import {
-  formatHours,
-  remainingHours,
-  type DurationSource,
-} from '@/lib/duration';
+import { formatHours, type DurationSource } from '@/lib/duration';
 import { useToast } from '@/components/Toast';
 import { useDurations } from '@/lib/durations';
 import { buildAlerts } from '@/lib/alerts';
@@ -41,7 +37,7 @@ import { useHydrated } from '@/hooks/useHydrated';
 import { encodePlan } from '@/lib/planLink';
 import { useLibrary } from '@/lib/library';
 import { sessionMinutesFor } from '@/lib/sessions';
-import { planItems } from '@/lib/planning';
+import { hoursLeft, planItems } from '@/lib/planning';
 import { pickTonight, planSchedule, type ScheduledItem } from '@/lib/scheduler';
 import { COLORS } from '@/styles/colors';
 import { GUTTER, LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
@@ -81,7 +77,7 @@ const finishDate = (ms: number) =>
 
 interface Entry {
   game: Game;
-  /** Hours left, not hours long — see lib/duration remainingHours. */
+  /** Hours left, not hours long — see lib/planning hoursLeft. */
   hours: number;
   /** The whole game's length, for saying "10h left of 40h". */
   totalHours: number;
@@ -221,10 +217,7 @@ export default function PlanScreen() {
         const duration = durationOf(e.game);
         return {
           game: e.game,
-          hours: remainingHours(duration.hours, {
-            hoursPlayed: e.hoursPlayed,
-            playing: true,
-          }),
+          hours: hoursLeft(e, () => duration.hours),
           totalHours: duration.hours,
           played: e.hoursPlayed,
           playing: true,
@@ -238,9 +231,7 @@ export default function PlanScreen() {
         const duration = durationOf(e.game);
         return {
           game: e.game,
-          hours: remainingHours(duration.hours, {
-            hoursPlayed: e.hoursPlayed,
-          }),
+          hours: hoursLeft(e, () => duration.hours),
           totalHours: duration.hours,
           played: e.hoursPlayed,
           playing: false,

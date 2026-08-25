@@ -7,7 +7,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { ScaleButton } from './ScaleButton';
 import { GrainScrim } from './Textured';
 import { useHydrated } from '@/hooks/useHydrated';
-import { remainingHours } from '@/lib/duration';
+import { hoursLeft } from '@/lib/planning';
 import { useDurations } from '@/lib/durations';
 import { useLibrary } from '@/lib/library';
 import { buildPrompt } from '@/lib/prompt';
@@ -42,10 +42,7 @@ export function PromptBand({ inset = GUTTER }: { inset?: number }) {
     () =>
       hydrated
         ? buildPrompt(library, (entry) =>
-            remainingHours(durationOf(entry.game).hours, {
-              hoursPlayed: entry.hoursPlayed,
-              playing: entry.status === 'playing',
-            })
+            hoursLeft(entry, (it) => durationOf(it.game).hours)
           )
         : null,
     [hydrated, library, durationOf]
