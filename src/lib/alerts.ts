@@ -41,6 +41,14 @@ export interface Alert {
   days?: number;
   /** Hours of play still to do. */
   hoursLeft: number;
+  /**
+   * Hours of play there is actually room for before the date, on
+   * at-risk alerts. Exposed because the plan page draws these as
+   * one-line rows now, and "needs 58h, room for 7h" is the whole
+   * story in six words — the prose sentence keeps carrying it for
+   * anything that wants the long form.
+   */
+  roomHours?: number;
 }
 
 const plural = (n: number, one: string, many: string) =>
@@ -85,6 +93,7 @@ export function buildAlerts(
             name,
             days,
             hoursLeft: left,
+            roomHours: Math.round(capacity),
             /*
              * Names the two escapes, both of which are on the card.
              *

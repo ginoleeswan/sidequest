@@ -87,8 +87,9 @@ const SCENARIOS = [
     name: 'the plan, with a deadline that cannot be met',
     route: '/plan',
     seed: SEED,
-    // The alert offers every escape its sentence names.
-    expect: ['Drop the date', 'Let it go', 'Tonight', 'This week'],
+    // The misfit row offers every escape, and the page tells its story
+    // in order: tonight, then the one merged schedule card.
+    expect: ['Drop the date', 'Let it go', 'Tonight', 'What you’ll play'],
   },
   {
     name: 'a shared plan asks for something back',
