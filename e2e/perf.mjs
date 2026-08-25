@@ -61,17 +61,19 @@ const BUDGETS = {
    * app has been over its stated intent for some time without the check
    * noticing.
    *
-   * 560 kept twenty percent of headroom over an honest measurement,
-   * and the accounts release spent it: supabase-js and the Google
-   * sign-in web stack ride the entry bundle, and the measured figure
-   * moved from 487 to 584. The budget follows reality — a tripwire
-   * that is permanently red protects nothing — but the debt is named:
-   * supabase-js is imported eagerly at module scope in lib/supabase
-   * and is only needed once someone opens the account screen. Loading
-   * it lazily would claw most of the difference back, and this number
-   * should come down when it does.
+   * 560 kept twenty percent of headroom over an honest measurement, and
+   * the accounts release spent it: supabase-js rode the entry bundle
+   * and the measured figure moved from 487 to 584, so the budget went
+   * to 640 with the debt named rather than hidden.
+   *
+   * That debt is now paid. supabase-js is a dynamic import, fetched
+   * when there is a session to restore, a provider redirect to read, or
+   * a sign-in button pressed — and never for the signed-out majority,
+   * who were downloading the entire auth stack to be told they did not
+   * need an account. Measured 526 KB. 580 keeps ten percent of
+   * headroom, which is the same margin 640 kept over 584.
    */
-  scriptKb: 640,
+  scriptKb: 580,
   /** Total compressed bytes, including fonts. */
   totalKb: 800,
   /** Largest contentful paint, milliseconds. */

@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 
 import type { Session } from '@supabase/supabase-js';
 
-import { authConfigured, supabase } from './supabase';
+import { authConfigured, getSupabase, somethingToRestore } from './supabase';
 import { kv } from './storage';
 import { forgetSyncCursors } from './sync/SyncProvider';
 
@@ -34,7 +34,16 @@ const AuthContext = createContext<AuthValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(authConfigured);
+  /**
+   * Starts false when there is nothing to restore.
+   *
+   * Deriving it here rather than clearing it in the effect is not
+   * tidiness: a setState in an effect body is a cascading render, and
+   * this particular answer is already known before the first one.
+   */
+  const [loading, setLoading] = useState(
+    () => authConfigured && somethingToRestore()
+  );
 
   useEffect(() => {
     if (!authConfigured) return;
@@ -44,26 +53,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // an unhandled rejection at startup — and neither branch may touch
     // state after this provider has unmounted.
     let alive = true;
-    supabase.auth
-      .getSession()
-      .then(({ data }) => {
+
+    /**
+     * Nothing stored and no redirect in the URL means nobody to
+     * restore, and supabase-js is a large download to reach that
+     * conclusion. Signed out is the answer, immediately and for free.
+     *
+     * The URL check is not optional: coming back from Google there is
+     * no stored session yet and the tokens are in the fragment, so
+     * skipping the load would make the redirect silently do nothing.
+     */
+    if (!somethingToRestore()) return;
+
+    let unsubscribe: (() => void) | undefined;
+    getSupabase()
+      .then(async (client) => {
+        // Subscribed before the read, so a session that arrives out of
+        // the URL while getSession is in flight is not missed.
+        const { data: sub } = client.auth.onAuthStateChange((_event, next) => {
+          setSession(next);
+          setLoading(false);
+        });
+        unsubscribe = () => sub.subscription.unsubscribe();
+        if (!alive) return unsubscribe();
+
+        const { data } = await client.auth.getSession();
         if (!alive) return;
         setSession(data.session);
         setLoading(false);
       })
       .catch(() => {
+        // A rejected read — corrupt persisted session, storage briefly
+        // unavailable, a chunk that would not load — must resolve to
+        // "not signed in" rather than an unhandled rejection at
+        // startup, and must not touch state after unmount.
         if (!alive) return;
         setSession(null);
         setLoading(false);
       });
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
-      setSession(next);
-      setLoading(false);
-    });
     return () => {
       alive = false;
-      sub.subscription.unsubscribe();
+      unsubscribe?.();
     };
   }, []);
 
@@ -93,7 +124,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!credential.identityToken) {
           throw new Error('Apple returned no identity token.');
         }
-        const { error } = await supabase.auth.signInWithIdToken({
+        const client = await getSupabase();
+        const { error } = await client.auth.signInWithIdToken({
           provider: 'apple',
           token: credential.identityToken,
         });
@@ -109,7 +141,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
        */
       signInWithGoogle: async () => {
         if (Platform.OS === 'web') {
-          const { error } = await supabase.auth.signInWithOAuth({
+          const client = await getSupabase();
+          const { error } = await client.auth.signInWithOAuth({
             provider: 'google',
             options: { redirectTo: window.location.origin },
           });
@@ -126,7 +159,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const result = await GoogleSignin.signIn();
         const token = result.data?.idToken;
         if (!token) throw new Error('Google returned no identity token.');
-        const { error } = await supabase.auth.signInWithIdToken({
+        const client = await getSupabase();
+        const { error } = await client.auth.signInWithIdToken({
           provider: 'google',
           token,
         });
@@ -135,7 +169,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       /** A link in the inbox — no password to invent, lose or reuse. */
       signInWithEmail: async (email: string) => {
-        const { error } = await supabase.auth.signInWithOtp({
+        const client = await getSupabase();
+        const { error } = await client.auth.signInWithOtp({
           email,
           options: {
             emailRedirectTo:
@@ -154,7 +189,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
        * out into data loss and make the account load-bearing after all.
        */
       signOut: async () => {
-        await supabase.auth.signOut();
+        const client = await getSupabase();
+        await client.auth.signOut();
         // The persisted query cache is the one thing that DOES go: it
         // can hold synced shelves, and on a shared browser the next
         // person would see the previous person's games painted on first

@@ -23,7 +23,7 @@
 
 import { NO_CURSORS, syncOnce, type SyncState } from './engine';
 import { supabaseBackend } from './supabaseBackend';
-import { supabase } from '../supabase';
+import { getSupabase } from '../supabase';
 import type { LibraryEntry } from '../library';
 import type { Game } from '@/api/types';
 
@@ -35,15 +35,21 @@ jest.mock('../supabase', () => {
   // reads the environment at run time.
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { createClient } = require('@supabase/supabase-js');
+  const client = createClient(
+    process.env.SIDEQUEST_LIVE_URL ?? '',
+    process.env.SIDEQUEST_LIVE_KEY ?? '',
+    { auth: { persistSession: false, autoRefreshToken: false } }
+  );
   return {
     authConfigured: true,
-    supabase: createClient(
-      process.env.SIDEQUEST_LIVE_URL ?? '',
-      process.env.SIDEQUEST_LIVE_KEY ?? '',
-      { auth: { persistSession: false, autoRefreshToken: false } }
-    ),
+    getSupabase: async () => client,
+    hasStoredSession: () => true,
+    isAuthCallback: () => false,
   };
 });
+
+/** The same client the backend gets, for reading rows back directly. */
+const db = async () => await getSupabase();
 
 jest.setTimeout(120_000);
 
@@ -84,7 +90,9 @@ let userId = '';
 let backend: ReturnType<typeof supabaseBackend>;
 
 beforeAll(async () => {
-  const { data, error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await (
+    await db()
+  ).auth.signInWithPassword({
     email: process.env.SIDEQUEST_LIVE_EMAIL ?? '',
     password: process.env.SIDEQUEST_LIVE_PASSWORD ?? '',
   });
@@ -94,17 +102,17 @@ beforeAll(async () => {
 
   // A previous run that died half way would otherwise be indis-
   // tinguishable from a bug in this one.
-  await supabase.from('library_entries').delete().eq('user_id', userId);
-  await supabase.from('game_durations').delete().eq('user_id', userId);
-  await supabase.from('preferences').delete().eq('user_id', userId);
+  await (await db()).from('library_entries').delete().eq('user_id', userId);
+  await (await db()).from('game_durations').delete().eq('user_id', userId);
+  await (await db()).from('preferences').delete().eq('user_id', userId);
 });
 
 afterAll(async () => {
   if (!userId) return;
-  await supabase.from('library_entries').delete().eq('user_id', userId);
-  await supabase.from('game_durations').delete().eq('user_id', userId);
-  await supabase.from('preferences').delete().eq('user_id', userId);
-  await supabase.auth.signOut();
+  await (await db()).from('library_entries').delete().eq('user_id', userId);
+  await (await db()).from('game_durations').delete().eq('user_id', userId);
+  await (await db()).from('preferences').delete().eq('user_id', userId);
+  await (await db()).auth.signOut();
 });
 
 describe('a round against the real database', () => {
@@ -126,7 +134,9 @@ describe('a round against the real database', () => {
     expect(result.stuck).toEqual([]);
 
     // Read it back the way any client would, not through the engine.
-    const { data } = await supabase
+    const { data } = await (
+      await db()
+    )
       .from('library_entries')
       .select('game_id,status,note,rating,client_updated_at,updated_at')
       .eq('user_id', userId)
@@ -191,7 +201,9 @@ describe('a round against the real database', () => {
     });
     if (!after.ok) throw new Error(`round failed: ${after.reason}`);
 
-    const { data } = await supabase
+    const { data } = await (
+      await db()
+    )
       .from('library_entries')
       .select('game_id,deleted_at')
       .eq('user_id', userId)
@@ -222,7 +234,9 @@ describe('a round against the real database', () => {
     expect(result.stuck.map((s) => s.key)).toEqual([String(BASE + 4)]);
     expect(result.stuck[0].reason).toMatch(/want/i);
     // And the innocent one still landed.
-    const { data } = await supabase
+    const { data } = await (
+      await db()
+    )
       .from('library_entries')
       .select('game_id')
       .eq('user_id', userId)

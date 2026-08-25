@@ -23,4 +23,10 @@ export const NOT_ICONS = [
   // React Native's Share.share, spied on by method name in tests. The
   // drawn share icon is share-outline, which is its own name.
   'share',
+  // The OAuth query parameter a provider redirects back with, read in
+  // lib/supabase to decide whether this page load has a session in it.
+  'code',
+  // window.location, stubbed in the supabase client's tests. There is
+  // no map in this app and never has been.
+  'location',
 ] as const;
