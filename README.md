@@ -60,6 +60,7 @@ Open in [Expo Go](https://expo.dev/go), an emulator, or press `w` for web.
 | `npm run test:a11y`                  | axe (WCAG A/AA) over `dist/`, both widths              |
 | `npm run test:icons`                 | every named icon draws from the subset font            |
 | `npm run test:perf`                  | 4G + 4x CPU: bytes, FCP, LCP, CLS against budgets      |
+| `npm run test:live`                  | sync against a real Supabase project (see below)       |
 | `npm run build`                      | sitemap + static web export into `dist/`               |
 | `node scripts/subset-icons.mjs`      | regenerate the Ionicons subset (after adding an icon)  |
 | `node scripts/duration-coverage.mjs` | data-source validation (see `docs/validation/`)        |
@@ -78,6 +79,31 @@ Playwright build (a sandbox with its own browsers, say), point at it:
 ```bash
 CHROMIUM_PATH=/path/to/chrome npm run test:hydration
 ```
+
+`test:live` is the only suite that talks to a real database, and it is
+deliberately outside `npm test` and outside CI. Everything else about
+sync runs against a backend we wrote ourselves, which proves the engine
+agrees with our understanding of Postgres rather than with Postgres — an
+upsert whose conflict target misses the index, a policy that refuses the
+anon role, a trigger that never fires: none of those can fail against a
+fake. This one signs in and drives real rounds through PostgREST as two
+devices, including a conflict, a delete and a row the server refuses.
+
+It writes rows and deletes them again, but it is still somebody's
+database, so point it at a throwaway account:
+
+```bash
+SIDEQUEST_LIVE_URL=https://<ref>.supabase.co \
+SIDEQUEST_LIVE_KEY=<publishable key> \
+SIDEQUEST_LIVE_EMAIL=<throwaway user> \
+SIDEQUEST_LIVE_PASSWORD=<their password> \
+npm run test:live
+```
+
+It runs on plain Node rather than the app's jest preset, which matters:
+jest-expo installs React Native's `fetch`, and in a test process that is
+a stub which resolves with no status and no body — a suite that cannot
+reach the network while looking like it did.
 
 ## Deploy (Vercel)
 
