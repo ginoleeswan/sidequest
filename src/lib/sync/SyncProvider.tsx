@@ -8,7 +8,14 @@ import {
   useState,
 } from 'react';
 
-import { NO_CURSORS, syncOnce, type Cursors, type SyncBackend } from './engine';
+import {
+  NO_CURSORS,
+  NO_KNOWN,
+  syncOnce,
+  type Cursors,
+  type Known,
+  type SyncBackend,
+} from './engine';
 import type { Preferences } from './shape';
 import { supabaseBackend } from './supabaseBackend';
 import { useAuth } from '../auth';
@@ -31,6 +38,15 @@ import { kv, readJson, writeJson } from '../storage';
  */
 
 const CURSOR_KEY = 'sidequest.sync.cursors.v1';
+/**
+ * What the server was last confirmed to hold.
+ *
+ * Kept beside the cursor rather than inside it because the two answer
+ * different questions and are allowed to be missing independently: a
+ * device upgrading from a build without this record still has a valid
+ * cursor, and simply re-pushes its library once.
+ */
+const KNOWN_KEY = 'sidequest.sync.known.v1';
 const PREFS_KEYS = {
   pace: 'sidequest.plan.pace',
   planWindow: 'sidequest.plan.window',
@@ -91,7 +107,7 @@ export function SyncProvider({
   const { session } = useAuth();
   const library = useLibrary();
   const durations = useDurations();
-  const [status, setStatus] = useState<SyncStatus>({ state: 'idle' });
+  const [runStatus, setStatus] = useState<SyncStatus>({ state: 'idle' });
 
   const userId = session?.user?.id ?? null;
 
@@ -99,7 +115,9 @@ export function SyncProvider({
   // rebuilt — and so a round in flight cannot be started twice.
   const inFlight = useRef(false);
   const latest = useRef({ library, durations });
-  latest.current = { library, durations };
+  useEffect(() => {
+    latest.current = { library, durations };
+  });
 
   const run = useCallback(async () => {
     if (!userId || inFlight.current) return;
@@ -112,6 +130,7 @@ export function SyncProvider({
       durations: dur.overrides,
       preferences: readPreferences(),
       cursors: readJson<Cursors>(CURSOR_KEY, NO_CURSORS),
+      known: readJson<Known>(KNOWN_KEY, NO_KNOWN),
     });
 
     if (result.ok) {
@@ -121,6 +140,7 @@ export function SyncProvider({
       dur.adoptSynced(result.state.durations);
       writePreferences(result.state.preferences);
       writeJson(CURSOR_KEY, result.state.cursors);
+      writeJson(KNOWN_KEY, result.state.known ?? NO_KNOWN);
       setStatus({ state: 'synced', at: Date.now() });
     } else {
       setStatus({ state: 'failed', reason: result.reason, at: Date.now() });
@@ -130,12 +150,18 @@ export function SyncProvider({
 
   // Signing in: catch up immediately, in both directions.
   useEffect(() => {
-    if (!userId) {
-      setStatus({ state: 'idle' });
-      return;
-    }
-    void run();
+    if (userId) void run();
   }, [userId, run]);
+
+  /**
+   * Signed out reads as idle without a write.
+   *
+   * Deriving it rather than setting it in the effect above is not
+   * tidiness: a setState there runs on the same commit that cleared the
+   * session, which is a cascading render the compiler is right to
+   * refuse.
+   */
+  const status: SyncStatus = userId ? runStatus : { state: 'idle' };
 
   // A local change, once it has stopped. The library and durations
   // objects are new on every edit, which is exactly the signal wanted.
@@ -169,7 +195,8 @@ export function useSync(): SyncValue {
   return ctx ?? { status: { state: 'idle' }, active: false, syncNow: () => {} };
 }
 
-/** Sign-out forgets where the cursor was, so the next account starts clean. */
+/** Sign-out forgets where sync got to, so the next account starts clean. */
 export function forgetSyncCursors() {
   kv.removeItem(CURSOR_KEY);
+  kv.removeItem(KNOWN_KEY);
 }

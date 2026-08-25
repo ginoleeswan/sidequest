@@ -261,6 +261,112 @@ describe('syncOnce', () => {
     expect(calls.durations[0][0]).toMatchObject({ game_id: 42, hours: 30 });
   });
 
+  describe('what the server is known to hold', () => {
+    it('does not re-push a library the server already has', async () => {
+      // The loop this closes: a pull is a patch, so every row it does
+      // not mention looks unknown to the server. Without a record of
+      // what landed, the whole library re-uploads on every change.
+      const first = fakeBackend();
+      const before = state({ entries: { '42': entry() } });
+      const one = await syncOnce(first.backend, before);
+      if (!one.ok) throw new Error('expected a finished round');
+      expect(first.calls.library[0]).toHaveLength(1);
+
+      const second = fakeBackend();
+      const two = await syncOnce(second.backend, { ...before, ...one.state });
+      expect(two.ok).toBe(true);
+      expect(second.calls.library).toHaveLength(0);
+    });
+
+    it('re-pushes an entry the device has since edited', async () => {
+      const first = fakeBackend();
+      const one = await syncOnce(
+        first.backend,
+        state({ entries: { '42': entry() } })
+      );
+      if (!one.ok) throw new Error('expected a finished round');
+
+      const second = fakeBackend();
+      await syncOnce(second.backend, {
+        ...one.state,
+        entries: { '42': entry({ status: 'finished', updatedAt: 1_900_000_000_000 }) },
+      });
+      expect(second.calls.library[0]).toHaveLength(1);
+      expect(second.calls.library[0][0].status).toBe('finished');
+    });
+
+    it('notices a game that left the device and tombstones it', async () => {
+      // Deleting a game drops the key from the local store, so there is
+      // nothing left for the merge to compare. The record of the last
+      // round is the only thing that can tell the other device.
+      const first = fakeBackend();
+      const one = await syncOnce(
+        first.backend,
+        state({ entries: { '42': entry() } })
+      );
+      if (!one.ok) throw new Error('expected a finished round');
+
+      const second = fakeBackend();
+      const two = await syncOnce(
+        second.backend,
+        { ...one.state, entries: {} },
+        1_900_000_000_000
+      );
+      expect(two.ok).toBe(true);
+      expect(second.calls.library[0]).toHaveLength(1);
+      expect(second.calls.library[0][0]).toMatchObject({
+        game_id: 42,
+        deleted_at: toStamp(1_900_000_000_000),
+      });
+    });
+
+    it('does not re-push an unchanged duration, whatever the clock says', async () => {
+      // Corrections are stamped with the moment of the sync, which is
+      // different every round; the hours are what either changed or did
+      // not.
+      const first = fakeBackend();
+      const one = await syncOnce(
+        first.backend,
+        state({ durations: { '42': 30 } }),
+        1_800_000_000_000
+      );
+      if (!one.ok) throw new Error('expected a finished round');
+      expect(first.calls.durations[0]).toHaveLength(1);
+
+      const second = fakeBackend();
+      await syncOnce(
+        second.backend,
+        { ...one.state, durations: { '42': 30 } },
+        1_900_000_000_000
+      );
+      expect(second.calls.durations).toHaveLength(0);
+
+      const third = fakeBackend();
+      await syncOnce(
+        third.backend,
+        { ...one.state, durations: { '42': 31 } },
+        1_900_000_000_000
+      );
+      expect(third.calls.durations[0]).toHaveLength(1);
+    });
+
+    it('a failed round does not record anything as landed', async () => {
+      const { backend } = fakeBackend({
+        pushLibrary: async () => {
+          throw new Error('row level security');
+        },
+      });
+      const result = await syncOnce(backend, state({ entries: { '42': entry() } }));
+      expect(result.ok).toBe(false);
+
+      // The next round, against a backend that works, still sends it.
+      const retry = fakeBackend();
+      const again = await syncOnce(retry.backend, state({ entries: { '42': entry() } }));
+      expect(again.ok).toBe(true);
+      expect(retry.calls.library[0]).toHaveLength(1);
+    });
+  });
+
   it('pushes a corrected duration and adopts a newer one', async () => {
     const pulled: Stamped<DurationRow> = {
       game_id: 42,

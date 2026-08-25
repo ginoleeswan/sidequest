@@ -1,4 +1,4 @@
-import { advanceCursor, mergeRows } from './merge';
+import { advanceCursor, knownAfter, mergeRows, pendingPush } from './merge';
 import {
   applyDurations,
   applyLibrary,
@@ -45,7 +45,24 @@ export interface SyncState {
   preferences: Preferences;
   /** Server `updated_at` of the newest row seen, per table. */
   cursors: Cursors;
+  /**
+   * What the server was last confirmed to hold, per table.
+   *
+   * Optional, and absent means "assume nothing" — which pushes the
+   * whole library once and then settles. That is the safe direction to
+   * be wrong in, and it is what a device upgrading from a build that
+   * did not keep this record will do exactly once.
+   */
+  known?: Known;
 }
+
+/** Key to fingerprint, per table. See `pendingPush` for what a fingerprint is. */
+export interface Known {
+  library: Record<string, number>;
+  durations: Record<string, number>;
+}
+
+export const NO_KNOWN: Known = { library: {}, durations: {} };
 
 export interface Cursors {
   library: string | null;
@@ -79,6 +96,15 @@ export interface SyncBackend {
 /** Every pulled row carries the server clock the cursor is kept in. */
 export type Stamped<T> = T & { updated_at: string };
 
+/**
+ * A duration's fingerprint is the number of hours, not its stamp.
+ *
+ * The local store keeps no per-correction timestamp, so `localDurations`
+ * stamps every row with the moment of the sync. Fingerprinting on that
+ * would mark every correction as changed on every round.
+ */
+const hours = (row: { value?: number }) => row.value ?? 0;
+
 export async function syncOnce(
   backend: SyncBackend,
   local: SyncState,
@@ -93,19 +119,32 @@ export async function syncOnce(
     );
     const entries = applyLibrary(libraryPlan.next, local.entries);
 
+    // What the merge offered, minus what the server already has, plus
+    // tombstones for keys that have since left the device. Rows the
+    // pull itself mentioned count as held even when it removed them:
+    // the server plainly knows about those already.
+    const libraryHeld = new Set(libraryPlan.next.map((row) => row.key));
+    for (const row of pulledLibrary) libraryHeld.add(String(row.game_id));
+    const libraryPush = pendingPush(
+      libraryHeld,
+      libraryPlan.push,
+      local.known?.library ?? {},
+      now
+    );
+
     // Games before entries: a library_entries row references games(id),
     // so pushing an entry for a game the table has never heard of is a
     // foreign key violation that would fail the whole batch.
-    if (libraryPlan.push.length > 0) {
+    if (libraryPush.length > 0) {
       const named = gamesUpload(
         Object.fromEntries(
-          libraryPlan.push
+          libraryPush
             .filter((row) => row.value?.game?.name)
             .map((row) => [row.key, row.value as LibraryEntry])
         )
       );
       if (named.length > 0) await backend.pushGames(named);
-      await backend.pushLibrary(libraryUpload(libraryPlan.push));
+      await backend.pushLibrary(libraryUpload(libraryPush));
     }
 
     /* -------------------------------------------------------- durations */
@@ -115,8 +154,17 @@ export async function syncOnce(
       remoteDurations(pulledDurations)
     );
     const durations = applyDurations(durationPlan.next);
-    if (durationPlan.push.length > 0) {
-      await backend.pushDurations(durationsUpload(durationPlan.push));
+    const durationsHeld = new Set(durationPlan.next.map((row) => row.key));
+    for (const row of pulledDurations) durationsHeld.add(String(row.game_id));
+    const durationsPush = pendingPush(
+      durationsHeld,
+      durationPlan.push,
+      local.known?.durations ?? {},
+      now,
+      hours
+    );
+    if (durationsPush.length > 0) {
+      await backend.pushDurations(durationsUpload(durationsPush));
     }
 
     /* ------------------------------------------------------ preferences */
@@ -140,11 +188,21 @@ export async function syncOnce(
     return {
       ok: true,
       pulled: pulledLibrary.length + pulledDurations.length,
-      pushed: libraryPlan.push.length + durationPlan.push.length,
+      pushed: libraryPush.length + durationsPush.length,
       state: {
         entries,
         durations,
         preferences,
+        // Recorded from what is actually kept, not from the merge's
+        // working set: a key remembered that the device did not retain
+        // would read as a fresh delete on the very next round.
+        known: {
+          library: knownAfter(libraryPlan.next.filter((row) => row.value)),
+          durations: knownAfter(
+            durationPlan.next.filter((row) => (row.value ?? 0) > 0),
+            hours
+          ),
+        },
         cursors: {
           library: advanceCursor(
             local.cursors.library,

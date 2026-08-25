@@ -1,4 +1,4 @@
-import { advanceCursor, mergeRows, type Row } from '../merge';
+import { advanceCursor, knownAfter, mergeRows, pendingPush, type Row } from '../merge';
 
 /**
  * The rules that decide whether somebody keeps their library.
@@ -126,5 +126,58 @@ describe('advanceCursor', () => {
     const held = '2026-03-01T00:00:00Z';
     expect(advanceCursor(held, [])).toBe(held);
     expect(advanceCursor(held, ['2026-01-01T00:00:00Z'])).toBe(held);
+  });
+});
+
+describe('pendingPush', () => {
+  const held = (...keys: string[]) => new Set(keys);
+  const row = (key: string, clientUpdatedAt: number) => ({ key, clientUpdatedAt });
+
+  it('drops what the server is already known to hold', () => {
+    const send = pendingPush(held('a'), [row('a', 5)], { a: 5 }, 9);
+    expect(send).toEqual([]);
+  });
+
+  it('keeps a row the server holds at an older stamp', () => {
+    const send = pendingPush(held('a'), [row('a', 6)], { a: 5 }, 9);
+    expect(send).toEqual([row('a', 6)]);
+  });
+
+  it('turns a key that left the device into a tombstone', () => {
+    // The only way a delete is ever noticed: the local store drops the
+    // key outright, so there is nothing for mergeRows to compare.
+    const send = pendingPush(held(), [], { a: 5 }, 9);
+    expect(send).toEqual([{ key: 'a', clientUpdatedAt: 9, deleted: true }]);
+  });
+
+  it('does not tombstone a key the pull is dealing with', () => {
+    const send = pendingPush(held('a'), [], { a: 5 }, 9);
+    expect(send).toEqual([]);
+  });
+
+  it('fingerprints on whatever the caller says identity is', () => {
+    // Durations carry no stamp of their own, so the hours are the
+    // fingerprint; the stamp changes every round and would mean
+    // re-uploading every correction forever.
+    const hours = (r: { clientUpdatedAt: number; value?: number }) =>
+      r.value ?? 0;
+    const same = [{ key: 'a', clientUpdatedAt: 999, value: 30 }];
+    expect(pendingPush(held('a'), same, { a: 30 }, 9, hours)).toEqual([]);
+    expect(pendingPush(held('a'), same, { a: 12 }, 9, hours)).toEqual(same);
+  });
+});
+
+describe('knownAfter', () => {
+  it('records the stamp of everything retained', () => {
+    expect(
+      knownAfter([
+        { key: 'a', clientUpdatedAt: 1 },
+        { key: 'b', clientUpdatedAt: 2 },
+      ])
+    ).toEqual({ a: 1, b: 2 });
+  });
+
+  it('records nothing for an empty round', () => {
+    expect(knownAfter([])).toEqual({});
   });
 });

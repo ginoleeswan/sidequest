@@ -115,3 +115,60 @@ export function advanceCursor(
   }
   return latest;
 }
+
+/**
+ * What actually needs sending, given what the server is known to hold.
+ *
+ * `mergeRows` answers "who is right"; this answers "who needs telling",
+ * and they are different questions. A pull is a patch, so merge treats
+ * every row the pull did not mention as possibly-unknown to the server
+ * and offers it for pushing. Left there, a library re-uploads itself
+ * in full every time anything changes.
+ *
+ * `known` is the fix and the record: key to a fingerprint of what the
+ * server was last confirmed to hold. A row whose fingerprint still
+ * matches needs no telling — and a key that is in `known` but no
+ * longer held is a DELETE, which is the only way this app can notice
+ * one at all: removing a game drops the key outright, leaving nothing
+ * for merge to see.
+ *
+ * The fingerprint is a parameter because the two tables have different
+ * honest answers. A library entry carries the moment the device
+ * changed it, so its stamp is the fingerprint. A duration correction
+ * carries no stamp of its own — the local store is a flat map of game
+ * id to hours — so it is stamped with the moment of the sync, which
+ * differs every round and would make every round a re-upload. Its
+ * fingerprint is the number itself, which is the thing that either
+ * changed or did not.
+ */
+export type Fingerprint<T extends Row> = (row: T) => number;
+
+const byStamp = <T extends Row>(row: T) => row.clientUpdatedAt;
+
+export function pendingPush<T extends Row>(
+  held: ReadonlySet<string>,
+  offered: readonly T[],
+  known: Readonly<Record<string, number>>,
+  now: number,
+  fingerprint: Fingerprint<T> = byStamp
+): T[] {
+  const send = offered.filter((row) => known[row.key] !== fingerprint(row));
+
+  for (const key of Object.keys(known)) {
+    if (held.has(key)) continue;
+    // Gone from the device since the last round: tell the server, so
+    // the other device stops showing a game this one let go.
+    send.push({ key, clientUpdatedAt: now, deleted: true } as unknown as T);
+  }
+  return send;
+}
+
+/** What the server is believed to hold once a round has succeeded. */
+export function knownAfter<T extends Row>(
+  next: readonly T[],
+  fingerprint: Fingerprint<T> = byStamp
+): Record<string, number> {
+  const known: Record<string, number> = {};
+  for (const row of next) known[row.key] = fingerprint(row);
+  return known;
+}
