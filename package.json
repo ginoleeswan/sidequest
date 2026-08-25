@@ -29,7 +29,8 @@
     "update:prod": "eas update --channel production",
     "fingerprint:generate": "expo-updates fingerprint:generate",
     "apple:secret": "node scripts/apple-client-secret.mjs",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test:live": "jest --runInBand --config jest.live.config.js"
   },
   "engines": {
     "node": ">=22"
@@ -95,6 +96,10 @@
   "jest": {
     "preset": "jest-expo",
     "testTimeout": 20000,
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "\\.integration\\.test\\.ts$"
+    ],
     "setupFilesAfterEnv": [
       "<rootDir>/jest.setup.js"
     ],
@@ -109,6 +114,7 @@
       "!src/**/__tests__/**",
       "!src/app/+html.tsx",
       "!src/**/*.d.ts",
+      "!src/**/*.integration.test.ts",
       "!src/test-utils.tsx",
       "!api/test-utils.ts"
     ],
