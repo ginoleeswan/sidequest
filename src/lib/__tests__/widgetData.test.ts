@@ -216,7 +216,29 @@ describe('pressureOf', () => {
     expect(pressureOf([], { games: 0, lastFinishAt: null }, 0)).toEqual({
       urgency: 'calm',
       note: '',
+      days: null,
     });
+  });
+
+  it('carries the days to the date, for the ring to draw', () => {
+    // §6.1 asks the small and Lock Screen families for a
+    // days-remaining ring, and a ring needs a quantity rather than a
+    // sentence.
+    expect(pressureOf([alert({ days: 9 })], summary, 0).days).toBe(9);
+    expect(
+      pressureOf([alert({ kind: 'at-risk', days: 3 })], summary, 0).days
+    ).toBe(3);
+  });
+
+  it('keeps a date that has gone as a negative, not as zero', () => {
+    // Past-its-date is a real state, and rounding it up would hide it.
+    expect(
+      pressureOf([alert({ kind: 'at-risk', days: -4 })], summary, 0).days
+    ).toBe(-4);
+  });
+
+  it('has no days to count when nothing is pressing', () => {
+    expect(pressureOf([], { games: 2, lastFinishAt: 0 }, 0).days).toBeNull();
   });
 
   it('ignores nearly-done, which is a nudge and not a pressure', () => {
@@ -231,7 +253,7 @@ describe('pressureOf', () => {
 
 describe('planTimeline', () => {
   const DAY = 86_400_000;
-  const calm = { urgency: 'calm' as const, note: '' };
+  const calm = { urgency: 'calm' as const, note: '', days: null };
   const daysApart = (from: number, to: number) =>
     Math.round((new Date(to).setHours(12) - new Date(from).setHours(12)) / DAY);
   // A Wednesday, mid-morning, so "today" is unambiguous.
@@ -309,7 +331,7 @@ describe('planTimeline', () => {
       () => [night(0, [{ name: 'Hades', hours: 2 }])],
       (at) =>
         at >= midnightOf(now) + 3 * DAY
-          ? { urgency: 'red', note: "Hades won't fit" }
+          ? { urgency: 'red', note: "Hades won't fit", days: 2 }
           : calm,
       now
     );

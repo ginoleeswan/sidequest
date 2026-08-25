@@ -22,7 +22,7 @@ import { midnightOf, planTimeline } from '../widgetData';
 const HOUR = 3_600_000;
 
 describe('planTimeline across a clock change', () => {
-  const calm = { urgency: 'calm' as const, note: '' };
+  const calm = { urgency: 'calm' as const, note: '', days: null };
   const timeline = (from: string) =>
     planTimeline(
       () => [],

@@ -67,6 +67,16 @@ export interface Pressure {
    * clauses. A Lock Screen gets a handful of words or nothing.
    */
   note: string;
+  /**
+   * Days to the deadline the note is about, or null when there is not
+   * one to count down to.
+   *
+   * A number rather than only a sentence, because §6.1 asks the small
+   * and Lock Screen families for a days-remaining ring, and a ring
+   * needs a quantity. Negative when the date has already gone: that is
+   * a real state and rounding it up to zero would hide it.
+   */
+  days: number | null;
 }
 
 /** The plan in two numbers, for the calm state. */
@@ -105,6 +115,7 @@ export function pressureOf(
         risk.days != null && risk.days <= 0
           ? `${risk.name} is past its date`
           : `${risk.name} won't fit`,
+      days: risk.days ?? null,
     };
   }
 
@@ -116,12 +127,19 @@ export function pressureOf(
         due.days === 0
           ? `${due.name} due today`
           : `${due.name} due in ${due.days}d`,
+      days: due.days ?? null,
     };
   }
 
-  if (summary.games === 0) return { urgency: 'calm', note: '' };
+  // Nothing to count down to. The calm families show the plan instead,
+  // and the ring has nothing honest to draw.
+  if (summary.games === 0) return { urgency: 'calm', note: '', days: null };
   if (summary.lastFinishAt == null) {
-    return { urgency: 'calm', note: plural(summary.games, 'game') };
+    return {
+      urgency: 'calm',
+      note: plural(summary.games, 'game'),
+      days: null,
+    };
   }
   return {
     urgency: 'calm',
@@ -129,6 +147,7 @@ export function pressureOf(
       daysBetween(now, summary.lastFinishAt),
       'day'
     )}`,
+    days: null,
   };
 }
 

@@ -65,6 +65,9 @@ struct Pressure: Codable {
   let urgency: String
   /// One short line, already written for a Lock Screen by the app.
   let note: String
+  /// Days to the date the note is about; absent when there is none.
+  /// Negative when the date has already gone, which is a real state.
+  let days: Int?
 
   var tint: Color {
     switch urgency {
@@ -77,8 +80,25 @@ struct Pressure: Codable {
   /// Whether this is worth spending the widget's loudest colour on.
   var isPressing: Bool { urgency == "red" || urgency == "amber" }
 
-  static let calm = Pressure(urgency: "calm", note: "")
+  /**
+   * How much of the ring is left, 0 to 1.
+   *
+   * Drawn against the same horizon the app uses to decide a deadline is
+   * worth mentioning at all, so a date at the edge of that window is a
+   * full circle and the day itself is an empty one. A date already gone
+   * is empty rather than negative — the ring has said all it can, and
+   * the words beside it carry the rest.
+   */
+  var remaining: Double? {
+    guard let days else { return nil }
+    return min(1, max(0, Double(days) / Double(alertHorizonDays)))
+  }
+
+  static let calm = Pressure(urgency: "calm", note: "", days: nil)
 }
+
+/// Matches HORIZON_DAYS in lib/alerts. See `Pressure.remaining`.
+let alertHorizonDays = 21
 
 /**
  * One morning of the plan, already decided.

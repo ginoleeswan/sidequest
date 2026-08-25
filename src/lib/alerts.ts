@@ -16,7 +16,15 @@ import type { LibraryEntry } from './library';
 const DAY = 24 * 60 * 60 * 1000;
 
 /** Past this, a deadline is not news yet. */
-const HORIZON_DAYS = 21;
+/**
+ * How far ahead a deadline is worth mentioning.
+ *
+ * Exported because the widget's ring is drawn against it: a deadline
+ * at the horizon is a full circle and the day itself is an empty one,
+ * and that only reads correctly if both sides agree what the horizon
+ * is.
+ */
+export const HORIZON_DAYS = 21;
 
 /** Close enough to the end that one evening finishes it. */
 const NEARLY_DONE_HOURS = 2;

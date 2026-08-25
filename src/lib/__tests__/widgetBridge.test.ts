@@ -23,7 +23,7 @@ const morning = (title: string): PlanDay => ({
   at: new Date('2026-08-28T00:00:00').getTime(),
   tonight: { title, hours: 2, finishes: false },
   nights: [{ day: 'FRI', title, hours: 2, finishes: false }],
-  pressure: { urgency: 'calm', note: '1 game · 2 days' },
+  pressure: { urgency: 'calm', note: '1 game · 2 days', days: null },
 });
 
 beforeEach(() => jest.clearAllMocks());

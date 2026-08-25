@@ -135,15 +135,45 @@ struct TonightAccessory: View {
   var body: some View {
     switch family {
     case .accessoryCircular:
-      // Room for a number and nothing else, so it shows the number that
-      // decides the evening: how long it runs.
+      /*
+       * A ring when there is something to count down to, and hours
+       * when there is not.
+       *
+       * §6.1 asks this family for a days-remaining ring, and a circle
+       * is the one shape that says "draining" without a word. But most
+       * people set no deadlines at all, and a ring with nothing behind
+       * it would be decoration — so with no date it goes back to the
+       * number that decides the evening: how long it runs.
+       */
       ZStack {
         AccessoryWidgetBackground()
-        VStack(spacing: -2) {
-          Text("\(entry.tonight?.hours ?? 0)")
-            .font(.system(size: 22, weight: .heavy))
-          Text("HRS")
-            .font(.system(size: 9, weight: .semibold))
+        if let remaining = entry.pressure.remaining {
+          // The track, so a nearly-empty ring reads as a ring running
+          // out rather than as a stray arc.
+          Circle()
+            .stroke(style: StrokeStyle(lineWidth: 4))
+            .opacity(0.25)
+            .padding(2)
+          Circle()
+            .trim(from: 0, to: remaining)
+            .stroke(style: StrokeStyle(lineWidth: 4, lineCap: .round))
+            // From the top, clockwise, because that is the direction
+            // every clock face in the world already agrees on.
+            .rotationEffect(.degrees(-90))
+            .padding(2)
+          VStack(spacing: -2) {
+            Text("\(max(0, entry.pressure.days ?? 0))")
+              .font(.system(size: 20, weight: .heavy))
+            Text("DAYS")
+              .font(.system(size: 8, weight: .semibold))
+          }
+        } else {
+          VStack(spacing: -2) {
+            Text("\(entry.tonight?.hours ?? 0)")
+              .font(.system(size: 22, weight: .heavy))
+            Text("HRS")
+              .font(.system(size: 9, weight: .semibold))
+          }
         }
       }
       .widgetAccentable()
@@ -155,9 +185,17 @@ struct TonightAccessory: View {
       // the hours, which are the least surprising thing on the line.
       Text(
         entry.tonight.map { tonight in
-          entry.pressure.isPressing
-            ? "\(tonight.title) · \(entry.pressure.note)"
-            : "\(tonight.title) · \(tonight.hours)h"
+          // §6.1's own example is `Pentiment · 9d`: with a date in
+          // view the days are the fact, and the hours are not. Only
+          // the number, not the sentence — an inline accessory is
+          // truncated by whatever else is on the Lock Screen.
+          if let days = entry.pressure.days, days > 0 {
+            return "\(tonight.title) · \(days)d"
+          }
+          if entry.pressure.isPressing {
+            return "\(tonight.title) · \(entry.pressure.note)"
+          }
+          return "\(tonight.title) · \(tonight.hours)h"
         } ?? "No plan yet"
       )
 
