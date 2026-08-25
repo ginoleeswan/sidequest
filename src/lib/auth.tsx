@@ -6,6 +6,7 @@ import type { Session } from '@supabase/supabase-js';
 
 import { authConfigured, supabase } from './supabase';
 import { kv } from './storage';
+import { forgetSyncCursors } from './sync/SyncProvider';
 
 /**
  * Signing in, as something the app can live without.
@@ -160,6 +161,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // frame. It is a cache — dropping it costs a refetch, nothing
         // more, and the device-owned library above is untouched.
         kv.removeItem('sidequest.query-cache.v1');
+        // And where sync had got to. The library stays — it is this
+        // device's — but the cursor belongs to the account that just
+        // left, and handing it to the next one would skip every row
+        // written before this moment.
+        forgetSyncCursors();
       },
     }),
     [session, loading]

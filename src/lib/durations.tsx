@@ -48,6 +48,15 @@ interface DurationsValue {
   setDuration: (id: number, hours: number) => void;
   /** Go back to RAWG's estimate. */
   clearDuration: (id: number) => void;
+  /** Sync's way in: adopt an already-merged set of corrections. */
+  adoptSynced: (overrides: Record<string, number>) => void;
+  /**
+   * The corrections themselves, for sync to send.
+   *
+   * Read-only by convention: every write goes through setDuration or
+   * clearDuration, which are the two the rest of the app uses.
+   */
+  overrides: Record<string, number>;
   /** How many lengths this person has corrected. */
   count: number;
   /** Set when the last write to the device failed; null when it landed. */
@@ -116,6 +125,11 @@ export function DurationsProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const adoptSynced = useCallback(
+    (next: Record<string, number>) => setOverrides(next),
+    []
+  );
+
   const clearDuration = useCallback((id: number) => {
     setOverrides((prev) => {
       const next = { ...prev };
@@ -136,10 +150,20 @@ export function DurationsProvider({ children }: { children: React.ReactNode }) {
       learnDurations,
       setDuration,
       clearDuration,
+      adoptSynced,
+      overrides,
       count: Object.keys(overrides).length,
       saveError,
     }),
-    [overrides, reported, learnDurations, setDuration, clearDuration, saveError]
+    [
+      overrides,
+      reported,
+      learnDurations,
+      setDuration,
+      clearDuration,
+      adoptSynced,
+      saveError,
+    ]
   );
 
   return (

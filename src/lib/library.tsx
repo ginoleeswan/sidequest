@@ -152,6 +152,15 @@ interface LibraryContextValue {
   addTag: (id: number, tag: string) => void;
   /** Take it off again. */
   removeTag: (id: number, tag: string) => void;
+  /**
+   * Sync's way in: adopt an already-merged map.
+   *
+   * Deliberately NOT stamped. Everything else here records when this
+   * device changed an entry; these entries were changed on another one,
+   * and restamping them would mark the whole pull as local news and
+   * push it straight back — a loop that grows by a round trip each time.
+   */
+  adoptSynced: (entries: Entries) => void;
   /** Every shelf in use, alphabetically — the filter list writes itself. */
   tags: string[];
   /**
@@ -302,6 +311,8 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     });
     return games.length;
   }, [setEntries]);
+
+  const adoptSynced = useCallback((next: Entries) => commit(next), []);
 
   const setDeadline = useCallback(
     (id: number, deadline: number | null) => {
@@ -525,6 +536,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       addPlayTime,
       addTag,
       removeTag,
+      adoptSynced,
       tags: [
         ...new Set(Object.values(entries).flatMap((entry) => entry.tags ?? [])),
       ].sort((a, b) => a.localeCompare(b)),
@@ -545,6 +557,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       addPlayTime,
       addTag,
       removeTag,
+      adoptSynced,
       removeMany,
       moveMany,
       saveError,
