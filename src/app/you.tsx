@@ -25,6 +25,7 @@ import { useDurations } from '@/lib/durations';
 import { readDrops, totalDrops } from '@/lib/drops';
 import { useLibrary } from '@/lib/library';
 import { libraryStats } from '@/lib/libraryStats';
+import { useSync, type SyncStatus } from '@/lib/sync/SyncProvider';
 import { COLORS } from '@/styles/colors';
 import { GUTTER, LAYOUT, RADIUS, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
@@ -157,12 +158,20 @@ const LEGAL = [
   { label: 'Privacy', href: '/privacy' },
 ] as const;
 
+const SYNC_LABEL: Record<SyncStatus['state'], string> = {
+  idle: 'Signed in',
+  syncing: 'Syncing…',
+  synced: 'Synced',
+  failed: 'Not synced',
+};
+
 export default function YouScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isExpanded } = useBreakpoint();
   const { entries, count, exportJson } = useLibrary();
   const { session, available } = useAuth();
+  const { status: syncStatus } = useSync();
   const { durationOf } = useDurations();
   const hydrated = useHydrated();
   const [pace] = usePersistedState('sidequest.plan.pace', 6);
@@ -338,9 +347,22 @@ export default function YouScreen() {
                       that come after a magic link, and no room for the
                       account deletion an app with accounts has to
                       offer. See app/account. */}
+                  {/* The state, not the intention. This row said
+                      "Synced" the moment somebody signed in, whether or
+                      not a round had ever finished — and a row that
+                      always says yes tells you nothing on the day it
+                      matters. */}
                   <Row
-                    icon={session ? 'cloud-done' : 'cloud-outline'}
-                    label={session ? 'Synced' : 'Sync to another device'}
+                    icon={
+                      !session
+                        ? 'cloud-outline'
+                        : syncStatus.state === 'failed'
+                          ? 'cloud-offline-outline'
+                          : syncStatus.state === 'synced'
+                            ? 'cloud-done'
+                            : 'cloud-outline'
+                    }
+                    label={session ? SYNC_LABEL[syncStatus.state] : 'Sync to another device'}
                     value={session ? (email ?? undefined) : 'Not signed in'}
                     onPress={() => router.push('/account')}
                   />
