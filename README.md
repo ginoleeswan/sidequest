@@ -59,8 +59,16 @@ Open in [Expo Go](https://expo.dev/go), an emulator, or press `w` for web.
 | `npm run test:a11y`                  | axe (WCAG A/AA) over `dist/`, both widths              |
 | `npm run test:icons`                 | every named icon draws from the subset font            |
 | `npm run test:perf`                  | 4G + 4x CPU: bytes, FCP, LCP, CLS against budgets      |
+| `npm run build`                      | sitemap + static web export into `dist/`               |
 | `node scripts/subset-icons.mjs`      | regenerate the Ionicons subset (after adding an icon)  |
 | `node scripts/duration-coverage.mjs` | data-source validation (see `docs/validation/`)        |
+| `node scripts/brand-assets.mjs`      | regenerate icons, splash and OG card from the mark     |
+
+EAS lives in its own scripts — `build:dev` / `build:preview` / `build:prod`
+and `update:preview` / `update:prod` — plus `npm run prebuild` for the
+native projects. `scripts/brand-assets.mjs` also writes the splash
+wordmark that `plugins/withSplashWordmark` patches into the iOS
+storyboard, which is why the two share their size constants.
 
 `test:hydration` and `test:a11y` need a `dist/` from `npm run build`, and a Chromium that
 Playwright can launch. Where the installed browser does not match the
@@ -105,10 +113,19 @@ Live at [gosidequest.vercel.app](https://gosidequest.vercel.app).
 
 ```
 src/
-  app/          # expo-router routes (_layout, index, game/[id])
-  api/          # typed RAWG client
+  app/          # expo-router routes — (tabs)/, game/[id], about, account
+  api/          # typed clients: RAWG, IGDB, Steam, Twitch
   components/   # UI components
-  styles/       # colors, typography
+  lib/          # the logic: library, scheduler, sessions, auth, widgets…
+  hooks/        # useBreakpoint, useTonightPick, usePersistedState…
+  constants/    # icon subset, categories
+  styles/       # colors, typography, motion, theme
+api/            # Vercel serverless functions (proxies, previews, report)
+plugins/        # Expo config plugins (splash wordmark)
+targets/        # iOS widgets (Swift, via @bacons/apple-targets)
+supabase/       # migrations for the optional sync backend
+scripts/        # brand assets, icon subset, duration coverage
+e2e/            # the browser battery: hydration, a11y, perf, icons
 assets/         # fonts, icons, images
 docs/           # product spec, validation, screenshots
 ```
