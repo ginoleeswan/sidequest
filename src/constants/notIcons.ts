@@ -20,4 +20,7 @@ export const NOT_ICONS = [
   // The ARIA role, asserted on in tests. The icons in use are
   // alert-circle and alert-circle-outline, which are their own names.
   'alert',
+  // React Native's Share.share, spied on by method name in tests. The
+  // drawn share icon is share-outline, which is its own name.
+  'share',
 ] as const;

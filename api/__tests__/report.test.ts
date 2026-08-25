@@ -1,5 +1,5 @@
 import handler from '../report';
-import { fakeReq, fakeRes, fromIp } from './harness';
+import { fakeReq, fakeRes, fromIp } from '../test-utils';
 
 type Req = Parameters<typeof handler>[0];
 type Res = Parameters<typeof handler>[1];

@@ -1,5 +1,5 @@
 import handler from '../steam';
-import { fakeReq, fakeRes } from './harness';
+import { fakeReq, fakeRes } from '../test-utils';
 
 type Req = Parameters<typeof handler>[0];
 type Res = Parameters<typeof handler>[1];

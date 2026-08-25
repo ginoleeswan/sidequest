@@ -27,10 +27,34 @@ jest.mock('../supabase', () => ({
         return { data: { subscription: { unsubscribe: mockUnsubscribe } } };
       },
       signOut: () => mockSignOut(),
+      signInWithIdToken: (args: unknown) => mockSignInWithIdToken(args),
+      signInWithOtp: (args: unknown) => mockSignInWithOtp(args),
     },
   },
 }));
 
+const mockAppleSignIn = jest.fn();
+jest.mock('expo-apple-authentication', () => ({
+  signInAsync: (args: unknown) => mockAppleSignIn(args),
+  AppleAuthenticationScope: { FULL_NAME: 0, EMAIL: 1 },
+}));
+
+const mockGoogleSignIn = jest.fn();
+const mockGoogleConfigure = jest.fn();
+jest.mock('@react-native-google-signin/google-signin', () => ({
+  GoogleSignin: {
+    configure: (args: unknown) => mockGoogleConfigure(args),
+    hasPlayServices: jest.fn(async () => true),
+    signIn: () => mockGoogleSignIn(),
+  },
+}));
+
+const mockSignInWithIdToken = jest.fn(
+  async (_args: unknown) => ({ error: null }) as { error: Error | null }
+);
+const mockSignInWithOtp = jest.fn(
+  async (_args: unknown) => ({ error: null }) as { error: Error | null }
+);
 const mockRemoveItem = jest.fn();
 jest.mock('../storage', () => ({
   kv: {
@@ -84,6 +108,65 @@ describe('AuthProvider', () => {
     await act(async () => {});
     await act(async () => unmount());
     expect(mockUnsubscribe).toHaveBeenCalled();
+  });
+
+  it('Apple: the system credential goes straight to Supabase', async () => {
+    mockAppleSignIn.mockResolvedValue({ identityToken: 'apple-jwt' });
+    const { result } = await setup();
+    await act(async () => result.current.signInWithApple());
+    expect(mockSignInWithIdToken).toHaveBeenCalledWith({
+      provider: 'apple',
+      token: 'apple-jwt',
+    });
+  });
+
+  it('Apple: a credential with no token is an error, not a silent no-op', async () => {
+    mockAppleSignIn.mockResolvedValue({ identityToken: null });
+    const { result } = await setup();
+    await act(async () => {
+      await expect(result.current.signInWithApple()).rejects.toThrow(
+        /identity token/
+      );
+    });
+    expect(mockSignInWithIdToken).not.toHaveBeenCalled();
+  });
+
+  it('Google on native: token from the sheet, then Supabase', async () => {
+    mockGoogleSignIn.mockResolvedValue({ data: { idToken: 'google-jwt' } });
+    const { result } = await setup();
+    await act(async () => result.current.signInWithGoogle());
+    expect(mockGoogleConfigure).toHaveBeenCalled();
+    expect(mockSignInWithIdToken).toHaveBeenCalledWith({
+      provider: 'google',
+      token: 'google-jwt',
+    });
+  });
+
+  it('Google: a cancelled sheet (no token) throws rather than half-signing-in', async () => {
+    mockGoogleSignIn.mockResolvedValue({ data: undefined });
+    const { result } = await setup();
+    await act(async () => {
+      await expect(result.current.signInWithGoogle()).rejects.toThrow(
+        /identity token/
+      );
+    });
+    expect(mockSignInWithIdToken).not.toHaveBeenCalled();
+  });
+
+  it('email: sends the magic link and surfaces a Supabase refusal', async () => {
+    const { result } = await setup();
+    await act(async () => result.current.signInWithEmail('g@example.com'));
+    expect(mockSignInWithOtp).toHaveBeenCalledWith(
+      expect.objectContaining({ email: 'g@example.com' })
+    );
+    mockSignInWithOtp.mockResolvedValueOnce({
+      error: new Error('rate limited'),
+    } as never);
+    await act(async () => {
+      await expect(
+        result.current.signInWithEmail('g@example.com')
+      ).rejects.toThrow('rate limited');
+    });
   });
 
   it('sign-out drops the persisted query cache with the session', async () => {

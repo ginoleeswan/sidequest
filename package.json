@@ -108,7 +108,8 @@
       "!src/**/__tests__/**",
       "!src/app/+html.tsx",
       "!src/**/*.d.ts",
-      "!src/test-utils.tsx"
+      "!src/test-utils.tsx",
+      "!api/test-utils.ts"
     ]
   }
 }
