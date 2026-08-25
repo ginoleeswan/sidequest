@@ -60,14 +60,11 @@ describe('the static pages', () => {
       expect(
         screen.getAllByText('Free · No account · Nothing to install').length
       ).toBeGreaterThan(0);
-    },
-    HEAVY
-  );
-
-  it(
-    'is honest about what it does not take',
-    async () => {
-      await renderApp(<AboutScreen />);
+      // And what it does not take, which is the other half of the case.
+      // Asserted against this same mount rather than a second one: the
+      // about screen is the heaviest render in the app, and paying for
+      // it twice to check one more label made the suite a wall-clock
+      // race that lost on a loaded machine.
       expect(screen.getByLabelText('No account. No tracking.')).toBeTruthy();
     },
     HEAVY
