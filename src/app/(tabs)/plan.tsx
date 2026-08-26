@@ -37,7 +37,8 @@ import { SITE_ORIGIN } from '@/constants/site';
 import { useHydrated } from '@/hooks/useHydrated';
 import { encodePlan } from '@/lib/planLink';
 import { useLibrary } from '@/lib/library';
-import { sessionMinutesFor } from '@/lib/sessions';
+import { readSessions, sessionMinutesFor } from '@/lib/sessions';
+import { measuredPace, worthSaying } from '@/lib/measuredPace';
 import { hoursLeft, planItems } from '@/lib/planning';
 import { pickTonight, planSchedule, type ScheduledItem } from '@/lib/scheduler';
 import { COLORS } from '@/styles/colors';
@@ -399,6 +400,22 @@ export default function PlanScreen() {
    */
   const routeShown = schedule.scheduled.slice(0, ROUTE_SHOWN);
   const routeRest = schedule.scheduled.length - routeShown.length;
+
+  /**
+   * What the app has actually watched, against what it was told.
+   *
+   * The session clock has been recording real evenings all along and
+   * only the Memcard ever looked, while every date on this page rests
+   * on a number somebody picked in ten seconds during onboarding. Read
+   * once per visit, like `now`, so the page holds still.
+   *
+   * Offered, never applied: it counts logged sessions and nobody logs
+   * every evening, so it is a floor rather than a measurement. See
+   * lib/measuredPace.
+   */
+  const [measured] = useState(() => measuredPace(readSessions()));
+  const paceNews =
+    measured && worthSaying(pace, measured.hoursPerWeek) ? measured : null;
 
   const tonight = useMemo(
     () =>
@@ -789,6 +806,46 @@ export default function PlanScreen() {
                           <Text style={styles.dialVerdict}>
                             {verdictSentence}
                           </Text>
+                          {/* Between the verdict and the price of
+                              pins, because it is about whether the
+                              verdict can be believed. Never a telling
+                              off: a plan built on an optimistic pace
+                              promises what the week cannot keep, and
+                              missing your own plan every week is a far
+                              worse thing to feel than reading one
+                              honest sentence about it. */}
+                          {paceNews && (
+                            <View style={styles.paceNews}>
+                              <Text style={styles.paceNewsText}>
+                                Your timed evenings come to at least{' '}
+                                {formatHours(paceNews.hoursPerWeek)} a week.
+                                This plan assumes {pace}h, so it is holding back
+                                games you have room for.
+                              </Text>
+                              <Text
+                                style={styles.paceNewsAction}
+                                onPress={() =>
+                                  setPace(
+                                    Math.max(
+                                      1,
+                                      Math.round(paceNews.hoursPerWeek)
+                                    )
+                                  )
+                                }
+                                suppressHighlighting
+                                accessibilityRole="button"
+                                accessibilityLabel={`Use ${Math.round(paceNews.hoursPerWeek)} hours a week`}
+                              >
+                                Use {Math.round(paceNews.hoursPerWeek)}h a week
+                                →
+                              </Text>
+                              <Text style={styles.paceNewsCaveat}>
+                                Counts only the evenings you timed, across{' '}
+                                {paceNews.sessions} of them.
+                              </Text>
+                            </View>
+                          )}
+
                           {schedule.costOfPins > 0 && (
                             <Text style={styles.pinCost}>
                               Keeping what you marked must-play costs you{' '}
@@ -930,6 +987,21 @@ const styles = StyleSheet.create({
     ...TYPE.caption,
     color: COLORS.accent,
   },
+  /**
+   * The one thing on this page that reports on the reader rather than
+   * on their games, so it is kept quiet and factual — no warning
+   * colour, no icon. It states two numbers and offers a tap.
+   */
+  paceNews: {
+    gap: 3,
+    marginTop: SPACING.xs,
+    paddingTop: SPACING.sm,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.stroke,
+  },
+  paceNewsText: { ...TYPE.caption, color: COLORS.lightGrey },
+  paceNewsAction: { ...TYPE.labelTiny, color: COLORS.accent },
+  paceNewsCaveat: { ...TYPE.micro, color: COLORS.mediumGrey },
   steamLink: {
     ...TYPE.labelTiny,
     color: COLORS.mediumGrey,

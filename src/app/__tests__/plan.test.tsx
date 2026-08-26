@@ -283,3 +283,111 @@ describe('a very large plan', () => {
     expect(screen.queryByText(/more after these/)).toBeNull();
   });
 });
+
+/**
+ * The pace the app watched, against the one it was told.
+ *
+ * Every date on this page rests on hours-a-week, chosen in ten seconds
+ * during onboarding by somebody being generous with themselves — while
+ * the session clock recorded real evenings the whole time and only the
+ * Memcard ever looked.
+ *
+ * It is offered, never applied. A plan built on an optimistic pace
+ * promises what the week cannot keep, and missing your own plan every
+ * week is a far worse thing to feel than reading one honest sentence
+ * about it — but the count is only of evenings somebody remembered to
+ * time, so the app must not swap its own floor in for their judgement.
+ */
+describe('what the sessions know about your pace', () => {
+  const DAY = 86_400_000;
+  const sessions = (rows: { daysAgo: number; minutes: number }[]) =>
+    JSON.stringify(
+      rows.map(({ daysAgo, minutes }) => ({
+        gameId: 1,
+        minutes,
+        endedAt: Date.now() - daysAgo * DAY,
+      }))
+    );
+
+  /**
+   * Twelve timed evenings of three hours across four weeks: nine hours
+   * a week on the record, against the six the plan assumes. The floor
+   * genuinely clears the assumption, which is the only case the app is
+   * allowed to speak in.
+   */
+  const busy = Array.from({ length: 12 }, (_, i) => ({
+    daysAgo: 28 - i * 2,
+    minutes: 180,
+  }));
+
+  /** The caveat is the honest half: it counts what was timed, no more. */
+  it('admits it only counted the evenings that were timed', async () => {
+    seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
+    store['sidequest.sessions.v1'] = sessions(busy);
+    await renderApp(<PlanScreen />);
+    await waitFor(() =>
+      expect(screen.getByText(/only the evenings you timed/)).toBeTruthy()
+    );
+  });
+
+  it('says nothing when no evenings have been timed', async () => {
+    seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
+    await renderApp(<PlanScreen />);
+    expect(screen.queryByText(/timed evenings/)).toBeNull();
+  });
+
+  it('says nothing on too little evidence to judge anybody by', async () => {
+    seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
+    store['sidequest.sessions.v1'] = sessions([
+      { daysAgo: 3, minutes: 120 },
+      { daysAgo: 1, minutes: 120 },
+    ]);
+    await renderApp(<PlanScreen />);
+    expect(screen.queryByText(/timed evenings/)).toBeNull();
+  });
+
+  /**
+   * The case it cannot speak to. An untimed evening looks exactly like
+   * an evening that did not happen, so a low count is equally
+   * consistent with somebody who plays every night and never presses
+   * the button — and "use 1h a week" off four timed evenings would be
+   * the app rewriting a stranger's life from the corner it saw.
+   */
+  it('stays quiet when the timed evenings are few, which proves nothing', async () => {
+    seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
+    store['sidequest.sessions.v1'] = sessions([
+      { daysAgo: 28, minutes: 45 },
+      { daysAgo: 20, minutes: 45 },
+      { daysAgo: 12, minutes: 45 },
+      { daysAgo: 4, minutes: 45 },
+    ]);
+    await renderApp(<PlanScreen />);
+    expect(screen.queryByText(/timed evenings/)).toBeNull();
+  });
+
+  /** Upward it is on solid ground: those hours are on the record. */
+  it('says so when there is provably more room than the plan thinks', async () => {
+    seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
+    store['sidequest.sessions.v1'] = sessions(busy);
+    await renderApp(<PlanScreen />);
+    await waitFor(() =>
+      expect(
+        screen.getByText(/holding back games you have room for/)
+      ).toBeTruthy()
+    );
+  });
+
+  it('offers the number rather than taking it', async () => {
+    seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
+    store['sidequest.sessions.v1'] = sessions(busy);
+    await renderApp(<PlanScreen />);
+    // The dial is untouched until somebody presses the offer.
+    await waitFor(() =>
+      expect(
+        screen.getByLabelText('Hours a week: 6h').props.accessibilityState
+          .selected
+      ).toBe(true)
+    );
+    expect(screen.getByText(/Use \d+h a week/)).toBeTruthy();
+  });
+});
