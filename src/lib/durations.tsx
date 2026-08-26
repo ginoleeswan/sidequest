@@ -12,7 +12,7 @@ import { resolveDuration, type Duration } from './duration';
 import { fetchTimesToBeat, type TimeToBeatBySlug } from '@/api/igdb';
 import type { Game } from '@/api/types';
 import { useHydrated } from '@/hooks/useHydrated';
-import { readVersioned, writeFailureMessage, writeJson } from '@/lib/storage';
+import { readRescued, writeFailureMessage, writeJson } from '@/lib/storage';
 
 const STORAGE_KEY = 'sidequest.durations.v1';
 
@@ -22,13 +22,35 @@ const EMPTY: Overrides = {};
 /** Game id → hours the player told us it takes. */
 type Overrides = Record<string, number>;
 
-function load(): Overrides {
-  const parsed = readVersioned<Overrides>(STORAGE_KEY, {}, []);
-  return Object.fromEntries(
-    Object.entries(parsed).filter(
-      ([, hours]) => typeof hours === 'number' && hours > 0
-    )
-  );
+/**
+ * The lengths somebody corrected by hand, and a rescue if the file
+ * holding them will not parse.
+ *
+ * Small compared with the library and not small in effort: every entry
+ * here is a number a person went and found out, and the plan trusts
+ * these over every estimate it has. Losing them silently — read as
+ * empty, overwritten by the next correction — is the same failure the
+ * library had, in a store nobody would think to check.
+ *
+ * The shape filter stays and does a second job: a file that parses but
+ * holds nonsense degrades to the entries that make sense rather than
+ * poisoning every duration in the app.
+ */
+function load(): { value: Overrides; error: string | null } {
+  const read = readRescued<Overrides>(STORAGE_KEY, {}, []);
+  return {
+    value: Object.fromEntries(
+      Object.entries(read.value).filter(
+        ([, hours]) => typeof hours === 'number' && hours > 0
+      )
+    ),
+    error:
+      read.rescue === 'none'
+        ? null
+        : read.rescue === 'kept'
+          ? 'The lengths you corrected could not be read, so the plan is using estimates for now. The unreadable copy has been kept on this device.'
+          : 'The lengths you corrected could not be read, and the unreadable copy could not be kept.',
+  };
 }
 
 interface DurationsValue {
@@ -61,6 +83,12 @@ interface DurationsValue {
   count: number;
   /** Set when the last write to the device failed; null when it landed. */
   saveError: string | null;
+  /**
+   * Set when the stored corrections would not parse. Distinct from
+   * `saveError`: that one means the device refused a write, this one
+   * means what was already there could not be read.
+   */
+  loadError: string | null;
 }
 
 const DurationsContext = createContext<DurationsValue | null>(null);
@@ -74,7 +102,9 @@ const DurationsContext = createContext<DurationsValue | null>(null);
  * device, and makes their correction win everywhere.
  */
 export function DurationsProvider({ children }: { children: React.ReactNode }) {
-  const [stored, setOverrides] = useState<Overrides>(load);
+  const [initial] = useState(load);
+  const [stored, setOverrides] = useState<Overrides>(initial.value);
+  const loadError = initial.error;
   /**
    * Reported times, by slug.
    *
@@ -154,6 +184,7 @@ export function DurationsProvider({ children }: { children: React.ReactNode }) {
       overrides,
       count: Object.keys(overrides).length,
       saveError,
+      loadError,
     }),
     [
       overrides,
@@ -163,6 +194,7 @@ export function DurationsProvider({ children }: { children: React.ReactNode }) {
       clearDuration,
       adoptSynced,
       saveError,
+      loadError,
     ]
   );
 

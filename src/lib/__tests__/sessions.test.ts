@@ -118,3 +118,36 @@ describe('saying a length out loud', () => {
     expect(formatMinutes(80)).toBe('1h 20m');
   });
 });
+
+/**
+ * A play history that will not parse.
+ *
+ * `endSession` writes `[newest, ...readSessions()]`, so a log reading as
+ * empty is a log replaced by its own last entry the moment somebody
+ * stops playing — every evening they ever recorded, gone, with nothing
+ * on screen to suggest it happened.
+ */
+describe('a damaged session log', () => {
+  const LOG = 'sidequest.sessions.v1';
+  const truncated = '[{"gameId":1,"minutes":90,"endedAt":1';
+
+  it('reads as empty rather than throwing', () => {
+    store[LOG] = truncated;
+    expect(readSessions()).toEqual([]);
+  });
+
+  it('keeps the unreadable copy where it can be found again', () => {
+    store[LOG] = truncated;
+    readSessions();
+    expect(store[`${LOG}.damaged`]).toBe(truncated);
+  });
+
+  /** The failure itself: finishing a session used to overwrite it. */
+  it('does not lose the copy when the next session ends', () => {
+    store[LOG] = truncated;
+    startSession(1, 'Celeste', 0);
+    endSession(30 * MINUTE);
+    expect(store[LOG]).not.toBe(truncated);
+    expect(store[`${LOG}.damaged`]).toBe(truncated);
+  });
+});

@@ -10,7 +10,12 @@ import {
 
 import type { Game } from '@/api/types';
 import { useHydrated } from '@/hooks/useHydrated';
-import { readVersioned, writeFailureMessage, writeJson } from '@/lib/storage';
+import {
+  forgetDamaged,
+  readRescued,
+  writeFailureMessage,
+  writeJson,
+} from '@/lib/storage';
 import { clearWidgets } from '@/lib/widgetBridge';
 
 export type LibraryStatus = 'wishlist' | 'playing' | 'finished';
@@ -98,7 +103,26 @@ const EMPTY: Entries = {};
  * which is the point. Bumping to a v2 key without one would abandon
  * every existing library on the next deploy.
  */
-const load = (): Entries => readVersioned<Entries>(STORAGE_KEY, {}, []);
+/**
+ * Read the library, and rescue anything that would not parse.
+ *
+ * See `readRescued`: the rescue belongs in the load step because it has
+ * to happen before this provider's own state can be written back. What
+ * belongs HERE is the sentence — this store is somebody's backlog, and
+ * the copy has to say so.
+ */
+function load(): { value: Entries; error: string | null } {
+  const read = readRescued<Entries>(STORAGE_KEY, {}, []);
+  return {
+    value: read.value,
+    error:
+      read.rescue === 'none'
+        ? null
+        : read.rescue === 'kept'
+          ? 'Some of your library could not be read, so it is not shown here. The unreadable copy has been kept on this device rather than overwritten.'
+          : 'Some of your library could not be read, and the unreadable copy could not be kept. Anything you save now will replace it.',
+  };
+}
 
 interface LibraryContextValue {
   entries: Entries;
@@ -174,12 +198,30 @@ interface LibraryContextValue {
   moveMany: (ids: number[], status: LibraryStatus) => number;
   /** Set when the last write to the device failed; null when it landed. */
   saveError: string | null;
+  /**
+   * Set when the stored library would not parse. Distinct from
+   * `saveError`: that one means the device refused a write, this one
+   * means what was already there could not be read.
+   */
+  loadError: string | null;
 }
 
 const LibraryContext = createContext<LibraryContextValue | null>(null);
 
 export function LibraryProvider({ children }: { children: React.ReactNode }) {
-  const [stored, commit] = useState<Entries>(load);
+  /**
+   * What was on the device, and whether any of it was unreadable.
+   *
+   * Held rather than discarded, because falling back to an empty
+   * library is only half an answer: the app then renders as though the
+   * reader never had anything, and the next thing they touch writes
+   * that emptiness over the bytes. A damaged library became a deleted
+   * one, permanently, with no server to recover it from — one tap
+   * after opening the app, without a word.
+   */
+  const [initial] = useState(load);
+  const [stored, commit] = useState<Entries>(initial.value);
+  const loadError = initial.error;
 
   /**
    * Every mutation goes through here, and every changed entry comes out
@@ -475,7 +517,25 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
          * Only on the last one out. Removing some games is an edit, and
          * the ordinary publish handles it.
          */
-        if (Object.keys(next).length === 0) void clearWidgets();
+        if (Object.keys(next).length === 0) {
+          void clearWidgets();
+          /**
+           * And the rescued copy, if a damaged library ever left one.
+           *
+           * Emptying the library is this app's "delete everything" —
+           * there is no other button for it — and the rescue puts a
+           * second copy of somebody's backlog on their device that
+           * nothing else would ever remove. Keeping data after the
+           * reader has cleared it is exactly the promise the widget
+           * clearing above exists to honour, and a rescue that quietly
+           * broke it would be a poor trade for the loss it prevents.
+           *
+           * Only the library's own. The lengths somebody corrected and
+           * the evenings they logged are not the backlog, and amnesty
+           * has never claimed to clear them.
+           */
+          forgetDamaged(STORAGE_KEY);
+        }
         return next;
       });
       return count;
@@ -558,6 +618,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       removeMany,
       moveMany,
       saveError,
+      loadError,
     }),
     [
       entries,
@@ -576,6 +637,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       removeMany,
       moveMany,
       saveError,
+      loadError,
     ]
   );
 

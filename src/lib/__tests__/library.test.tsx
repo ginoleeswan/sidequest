@@ -267,3 +267,75 @@ describe('LibraryProvider', () => {
     expect(() => result.current.importJson('not json')).toThrow();
   });
 });
+
+/**
+ * A library that will not parse.
+ *
+ * The worst version of this was silent and permanent: the read fell
+ * back to empty, the shelf rendered as though the reader had never
+ * saved anything — a plausible sight, so nothing looked wrong — and the
+ * first game they added wrote that emptiness over the bytes. One tap
+ * after opening the app, with no account and no server, a damaged
+ * backlog became a deleted one.
+ */
+describe('a damaged library', () => {
+  const truncated =
+    '{"1":{"game":{"id":1,"name":"Precious"},"status":"wishlist","addedAt":1}';
+
+  it('starts clean rather than crashing', async () => {
+    const store = useFakeStorage();
+    store['sidequest.library.v1'] = truncated;
+    const { result } = await setup();
+    expect(result.current.count).toBe(0);
+  });
+
+  it('keeps the unreadable copy, and says so', async () => {
+    const store = useFakeStorage();
+    store['sidequest.library.v1'] = truncated;
+    const { result } = await setup();
+    expect(store['sidequest.library.v1.damaged']).toBe(truncated);
+    expect(result.current.loadError).toMatch(/could not be read/);
+  });
+
+  /** The whole point: the next thing they touch must not destroy it. */
+  it('survives the first thing saved after it', async () => {
+    const store = useFakeStorage();
+    store['sidequest.library.v1'] = truncated;
+    const { result } = await setup();
+    await act(async () => {
+      result.current.setStatus(game(99, 'Something New'), 'wishlist');
+    });
+    // The live key has moved on, which is correct — the app has to
+    // stay usable. The rescued copy is what must still be there.
+    expect(store['sidequest.library.v1.damaged']).toBe(truncated);
+  });
+
+  /**
+   * The rescue puts a second copy of somebody's backlog on their
+   * device. Emptying the library is this app's "delete everything" —
+   * there is no other button for it — so a copy that survived it would
+   * be the app keeping data the reader had just cleared, which is the
+   * same promise the widget clearing exists to honour.
+   */
+  it('is cleared when the reader clears their library', async () => {
+    const store = useFakeStorage();
+    store['sidequest.library.v1'] = truncated;
+    const { result } = await setup();
+    await act(async () => {
+      result.current.setStatus(game(99, 'Something New'), 'wishlist');
+    });
+    expect(store['sidequest.library.v1.damaged']).toBe(truncated);
+
+    await act(async () => {
+      result.current.removeMany([99]);
+    });
+    expect(store['sidequest.library.v1.damaged']).toBeUndefined();
+  });
+
+  it('says nothing at all when the library reads fine', async () => {
+    const store = useFakeStorage();
+    const { result } = await setup();
+    expect(result.current.loadError).toBeNull();
+    expect(store['sidequest.library.v1.damaged']).toBeUndefined();
+  });
+});

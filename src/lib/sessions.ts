@@ -1,4 +1,4 @@
-import { readVersioned, writeJson } from './storage';
+import { readRescued, readVersioned, writeJson } from './storage';
 
 /**
  * Time actually spent, recorded as it happens.
@@ -91,8 +91,22 @@ export function endSession(now: number = Date.now()): LoggedSession | null {
   return logged;
 }
 
+/**
+ * The play history, rescued if it will not parse.
+ *
+ * `endSession` writes `[newest, ...readSessions()]`, so a log that
+ * reads as empty is a log replaced by its own last entry the moment
+ * somebody stops playing — every evening they ever recorded, gone,
+ * with nothing on screen to suggest it happened.
+ *
+ * The rescue is silent here, unlike the library's and the durations':
+ * this is a module function with no provider behind it and no channel
+ * to speak through, and inventing one for a history nobody is looking
+ * at would be worse than keeping the bytes and saying nothing. They are
+ * under `sessions.log.v1.damaged` if they are ever wanted.
+ */
 export const readSessions = (): LoggedSession[] =>
-  readVersioned<LoggedSession[]>(LOG_KEY, [], []).filter(
+  readRescued<LoggedSession[]>(LOG_KEY, [], []).value.filter(
     (session) =>
       typeof session?.gameId === 'number' &&
       typeof session?.minutes === 'number'

@@ -16,6 +16,67 @@ export type WriteResult =
   { ok: true } | { ok: false; reason: 'full' | 'unavailable'; error: unknown };
 
 /**
+ * What a read found, and what it could not read.
+ *
+ * The doctrine above is about writes, and it missed the same loss
+ * arriving through the other door. A key that will not parse falls back
+ * to a default, the app renders as though the reader never had
+ * anything, and the next thing they touch writes that emptiness over
+ * the bytes — so a damaged library becomes a deleted one, permanently,
+ * with no server to recover it from.
+ *
+ * A read therefore reports too. `damaged` carries the raw string that
+ * would not parse, so the caller can put it somewhere safe before its
+ * own state overwrites it.
+ */
+export interface ReadResult<T> {
+  value: T;
+  damaged?: string;
+}
+
+/** Where a key's unreadable contents are kept. */
+export const damagedKey = (key: string): string => `${key}.damaged`;
+
+/**
+ * Put unreadable bytes somewhere they survive the next write.
+ *
+ * Best-effort and deliberately not fatal: if this fails there is
+ * nothing further to try, and refusing to start the app would turn one
+ * person's corrupt key into an app that cannot be opened. The caller
+ * still has the failure and can say so.
+ *
+ * Only the first one is kept. A second damaged read is more likely to
+ * be this mechanism's own output than a fresh disaster, and overwriting
+ * would destroy the copy that mattered.
+ */
+/**
+ * Drop a rescued copy.
+ *
+ * The rescue puts a second copy of somebody's data on their device, and
+ * a copy nothing can ever remove is the opposite of what this app
+ * promises about their data being theirs to delete. Whatever counts as
+ * "forget all of this" for a store has to forget its rescued copy too.
+ */
+export function forgetDamaged(key: string): void {
+  kv.removeItem(damagedKey(key));
+}
+
+export function quarantine(key: string, raw: string): WriteResult {
+  const to = damagedKey(key);
+  if (readRaw(to) != null) return { ok: true };
+  try {
+    kv.setItem(to, raw);
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      reason: isQuotaError(error) ? 'full' : 'unavailable',
+      error,
+    };
+  }
+}
+
+/**
  * The storage the platform actually has.
  *
  * The whole file was written against `localStorage`, which native does
@@ -102,8 +163,17 @@ export function readVersioned<T>(
   fallback: T,
   migrations: { from: string; migrate: (value: unknown) => T | null }[] = []
 ): T {
-  const current = kv.getItem(key);
-  if (current != null) return readJson<T>(key, fallback);
+  return readVersionedChecked<T>(key, fallback, migrations).value;
+}
+
+/** `readVersioned`, admitting when the current key would not parse. */
+export function readVersionedChecked<T>(
+  key: string,
+  fallback: T,
+  migrations: { from: string; migrate: (value: unknown) => T | null }[] = []
+): ReadResult<T> {
+  const current = readRaw(key);
+  if (current != null) return readJsonChecked<T>(key, fallback);
 
   for (const { from, migrate } of migrations) {
     const older = readJson<unknown>(from, null);
@@ -112,21 +182,97 @@ export function readVersioned<T>(
       const migrated = migrate(older);
       if (migrated == null) continue;
       writeJson(key, migrated);
-      return migrated;
+      return { value: migrated };
     } catch {
       // A migration that throws must not stop the app from starting.
     }
   }
-  return fallback;
+  return { value: fallback };
+}
+
+/**
+ * Whether a read found damage, and whether the damage was saved.
+ *
+ * `'none'` is the ordinary case. `'kept'` means the unreadable bytes
+ * are under `damagedKey(key)` and the reader can be told their data is
+ * not gone. `'lost'` means even the copy could not be written, which is
+ * the one case where the next save really will destroy something — and
+ * the reader deserves a different sentence for it.
+ */
+export type Rescue = 'none' | 'kept' | 'lost';
+
+export interface RescuedRead<T> {
+  value: T;
+  rescue: Rescue;
+}
+
+/**
+ * Read a store that holds something the reader cannot get back, and
+ * rescue anything unreadable before the caller's own state can write
+ * over it.
+ *
+ * Three stores need this and each had the same silent failure: the read
+ * falls back to empty, the screen renders as though there had never
+ * been anything — which is always a plausible sight — and the next
+ * thing the reader touches persists that emptiness. The bytes are gone
+ * with no server to recover them from.
+ *
+ * Call this from the load step rather than from an effect. It has to
+ * happen before the first write, and it is part of loading rather than
+ * a reaction to it. Safe to run twice — `quarantine` will not overwrite
+ * a copy it already kept — which matters because a StrictMode state
+ * initialiser does exactly that.
+ *
+ * What the reader is told is left to the caller: "your library" and
+ * "the lengths you corrected" are not the same sentence, and this
+ * module has no business writing either.
+ */
+export function readRescued<T>(
+  key: string,
+  fallback: T,
+  migrations: { from: string; migrate: (value: unknown) => T | null }[] = []
+): RescuedRead<T> {
+  const read = readVersionedChecked<T>(key, fallback, migrations);
+  if (read.damaged == null) return { value: read.value, rescue: 'none' };
+  return {
+    value: read.value,
+    rescue: quarantine(key, read.damaged).ok ? 'kept' : 'lost',
+  };
 }
 
 export function readJson<T>(key: string, fallback: T): T {
+  return readJsonChecked<T>(key, fallback).value;
+}
+
+/**
+ * The same read, admitting when it failed.
+ *
+ * Starting clean rather than crashing on boot is still right — but it
+ * is only half an answer, because the bytes it could not read are about
+ * to be written over. Callers holding something irreplaceable use this
+ * one and quarantine what comes back.
+ */
+export function readJsonChecked<T>(key: string, fallback: T): ReadResult<T> {
+  // Storage being unavailable and storage holding nonsense are
+  // different failures, and only the second one has anything worth
+  // rescuing. Reading through a backend that throws must not be
+  // reported as damage: there are no bytes, so there is nothing to
+  // quarantine and nothing to alarm anybody about.
+  const raw = readRaw(key);
+  if (raw == null) return { value: fallback };
   try {
-    const raw = kv.getItem(key);
-    return raw != null ? (JSON.parse(raw) as T) : fallback;
+    return { value: JSON.parse(raw) as T };
   } catch {
-    // Unreadable or corrupt: start clean rather than crash on boot.
-    return fallback;
+    return { value: fallback, damaged: raw };
+  }
+}
+
+/** `kv.getItem`, for a backend that may not be there at all. */
+function readRaw(key: string): string | null {
+  try {
+    return kv.getItem(key);
+  } catch {
+    return null;
   }
 }
 
