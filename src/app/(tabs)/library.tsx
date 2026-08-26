@@ -243,7 +243,7 @@ export default function LibraryScreen() {
       toast(
         headers.length > 0
           ? 'No title column in that — expected Title, Name or Game'
-          : 'That doesn\u2019t look like a library export',
+          : 'Nothing to import. One game a line, or a CSV export.',
         'alert-circle'
       );
       return;
@@ -611,17 +611,28 @@ export default function LibraryScreen() {
         >
           <Pressable style={styles.modalCard} onPress={() => {}}>
             <Text style={styles.modalTitle}>Import a library</Text>
+            {/* The list goes first now, because it is the thing most
+                people can actually do. The exports still work and are
+                still worth naming, but leading with them told the
+                reader without a Steam account to go and produce a
+                spreadsheet before the app would help — which is the
+                door shut on exactly the person this path exists for. */}
             <Text style={styles.modalHint}>
-              On your other device: Library → Copy library. Or paste a CSV
-              export from Backloggd, HowLongToBeat or a spreadsheet — a column
-              called Title, Name or Game is all it needs.
+              Just type or paste your games, one a line — that is enough. A CSV
+              from Backloggd, HowLongToBeat or a spreadsheet works too, and
+              brings your hours and shelves with it. From another device:
+              Library → Copy library.
             </Text>
             <TextInput
               value={importText}
               onChangeText={setImportText}
               multiline
-              placeholder="Paste your library export…"
+              placeholder={'Hades\nElden Ring\nOuter Wilds…'}
               placeholderTextColor={COLORS.mediumGrey}
+              // A real label, not just the placeholder: the placeholder
+              // is an example now rather than an instruction, and a
+              // screen reader was only ever getting the instruction.
+              accessibilityLabel="Your games, one a line, or a CSV export"
               style={styles.modalInput}
             />
             <Pressable

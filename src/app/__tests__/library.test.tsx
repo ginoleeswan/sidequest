@@ -116,18 +116,22 @@ describe('the library screen', () => {
     expect(screen.queryByText('Shortest')).toBeNull();
   });
 
+  /**
+   * One line is refused on purpose, now that a headerless list of
+   * titles is a library. A single line is as likely to be a stray
+   * sentence as a game, and somebody importing a backlog is pasting
+   * more than one — a single title is what the search box is for.
+   */
   it('refuses a paste that is not a library', async () => {
     await renderApp(<LibraryScreen />);
     await fireEvent.press(screen.getByLabelText('Import a library'));
     await fireEvent.changeText(
-      screen.getByPlaceholderText(/Paste/i),
+      screen.getByLabelText(/one a line/i),
       'not json'
     );
     await fireEvent.press(screen.getByText('Merge into my library'));
     await waitFor(() =>
-      expect(
-        screen.getByText(/doesn’t look like a library export/)
-      ).toBeTruthy()
+      expect(screen.getByText(/Nothing to import/)).toBeTruthy()
     );
   });
 
@@ -136,7 +140,7 @@ describe('the library screen', () => {
     await renderApp(<LibraryScreen />);
     await fireEvent.press(screen.getByLabelText('Import a library'));
     await fireEvent.changeText(
-      screen.getByPlaceholderText(/Paste/i),
+      screen.getByLabelText(/one a line/i),
       JSON.stringify({
         '2': { addedAt: 9, status: 'wishlist', game: game(2, 'Hades II', 30) },
       })
@@ -175,7 +179,7 @@ describe('the library screen', () => {
     await renderApp(<LibraryScreen />);
     await fireEvent.press(screen.getByLabelText('Import a library'));
     await fireEvent.changeText(
-      screen.getByPlaceholderText(/Paste/i),
+      screen.getByLabelText(/one a line/i),
       ['Title,Status,Hours', 'Celeste,Completed,9', 'Hades,Playing,4'].join(
         '\n'
       )
@@ -188,11 +192,37 @@ describe('the library screen', () => {
     expect(library()['78'].status).toBe('playing');
   });
 
+  /**
+   * The reader with no Steam account and no spreadsheet.
+   *
+   * This is the largest share of the people this app is for — a backlog
+   * on a PlayStation, an Xbox, a Switch — and until now the box wanted a
+   * header row, so their most natural move came back empty with the
+   * first game eaten as a column name. Getting the pile IN is the whole
+   * cold start: the app's one insight is what you can finish out of ALL
+   * of it, and five games typed by hand is a shortlist, not a backlog.
+   */
+  it('imports a backlog typed one game a line', async () => {
+    await renderApp(<LibraryScreen />);
+    await fireEvent.press(screen.getByLabelText('Import a library'));
+    await fireEvent.changeText(
+      screen.getByLabelText(/one a line/i),
+      ['Celeste', 'Hades'].join('\n')
+    );
+    await fireEvent.press(screen.getByText('Merge into my library'));
+
+    await waitFor(() => expect(library()['77']).toBeTruthy());
+    // No shelf or hours came with them, so they land where anything
+    // unplayed lands rather than being guessed at.
+    expect(library()['77'].status).toBe('wishlist');
+    expect(library()['78']).toBeTruthy();
+  });
+
   it('says which titles it could not match rather than dropping them silently', async () => {
     await renderApp(<LibraryScreen />);
     await fireEvent.press(screen.getByLabelText('Import a library'));
     await fireEvent.changeText(
-      screen.getByPlaceholderText(/Paste/i),
+      screen.getByLabelText(/one a line/i),
       ['Title', 'Celeste', 'Some Obscure Thing'].join('\n')
     );
     await fireEvent.press(screen.getByText('Merge into my library'));
@@ -205,7 +235,7 @@ describe('the library screen', () => {
     await renderApp(<LibraryScreen />);
     await fireEvent.press(screen.getByLabelText('Import a library'));
     await fireEvent.changeText(
-      screen.getByPlaceholderText(/Paste/i),
+      screen.getByLabelText(/one a line/i),
       ['Foo,Bar', '1,2'].join('\n')
     );
     await fireEvent.press(screen.getByText('Merge into my library'));
