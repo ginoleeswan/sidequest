@@ -11,6 +11,21 @@ import type { LibraryStatus } from './library';
  *
  * Only the title is required. Everything else is a bonus, because a
  * title is enough to look a game up.
+ *
+ * And a plain list of titles is a library too. This wanted a header row
+ * with a column it recognised, so the most natural thing anybody would
+ * paste — their backlog, one game a line — came back empty with the
+ * first game consumed as a column name, and the app answered "no title
+ * column, expected Title, Name or Game". That is the app telling
+ * somebody to go and make a spreadsheet before it will help them, which
+ * is exactly backwards for the reader who has no Steam account to
+ * import from and is the whole reason this path exists.
+ *
+ * So: a paste that does not look like a table is read as a list of
+ * titles. A paste that DOES look like a table and still has no title
+ * column keeps the honest error, because guessing which column of a
+ * spreadsheet holds the names is how somebody's library fills up with
+ * dates and ratings.
  */
 
 export interface CsvRow {
@@ -81,13 +96,46 @@ function hoursFrom(value: string | undefined): number | undefined {
     : undefined;
 }
 
+/**
+ * Whether a paste is a table at all.
+ *
+ * Half the lines carrying a comma, rather than any of them: plenty of
+ * titles have a comma in them, and one "Crisis Core: Final Fantasy VII,
+ * Reunion" in a list of forty should not turn the whole paste into a
+ * spreadsheet nobody can read.
+ */
+const looksTabular = (lines: string[]): boolean =>
+  lines.filter((line) => line.includes(',')).length * 2 >= lines.length;
+
+/** Every line a title, minus a lone header if the list came with one. */
+function titleList(lines: string[]): CsvRow[] {
+  const body = TITLE_KEYS.includes(lines[0].toLowerCase())
+    ? lines.slice(1)
+    : lines;
+  const seen = new Set<string>();
+  const rows: CsvRow[] = [];
+  for (const title of body) {
+    const key = title.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    rows.push({ title });
+  }
+  return rows;
+}
+
 /** Read a pasted export. Never throws — a bad paste is a message. */
 export function parseCsv(text: string): CsvParse {
   const lines = text
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
+  // One line is as likely to be a stray sentence as a library, and
+  // somebody importing a backlog is pasting more than one game. A
+  // single title is what the search box is for.
   if (lines.length < 2) return { rows: [], headers: [] };
+
+  // Not a table: the reader pasted their backlog, one game a line.
+  if (!looksTabular(lines)) return { rows: titleList(lines), headers: [] };
 
   const headers = splitCsvLine(lines[0]).map((header) =>
     header.toLowerCase().replace(/^"|"$/g, '')
@@ -96,6 +144,8 @@ export function parseCsv(text: string): CsvParse {
     headers.findIndex((header) => keys.includes(header));
 
   const titleAt = indexOf(TITLE_KEYS);
+  // A table whose columns mean nothing to us keeps the honest error:
+  // guessing which one holds the names fills a library with dates.
   if (titleAt < 0) return { rows: [], headers };
 
   const statusAt = indexOf(STATUS_KEYS);
