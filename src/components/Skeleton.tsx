@@ -318,26 +318,55 @@ export function SkeletonDetailExpanded() {
   );
 }
 
-/** Detail-page silhouette: full-bleed hero, title stack, stats, prose. */
+/**
+ * Detail-page silhouette, measured against the page it stands in for.
+ *
+ * It used to describe a page this app does not have: a plain hero, then
+ * a title BELOW it, three stat chips, two pills and a shelf of three
+ * tiles. Rendered beside the real thing at 390 points, the title sat
+ * 115 points low, the meta row 92, the status control was missing
+ * altogether and the tile shelf landed where the description goes. A
+ * silhouette of a different page is a worse promise than no silhouette,
+ * because the reader has already started reading it.
+ *
+ * The real masthead carries the title, the hours, the pace line and the
+ * genres OVER the artwork — see `StatStrip` — so this does too, hung
+ * from the bottom of the hero. The numbers below are that page
+ * measured, not guessed: title at 325, hours at 373, byline at 415,
+ * genres at 440, hero ending at 480, the status control 495 to 630, the
+ * About heading at 649 and its prose at 683.
+ */
 export function SkeletonDetail() {
   return (
     <View>
-      <Skeleton style={styles.detailHero} />
+      <View style={styles.detailHero}>
+        <Skeleton style={styles.detailHeroFill} />
+        <View style={styles.detailMasthead}>
+          <Skeleton style={styles.detailTitle} />
+          <Skeleton style={styles.detailHours} />
+          <Skeleton style={styles.detailPace} />
+          <Skeleton style={styles.detailGenres} />
+        </View>
+      </View>
       <View style={styles.detailBody}>
-        <Skeleton style={styles.detailTitle} />
-        <View style={styles.row}>
-          <Skeleton style={styles.detailStat} />
-          <Skeleton style={styles.detailStat} />
-          <Skeleton style={styles.detailStat} />
+        {/* The three status segments and the session row under them. */}
+        <Skeleton style={styles.detailControl} />
+        <View style={styles.detailSection}>
+          <Skeleton style={styles.detailHeading} />
+          {/* Prose sets solid, the way text does: three lines and the
+              Read More under them with no gaps between, or the link
+              drifts below where it will actually land. */}
+          <View style={styles.detailProse}>
+            <Skeleton style={styles.detailLine} />
+            <Skeleton style={styles.detailLine} />
+            <Skeleton style={styles.detailLineShort} />
+            <Skeleton style={styles.detailReadMore} />
+          </View>
         </View>
-        <View style={styles.row}>
-          <Skeleton style={styles.detailChip} />
-          <Skeleton style={styles.detailChip} />
+        <View style={[styles.detailSection, styles.detailSectionApart]}>
+          <Skeleton style={styles.detailHeading} />
+          <Skeleton style={styles.detailVerdict} />
         </View>
-        <Skeleton style={styles.lineFull} />
-        <Skeleton style={styles.lineFull} />
-        <Skeleton style={styles.lineWide} />
-        <SkeletonShelf tiles={3} />
       </View>
     </View>
   );
@@ -410,13 +439,46 @@ const styles = StyleSheet.create({
     marginHorizontal: -GUTTER,
     paddingHorizontal: SPACING.md,
   },
-  detailHero: { height: 420, borderRadius: 0 },
+  /**
+   * Every number here is the loaded page measured at 390 points, so the
+   * bones stand where the words will. See `SkeletonDetail`.
+   */
+  detailHero: { height: 480, justifyContent: 'flex-end' },
+  /** The artwork's stand-in, behind the masthead rather than above it. */
+  detailHeroFill: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 0,
+  },
+  detailMasthead: {
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.md,
+  },
+  detailTitle: { height: 36, width: '55%' },
+  detailHours: { height: 38, width: '54%', marginTop: 12 },
+  detailPace: { height: 17, width: '54%', marginTop: 4 },
+  detailGenres: { height: 24, width: '54%', marginTop: 8 },
   detailBody: {
     paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.lg,
-    gap: SPACING.md,
+    paddingTop: SPACING.md,
+    gap: 18,
   },
-  detailTitle: { height: 26, width: '62%' },
+  /** The status segments and the session row, as one card. */
+  detailControl: { height: 135, borderRadius: RADIUS.md },
+  detailSection: { gap: 10 },
+  /** The extra air the page leaves before Player verdict. */
+  detailSectionApart: { marginTop: 22 },
+  detailProse: { gap: 0 },
+  detailHeading: { height: 24, width: 108 },
+  detailLine: { height: 23, width: '100%' },
+  detailLineShort: { height: 23, width: '72%' },
+  detailReadMore: { height: 23, width: 90 },
+  /** The ratings breakdown, which is a card rather than a shelf. */
+  detailVerdict: { height: 228, borderRadius: RADIUS.md },
+  /** Still the expanded masthead's, which lays its stats out in a row. */
   detailStat: { height: 34, width: 64 },
   detailChip: { height: 26, width: 84, borderRadius: 14 },
   lineFull: { height: 12, width: '100%' },
