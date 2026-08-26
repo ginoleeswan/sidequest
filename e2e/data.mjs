@@ -104,7 +104,17 @@ const SCENARIOS = [
       { name: 'Tunic', hours: 12 },
     ])}`,
     seed: {},
-    expect: ['Shared with you', 'Hades', 'Build your own'],
+    // Drawn as a plan, not listed as a backlog: the same week of
+    // evenings and horizon of credits the sender is looking at.
+    expect: [
+      'Shared with you',
+      'Hades',
+      'The week',
+      'Where the credits land',
+      'Build your own',
+    ],
+    // Somebody else's Thursday is not an appointment you have.
+    absent: ['Put this week in my calendar'],
   },
 ];
 

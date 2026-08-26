@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { planColour } from '@/lib/planColours';
 import type { ScheduledItem } from '@/lib/scheduler';
 import { COLORS } from '@/styles/colors';
+import { SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 /**
@@ -24,9 +25,18 @@ import { TYPE } from '@/styles/typography';
  * you can see the date arriving before the game's span can — the
  * geometry of "won't make it", with no sentence needed. (The sentence,
  * and the ways out, live in "What doesn't fit".)
+ *
+ * Four landings, at most. A backlog of twenty games would print twenty
+ * flags into three hundred points of width and the strip would say
+ * nothing at all — so the near ones are drawn and the rest are counted
+ * in a sentence. A horizon you cannot see past is still a horizon; one
+ * that pretends there is nothing past it is a lie.
  */
 
 const DAY = 24 * 60 * 60 * 1000;
+
+/** As many landings as a phone's width can name without crushing them. */
+const SHOWN = 4;
 
 /** A deadline the plan cannot meet, drawn on the date it names. */
 export interface TroubledDate {
@@ -68,7 +78,9 @@ export function HorizonStrip({
 }) {
   if (scheduled.length === 0) return null;
 
-  const lastFinish = scheduled[scheduled.length - 1].finishAt;
+  const near = scheduled.slice(0, SHOWN);
+  const beyond = scheduled.slice(SHOWN);
+  const lastFinish = near[near.length - 1].finishAt;
   /**
    * The horizon: past the last landing, past any troubled date, and
    * never under two weeks — a plan that finishes on Thursday should
@@ -82,76 +94,89 @@ export function HorizonStrip({
   const end = latest + Math.max((latest - now) * 0.08, 2 * DAY);
   const span = end - now;
   /** Clamped in from the edges so a label centred here stays legible. */
-  const at = (t: number) => Math.min(92, Math.max(8, ((t - now) / span) * 100));
+  const at = (t: number) =>
+    Math.min(86, Math.max(10, ((t - now) / span) * 100));
 
-  const flags = layFlags(scheduled, at);
+  const flags = layFlags(near, at);
+
+  /** What the strip could not draw, said rather than dropped. */
+  const rest = beyond.length
+    ? ` ${beyond.length} more after that, the last around ${dateLabel(
+        scheduled[scheduled.length - 1].finishAt
+      )}.`
+    : '';
 
   const summary =
-    `Credits land: ${scheduled
+    `Credits land: ${near
       .map((item) => `${item.name} ${dateLabel(item.finishAt)}`)
       .join(', ')}.` +
+    rest +
     troubled
       .map((t) => ` ${t.name}’s date, ${dateLabel(t.deadline)}, can’t be met.`)
       .join('');
 
   return (
-    <View
-      style={styles.strip}
-      accessible
-      accessibilityRole="image"
-      accessibilityLabel={summary}
-    >
-      <Text style={styles.today}>TODAY</Text>
+    <View accessible accessibilityRole="image" accessibilityLabel={summary}>
+      <View style={styles.strip}>
+        <Text style={styles.today}>TODAY</Text>
 
-      {/* The coral weather, above the spine: a date bearing down. The
-          diamond stands on the date; its label reads off to the right,
-          clear of TODAY's own band. */}
-      {troubled.map((t) => (
-        <View
-          key={t.id}
-          style={[styles.trouble, { left: `${at(t.deadline)}%` }]}
-        >
-          <View style={styles.troubleMark}>
-            <View style={styles.troubleDiamond} />
-            <Text style={styles.troubleDate} numberOfLines={1}>
-              {dateLabel(t.deadline)}
+        {/* The coral weather, above the spine: a date bearing down. The
+            diamond stands on the date; its label reads off to the
+            right, clear of TODAY's own band. */}
+        {troubled.map((t) => (
+          <View
+            key={t.id}
+            style={[styles.trouble, { left: `${at(t.deadline)}%` }]}
+          >
+            <View style={styles.troubleMark}>
+              <View style={styles.troubleDiamond} />
+              <Text style={styles.troubleDate} numberOfLines={1}>
+                {dateLabel(t.deadline)}
+              </Text>
+            </View>
+            <View style={styles.troubleStem} />
+          </View>
+        ))}
+
+        {/* The spine: the month in route order, then open time. */}
+        <View style={styles.spine}>
+          {near.map((item, index) => (
+            <View
+              key={item.id}
+              style={{
+                flex:
+                  item.finishAt -
+                  (index === 0 ? now : near[index - 1].finishAt),
+                backgroundColor: planColour(index),
+              }}
+            />
+          ))}
+          <View style={{ flex: Math.max(end - lastFinish, span * 0.02) }} />
+        </View>
+
+        {/* One save-slot per landing, planted on its date. */}
+        {flags.map(({ item, pct, far, colour }) => (
+          <View key={item.id} style={[styles.flag, { left: `${pct}%` }]}>
+            <View style={[styles.slot, { backgroundColor: colour }]}>
+              <View style={styles.slotNotch} />
+            </View>
+            <View style={[styles.stem, far && styles.stemFar]} />
+            <Text style={styles.flagDate} numberOfLines={1}>
+              {dateLabel(item.finishAt)}
+            </Text>
+            <Text style={styles.flagName} numberOfLines={1}>
+              {item.name}
             </Text>
           </View>
-          <View style={styles.troubleStem} />
-        </View>
-      ))}
-
-      {/* The spine: the month in route order, then open time. */}
-      <View style={styles.spine}>
-        {scheduled.map((item, index) => (
-          <View
-            key={item.id}
-            style={{
-              flex:
-                item.finishAt -
-                (index === 0 ? now : scheduled[index - 1].finishAt),
-              backgroundColor: planColour(index),
-            }}
-          />
         ))}
-        <View style={{ flex: Math.max(end - lastFinish, span * 0.02) }} />
       </View>
 
-      {/* One save-slot per landing, planted on its date. */}
-      {flags.map(({ item, pct, far, colour }) => (
-        <View key={item.id} style={[styles.flag, { left: `${pct}%` }]}>
-          <View style={[styles.slot, { backgroundColor: colour }]}>
-            <View style={styles.slotNotch} />
-          </View>
-          <View style={[styles.stem, far && styles.stemFar]} />
-          <Text style={styles.flagDate} numberOfLines={1}>
-            {dateLabel(item.finishAt)}
-          </Text>
-          <Text style={styles.flagName} numberOfLines={1}>
-            {item.name}
-          </Text>
-        </View>
-      ))}
+      {beyond.length > 0 && (
+        <Text style={styles.beyond}>
+          + {beyond.length} more after that, the last around{' '}
+          {dateLabel(scheduled[scheduled.length - 1].finishAt)}
+        </Text>
+      )}
     </View>
   );
 }
@@ -252,4 +277,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
     marginLeft: 3,
   },
+
+  /**
+   * Under the strip and OUTSIDE it, on a line of its own: absolutely
+   * positioned inside the strip it landed on the lower label row, and
+   * a sentence printed through a game's name is worse than no
+   * sentence.
+   */
+  beyond: { ...TYPE.micro, color: COLORS.mediumGrey, marginTop: SPACING.sm },
 });

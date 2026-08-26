@@ -69,6 +69,34 @@ describe('the horizon', () => {
     ).toBeTruthy();
   });
 
+  /**
+   * Twenty flags in three hundred points of width says nothing at all.
+   * The near ones are drawn; the rest are counted in a sentence,
+   * because a horizon that pretends there is nothing past it is a lie.
+   */
+  it('draws the near landings and counts the rest', async () => {
+    await renderApp(
+      <HorizonStrip
+        scheduled={Array.from({ length: 7 }, (_, i) =>
+          lands(i + 1, `Game ${i + 1}`, NOW + (i + 1) * 10 * DAY)
+        )}
+        now={NOW}
+      />
+    );
+    expect(screen.getByText('Game 4')).toBeTruthy();
+    expect(screen.queryByText('Game 5')).toBeNull();
+    expect(screen.getByText(/3 more after that/)).toBeTruthy();
+    // And the last one's date is named, so the sentence is a fact.
+    expect(screen.getByText(/Oct 26/)).toBeTruthy();
+  });
+
+  it('says nothing about a beyond that isn’t there', async () => {
+    await renderApp(
+      <HorizonStrip scheduled={[lands(1, 'Hades', NOW + 5 * DAY)]} now={NOW} />
+    );
+    expect(screen.queryByText(/more after that/)).toBeNull();
+  });
+
   it('renders nothing without a schedule', async () => {
     await renderApp(<HorizonStrip scheduled={[]} now={NOW} />);
     expect(screen.queryByText('TODAY')).toBeNull();
