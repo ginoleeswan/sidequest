@@ -10,7 +10,12 @@ import {
 
 import type { Game } from '@/api/types';
 import { useHydrated } from '@/hooks/useHydrated';
-import { readVersioned, writeFailureMessage, writeJson } from '@/lib/storage';
+import {
+  quarantine,
+  readVersionedChecked,
+  writeFailureMessage,
+  writeJson,
+} from '@/lib/storage';
 import { clearWidgets } from '@/lib/widgetBridge';
 
 export type LibraryStatus = 'wishlist' | 'playing' | 'finished';
@@ -98,7 +103,27 @@ const EMPTY: Entries = {};
  * which is the point. Bumping to a v2 key without one would abandon
  * every existing library on the next deploy.
  */
-const load = (): Entries => readVersioned<Entries>(STORAGE_KEY, {}, []);
+/**
+ * Read the library, and rescue anything that would not parse.
+ *
+ * The rescue belongs here rather than in an effect, because it has to
+ * happen before this provider's own state can be written back — and
+ * because it is part of loading, not a reaction to it. Idempotent by
+ * construction: `quarantine` refuses to overwrite a copy it already
+ * kept, so a repeated initialiser (StrictMode does exactly that) cannot
+ * turn the rescue into a second disaster.
+ */
+function load(): { value: Entries; error: string | null } {
+  const read = readVersionedChecked<Entries>(STORAGE_KEY, {}, []);
+  if (read.damaged == null) return { value: read.value, error: null };
+  const kept = quarantine(STORAGE_KEY, read.damaged);
+  return {
+    value: read.value,
+    error: kept.ok
+      ? 'Some of your library could not be read, so it is not shown here. The unreadable copy has been kept on this device rather than overwritten.'
+      : 'Some of your library could not be read, and the unreadable copy could not be kept. Anything you save now will replace it.',
+  };
+}
 
 interface LibraryContextValue {
   entries: Entries;
@@ -174,12 +199,30 @@ interface LibraryContextValue {
   moveMany: (ids: number[], status: LibraryStatus) => number;
   /** Set when the last write to the device failed; null when it landed. */
   saveError: string | null;
+  /**
+   * Set when the stored library would not parse. Distinct from
+   * `saveError`: that one means the device refused a write, this one
+   * means what was already there could not be read.
+   */
+  loadError: string | null;
 }
 
 const LibraryContext = createContext<LibraryContextValue | null>(null);
 
 export function LibraryProvider({ children }: { children: React.ReactNode }) {
-  const [stored, commit] = useState<Entries>(load);
+  /**
+   * What was on the device, and whether any of it was unreadable.
+   *
+   * Held rather than discarded, because falling back to an empty
+   * library is only half an answer: the app then renders as though the
+   * reader never had anything, and the next thing they touch writes
+   * that emptiness over the bytes. A damaged library became a deleted
+   * one, permanently, with no server to recover it from — one tap
+   * after opening the app, without a word.
+   */
+  const [initial] = useState(load);
+  const [stored, commit] = useState<Entries>(initial.value);
+  const loadError = initial.error;
 
   /**
    * Every mutation goes through here, and every changed entry comes out
@@ -558,6 +601,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       removeMany,
       moveMany,
       saveError,
+      loadError,
     }),
     [
       entries,
@@ -576,6 +620,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       removeMany,
       moveMany,
       saveError,
+      loadError,
     ]
   );
 

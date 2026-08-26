@@ -1,6 +1,9 @@
 import {
   _setBackendForTests,
+  damagedKey,
+  quarantine,
   readJson,
+  readJsonChecked,
   readVersioned,
   writeFailureMessage,
   writeJson,
@@ -183,5 +186,85 @@ describe('readVersioned', () => {
         { from: 'v0', migrate: (v) => Number(v) },
       ])
     ).toBe(9);
+  });
+});
+
+/**
+ * A key that will not parse.
+ *
+ * Falling back to a default keeps the app from crashing on boot, and
+ * for most keys that is the whole answer. For the library it is half of
+ * one: the app renders as though the reader never had anything, and the
+ * next thing they touch writes that emptiness over the bytes. So a read
+ * reports what it could not read, and the caller puts it somewhere the
+ * next write cannot reach.
+ */
+describe('unreadable bytes', () => {
+  /**
+   * A real backing map, so a write can be read back — set through the
+   * seam directly rather than through `useStore`, whose name makes the
+   * hooks rule treat any helper calling it as a broken custom hook.
+   */
+  const backed = (seed: Record<string, string> = {}) => {
+    const map: Record<string, string> = { ...seed };
+    _setBackendForTests({
+      getItem: (k) => map[k] ?? null,
+      setItem: (k, v) => void (map[k] = v),
+    });
+    return map;
+  };
+
+  it('still starts clean, so a corrupt key cannot stop the app', () => {
+    backed({ thing: '{"half":' });
+    expect(readJson('thing', { fallback: true })).toEqual({ fallback: true });
+  });
+
+  it('hands back exactly what it could not parse', () => {
+    backed({ thing: '{"half":' });
+    const read = readJsonChecked('thing', {});
+    expect(read.value).toEqual({});
+    expect(read.damaged).toBe('{"half":');
+  });
+
+  it('says nothing is damaged when the key is simply absent', () => {
+    backed();
+    expect(readJsonChecked('nothing', 7).damaged).toBeUndefined();
+  });
+
+  /**
+   * Storage being unavailable and storage holding nonsense are
+   * different failures, and only the second has anything to rescue.
+   * Reporting an unreachable backend as damage would quarantine nothing
+   * and alarm somebody whose data is perfectly intact.
+   */
+  it('does not call an unreachable backend damaged', () => {
+    useStore(undefined);
+    const read = readJsonChecked('thing', 'safe');
+    expect(read.value).toBe('safe');
+    expect(read.damaged).toBeUndefined();
+  });
+
+  it('keeps the unreadable copy under its own key', () => {
+    const map = backed();
+    expect(quarantine('thing', '{"half":').ok).toBe(true);
+    expect(map[damagedKey('thing')]).toBe('{"half":');
+  });
+
+  /**
+   * A second damaged read is more likely to be this mechanism's own
+   * output than a fresh disaster, and overwriting would destroy the
+   * copy that mattered. It also makes the rescue safe to run twice,
+   * which a StrictMode initialiser does.
+   */
+  it('never overwrites a copy it already kept', () => {
+    const map = backed();
+    quarantine('thing', 'the original');
+    quarantine('thing', 'a later mess');
+    expect(map[damagedKey('thing')]).toBe('the original');
+  });
+
+  it('reports rather than throws when the copy cannot be written', () => {
+    useStore({ getItem: () => null } as Partial<Storage>);
+    expect(quarantine('thing', 'x').ok).toBe(false);
   });
 });
