@@ -10,12 +10,7 @@ import {
 
 import type { Game } from '@/api/types';
 import { useHydrated } from '@/hooks/useHydrated';
-import {
-  quarantine,
-  readVersionedChecked,
-  writeFailureMessage,
-  writeJson,
-} from '@/lib/storage';
+import { readRescued, writeFailureMessage, writeJson } from '@/lib/storage';
 import { clearWidgets } from '@/lib/widgetBridge';
 
 export type LibraryStatus = 'wishlist' | 'playing' | 'finished';
@@ -106,22 +101,21 @@ const EMPTY: Entries = {};
 /**
  * Read the library, and rescue anything that would not parse.
  *
- * The rescue belongs here rather than in an effect, because it has to
- * happen before this provider's own state can be written back — and
- * because it is part of loading, not a reaction to it. Idempotent by
- * construction: `quarantine` refuses to overwrite a copy it already
- * kept, so a repeated initialiser (StrictMode does exactly that) cannot
- * turn the rescue into a second disaster.
+ * See `readRescued`: the rescue belongs in the load step because it has
+ * to happen before this provider's own state can be written back. What
+ * belongs HERE is the sentence — this store is somebody's backlog, and
+ * the copy has to say so.
  */
 function load(): { value: Entries; error: string | null } {
-  const read = readVersionedChecked<Entries>(STORAGE_KEY, {}, []);
-  if (read.damaged == null) return { value: read.value, error: null };
-  const kept = quarantine(STORAGE_KEY, read.damaged);
+  const read = readRescued<Entries>(STORAGE_KEY, {}, []);
   return {
     value: read.value,
-    error: kept.ok
-      ? 'Some of your library could not be read, so it is not shown here. The unreadable copy has been kept on this device rather than overwritten.'
-      : 'Some of your library could not be read, and the unreadable copy could not be kept. Anything you save now will replace it.',
+    error:
+      read.rescue === 'none'
+        ? null
+        : read.rescue === 'kept'
+          ? 'Some of your library could not be read, so it is not shown here. The unreadable copy has been kept on this device rather than overwritten.'
+          : 'Some of your library could not be read, and the unreadable copy could not be kept. Anything you save now will replace it.',
   };
 }
 

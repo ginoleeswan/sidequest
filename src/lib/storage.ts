@@ -178,6 +178,56 @@ export function readVersionedChecked<T>(
   return { value: fallback };
 }
 
+/**
+ * Whether a read found damage, and whether the damage was saved.
+ *
+ * `'none'` is the ordinary case. `'kept'` means the unreadable bytes
+ * are under `damagedKey(key)` and the reader can be told their data is
+ * not gone. `'lost'` means even the copy could not be written, which is
+ * the one case where the next save really will destroy something — and
+ * the reader deserves a different sentence for it.
+ */
+export type Rescue = 'none' | 'kept' | 'lost';
+
+export interface RescuedRead<T> {
+  value: T;
+  rescue: Rescue;
+}
+
+/**
+ * Read a store that holds something the reader cannot get back, and
+ * rescue anything unreadable before the caller's own state can write
+ * over it.
+ *
+ * Three stores need this and each had the same silent failure: the read
+ * falls back to empty, the screen renders as though there had never
+ * been anything — which is always a plausible sight — and the next
+ * thing the reader touches persists that emptiness. The bytes are gone
+ * with no server to recover them from.
+ *
+ * Call this from the load step rather than from an effect. It has to
+ * happen before the first write, and it is part of loading rather than
+ * a reaction to it. Safe to run twice — `quarantine` will not overwrite
+ * a copy it already kept — which matters because a StrictMode state
+ * initialiser does exactly that.
+ *
+ * What the reader is told is left to the caller: "your library" and
+ * "the lengths you corrected" are not the same sentence, and this
+ * module has no business writing either.
+ */
+export function readRescued<T>(
+  key: string,
+  fallback: T,
+  migrations: { from: string; migrate: (value: unknown) => T | null }[] = []
+): RescuedRead<T> {
+  const read = readVersionedChecked<T>(key, fallback, migrations);
+  if (read.damaged == null) return { value: read.value, rescue: 'none' };
+  return {
+    value: read.value,
+    rescue: quarantine(key, read.damaged).ok ? 'kept' : 'lost',
+  };
+}
+
 export function readJson<T>(key: string, fallback: T): T {
   return readJsonChecked<T>(key, fallback).value;
 }

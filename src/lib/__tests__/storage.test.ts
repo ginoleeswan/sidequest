@@ -4,6 +4,7 @@ import {
   quarantine,
   readJson,
   readJsonChecked,
+  readRescued,
   readVersioned,
   writeFailureMessage,
   writeJson,
@@ -266,5 +267,42 @@ describe('unreadable bytes', () => {
   it('reports rather than throws when the copy cannot be written', () => {
     useStore({ getItem: () => null } as Partial<Storage>);
     expect(quarantine('thing', 'x').ok).toBe(false);
+  });
+
+  /**
+   * The whole dance, for the three stores that hold something a person
+   * cannot get back. Each one had the same silent failure and each one
+   * needs a different sentence about it, so this returns what happened
+   * and leaves the wording to the caller.
+   */
+  describe('readRescued', () => {
+    it('reads normally and reports no damage', () => {
+      backed({ k: '{"a":1}' });
+      expect(readRescued('k', {})).toEqual({ value: { a: 1 }, rescue: 'none' });
+    });
+
+    it('falls back, keeps the bytes, and says it kept them', () => {
+      const map = backed({ k: '{"half":' });
+      expect(readRescued('k', { safe: true })).toEqual({
+        value: { safe: true },
+        rescue: 'kept',
+      });
+      expect(map[damagedKey('k')]).toBe('{"half":');
+    });
+
+    /** The one case where the next save really does destroy something. */
+    it('says so when even the copy could not be written', () => {
+      useStore({
+        getItem: (k: string) => (k === 'k' ? '{"half":' : null),
+      } as unknown as Partial<Storage>);
+      expect(readRescued('k', null).rescue).toBe('lost');
+    });
+
+    it('is safe to run twice, as a StrictMode initialiser does', () => {
+      const map = backed({ k: 'the original' });
+      readRescued('k', null);
+      readRescued('k', null);
+      expect(map[damagedKey('k')]).toBe('the original');
+    });
   });
 });

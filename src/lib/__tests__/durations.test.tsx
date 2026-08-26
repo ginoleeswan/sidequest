@@ -187,3 +187,28 @@ describe('learning what games take', () => {
     ).toBe('estimate');
   });
 });
+
+/**
+ * Corrections that will not parse.
+ *
+ * Small compared with the library and not small in effort: every entry
+ * is a number somebody went and found out, and the plan trusts these
+ * over every estimate it has. Read as empty and overwritten by the next
+ * correction, they would go the same way the library nearly did — in a
+ * store nobody would think to check.
+ */
+describe('damaged corrections', () => {
+  it('keeps the unreadable copy and says the plan is on estimates', async () => {
+    store[KEY] = '{"3498":21';
+    const api = await mount();
+    expect(store[`${KEY}.damaged`]).toBe('{"3498":21');
+    expect(api().loadError).toMatch(/could not be read/);
+  });
+
+  it('says nothing when the corrections read fine', async () => {
+    store[KEY] = '{"7":5}';
+    const api = await mount();
+    expect(api().loadError).toBeNull();
+    expect(store[`${KEY}.damaged`]).toBeUndefined();
+  });
+});

@@ -27,8 +27,10 @@ import { useLibrary } from '@/lib/library';
 export function SaveErrorNotice() {
   const toast = useToast();
   const { saveError: libraryError, loadError: libraryLoadError } = useLibrary();
-  const { saveError: durationsError } = useDurations();
-  const message = libraryLoadError ?? libraryError ?? durationsError;
+  const { saveError: durationsError, loadError: durationsLoadError } =
+    useDurations();
+  const message =
+    libraryLoadError ?? durationsLoadError ?? libraryError ?? durationsError;
 
   // Only announce a change, so one full disk is not reported on every
   // keystroke that follows it.
