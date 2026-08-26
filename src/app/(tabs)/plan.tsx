@@ -455,6 +455,38 @@ export default function PlanScreen() {
    * it is a sentence, so changing a dial visibly changes the answer.
    */
   const fits = schedule.scheduled.length;
+  /**
+   * The window's own name, for a verdict that can point at its cause.
+   */
+  /**
+   * Guarded on the window existing, not merely on finding a label:
+   * "whenever" IS one of the options and its value is null, so a plan
+   * with no window at all matched it and produced "whenever holds 5 of
+   * them". Games can still be dropped without a global window — a
+   * deadline somebody set on one game does it — so that branch is
+   * reachable, and it has no window to blame.
+   */
+  const windowLabel =
+    windowWeeks != null
+      ? WINDOW_OPTIONS.find((option) => option.value === windowWeeks)?.label
+      : undefined;
+
+  /**
+   * "N of these M" counts the failures, and it scales horribly.
+   *
+   * At four games "3 of these 4 will get done" is encouragement. At
+   * five hundred it reads "5 of these 500 will get done" — an
+   * indictment of somebody's entire shelf, in the largest sentence on
+   * the page, opening a screen whose whole doctrine is relief. The
+   * arithmetic was right and the framing put 495 failures in front of
+   * a reader who had done nothing wrong.
+   *
+   * Where a window is what excluded them, the window is what the
+   * sentence names. "2 weeks holds 5 of them" is the same fact told as
+   * a property of the dial they just moved rather than a property of
+   * them — and it answers the question that dial otherwise raises
+   * silently, which is why one chip changed the whole page.
+   */
   const verdictSentence =
     fits === 0
       ? 'Nothing fits. Give it more time or a wider window — or let a few of these go. That’s allowed.'
@@ -462,9 +494,11 @@ export default function PlanScreen() {
         ? fits === 1
           ? `You can finish it by ${finishDate(lastFinish)}.`
           : `You can finish ${fits === 2 ? 'both' : `all ${fits}`}, the last by ${finishDate(lastFinish)}.`
-        : lastFinish
-          ? `${fits} of these ${entries.length} will get done, the last by ${finishDate(lastFinish)}.`
-          : `${fits} of these ${entries.length} will get done.`;
+        : windowLabel && lastFinish
+          ? `${windowLabel} holds ${fits} of them, the last by ${finishDate(lastFinish)}.`
+          : lastFinish
+            ? `${fits} of these ${entries.length} will get done, the last by ${finishDate(lastFinish)}.`
+            : `${fits} of these ${entries.length} will get done.`;
 
   /**
    * A pace measured off Steam is a real number, not one of the six on
