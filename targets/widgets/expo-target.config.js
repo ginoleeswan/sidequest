@@ -42,6 +42,8 @@ module.exports = {
   colors: {
     $accent: '#F2A93B',
     $violet: '#9D8FFF',
+    $mint: '#3ECF8E',
+    $coral: '#F87168',
     $ground: '#272F3F',
     $well: '#1E2532',
     $muted: '#A3A9B8',
