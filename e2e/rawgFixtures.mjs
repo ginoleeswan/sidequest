@@ -72,6 +72,30 @@ const detail = {
   tags: [{ id: 31, name: 'Singleplayer', slug: 'singleplayer' }],
 };
 
+/**
+ * A deep bench of extras, because the storefront needs one.
+ *
+ * The home page passes a single `seen` set down all of its rows so no
+ * two shelves offer the same game (see `dedupeGames`). Against a
+ * three-game fixture that is starvation, not deduplication: the first
+ * row takes everything and every row under it renders empty, so the
+ * whole page falls to "Nothing here yet" — a blank storefront that
+ * looks exactly like a real regression and is not one.
+ *
+ * RAWG returns forty a page. So does this. The named three stay at the
+ * front, because other scenarios read them by name.
+ */
+const bench = Array.from({ length: 40 }, (_, i) =>
+  game(
+    9000 + i,
+    `Bench Game ${i + 1}`,
+    // A spread of lengths, so the length-window shelves ("short enough
+    // to finish", "under 8 hours") have something to select.
+    2 + (i % 24),
+    `20${10 + (i % 15)}-06-01`
+  )
+);
+
 const page = (results) => ({ count: results.length, next: null, results });
 
 /**
@@ -93,7 +117,7 @@ export function rawgFixture(path) {
     ]);
   if (/^games\/\d+$/.test(path)) return detail;
   if (path === 'games' || path.startsWith('games?'))
-    return page(series.concat([detail]));
+    return page(series.concat([detail], bench));
   if (path.startsWith('collections/'))
     // Feed shape, not game shape: a result here is a post that CARRIES
     // a game. The onboarding read `item.game` from day one and a flat
