@@ -64,6 +64,21 @@ const SEED = {
   }),
 };
 
+/** Four hundred games and a fortnight to play them: the honest worst case. */
+const BULK = {
+  'sidequest.onboarded.v1': 'true',
+  'sidequest.plan.pace': '8',
+  'sidequest.plan.window': '2',
+  'sidequest.library.v1': JSON.stringify(
+    Object.fromEntries(
+      Array.from({ length: 400 }, (_, i) => [
+        String(i + 1),
+        entry(i + 1, `Imported Game ${i + 1}`, 4 + (i % 30)),
+      ])
+    )
+  ),
+};
+
 /**
  * Each scenario is a page and the sentences that make it that page.
  * `absent` guards the regressions where the wrong thing appeared.
@@ -134,6 +149,58 @@ const SCENARIOS = [
     // Somebody else's Thursday is not an appointment you have.
     absent: ['Put this week in my calendar'],
   },
+  {
+    /**
+     * A Steam-sized backlog, which the import feature makes ordinary.
+     *
+     * Three of the worst things ever found on this page lived here and
+     * nowhere else: eight hundred and forty-nine rows under "what
+     * doesn't fit" — the relief section scrolling a guilt wall — four
+     * hundred and twenty-nine route rows under a heading that says
+     * "this month", and a verdict reading "5 of these 500 will get
+     * done" that put 495 failures in the page's largest sentence.
+     *
+     * Every one of them passed the unit tests, because every one was
+     * correct at the four-game size the tests used. Only rendering at
+     * scale showed them. So the scale is a scenario now.
+     */
+    name: 'the plan, with a Steam-sized backlog and a fortnight',
+    route: '/plan',
+    seed: BULK,
+    expect: [
+      // The cap speaks rather than truncating in silence.
+      'more games the window has no room for',
+      // And the verdict names the window instead of counting failures.
+      '2 weeks holds',
+    ],
+    absent: ['of these 400 will get done'],
+    /**
+     * The property itself, not a proxy for it: this page must cost
+     * about the same whether somebody owns four games or four hundred.
+     * It measured 11,536 nodes at a thousand games before the caps and
+     * about 540 after, at any size.
+     */
+    maxNodes: 1200,
+  },
+  {
+    /**
+     * The same backlog with no window, which is the other half of the
+     * shape: nothing is dropped, so everything schedules, and it is the
+     * ROUTE that runs away — four hundred numbered rows under a heading
+     * that says "this month", spanning a decade.
+     *
+     * Two scenarios rather than one because the caps answer opposite
+     * conditions: the misfit cap needs games the window excluded, and
+     * the route cap needs games that fit.
+     */
+    name: 'the plan, with a Steam-sized backlog and no window',
+    route: '/plan',
+    seed: Object.fromEntries(
+      Object.entries(BULK).filter(([key]) => key !== 'sidequest.plan.window')
+    ),
+    expect: ['more after these', 'See them all in your library'],
+    maxNodes: 1200,
+  },
 ];
 
 const server = await serve(ROOT, PORT);
@@ -182,6 +249,16 @@ for (const scenario of SCENARIOS) {
   for (const text of scenario.absent ?? []) {
     const count = await page.getByText(text, { exact: false }).count();
     if (count > 0) missing.push(`must not show "${text}"`);
+  }
+  if (scenario.maxNodes) {
+    const nodes = await page.evaluate(
+      () => document.querySelectorAll('*').length
+    );
+    if (nodes > scenario.maxNodes) {
+      missing.push(
+        `${nodes} DOM nodes, over the ${scenario.maxNodes} this page is allowed — a list has stopped being bounded`
+      );
+    }
   }
   if (errors.length) missing.push(...errors.map((e) => `pageerror: ${e}`));
 
