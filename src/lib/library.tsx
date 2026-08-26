@@ -10,7 +10,12 @@ import {
 
 import type { Game } from '@/api/types';
 import { useHydrated } from '@/hooks/useHydrated';
-import { readRescued, writeFailureMessage, writeJson } from '@/lib/storage';
+import {
+  forgetDamaged,
+  readRescued,
+  writeFailureMessage,
+  writeJson,
+} from '@/lib/storage';
 import { clearWidgets } from '@/lib/widgetBridge';
 
 export type LibraryStatus = 'wishlist' | 'playing' | 'finished';
@@ -512,7 +517,25 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
          * Only on the last one out. Removing some games is an edit, and
          * the ordinary publish handles it.
          */
-        if (Object.keys(next).length === 0) void clearWidgets();
+        if (Object.keys(next).length === 0) {
+          void clearWidgets();
+          /**
+           * And the rescued copy, if a damaged library ever left one.
+           *
+           * Emptying the library is this app's "delete everything" —
+           * there is no other button for it — and the rescue puts a
+           * second copy of somebody's backlog on their device that
+           * nothing else would ever remove. Keeping data after the
+           * reader has cleared it is exactly the promise the widget
+           * clearing above exists to honour, and a rescue that quietly
+           * broke it would be a poor trade for the loss it prevents.
+           *
+           * Only the library's own. The lengths somebody corrected and
+           * the evenings they logged are not the backlog, and amnesty
+           * has never claimed to clear them.
+           */
+          forgetDamaged(STORAGE_KEY);
+        }
         return next;
       });
       return count;

@@ -49,6 +49,18 @@ export const damagedKey = (key: string): string => `${key}.damaged`;
  * be this mechanism's own output than a fresh disaster, and overwriting
  * would destroy the copy that mattered.
  */
+/**
+ * Drop a rescued copy.
+ *
+ * The rescue puts a second copy of somebody's data on their device, and
+ * a copy nothing can ever remove is the opposite of what this app
+ * promises about their data being theirs to delete. Whatever counts as
+ * "forget all of this" for a store has to forget its rescued copy too.
+ */
+export function forgetDamaged(key: string): void {
+  kv.removeItem(damagedKey(key));
+}
+
 export function quarantine(key: string, raw: string): WriteResult {
   const to = damagedKey(key);
   if (readRaw(to) != null) return { ok: true };

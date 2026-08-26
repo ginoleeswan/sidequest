@@ -310,6 +310,28 @@ describe('a damaged library', () => {
     expect(store['sidequest.library.v1.damaged']).toBe(truncated);
   });
 
+  /**
+   * The rescue puts a second copy of somebody's backlog on their
+   * device. Emptying the library is this app's "delete everything" —
+   * there is no other button for it — so a copy that survived it would
+   * be the app keeping data the reader had just cleared, which is the
+   * same promise the widget clearing exists to honour.
+   */
+  it('is cleared when the reader clears their library', async () => {
+    const store = useFakeStorage();
+    store['sidequest.library.v1'] = truncated;
+    const { result } = await setup();
+    await act(async () => {
+      result.current.setStatus(game(99, 'Something New'), 'wishlist');
+    });
+    expect(store['sidequest.library.v1.damaged']).toBe(truncated);
+
+    await act(async () => {
+      result.current.removeMany([99]);
+    });
+    expect(store['sidequest.library.v1.damaged']).toBeUndefined();
+  });
+
   it('says nothing at all when the library reads fine', async () => {
     const store = useFakeStorage();
     const { result } = await setup();
