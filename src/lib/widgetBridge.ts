@@ -24,10 +24,21 @@ import { widgetStore } from './widgetStore';
  * loudly.
  */
 
-/** The widget `kind`s, matching the Swift `StaticConfiguration` strings. */
-const KINDS = {
+/**
+ * The widget `kind`s, matching the Swift `StaticConfiguration` strings.
+ *
+ * Exported for the contract test in `__tests__/widgetBridge`, which
+ * reads the Swift and refuses any kind this table has not heard of.
+ * That test exists because this table silently fell behind once: a
+ * fourth widget shipped, nothing here knew its name, and the two
+ * consequences were invisible from the JavaScript side — it was never
+ * told a new plan had arrived, and, worse, it was never told to stop
+ * showing an old one after somebody deleted their library.
+ */
+export const KINDS = {
   tonight: 'Tonight',
   week: 'ThisWeek',
+  month: 'ThisMonth',
   year: 'TheYear',
 } as const;
 
@@ -57,8 +68,13 @@ export async function publishPlan(days: readonly PlanDay[]) {
     bridge.store.remove('plan');
   }
 
+  // Every widget drawn from `plan`, which is now three of the four.
+  // The month reads the same key and was correct on paper; it simply
+  // was never told, so a plan changed just now waited for whenever iOS
+  // next felt like asking — hours, by this file's own reckoning.
   bridge.reload(KINDS.tonight);
   bridge.reload(KINDS.week);
+  bridge.reload(KINDS.month);
 }
 
 /** Publish the year's card — the twelve slots and what fills them. */
@@ -86,5 +102,9 @@ export async function clearWidgets() {
   for (const key of ['plan', 'tonight', 'week', 'year']) {
     bridge.store.remove(key);
   }
+  // Removing the data is only half of forgetting. A widget holds a
+  // rendered timeline of its own, so one that is never told to reload
+  // goes on displaying a plan whose source has been deleted — which is
+  // the promise above broken on the most public screen the reader has.
   for (const kind of Object.values(KINDS)) bridge.reload(kind);
 }

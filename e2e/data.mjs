@@ -81,7 +81,25 @@ const SCENARIOS = [
     name: 'the home shelves, with data',
     route: '/',
     seed: { 'sidequest.onboarded.v1': 'true' },
-    expect: ['Out this week', 'How this works'],
+    // 'Out this week' and the nav are CHROME: they are on the page
+    // whether or not a single shelf rendered, so asserting them proved
+    // only that the router worked. This scenario passed green against
+    // a completely blank storefront until the guard below was added —
+    // which is the exact failure this whole file exists to catch.
+    expect: ['How this works', 'Take a look', 'Surprise me'],
+    absent: ['Nothing here yet', 'Couldn’t reach RAWG'],
+  },
+  {
+    // The same storefront for somebody mid-backlog, because the feed
+    // is personal: the shelves it picks are seeded from the library,
+    // and the top of the page becomes tonight's pick rather than a
+    // release. A shelf set that renders for a stranger and not for a
+    // regular is a bug only this scenario would see.
+    name: 'the home shelves, for somebody mid-backlog',
+    route: '/',
+    seed: SEED,
+    expect: ['Tonight', 'Hades', 'Take a look'],
+    absent: ['Nothing here yet', 'Couldn’t reach RAWG'],
   },
   {
     name: 'the plan, with a deadline that cannot be met',

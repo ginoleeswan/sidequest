@@ -97,15 +97,19 @@ Every gamer has a self-imposed deadline: _"clear something before GTA 6 / Silkso
 
 ### 6.1 Widget (the soul of the product)
 
-| Size               | Content                                      |
-| ------------------ | -------------------------------------------- |
-| Small              | one decision — art, title, days/hours ring   |
-| Medium             | next game + queue                            |
-| Large              | the schedule timeline                        |
-| Lock screen        | days-remaining ring; inline `Pentiment · 9d` |
-| Live Activity (v2) | in-session `2h 14m played · 6h to beat`      |
+Built as four widgets in one extension, which is the same idea arrived at by scale rather than by size — the three questions the plan page is built on, plus the trophy.
+
+| Widget         | Families                                      | Content                                                                       | Status   |
+| -------------- | --------------------------------------------- | ----------------------------------------------------------------------------- | -------- |
+| **Tonight**    | small, medium, Lock Screen (rect/circ/inline) | one decision — art, title, hours; the days-remaining ring on the accessories  | built    |
+| **This week**  | medium, large, XL                             | the seven evenings as a dated agenda; free evenings drawn as free             | built    |
+| **This month** | medium, large, XL                             | the horizon — today, credit flags on their dates, deadline trouble as weather | built    |
+| **The year**   | small, medium                                 | the Memcard's twelve months (§7)                                              | built    |
+| Live Activity  | —                                             | in-session `2h 14m played · 6h to beat`                                       | v2, open |
 
 Urgency gradient calm → amber → red; on infeasibility the widget says so plainly. The widget is also the marketing asset — a homescreen reading "3 games · 12 days" beats any store screenshot.
+
+The widgets hold no rule the app also holds: which game is tonight's, what colour a game wears, how far back a month remembers, even the date strings are all decided in JS and written flat to the App Group. Where a value must exist twice — the palette, the alert horizon, the container name, the widget kinds — it is pinned by contract tests that read the Swift, because both sides of that boundary are blind to the other's drift.
 
 ### 6.2 The timeline insight
 
@@ -113,7 +117,7 @@ WidgetKit's `TimelineProvider` wants future-dated entries. A `Schedule` is deter
 
 ### 6.3 App
 
-Configuration console behind the widget: **Plan** (library, windows, velocity) · **Schedule** (timeline, dropped games with reasons) · **Detail** (ported ARCADE detail screen) · **Shelf** (see §7).
+Configuration console behind the widget. Built as: **Home** (a storefront personalised by the library) · **My Library** (the shelf, its hours framed as inventory rather than debt) · **The Plan** (tonight, what doesn't fit, this week, this month, and the two dials behind all of it) · **Detail** (ported ARCADE detail screen, and where a game sits in your plan) · **Memcard** (see §7) · **/shared** (somebody else's plan, drawn as a plan).
 
 ### 6.4 Notifications (sparse by design)
 
@@ -154,15 +158,15 @@ Matching lesson from A1: cross-database slug matching lies (`hades` → an unrel
 
 Sequenced so the cheapest signal comes before the most expensive build. The native widget is still the destination; it just isn't a blind bet.
 
-| #   | Step                                                                                                                                                                                                                                                     | Cost            | Status                                                                        |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | ----------------------------------------------------------------------------- |
-| 0   | Rotate RAWG + IGDB keys (public in git history)                                                                                                                                                                                                          | minutes         | **user, outstanding**                                                         |
-| 1   | A1 duration-coverage validation                                                                                                                                                                                                                          | ½ day           | done — both legs (IGDB via task #27)                                          |
-| 2   | Foundation: Expo SDK 57 / React 19 / TS / expo-router migration; secrets to env; dead deps out; card + detail UI ported                                                                                                                                  | ~1 day          | done                                                                          |
-| 3   | **The probe**: one web page — paste Steam ID → backlog reality check ("312 games · 4.5 hrs/week · **71 years to clear** · you'll finish 3 this year, here they are") as a shareable card. Served from the Expo web target — same codebase, not throwaway | 3–4 days        | superseded — the full web product shipped instead (live on Vercel)            |
-| 4   | Post to r/patientgamers / r/gamepass; read the signal                                                                                                                                                                                                    | —               | **user, open**                                                                |
-| 5   | The product: native app, Steam connect, engine both modes, Shelf/Memcard                                                                                                                                                                                 | the real build  | built + sync; awaiting first device run                                       |
-| 6   | The widget: config plugin, App Group, iOS small+medium, then Android                                                                                                                                                                                     | the centrepiece | iOS built (timeline, urgency, ring); Swift unverified on device; Android open |
+| #   | Step                                                                                                                                                                                                                                                     | Cost            | Status                                                                                                 |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------ |
+| 0   | Rotate RAWG + IGDB keys (public in git history)                                                                                                                                                                                                          | minutes         | **user, outstanding**                                                                                  |
+| 1   | A1 duration-coverage validation                                                                                                                                                                                                                          | ½ day           | done — both legs (IGDB via task #27)                                                                   |
+| 2   | Foundation: Expo SDK 57 / React 19 / TS / expo-router migration; secrets to env; dead deps out; card + detail UI ported                                                                                                                                  | ~1 day          | done                                                                                                   |
+| 3   | **The probe**: one web page — paste Steam ID → backlog reality check ("312 games · 4.5 hrs/week · **71 years to clear** · you'll finish 3 this year, here they are") as a shareable card. Served from the Expo web target — same codebase, not throwaway | 3–4 days        | superseded — the full web product shipped instead (live on Vercel)                                     |
+| 4   | Post to r/patientgamers / r/gamepass; read the signal                                                                                                                                                                                                    | —               | **user, open**                                                                                         |
+| 5   | The product: native app, Steam connect, engine both modes, Shelf/Memcard                                                                                                                                                                                 | the real build  | built + sync; awaiting first device run                                                                |
+| 6   | The widget: config plugin, App Group, iOS small+medium, then Android                                                                                                                                                                                     | the centrepiece | iOS built — four widgets (§6.1), timeline, urgency, ring; **Swift unverified on device**; Android open |
 
 **Probe scope discipline:** one screen and a share card. The moment it grows settings, kill the scope and move to step 5.
 
