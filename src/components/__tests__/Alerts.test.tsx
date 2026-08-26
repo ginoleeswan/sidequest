@@ -154,3 +154,51 @@ describe('letting a game go from the alert', () => {
     expect(screen.queryByText('Let it go')).toBeNull();
   });
 });
+
+/**
+ * A pile is not a list.
+ *
+ * A Steam import against a two-week window put eight hundred and
+ * forty-nine rows under a heading whose eyebrow reads "and that's
+ * allowed". A section built to deliver the relief stance is not
+ * allowed to scroll a guilt wall — the count was never the problem,
+ * eight hundred rows of it was.
+ */
+describe('when a great many games do not fit', () => {
+  const many = Array.from({ length: 40 }, (_, i) => ({
+    id: 100 + i,
+    name: `Overflow ${i}`,
+    hours: 60 - i,
+  }));
+
+  it('draws a few and says how many more there are', async () => {
+    await renderApp(<Alerts alerts={[]} overflow={many} />);
+    expect(screen.getAllByText(/^Overflow /).length).toBeLessThanOrEqual(3);
+    expect(
+      screen.getByText(/37 more games the window has no room for/)
+    ).toBeTruthy();
+  });
+
+  /**
+   * Shortest first, so what is shown is what the window would fit
+   * soonest rather than whichever thousand-hour game the sort happened
+   * to put at the front.
+   */
+  it('shows the ones nearest to fitting', async () => {
+    await renderApp(<Alerts alerts={[]} overflow={many} />);
+    // hours run 60 down to 21, so the last three are the shortest.
+    expect(screen.getByText('Overflow 39')).toBeTruthy();
+    expect(screen.queryByText('Overflow 0')).toBeNull();
+  });
+
+  /** Nothing to do about a pile one game at a time. */
+  it('points at the tool built for a pile', async () => {
+    await renderApp(<Alerts alerts={[]} overflow={many} />);
+    expect(screen.getByText(/let a few go together/)).toBeTruthy();
+  });
+
+  it('says nothing extra when they all fit on the card', async () => {
+    await renderApp(<Alerts alerts={[]} overflow={many.slice(0, 2)} />);
+    expect(screen.queryByText(/more games the window/)).toBeNull();
+  });
+});

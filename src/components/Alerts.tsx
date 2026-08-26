@@ -38,7 +38,29 @@ import { TYPE } from '@/styles/typography';
  * at all: a date that is going to be met is the route's story, and a
  * game one evening from credits is Tonight's. This section is only
  * for what actually needs a person.
+ *
+ * And it is BOUNDED, which took a 1000-game library to notice. The
+ * at-risk alerts were always capped at three by the alert engine; the
+ * window overflow was not, so a Steam import against a two-week window
+ * rendered eight hundred and forty-nine rows of games you cannot
+ * finish. A section whose eyebrow reads "and that's allowed" is not
+ * allowed to scroll for eight hundred rows — that is the guilt wall
+ * §2.1 exists to prevent, built by the feature meant to prevent it.
+ *
+ * So: a few rows with their exits, then one line naming the rest and
+ * pointing at the tool that handles a pile in one go. The count was
+ * never the problem; eight hundred rows of it was.
  */
+
+/**
+ * How many overflow rows are worth drawing.
+ *
+ * The at-risk alerts are already capped at three by the alert engine,
+ * so the section shows at most six rows and then speaks. Three is
+ * enough to make the shape concrete — "these are the sort of thing that
+ * did not fit" — without becoming an inventory of everything you own.
+ */
+const SPILLED_SHOWN = 3;
 
 /** A game the window has no room for, from `schedule.dropped`. */
 export interface Overflow {
@@ -79,9 +101,19 @@ export function Alerts({
   // Deduped: a game can miss its date AND overflow the window, and one
   // problem row per game is the point of merging these.
   const shown = new Set(atRisk.map((alert) => alert.gameId));
-  const spilled = overflow.filter((item) => !shown.has(item.id));
+  const allSpilled = overflow.filter((item) => !shown.has(item.id));
+  /**
+   * The shortest first, so what is shown is what is nearly within
+   * reach rather than whichever thousand-hour game the sort happened
+   * to put first. If the window has to grow to fit something, these
+   * are the ones it would fit soonest.
+   */
+  const spilled = [...allSpilled]
+    .sort((a, b) => a.hours - b.hours)
+    .slice(0, SPILLED_SHOWN);
+  const rest = allSpilled.length - spilled.length;
 
-  if (atRisk.length + spilled.length === 0) return null;
+  if (atRisk.length + allSpilled.length === 0) return null;
 
   const round = (hours: number) => Math.max(1, Math.round(hours));
 
@@ -203,6 +235,21 @@ export function Alerts({
         )
       )}
 
+      {rest > 0 && (
+        <Pressable
+          style={styles.rest}
+          onPress={() => router.push('/tidy')}
+          accessibilityRole="button"
+          accessibilityLabel={`${rest} more games do not fit — open backlog amnesty`}
+        >
+          <Text style={styles.restText}>
+            {rest} more {rest === 1 ? 'game' : 'games'} the window has no room
+            for. Nothing to do about them one at a time —{' '}
+            <Text style={styles.restLink}>let a few go together →</Text>
+          </Text>
+        </Pressable>
+      )}
+
       {letting != null && <LetGoBar count={1} onLetGo={letGo} />}
     </View>
   );
@@ -240,6 +287,19 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
     marginTop: 3,
   },
+  /**
+   * The line that replaces eight hundred rows. Bordered off the last
+   * row rather than styled as one, because it is a sentence about the
+   * section rather than another thing in it.
+   */
+  rest: {
+    paddingVertical: SPACING.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: COLORS.stroke,
+  },
+  restText: { ...TYPE.caption, color: COLORS.mediumGrey },
+  restLink: { color: COLORS.accent },
+
   action: { ...TYPE.labelTiny },
   accent: { color: COLORS.accent },
   /** Letting go is coral everywhere in this app; it is coral here. */

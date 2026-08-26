@@ -47,6 +47,21 @@ import { OVER_IMAGE, TYPE } from '@/styles/typography';
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
+ * How much of the route the month card draws.
+ *
+ * A 500-game library scheduled with no window put four hundred and
+ * twenty-nine numbered rows under a heading that says "This month",
+ * which is neither a month nor a plan — it is the library again, sorted
+ * differently, and the library is one tap away and better at it.
+ *
+ * Twelve is past what anyone can hold in their head and comfortably
+ * past a real month at any sane pace, so nobody with an ordinary
+ * backlog ever meets this. Past it, the page stops pretending to be a
+ * list and says how many more there are.
+ */
+const ROUTE_SHOWN = 12;
+
+/**
  * The plan's two dials, and the evening's one.
  *
  * These used to live inside the sentence that described them, one tap
@@ -377,6 +392,14 @@ export default function PlanScreen() {
     [libraryEntries]
   );
 
+  /**
+   * The route, and how much of it the card draws. See ROUTE_SHOWN: a
+   * heading that says "This month" may not be followed by four hundred
+   * rows spanning a decade.
+   */
+  const routeShown = schedule.scheduled.slice(0, ROUTE_SHOWN);
+  const routeRest = schedule.scheduled.length - routeShown.length;
+
   const tonight = useMemo(
     () =>
       pickTonight(
@@ -666,12 +689,12 @@ export default function PlanScreen() {
                           />
                           <View style={styles.monthRule} />
                           <View>
-                            {schedule.scheduled.map((item, index) => (
+                            {routeShown.map((item, index) => (
                               <QuestRow
                                 key={item.id}
                                 item={item}
                                 index={index}
-                                isLast={index === schedule.scheduled.length - 1}
+                                isLast={index === routeShown.length - 1}
                                 game={gamesById.get(item.id)}
                                 entry={entriesById.get(item.id)}
                                 onPress={() => router.push(`/game/${item.id}`)}
@@ -682,6 +705,20 @@ export default function PlanScreen() {
                               />
                             ))}
                           </View>
+                          {routeRest > 0 && (
+                            <Text
+                              style={styles.routeRest}
+                              onPress={() => router.push('/library')}
+                              suppressHighlighting
+                              accessibilityRole="link"
+                              accessibilityLabel={`${routeRest} more games in your plan — open your library`}
+                            >
+                              + {routeRest} more after these, shortest first.{' '}
+                              <Text style={styles.routeRestLink}>
+                                See them all in your library →
+                              </Text>
+                            </Text>
+                          )}
                         </View>
                       </View>
                     )}
@@ -847,6 +884,15 @@ const styles = StyleSheet.create({
     ...SHADOW.card,
   },
   monthRule: { height: 1, backgroundColor: COLORS.stroke },
+  /** The line that replaces four hundred rows — see ROUTE_SHOWN. */
+  routeRest: {
+    ...TYPE.caption,
+    color: COLORS.mediumGrey,
+    paddingTop: SPACING.md,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.stroke,
+  },
+  routeRestLink: { color: COLORS.accent },
 
   /**
    * The dial, and the sentence it produces.

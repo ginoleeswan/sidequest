@@ -249,3 +249,37 @@ describe('the plan screen', () => {
     expect(screen.queryByLabelText('Copy a link to this plan')).toBeNull();
   });
 });
+
+/**
+ * A heading that says "This month" may not be followed by four hundred
+ * rows spanning a decade.
+ *
+ * A 500-game library with no window put every scheduled game under it —
+ * which is neither a month nor a plan, but the library again, sorted
+ * differently, one tap from the screen that is better at exactly that.
+ */
+describe('a very large plan', () => {
+  const many = Array.from({ length: 40 }, (_, i) => ({
+    game: game(i + 1, `Game ${i + 1}`, 4 + i),
+    status: 'wishlist' as LibraryStatus,
+  }));
+
+  it('draws a readable route and says what is past it', async () => {
+    seed(many);
+    await renderApp(<PlanScreen />);
+    expect(screen.getAllByText('on track').length).toBe(12);
+    expect(screen.getByText(/28 more after these/)).toBeTruthy();
+  });
+
+  it('sends the reader to the screen that is a list', async () => {
+    seed(many);
+    await renderApp(<PlanScreen />);
+    expect(screen.getByText(/See them all in your library/)).toBeTruthy();
+  });
+
+  it('says nothing extra when the whole route fits', async () => {
+    seed(many.slice(0, 3));
+    await renderApp(<PlanScreen />);
+    expect(screen.queryByText(/more after these/)).toBeNull();
+  });
+});
