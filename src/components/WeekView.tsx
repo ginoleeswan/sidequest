@@ -93,11 +93,20 @@ export function WeekView({
   scheduled,
   now,
   leadId,
+  readOnly = false,
 }: {
   scheduled: ScheduledItem[];
   now: number;
   /** Tonight's pick, so the first evening agrees with the card above. */
   leadId?: number;
+  /**
+   * Somebody else's week, so the calendar hand-off stays out of it.
+   *
+   * A shared plan draws the same seven evenings, and offering to file
+   * them in YOUR calendar would be the app misreading whose week it is
+   * holding — a friend's Thursday is not an appointment you have.
+   */
+  readOnly?: boolean;
 }) {
   const toast = useToast();
   const week = planWeek(scheduled, now, 7, leadId);
@@ -268,22 +277,32 @@ export function WeekView({
         })}
       </View>
 
-      <View style={styles.rule} />
+      {!readOnly && (
+        <>
+          <View style={styles.rule} />
 
-      {/* Quiet, and last: the plan is the thing, this is what you do
-          with it. Text-and-icon rather than a button, because a second
-          filled control here would compete with the plan's own
-          actions — and inside the panel rather than under it, because
-          it acts on the week the panel is holding. */}
-      <Pressable
-        onPress={putInCalendar}
-        style={styles.toCalendar}
-        accessibilityRole="button"
-        accessibilityLabel="Add this week to your calendar"
-      >
-        <Ionicons name="calendar-outline" size={14} color={COLORS.mediumGrey} />
-        <Text style={styles.toCalendarText}>Put this week in my calendar</Text>
-      </Pressable>
+          {/* Quiet, and last: the plan is the thing, this is what you
+              do with it. Text-and-icon rather than a button, because a
+              second filled control here would compete with the plan's
+              own actions — and inside the panel rather than under it,
+              because it acts on the week the panel is holding. */}
+          <Pressable
+            onPress={putInCalendar}
+            style={styles.toCalendar}
+            accessibilityRole="button"
+            accessibilityLabel="Add this week to your calendar"
+          >
+            <Ionicons
+              name="calendar-outline"
+              size={14}
+              color={COLORS.mediumGrey}
+            />
+            <Text style={styles.toCalendarText}>
+              Put this week in my calendar
+            </Text>
+          </Pressable>
+        </>
+      )}
     </View>
   );
 }
