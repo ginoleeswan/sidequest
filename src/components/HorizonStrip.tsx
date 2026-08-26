@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { planColour } from '@/lib/planColours';
@@ -16,21 +17,30 @@ import { TYPE } from '@/styles/typography';
  * say that (§2.1), so the month is drawn as the only shape its facts
  * actually have — a timeline.
  *
- * TODAY is anchored at the left. The spine runs to the horizon in the
- * plan's colours, one span per game in route order, so the SEQUENCE is
- * visible — a thing no grid can show. Where a game's credits land, a
- * save-slot chip is planted on the spine with its date, memcard-style,
- * because finishing a game in this app is a save worth stamping. And a
- * deadline the plan cannot meet sits above the spine as coral weather:
- * you can see the date arriving before the game's span can — the
- * geometry of "won't make it", with no sentence needed. (The sentence,
- * and the ways out, live in "What doesn't fit".)
+ * TODAY stands on the spine. Ahead of it the spine runs to the horizon
+ * in the plan's colours, one span per game in route order, so the
+ * SEQUENCE is visible — a thing no grid can show. Where a game's
+ * credits land, a save-slot chip is planted on the spine with its date,
+ * memcard-style, because finishing a game in this app is a save worth
+ * stamping. And a deadline the plan cannot meet sits above the spine as
+ * coral weather: you can see the date arriving before the game's span
+ * can — the geometry of "won't make it", with no sentence needed. (The
+ * sentence, and the ways out, live in "What doesn't fit".)
  *
- * Four landings, at most. A backlog of twenty games would print twenty
- * flags into three hundred points of width and the strip would say
- * nothing at all — so the near ones are drawn and the rest are counted
- * in a sentence. A horizon you cannot see past is still a horizon; one
- * that pretends there is nothing past it is a lie.
+ * BEHIND today, the same strip carries what already landed: games
+ * finished in the last three weeks, their slots stamped mint. This is
+ * the one thing on the page that is not a plan, and it earns its place
+ * for exactly that reason — a timeline with only a future on it is a
+ * schedule, and a schedule is a thing you owe. With the last few
+ * credits still on it, it is a life: you finished Hades a fortnight
+ * ago, Tunic is a fortnight out. The memcard (§7) makes the yearly
+ * version of this argument; the strip makes the monthly one.
+ *
+ * Four landings ahead, at most. A backlog of twenty games would print
+ * twenty flags into three hundred points of width and the strip would
+ * say nothing at all — so the near ones are drawn and the rest are
+ * counted in a sentence. A horizon you cannot see past is still a
+ * horizon; one that pretends there is nothing past it is a lie.
  */
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -38,11 +48,28 @@ const DAY = 24 * 60 * 60 * 1000;
 /** As many landings as a phone's width can name without crushing them. */
 const SHOWN = 4;
 
+/**
+ * How far back the strip remembers, and how much it remembers.
+ *
+ * Three weeks matches the alerts' own horizon, so the app looks the
+ * same distance in both directions; two stamps is enough to say "this
+ * has been going well" without the past out-weighing the plan.
+ */
+const LOOK_BACK_DAYS = 21;
+const LANDED_SHOWN = 2;
+
 /** A deadline the plan cannot meet, drawn on the date it names. */
 export interface TroubledDate {
   id: number;
   name: string;
   deadline: number;
+}
+
+/** A game whose credits already rolled — a slot with a stamp on it. */
+export interface Landed {
+  id: number;
+  name: string;
+  finishedAt: number;
 }
 
 const dateLabel = (ms: number) =>
@@ -55,28 +82,69 @@ const dateLabel = (ms: number) =>
  * is clear, the far line otherwise. (A plain function, not inline in
  * render — the walk carries state between flags.)
  */
-function layFlags(scheduled: ScheduledItem[], at: (t: number) => number) {
+function layFlags(
+  marks: { key: number; date: number }[],
+  at: (t: number) => number
+) {
   let lastNear = -100;
   let lastFar = -100;
-  return scheduled.map((item, index) => {
-    const pct = at(item.finishAt);
+  return marks.map(({ key, date }) => {
+    const pct = at(date);
     const far = pct - lastNear < 24 && pct - lastFar >= 24;
     if (far) lastFar = pct;
     else lastNear = pct;
-    return { item, pct, far, colour: planColour(index) };
+    return { key, pct, far };
   });
+}
+
+/** The stamps and the flags share one line, so they lay out together. */
+function layAll(
+  landed: Landed[],
+  near: ScheduledItem[],
+  at: (t: number) => number
+) {
+  const rows = layFlags(
+    [
+      ...landed.map((item) => ({ key: item.id, date: item.finishedAt })),
+      ...near.map((item) => ({ key: item.id, date: item.finishAt })),
+    ],
+    at
+  );
+  return {
+    landed: landed.map((item, index) => ({ item, ...rows[index] })),
+    ahead: near.map((item, index) => ({
+      item,
+      ...rows[landed.length + index],
+      colour: planColour(index),
+    })),
+  };
 }
 
 export function HorizonStrip({
   scheduled,
   now,
   troubled = [],
+  landed = [],
 }: {
   scheduled: ScheduledItem[];
   now: number;
   troubled?: TroubledDate[];
+  /**
+   * What already landed, newest last. Filtered and capped here rather
+   * than by every caller, so the plan page and the widget agree on how
+   * much past a month is allowed to carry.
+   */
+  landed?: Landed[];
 }) {
   if (scheduled.length === 0) return null;
+
+  const recent = landed
+    .filter(
+      (item) =>
+        item.finishedAt <= now && item.finishedAt >= now - LOOK_BACK_DAYS * DAY
+    )
+    .sort((a, b) => a.finishedAt - b.finishedAt)
+    .slice(-LANDED_SHOWN);
 
   const near = scheduled.slice(0, SHOWN);
   const beyond = scheduled.slice(SHOWN);
@@ -92,12 +160,22 @@ export function HorizonStrip({
     now + 14 * DAY
   );
   const end = latest + Math.max((latest - now) * 0.08, 2 * DAY);
-  const span = end - now;
+  /**
+   * The axis starts at the oldest stamp rather than at today, and the
+   * past keeps its true proportion: a game finished three days ago sits
+   * three days back. Compressing the past to a fixed slice would be
+   * tidier and would be a lie about a picture whose whole claim is
+   * that distance means time.
+   */
+  const start = recent.length ? Math.min(now, recent[0].finishedAt) - DAY : now;
+  const span = end - start;
   /** Clamped in from the edges so a label centred here stays legible. */
   const at = (t: number) =>
-    Math.min(86, Math.max(10, ((t - now) / span) * 100));
+    Math.min(86, Math.max(10, ((t - start) / span) * 100));
+  /** TODAY's label reads rightwards from its tick, so it needs no room. */
+  const todayAt = Math.min(88, Math.max(0, ((now - start) / span) * 100));
 
-  const flags = layFlags(near, at);
+  const marks = layAll(recent, near, at);
 
   /** What the strip could not draw, said rather than dropped. */
   const rest = beyond.length
@@ -107,6 +185,11 @@ export function HorizonStrip({
     : '';
 
   const summary =
+    (recent.length
+      ? `Already finished: ${recent
+          .map((item) => `${item.name} ${dateLabel(item.finishedAt)}`)
+          .join(', ')}. `
+      : '') +
     `Credits land: ${near
       .map((item) => `${item.name} ${dateLabel(item.finishAt)}`)
       .join(', ')}.` +
@@ -118,7 +201,14 @@ export function HorizonStrip({
   return (
     <View accessible accessibilityRole="image" accessibilityLabel={summary}>
       <View style={styles.strip}>
-        <Text style={styles.today}>TODAY</Text>
+        {/* TODAY, standing on the spine rather than floating at the
+            left — with stamps behind it, the left edge is three weeks
+            ago and labelling it today would be the one outright lie
+            the picture could tell. */}
+        <View style={[styles.today, { left: `${todayAt}%` }]}>
+          <Text style={styles.todayText}>TODAY</Text>
+          <View style={styles.todayTick} />
+        </View>
 
         {/* The coral weather, above the spine: a date bearing down. The
             diamond stands on the date; its label reads off to the
@@ -138,8 +228,12 @@ export function HorizonStrip({
           </View>
         ))}
 
-        {/* The spine: the month in route order, then open time. */}
+        {/* The spine: what is behind, then the month in route order,
+            then open time. */}
         <View style={styles.spine}>
+          {recent.length > 0 && (
+            <View style={[styles.done, { flex: now - start }]} />
+          )}
           {near.map((item, index) => (
             <View
               key={item.id}
@@ -154,8 +248,28 @@ export function HorizonStrip({
           <View style={{ flex: Math.max(end - lastFinish, span * 0.02) }} />
         </View>
 
-        {/* One save-slot per landing, planted on its date. */}
-        {flags.map(({ item, pct, far, colour }) => (
+        {/* Behind today: slots already stamped. Mint, because mint is
+            what finishing looks like everywhere in this app. */}
+        {marks.landed.map(({ item, pct, far }) => (
+          <View
+            key={`done-${item.id}`}
+            style={[styles.flag, { left: `${pct}%` }]}
+          >
+            <View style={[styles.slot, styles.slotDone]}>
+              <Ionicons name="checkmark" size={11} color={COLORS.navy} />
+            </View>
+            <View style={[styles.stem, far && styles.stemFar]} />
+            <Text style={styles.flagDate} numberOfLines={1}>
+              {dateLabel(item.finishedAt)}
+            </Text>
+            <Text style={styles.flagName} numberOfLines={1}>
+              {item.name}
+            </Text>
+          </View>
+        ))}
+
+        {/* Ahead: one save-slot per landing, planted on its date. */}
+        {marks.ahead.map(({ item, pct, far, colour }) => (
           <View key={item.id} style={[styles.flag, { left: `${pct}%` }]}>
             <View style={[styles.slot, { backgroundColor: colour }]}>
               <View style={styles.slotNotch} />
@@ -187,13 +301,14 @@ const styles = StyleSheet.create({
    * hung off it by percentage. Tall enough for the far label line.
    */
   strip: { height: 108, position: 'relative' },
-  today: {
-    ...TYPE.micro,
-    color: COLORS.accent,
-    letterSpacing: 1,
-    position: 'absolute',
-    top: 0,
-    left: 0,
+  /** Anchored on its tick, reading rightwards — see `trouble`. */
+  today: { position: 'absolute', top: 8, width: 80, marginLeft: -1 },
+  todayText: { ...TYPE.micro, color: COLORS.accent, letterSpacing: 1 },
+  todayTick: {
+    width: 2,
+    height: 12,
+    backgroundColor: COLORS.accent,
+    marginTop: 2,
   },
   spine: {
     position: 'absolute',
@@ -206,13 +321,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: COLORS.navy,
   },
+  /** What is behind you, in the colour of finishing, quietly. */
+  done: { backgroundColor: COLORS.mint, opacity: 0.35 },
 
   /**
-   * A flag hangs from a zero-width anchor at its date, children
-   * centred across it — which is how a label centres on a point
-   * without measuring itself.
+   * Anchored by its left edge on the date, pulled back by half its
+   * width so the slot stands on the day itself. A zero-width anchor
+   * would be tidier, but react-native-web clamps a Text inside one to
+   * its parent's width — which is nothing — so the labels vanish. Real
+   * widths, offset by half, land in the same place.
    */
-  /** Centred on the date: real width, offset by half — see `trouble`. */
   flag: {
     position: 'absolute',
     top: 30,
@@ -228,7 +346,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.strokeStrong,
     overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  /** Stamped: the save is written, and mint is what that looks like. */
+  slotDone: { backgroundColor: COLORS.mint },
   slotNotch: {
     position: 'absolute',
     top: -5,
@@ -253,13 +375,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  /**
-   * Anchored by its left edge on the date, pulled back by half the
-   * diamond so the diamond stands on the day itself. A zero-width
-   * anchor would be tidier, but react-native-web clamps a Text inside
-   * one to its parent's width — which is nothing — so the labels
-   * vanish. Real widths, offset by half, land in the same place.
-   */
   trouble: { position: 'absolute', top: 16, width: 120, marginLeft: -6 },
   troubleMark: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   troubleDate: { ...TYPE.micro, color: COLORS.coral },

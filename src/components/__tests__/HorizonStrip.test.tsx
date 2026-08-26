@@ -97,6 +97,82 @@ describe('the horizon', () => {
     expect(screen.queryByText(/more after that/)).toBeNull();
   });
 
+  /**
+   * A timeline with only a future on it is a schedule, and a schedule
+   * is a thing you owe. With the last few credits still on it, it is a
+   * life — which is the register this app actually wants (§2.1).
+   */
+  describe('what already landed', () => {
+    it('stamps a recent finish behind today', async () => {
+      await renderApp(
+        <HorizonStrip
+          scheduled={[lands(1, 'Tunic', NOW + 14 * DAY)]}
+          now={NOW}
+          landed={[{ id: 9, name: 'Hades', finishedAt: NOW - 10 * DAY }]}
+        />
+      );
+      expect(screen.getByText('Hades')).toBeTruthy();
+      expect(screen.getByText('Aug 7')).toBeTruthy();
+      expect(
+        screen.getByLabelText(/Already finished: Hades Aug 7.*Credits land/)
+      ).toBeTruthy();
+    });
+
+    it('forgets what is older than the horizon', async () => {
+      await renderApp(
+        <HorizonStrip
+          scheduled={[lands(1, 'Tunic', NOW + 14 * DAY)]}
+          now={NOW}
+          landed={[{ id: 9, name: 'Ancient', finishedAt: NOW - 90 * DAY }]}
+        />
+      );
+      expect(screen.queryByText('Ancient')).toBeNull();
+      expect(screen.queryByLabelText(/Already finished/)).toBeNull();
+    });
+
+    it('keeps the two most recent, not the first two it was handed', async () => {
+      await renderApp(
+        <HorizonStrip
+          scheduled={[lands(1, 'Tunic', NOW + 14 * DAY)]}
+          now={NOW}
+          landed={[
+            { id: 7, name: 'Oldest', finishedAt: NOW - 20 * DAY },
+            { id: 8, name: 'Middle', finishedAt: NOW - 12 * DAY },
+            { id: 9, name: 'Newest', finishedAt: NOW - 2 * DAY },
+          ]}
+        />
+      );
+      expect(screen.queryByText('Oldest')).toBeNull();
+      expect(screen.getByText('Middle')).toBeTruthy();
+      expect(screen.getByText('Newest')).toBeTruthy();
+    });
+
+    /** A date in the future is not something that already happened. */
+    it('ignores a finish stamped ahead of now', async () => {
+      await renderApp(
+        <HorizonStrip
+          scheduled={[lands(1, 'Tunic', NOW + 14 * DAY)]}
+          now={NOW}
+          landed={[{ id: 9, name: 'Impossible', finishedAt: NOW + 3 * DAY }]}
+        />
+      );
+      expect(screen.queryByText('Impossible')).toBeNull();
+    });
+
+    it('says today is today, and not the left edge', async () => {
+      // With stamps behind it the left edge is three weeks ago, so
+      // TODAY has to stand on its own tick rather than float at 0.
+      await renderApp(
+        <HorizonStrip
+          scheduled={[lands(1, 'Tunic', NOW + 14 * DAY)]}
+          now={NOW}
+          landed={[{ id: 9, name: 'Hades', finishedAt: NOW - 10 * DAY }]}
+        />
+      );
+      expect(screen.getByText('TODAY')).toBeTruthy();
+    });
+  });
+
   it('renders nothing without a schedule', async () => {
     await renderApp(<HorizonStrip scheduled={[]} now={NOW} />);
     expect(screen.queryByText('TODAY')).toBeNull();

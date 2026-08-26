@@ -358,6 +358,25 @@ export default function PlanScreen() {
     .filter((e) => atRiskIds.has(e.game.id) && e.deadline != null)
     .map((e) => ({ id: e.game.id, name: e.game.name, deadline: e.deadline! }));
 
+  /**
+   * What already landed — the credits that rolled recently.
+   *
+   * The strip filters and caps these itself, so the plan page and the
+   * widget cannot disagree about how much past a month carries. All
+   * this has to do is offer everything finished, with its date.
+   */
+  const landed = useMemo(
+    () =>
+      Object.values(libraryEntries)
+        .filter((entry) => entry.status === 'finished' && entry.finishedAt)
+        .map((entry) => ({
+          id: entry.game.id,
+          name: entry.game.name,
+          finishedAt: entry.finishedAt as number,
+        })),
+    [libraryEntries]
+  );
+
   const tonight = useMemo(
     () =>
       pickTonight(
@@ -622,7 +641,11 @@ export default function PlanScreen() {
                       <View style={styles.section}>
                         <SectionHeader
                           title="This month"
-                          eyebrow="Where the credits land"
+                          eyebrow={
+                            landed.length > 0
+                              ? 'Where the credits land — and where they landed'
+                              : 'Where the credits land'
+                          }
                         />
                         <Text style={styles.routeNote}>
                           Quick wins first — momentum is the strategy.
@@ -639,6 +662,7 @@ export default function PlanScreen() {
                             scheduled={schedule.scheduled}
                             now={now}
                             troubled={troubled}
+                            landed={landed}
                           />
                           <View style={styles.monthRule} />
                           <View>
