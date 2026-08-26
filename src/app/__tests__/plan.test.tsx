@@ -391,3 +391,61 @@ describe('what the sessions know about your pace', () => {
     expect(screen.getByText(/Use \d+h a week/)).toBeTruthy();
   });
 });
+
+/**
+ * What the verdict says when most of the shelf is outside the window.
+ *
+ * "N of these M" counts the failures and scales horribly: at four games
+ * it is encouragement, at five hundred it reads "5 of these 500 will
+ * get done" — an indictment of somebody's whole shelf, in the largest
+ * sentence on a page whose doctrine is relief. Where a window is what
+ * excluded them, the window is what the sentence names.
+ */
+describe('the verdict, when a window is doing the excluding', () => {
+  const many = Array.from({ length: 30 }, (_, i) => ({
+    game: game(i + 1, `Game ${i + 1}`, 6 + i),
+    status: 'wishlist' as LibraryStatus,
+  }));
+
+  it('names the window rather than counting the failures', async () => {
+    seed(many);
+    await renderApp(<PlanScreen />);
+    await fireEvent.press(screen.getByLabelText('Finish them: 2 weeks'));
+    await waitFor(() =>
+      expect(
+        screen.getAllByText(/2 weeks holds \d+ of them/).length
+      ).toBeGreaterThan(0)
+    );
+    expect(screen.queryByText(/of these 30 will get done/)).toBeNull();
+  });
+
+  /**
+   * A plan with no window has none to blame — and "whenever" is itself
+   * an option whose value is null, so a careless lookup found it and
+   * said "whenever holds 5 of them".
+   */
+  it('never blames a window that was never set', async () => {
+    seed([
+      { game: game(1, 'Fits', 4), status: 'wishlist' as LibraryStatus },
+      {
+        game: game(2, 'Doomed', 400),
+        status: 'wishlist' as LibraryStatus,
+        deadline: Date.now() + 3 * 86_400_000,
+      },
+    ]);
+    await renderApp(<PlanScreen />);
+    expect(screen.queryByText(/whenever holds/)).toBeNull();
+  });
+
+  it('still celebrates a plan that fits entirely', async () => {
+    seed([
+      { game: game(1, 'Celeste', 4), status: 'wishlist' as LibraryStatus },
+    ]);
+    await renderApp(<PlanScreen />);
+    await waitFor(() =>
+      expect(
+        screen.getAllByText(/You can finish it by/).length
+      ).toBeGreaterThan(0)
+    );
+  });
+});
