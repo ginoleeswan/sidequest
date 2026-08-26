@@ -358,11 +358,24 @@ export default function LibraryScreen() {
                 the week panel uses over there. */}
             {count > 0 && (
               <View style={styles.hero}>
+                {/* "ahead of you" put the debt in the largest numeral
+                    in the app, on the page opened most — a hundred and
+                    twenty-two hours you are BEHIND on. Every other
+                    surface was rewritten to answer rather than accuse:
+                    the Plan says what will get done, the misfits say
+                    "and that's allowed", a free evening says "free".
+                    The shelf was still keeping score.
+
+                    Same number, and it earns its size — it is the raw
+                    material the Plan runs on. What changed is what it
+                    claims to be. "On your shelf" is an inventory;
+                    "ahead of you" is a road you are late down, and
+                    §2.1 says this app does not have that voice. */}
                 <View style={styles.heroLine}>
                   <Text style={styles.heroValue}>
                     {formatHours(stats.hoursAhead)}
                   </Text>
-                  <Text style={styles.heroLabel}>ahead of you</Text>
+                  <Text style={styles.heroLabel}>on your shelf</Text>
                 </View>
 
                 {/* Bringing a library in is an action on this panel, and
@@ -408,11 +421,20 @@ export default function LibraryScreen() {
                     were three stats the same size as each other, which
                     made the only meaningful one — the hours — no louder
                     than a zero. */}
+                {/* Credits first when there are any. This line read
+                    "5 still to play · 2 finished · 16h of credits" —
+                    the one achievement on the shelf, arriving last and
+                    quietest after two counts of what is outstanding.
+                    The app's whole thesis is finishing; where the shelf
+                    has evidence of it, it goes first. */}
                 <Text style={styles.heroSub}>
+                  {stats.finished > 0 &&
+                    `${stats.finished} finished${
+                      stats.hoursFinished > 0
+                        ? ` · ${formatHours(stats.hoursFinished)} of credits`
+                        : ''
+                    } · `}
                   {stats.waiting + stats.playing} still to play
-                  {stats.finished > 0 && ` · ${stats.finished} finished`}
-                  {stats.hoursFinished > 0 &&
-                    ` · ${formatHours(stats.hoursFinished)} of credits`}
                 </Text>
 
                 {/* Only what acts on the numbers above it. Import used
