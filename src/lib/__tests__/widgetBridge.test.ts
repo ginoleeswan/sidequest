@@ -1,4 +1,7 @@
-import { publishPlan, clearWidgets } from '../widgetBridge';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
+
+import { publishPlan, clearWidgets, KINDS } from '../widgetBridge';
 import type { PlanDay } from '../widgetData';
 
 /**
@@ -64,13 +67,27 @@ describe('the widget bridge', () => {
     }
   });
 
-  it('knocks after writing, for every widget it touched', async () => {
+  it('knocks after writing, for every widget drawn from the plan', async () => {
     await publishPlan([morning('Hades')]);
     expect(mockReload).toHaveBeenCalledWith('Tonight');
     expect(mockReload).toHaveBeenCalledWith('ThisWeek');
+    // The month reads the same key and was correct on paper for a
+    // while; it simply was never told, so it went on showing whatever
+    // it last rendered until iOS chose to ask again.
+    expect(mockReload).toHaveBeenCalledWith('ThisMonth');
   });
 
-  it('clearWidgets forgets all three and wakes all three', async () => {
+  /**
+   * Removing the data is only half of forgetting.
+   *
+   * A widget holds a rendered timeline of its own, so one that is never
+   * told to reload goes on displaying a plan whose source has been
+   * deleted — the app's delete-means-delete promise broken on the most
+   * public screen the reader has. This counted three for a while, and
+   * kept counting three after a fourth widget shipped, which is how the
+   * gap survived: the number was the assertion.
+   */
+  it('clearWidgets forgets every key and wakes every widget', async () => {
     await clearWidgets();
     expect(mockRemove.mock.calls.map(([k]) => k).sort()).toEqual([
       'plan',
@@ -78,6 +95,44 @@ describe('the widget bridge', () => {
       'week',
       'year',
     ]);
-    expect(mockReload).toHaveBeenCalledTimes(3);
+    const woken = mockReload.mock.calls.map(([k]) => k).sort();
+    expect(woken).toEqual([...Object.values(KINDS)].sort());
+  });
+});
+
+/**
+ * The two languages agree on what the widgets are called.
+ *
+ * `KINDS` is a hand-written copy of strings that live in Swift, and a
+ * copy is a thing that falls behind. This one did: a fourth widget
+ * shipped and nothing on this side learned its name, so it was never
+ * told a new plan had arrived and — the part that matters — never told
+ * to stop showing an old one after somebody deleted their library.
+ *
+ * Reading the Swift is the only check that could have caught it, since
+ * both consequences are invisible from JavaScript. It is cheap: four
+ * files, one regular expression, and a build failure the day somebody
+ * adds a fifth widget and forgets this table.
+ */
+describe('the widget kinds, against the Swift that declares them', () => {
+  const widgetsDir = join(__dirname, '..', '..', '..', 'targets', 'widgets');
+
+  const declared = readdirSync(widgetsDir)
+    .filter((name) => name.endsWith('.swift'))
+    .flatMap((name) =>
+      Array.from(
+        readFileSync(join(widgetsDir, name), 'utf8').matchAll(
+          /StaticConfiguration\(\s*kind:\s*"([^"]+)"/g
+        ),
+        (match) => match[1]
+      )
+    );
+
+  it('finds the widgets at all, so an empty match cannot pass', () => {
+    expect(declared.length).toBeGreaterThan(0);
+  });
+
+  it('knows the name of every widget the app ships', () => {
+    expect(declared.sort()).toEqual([...Object.values(KINDS)].sort());
   });
 });
