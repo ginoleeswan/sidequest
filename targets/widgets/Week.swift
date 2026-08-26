@@ -2,7 +2,7 @@ import SwiftUI
 import WidgetKit
 
 /**
- * This week — the seven evenings, as a strip.
+ * This week — the seven evenings, as an agenda.
  *
  * A different question from Tonight's, asked at a different moment.
  * Tonight is the sofa at eight; this is Sunday, working out whether the
@@ -11,12 +11,18 @@ import WidgetKit
  * free. Filing "nothing" into somebody's week is not the same gesture
  * as showing them a Tuesday they still have.
  *
- * Medium and up. Seven columns do not survive a small widget — at that
- * width each night gets about twenty points, which is a column of
- * truncated first letters and no information at all. Extra large is
- * the iPad size, and this is the widget that earns it: a seven-column
- * strip gets better with width where a single sentence would only get
- * larger.
+ * This was seven vertical bars with a day letter under each, and the
+ * app's own week was too until it stopped being: a mark in Thursday's
+ * column is a puzzle, and "THU 28 · Hades · 2h" is an answer. The app
+ * moved to dated rows; a widget that kept the bars would have the Lock
+ * Screen and the page telling one week two ways, which is exactly the
+ * drift this whole pipeline exists to prevent (§6.1 — the widget is
+ * the soul, and a soul that disagrees with the body is a bug).
+ *
+ * Medium and up, which is every size this widget has: seven rows in a
+ * small widget would be four points of leading each. Extra large is
+ * the iPad size, and rows get better with width — the blocks keep
+ * their proportions and the names stop truncating.
  */
 
 struct WeekEntry: TimelineEntry {
@@ -27,13 +33,20 @@ struct WeekEntry: TimelineEntry {
 
 struct WeekProvider: TimelineProvider {
   private static let sample: [WeekNight] = [
-    WeekNight(day: "MON", title: "", hours: 0, finishes: false),
-    WeekNight(day: "TUE", title: "Hades", hours: 2, finishes: false),
-    WeekNight(day: "WED", title: "Hades", hours: 2, finishes: false),
-    WeekNight(day: "THU", title: "", hours: 0, finishes: false),
-    WeekNight(day: "FRI", title: "Hades", hours: 3, finishes: true),
-    WeekNight(day: "SAT", title: "Pragmata", hours: 4, finishes: false),
-    WeekNight(day: "SUN", title: "", hours: 0, finishes: false),
+    WeekNight(day: "MON", date: 17, title: "", hours: 0, finishes: false,
+              colour: -1, named: false),
+    WeekNight(day: "TUE", date: 18, title: "Hades", hours: 2, finishes: false,
+              colour: 0, named: true),
+    WeekNight(day: "WED", date: 19, title: "Hades", hours: 2, finishes: false,
+              colour: 0, named: false),
+    WeekNight(day: "THU", date: 20, title: "", hours: 0, finishes: false,
+              colour: -1, named: false),
+    WeekNight(day: "FRI", date: 21, title: "Hades", hours: 3, finishes: true,
+              colour: 0, named: false),
+    WeekNight(day: "SAT", date: 22, title: "Pragmata", hours: 4,
+              finishes: false, colour: 1, named: true),
+    WeekNight(day: "SUN", date: 23, title: "", hours: 0, finishes: false,
+              colour: -1, named: false),
   ]
 
   func placeholder(in context: Context) -> WeekEntry {
@@ -80,35 +93,84 @@ struct WeekProvider: TimelineProvider {
   }
 }
 
-/** One evening: a bar whose height is its hours, or an empty slot. */
-struct NightColumn: View {
+/**
+ * One evening, as a row: the date, then a block as wide as the evening
+ * is long, carrying what it goes on.
+ *
+ * A free evening is DRAWN — dashed, and said out loud — because an
+ * empty row reads as a gap you failed to fill and a row that says free
+ * reads as a night you get back. That is the relief stance (§2.1) in
+ * one style rule, and it is the most important line in this file.
+ */
+struct NightRow: View {
   let night: WeekNight
+  /// The longest evening in the week, so the widths compare.
   let tallest: Int
-  let height: CGFloat
+  let compact: Bool
 
-  private var filled: CGFloat {
+  private var fraction: CGFloat {
     guard tallest > 0, night.hours > 0 else { return 0 }
-    // A floor under the proportion, so a one-hour evening is still a
-    // mark rather than a hairline nobody can see.
-    return max(height * CGFloat(night.hours) / CGFloat(tallest), 6)
+    return CGFloat(night.hours) / CGFloat(tallest)
   }
 
   var body: some View {
-    VStack(spacing: 4) {
-      ZStack(alignment: .bottom) {
-        RoundedRectangle(cornerRadius: 3)
-          .fill(Color.white.opacity(0.07))
-          .frame(height: height)
-        if !night.isFree {
-          RoundedRectangle(cornerRadius: 3)
-            .fill(night.finishes ? Color("$violet") : Color("$accent"))
-            .frame(height: filled)
+    HStack(spacing: 8) {
+      HStack(spacing: 3) {
+        Text(night.day)
+          .font(Brand.bold(9))
+          .foregroundStyle(Color("$muted"))
+        Text("\(night.date)")
+          .font(Brand.bold(11))
+          .foregroundStyle(night.isFree ? Color("$muted") : .white)
+      }
+      .frame(width: 38, alignment: .leading)
+
+      GeometryReader { geo in
+        if night.isFree {
+          RoundedRectangle(cornerRadius: 6)
+            .strokeBorder(
+              Color.white.opacity(0.16),
+              style: StrokeStyle(lineWidth: 1, dash: [3, 3])
+            )
+            .frame(width: max(geo.size.width * 0.5, 24))
+            .overlay(alignment: .leading) {
+              Text("free evening")
+                .font(Brand.regular(9))
+                .foregroundStyle(Color("$muted"))
+                .padding(.leading, 7)
+            }
+        } else {
+          RoundedRectangle(cornerRadius: 6)
+            .fill(planColour(night.colour))
+            // A floor under the width, so a half-hour is still a mark
+            // rather than a hairline nobody can see.
+            .frame(width: max(geo.size.width * fraction, 30))
+            .overlay(alignment: .leading) {
+              Text(label)
+                .font(Brand.bold(compact ? 9 : 10))
+                // Dark on amber, violet and mint alike — the one ink
+                // all three of the plan's colours take.
+                .foregroundStyle(Color("$ground"))
+                .lineLimit(1)
+                .padding(.horizontal, 7)
+            }
         }
       }
-      Text(night.day)
-        .font(Brand.bold(9))
-        .foregroundStyle(night.isFree ? Color("$muted") : .white)
+
+      // Reserved whether or not the credits roll here, so the rows
+      // keep a common right edge.
+      Image(systemName: "flag.fill")
+        .font(.system(size: 9))
+        .foregroundStyle(night.finishes ? Color("$accent") : .clear)
+        .frame(width: 10)
     }
+    .frame(height: compact ? 16 : 20)
+  }
+
+  /// A run's first evening carries the name; the rest carry the hours,
+  /// which is all they have left to say.
+  private var label: String {
+    night.named ? "\(night.title) · \(night.hours)h" : "\(night.hours)h"
   }
 }
 
@@ -133,35 +195,23 @@ struct WeekView: View {
       if let nights = entry.nights, !nights.isEmpty {
         let tallest = nights.map(\.hours).max() ?? 0
         let planned = nights.filter { !$0.isFree }
+        // Medium has room for five rows at a readable size; the taller
+        // families take all seven. Cropping beats cramming — a row a
+        // person cannot read is worse than a row that is not there,
+        // and the line underneath says how many were left off.
+        let room = tall ? 7 : 5
+        let shown = Array(nights.prefix(room))
 
-        HStack(alignment: .bottom, spacing: 6) {
-          ForEach(nights) { night in
-            NightColumn(
-              night: night,
-              tallest: tallest,
-              height: tall ? 64 : 40
-            )
+        VStack(spacing: tall ? 5 : 3) {
+          ForEach(shown) { night in
+            NightRow(night: night, tallest: tallest, compact: !tall)
           }
         }
 
-        if tall {
-          // The large family has room to name the games rather than
-          // only chart them, which is the difference between a picture
-          // of a week and a week you can read.
-          VStack(alignment: .leading, spacing: 3) {
-            ForEach(Array(runs(planned).prefix(3)), id: \.self) { line in
-              Text(line)
-                .font(Brand.regular(13))
-                .foregroundStyle(Color("$muted"))
-                .lineLimit(1)
-            }
-          }
-        } else {
-          Text(summary(planned, of: nights.count))
-            .font(Brand.regular(12))
-            .foregroundStyle(Color("$muted"))
-            .lineLimit(1)
-        }
+        Text(summary(planned, of: nights.count, hidden: nights.count - shown.count))
+          .font(Brand.regular(tall ? 12 : 11))
+          .foregroundStyle(Color("$muted"))
+          .lineLimit(1)
       } else {
         Waiting(hint: "Open Sidequest to plan your week")
       }
@@ -170,41 +220,26 @@ struct WeekView: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
   }
 
-  /// Consecutive evenings on the same game, collapsed — the same unit
-  /// `WeekView` uses in the app, because one game across five nights is
-  /// one fact, not five.
-  private func runs(_ nights: [WeekNight]) -> [String] {
-    var out: [String] = []
-    var current: (title: String, hours: Int, nights: Int)?
-    for night in nights {
-      if var run = current, run.title == night.title {
-        run.hours += night.hours
-        run.nights += 1
-        current = run
-      } else {
-        if let run = current {
-          out.append(line(run))
-        }
-        current = (night.title, night.hours, 1)
-      }
-    }
-    if let run = current { out.append(line(run)) }
-    return out
-  }
-
-  private func line(_ run: (title: String, hours: Int, nights: Int)) -> String {
-    run.nights == 1
-      ? "\(run.title) · \(run.hours)h"
-      : "\(run.title) · \(run.hours)h across \(run.nights)"
-  }
-
-  private func summary(_ planned: [WeekNight], of total: Int) -> String {
+  /**
+   * The week in one line, and what the rows could not show.
+   *
+   * Free nights are counted out loud for the same reason they are
+   * drawn: a week with three evenings back is good news, and news the
+   * app should say rather than leave to be inferred from blank space.
+   */
+  private func summary(
+    _ planned: [WeekNight],
+    of total: Int,
+    hidden: Int
+  ) -> String {
     if planned.isEmpty { return "Nothing planned yet" }
     let free = total - planned.count
     let hours = planned.reduce(0) { $0 + $1.hours }
-    return free == 0
+    var line = free == 0
       ? "\(hours)h planned"
       : "\(hours)h planned · \(free) \(free == 1 ? "night" : "nights") free"
+    if hidden > 0 { line += " · +\(hidden) more" }
+    return line
   }
 }
 
@@ -214,7 +249,7 @@ struct WeekWidget: Widget {
       WeekSurface(entry: entry)
     }
     .configurationDisplayName("This week")
-    .description("The seven evenings ahead, and the ones still free.")
+    .description("The evenings ahead, dated — and the ones still free.")
     /**
      * `systemExtraLarge` is iPad only, and this is the one widget that
      * earns it: seven columns and a list of runs is a shape that gets

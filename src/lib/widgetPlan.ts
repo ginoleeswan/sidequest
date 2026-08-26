@@ -3,7 +3,12 @@ import type { LibraryEntry } from './library';
 import { planItems } from './planning';
 import { planSchedule } from './scheduler';
 import { planWeek } from './week';
-import { planTimeline, pressureOf, type PlanDay } from './widgetData';
+import {
+  horizonShape,
+  planTimeline,
+  pressureOf,
+  type PlanDay,
+} from './widgetData';
 
 /**
  * The plan, worked out for the widgets rather than for a screen.
@@ -72,6 +77,19 @@ export function widgetPlan(input: PlanInput): PlanDay[] {
     lastFinishAt: scheduled[scheduled.length - 1]?.finishAt ?? null,
   };
 
+  /**
+   * Everything already finished, with its date. The window and the cap
+   * belong to `horizonShape`, so the widget's month and the app's
+   * cannot disagree about how much past a month carries.
+   */
+  const landed = entries
+    .filter((entry) => entry.status === 'finished' && entry.finishedAt)
+    .map((entry) => ({
+      id: entry.game.id,
+      name: entry.game.name,
+      finishedAt: entry.finishedAt as number,
+    }));
+
   return planTimeline(
     // The same week, from that morning on. Evenings that have gone fall
     // off the front, and when they have all gone the widget is empty —
@@ -79,6 +97,33 @@ export function widgetPlan(input: PlanInput): PlanDay[] {
     (at) => week.filter((evening) => evening.date >= at),
     (at) =>
       pressureOf(buildAlerts([...entries], hoursOf, pace, at), summary, at),
-    now
+    now,
+    7,
+    scheduled,
+    // Recomputed per morning for the same reason the pressure is: the
+    // marks hold still, but today moves along the strip beneath them,
+    // and a date that could be met on Monday cannot be by Thursday.
+    (at) =>
+      horizonShape(scheduled, landed, troubleAt(entries, hoursOf, pace, at), at)
   );
+}
+
+/**
+ * The one date the plan cannot meet, if there is one.
+ *
+ * The strip draws a single piece of weather rather than all of it: a
+ * widget has room for one warning, and the alert engine already ranks
+ * them, so the first at-risk deadline is the one worth the coral.
+ */
+function troubleAt(
+  entries: readonly LibraryEntry[],
+  hoursOf: (entry: LibraryEntry) => number,
+  pace: number,
+  at: number
+): number | null {
+  const risk = buildAlerts([...entries], hoursOf, pace, at).find(
+    (alert) => alert.kind === 'at-risk' && alert.days != null
+  );
+  if (!risk || risk.days == null) return null;
+  return at + risk.days * 86_400_000;
 }

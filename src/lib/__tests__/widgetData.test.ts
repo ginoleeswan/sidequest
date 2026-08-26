@@ -2,6 +2,7 @@ import type { Alert } from '../alerts';
 import type { Memcard } from '../memcard';
 import type { PlannedEvening } from '../week';
 import {
+  horizonShape,
   midnightOf,
   planTimeline,
   pressureOf,
@@ -10,11 +11,14 @@ import {
   yearShape,
 } from '../widgetData';
 
+const DAY_ONE = new Date(2026, 7, 17).getTime();
+
 const night = (
   weekday: number,
-  games: { name: string; hours: number; finishes?: boolean }[] = []
+  games: { name: string; hours: number; finishes?: boolean }[] = [],
+  date: number = DAY_ONE
 ): PlannedEvening => ({
-  date: 0,
+  date,
   weekday,
   hours: games.reduce((sum, g) => sum + g.hours, 0),
   games: games.map((g, i) => ({
@@ -81,9 +85,76 @@ describe('weekShape', () => {
       night(1, [{ name: 'Hades', hours: 2 }]),
     ]);
     expect(shaped).toEqual([
-      { day: 'SUN', title: '', hours: 0, finishes: false },
-      { day: 'MON', title: 'Hades', hours: 2, finishes: false },
+      {
+        day: 'SUN',
+        date: 17,
+        title: '',
+        hours: 0,
+        finishes: false,
+        colour: -1,
+        named: false,
+      },
+      {
+        day: 'MON',
+        date: 17,
+        title: 'Hades',
+        hours: 2,
+        finishes: false,
+        colour: 0,
+        named: true,
+      },
     ]);
+  });
+
+  /**
+   * "THU" is a repeating label; "THU 28" is a calendar. The widget does
+   * no date formatting of its own, so the day of the month is decided
+   * here — the same discipline as every other field on this shape.
+   */
+  it('names the date, not only the weekday', () => {
+    const shaped = weekShape([
+      night(1, [{ name: 'Hades', hours: 2 }], new Date(2026, 7, 24).getTime()),
+    ]);
+    expect(shaped[0].date).toBe(24);
+  });
+
+  /**
+   * Colour comes from the route, so the block on a Lock Screen and the
+   * block in the app are the same colour for the same game. Sent, not
+   * derived: two copies of a palette is how they drift.
+   */
+  it('paints each game its place in the route', () => {
+    const shaped = weekShape(
+      [
+        night(1, [{ name: 'First', hours: 2 }]),
+        night(2, [{ name: 'Third', hours: 2 }]),
+      ].map((n, i) => ({
+        ...n,
+        games: n.games.map((g) => ({ ...g, id: i === 0 ? 10 : 30 })),
+      })),
+      [{ id: 10 }, { id: 20 }, { id: 30 }]
+    );
+    expect(shaped.map((n) => n.colour)).toEqual([0, 2]);
+  });
+
+  /**
+   * A game across five nights is one fact, not five. The app names a
+   * run once and lets the rest carry the colour; so does the widget,
+   * off the same decision rather than its own copy of the rule.
+   */
+  it('names a run once', () => {
+    // Real ids: the run is decided by identity, not by the name
+    // happening to match, so the fixture has to carry them.
+    const on = (id: number, name: string, weekday: number) => ({
+      ...night(weekday, [{ name, hours: 2 }]),
+      games: [{ id, name, hours: 2, finishes: false }],
+    });
+    const shaped = weekShape([
+      on(1, 'Hades', 1),
+      on(1, 'Hades', 2),
+      on(2, 'Tunic', 3),
+    ]);
+    expect(shaped.map((n) => n.named)).toEqual([true, false, true]);
   });
 
   it('labels every weekday, Sunday first', () => {
@@ -344,5 +415,134 @@ describe('planTimeline', () => {
       'red',
       'red',
     ]);
+  });
+});
+
+/**
+ * The month, for a screen nobody opened.
+ *
+ * Same picture as `components/HorizonStrip`, cropped to what reads at
+ * widget width — and cropped HERE, so the two cannot disagree about
+ * how much past a month carries or how far ahead it looks. Swift is
+ * given an axis and some dates; every decision is already made.
+ */
+describe('horizonShape', () => {
+  const DAY = 86_400_000;
+  const NOW = new Date(2026, 7, 17, 9).getTime();
+  const land = (id: number, name: string, days: number) => ({
+    id,
+    name,
+    finishAt: NOW + days * DAY,
+  });
+
+  it('is nothing at all without a plan', () => {
+    expect(horizonShape([], [], null, NOW)).toBeNull();
+  });
+
+  it('marks the landings ahead, in route order and route colours', () => {
+    const shape = horizonShape(
+      [land(1, 'Hades', 5), land(2, 'Tunic', 20)],
+      [],
+      null,
+      NOW
+    );
+    expect(shape?.marks.map((m) => [m.name, m.colour, m.done])).toEqual([
+      ['Hades', 0, false],
+      ['Tunic', 1, false],
+    ]);
+  });
+
+  /**
+   * Swift formats no dates, the same as it shortens no day names: two
+   * formatters is two answers, and only one of them is on the screen
+   * the person also opened.
+   */
+  it('writes the date out, so the widget never formats one', () => {
+    const shape = horizonShape([land(1, 'Hades', 5)], [], NOW + 3 * DAY, NOW);
+    expect(shape?.marks[0].label).toBe('Aug 22');
+    expect(shape?.troubleLabel).toBe('Aug 20');
+  });
+
+  it('leaves the trouble label empty when there is no trouble', () => {
+    const shape = horizonShape([land(1, 'Hades', 5)], [], null, NOW);
+    expect(shape?.troubleLabel).toBe('');
+  });
+
+  /**
+   * The publisher decides whether to write to the app group at all by
+   * comparing the whole payload as JSON. A schedule recomputed a second
+   * later moves every finishAt by a second, so raw timestamps would
+   * make the plan differ from itself on every settle — a container
+   * write and two widget reloads for a picture nobody could tell apart.
+   */
+  it('is identical for two moments of the same day', () => {
+    const a = horizonShape(
+      [land(1, 'Hades', 5)],
+      [{ id: 9, name: 'Done', finishedAt: NOW - 3 * DAY }],
+      NOW + 3 * DAY,
+      NOW
+    );
+    const b = horizonShape(
+      [{ ...land(1, 'Hades', 5), finishAt: NOW + 5 * DAY + 90_000 }],
+      [{ id: 9, name: 'Done', finishedAt: NOW - 3 * DAY + 90_000 }],
+      NOW + 3 * DAY + 90_000,
+      NOW + 90_000
+    );
+    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+  });
+
+  it('counts the landings it had no room to draw', () => {
+    const shape = horizonShape(
+      [1, 2, 3, 4, 5].map((n) => land(n, `Game ${n}`, n * 10)),
+      [],
+      null,
+      NOW
+    );
+    // Three ahead on a widget, where the page draws four: the same
+    // picture, cropped to what will actually read at that size.
+    expect(shape?.marks).toHaveLength(3);
+    expect(shape?.beyond).toBe(2);
+  });
+
+  it('stamps the most recent finish behind today', () => {
+    const shape = horizonShape(
+      [land(1, 'Tunic', 14)],
+      [
+        { id: 8, name: 'Older', finishedAt: NOW - 15 * DAY },
+        { id: 9, name: 'Newer', finishedAt: NOW - 2 * DAY },
+      ],
+      null,
+      NOW
+    );
+    expect(shape?.marks[0]).toMatchObject({ name: 'Newer', done: true });
+    expect(shape?.marks.map((m) => m.name)).not.toContain('Older');
+    // The axis reaches back to hold it, so the past keeps its true
+    // proportion rather than being squeezed into a fixed slice.
+    expect(shape!.from).toBeLessThan(NOW);
+  });
+
+  it('forgets a finish older than the horizon', () => {
+    const shape = horizonShape(
+      [land(1, 'Tunic', 14)],
+      [{ id: 9, name: 'Ancient', finishedAt: NOW - 90 * DAY }],
+      null,
+      NOW
+    );
+    expect(shape?.marks.every((m) => !m.done)).toBe(true);
+    // Nothing behind today, so the axis does not reach back past it.
+    expect(shape?.from).toBe(midnightOf(NOW));
+  });
+
+  it('stretches the axis to hold a date that cannot be met', () => {
+    const trouble = NOW + 60 * DAY;
+    const shape = horizonShape([land(1, 'Tunic', 5)], [], trouble, NOW);
+    expect(shape?.troubleAt).toBe(midnightOf(trouble));
+    expect(shape!.to).toBeGreaterThan(trouble);
+  });
+
+  /** A plan that ends on Thursday should still read as time, not a wall. */
+  it('never draws a horizon shorter than a fortnight', () => {
+    const shape = horizonShape([land(1, 'Quick', 2)], [], null, NOW);
+    expect(shape!.to - NOW).toBeGreaterThan(14 * DAY);
   });
 });

@@ -43,14 +43,80 @@ struct Tonight: Codable {
 struct WeekNight: Codable, Identifiable {
   /// Three letters, already localised and shortened by the app.
   let day: String
+  /// Day of the month. "THU" is a repeating label; "THU 28" is a date,
+  /// and a calendar is a thing that names dates.
+  let date: Int
   /// Empty for a free evening. Free nights stay free, and the widget
   /// says so rather than hiding them.
   let title: String
   let hours: Int
   let finishes: Bool
+  /// The game's place in the route, which is what decides its colour.
+  /// -1 when the evening is free. Sent by the app rather than worked
+  /// out here: two copies of a palette is how a Lock Screen ends up
+  /// amber where the app is mint.
+  let colour: Int
+  /// Whether this evening carries the game's name. A run of one game
+  /// is named once; the rest carry the colour and their own hours.
+  let named: Bool
 
-  var id: String { day }
+  var id: String { "\(day)-\(date)" }
   var isFree: Bool { title.isEmpty }
+}
+
+/**
+ * The plan's three colours, indexed the way `lib/planColours` indexes
+ * them. Anything out of range wraps, exactly as the app's modulo does,
+ * so a fourth game is amber again rather than invisible.
+ */
+func planColour(_ index: Int) -> Color {
+  let palette = [Color("$accent"), Color("$violet"), Color("$mint")]
+  guard index >= 0 else { return Color("$muted") }
+  return palette[index % palette.count]
+}
+
+/** One mark on the month strip: a landing ahead, or a stamp behind. */
+struct HorizonMark: Codable, Identifiable {
+  let name: String
+  /// Epoch milliseconds the mark stands on — for WHERE it goes, which
+  /// is the one thing only this side can work out.
+  let at: Double
+  /// The date as it should be read, already formatted by the app.
+  /// Nothing here formats a date; see `WeekNight.day`.
+  let label: String
+  let colour: Int
+  /// The credits already rolled — the slot is stamped, not empty.
+  let done: Bool
+
+  var id: String { "\(name)-\(at)" }
+}
+
+/**
+ * The month, as the app decided it.
+ *
+ * The axis arrives rather than the positions: where a mark sits depends
+ * on how wide the widget happens to be, which is the one thing only
+ * this side can know. Which marks, in what order, what colour, how far
+ * back — all already settled.
+ */
+struct Horizon: Codable {
+  let from: Double
+  let to: Double
+  let now: Double
+  let marks: [HorizonMark]
+  /// A date the plan cannot meet, epoch ms, or absent for none.
+  let troubleAt: Double?
+  /// That date, already formatted. Empty when there is no trouble.
+  let troubleLabel: String
+  /// Landings there was no room to draw.
+  let beyond: Int
+
+  /// Where a moment falls along the strip, 0 to 1.
+  func fraction(of at: Double) -> Double {
+    let span = to - from
+    guard span > 0 else { return 0 }
+    return min(1, max(0, (at - from) / span))
+  }
 }
 
 /**
@@ -69,9 +135,17 @@ struct Pressure: Codable {
   /// Negative when the date has already gone, which is a real state.
   let days: Int?
 
+  /**
+   * The colour the app paints this state, not a colour of the widget's
+   * own. A deadline that cannot be met is coral everywhere in
+   * Sidequest — the diamond on the month strip, the way out on the
+   * misfit row — and this used to be violet here, which made the
+   * loudest state on somebody's Lock Screen the one colour the app
+   * never uses for it. Violet is the evening; coral is trouble.
+   */
   var tint: Color {
     switch urgency {
-    case "red": return Color("$violet")
+    case "red": return Color("$coral")
     case "amber": return Color("$accent")
     default: return Color("$muted")
     }
@@ -116,6 +190,8 @@ struct PlanDay: Codable {
   /// Nothing left to play. An empty state, not a missing one.
   let tonight: Tonight?
   let nights: [WeekNight]
+  /// The month from this morning. Absent when there is no plan.
+  let horizon: Horizon?
   let pressure: Pressure
 
   var date: Date { Date(timeIntervalSince1970: at / 1000) }

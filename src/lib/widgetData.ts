@@ -34,10 +34,78 @@ export interface TonightShape {
 export interface WeekNightShape {
   /** Three letters, already shortened here so Swift does no formatting. */
   day: string;
+  /**
+   * Day of the month, so the widget can name a date rather than only a
+   * weekday. "THU" is a repeating label; "THU 28" is a calendar.
+   */
+  date: number;
   /** Empty for a free evening. */
   title: string;
   hours: number;
   finishes: boolean;
+  /**
+   * Which of the plan's three colours this evening wears — the game's
+   * position in the route, exactly as `planColour` indexes it, or -1
+   * when the evening is free.
+   *
+   * Sent rather than derived, because the alternative is the widget
+   * holding a rule about colour that the app also holds. Two copies of
+   * a palette is how a Lock Screen ends up amber where the app is mint.
+   */
+  colour: number;
+  /**
+   * Whether this evening carries the game's name.
+   *
+   * A game across five nights is one fact, not five, so the app names a
+   * run once and lets the rest carry the colour. The decision is made
+   * here for the same reason the colour is.
+   */
+  named: boolean;
+}
+
+/** One mark on the month strip: a landing ahead, or a stamp behind. */
+export interface HorizonMarkShape {
+  name: string;
+  /**
+   * Epoch ms the mark stands on — for WHERE it goes, which depends on
+   * how wide the widget is and so can only be decided over there.
+   */
+  at: number;
+  /**
+   * The date as it should be read, already formatted. Swift does no
+   * date formatting, the same as it does no day-name shortening: two
+   * formatters is two answers, and only one of them is on the screen
+   * the person also opened.
+   */
+  label: string;
+  /** Route position for the colour, as `planColour` indexes it. */
+  colour: number;
+  /** The credits already rolled — the slot is stamped, not empty. */
+  done: boolean;
+}
+
+/**
+ * The month, as the widget draws it.
+ *
+ * The axis is sent, not the positions: where a mark sits depends on how
+ * wide the widget happens to be, which is the one thing only Swift can
+ * know. Everything that is a DECISION — which marks, in what order,
+ * what colour, how far back to remember — is made here, so the strip on
+ * a Home Screen and the strip in the app cannot drift.
+ */
+export interface HorizonShape {
+  /** The axis, epoch ms. */
+  from: number;
+  to: number;
+  /** Where today falls on it, epoch ms. */
+  now: number;
+  marks: HorizonMarkShape[];
+  /** A date the plan cannot meet, epoch ms, or null for none. */
+  troubleAt: number | null;
+  /** That date, already formatted. Empty when there is no trouble. */
+  troubleLabel: string;
+  /** Landings there was no room to draw. */
+  beyond: number;
 }
 
 /** The memory card, as twelve lit-or-not months. */
@@ -177,14 +245,38 @@ export function tonightShape(
   };
 }
 
-/** The seven evenings, free ones included and marked as free. */
-export function weekShape(week: readonly PlannedEvening[]): WeekNightShape[] {
-  return week.map((night) => ({
-    day: DAYS[night.weekday] ?? '',
-    title: night.games[0]?.name ?? '',
-    hours: Math.round(night.games.reduce((sum, g) => sum + g.hours, 0)),
-    finishes: night.games.some((g) => g.finishes),
-  }));
+/**
+ * The seven evenings, free ones included and marked as free.
+ *
+ * `order` is the route — the scheduled games in the order the plan puts
+ * them — and it decides the colours, so the strip on a Lock Screen and
+ * the agenda in the app paint the same game the same way.
+ *
+ * An evening reports its LEAD game. Two games on one night is still one
+ * evening, and a widget has room for one name; the hours are the whole
+ * evening's, which answers "how long am I in for".
+ */
+export function weekShape(
+  week: readonly PlannedEvening[],
+  order: readonly { id: number }[] = []
+): WeekNightShape[] {
+  const position = new Map(order.map((item, index) => [item.id, index]));
+  let carried: number | null = null;
+
+  return week.map((night) => {
+    const lead = night.games[0];
+    const named = lead != null && lead.id !== carried;
+    if (lead) carried = lead.id;
+    return {
+      day: DAYS[night.weekday] ?? '',
+      date: new Date(night.date).getDate(),
+      title: lead?.name ?? '',
+      hours: Math.round(night.games.reduce((sum, g) => sum + g.hours, 0)),
+      finishes: night.games.some((g) => g.finishes),
+      colour: lead ? (position.get(lead.id) ?? 0) : -1,
+      named,
+    };
+  });
 }
 
 /**
@@ -205,6 +297,102 @@ export function yearShape(card: Memcard): YearShape {
     count: card.count,
     hours: Math.round(card.hours),
     months,
+  };
+}
+
+/** A game whose credits already rolled, for the strip behind today. */
+export interface LandedInput {
+  id: number;
+  name: string;
+  finishedAt: number;
+}
+
+/**
+ * How far back the strip remembers, and how much of it it draws.
+ *
+ * Three weeks matches the alert horizon, so the app looks the same
+ * distance in both directions. The counts are lower than the in-app
+ * strip's because a widget is narrower than a page — the picture is the
+ * same picture, cropped to what will actually read at that size.
+ */
+const HORIZON_BACK_DAYS = 21;
+const HORIZON_AHEAD = 3;
+const HORIZON_LANDED = 1;
+
+/**
+ * A date as the strip prints it — the same short form the plan page
+ * uses for a landing, so the two say "Sep 5" the same way.
+ */
+const markLabel = (at: number) =>
+  new Date(at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+/**
+ * The month strip, decided.
+ *
+ * `scheduled` is the route in order; `landed` is everything finished,
+ * unfiltered — the window and the caps are applied here so that no
+ * caller can pick a different past.
+ */
+export function horizonShape(
+  scheduled: readonly { id: number; name: string; finishAt: number }[],
+  landed: readonly LandedInput[],
+  troubleAt: number | null,
+  now: number
+): HorizonShape | null {
+  if (scheduled.length === 0) return null;
+
+  const recent = landed
+    .filter(
+      (item) =>
+        item.finishedAt <= now &&
+        item.finishedAt >= now - HORIZON_BACK_DAYS * DAY_MS
+    )
+    .sort((a, b) => a.finishedAt - b.finishedAt)
+    .slice(-HORIZON_LANDED);
+
+  const near = scheduled.slice(0, HORIZON_AHEAD);
+  const lastFinish = near[near.length - 1].finishAt;
+  const latest = Math.max(lastFinish, troubleAt ?? 0, now + 14 * DAY_MS);
+  const to = latest + Math.max((latest - now) * 0.08, 2 * DAY_MS);
+  // True proportion both ways: a game finished three days ago sits
+  // three days back. See components/HorizonStrip for why.
+  const from = recent.length
+    ? Math.min(now, recent[0].finishedAt) - DAY_MS
+    : now;
+
+  /**
+   * Every timestamp lands on a midnight, and that is load-bearing.
+   *
+   * A month strip has no use for milliseconds — it prints dates — but
+   * the publisher decides whether to write at all by comparing the
+   * whole payload as JSON, and a schedule recomputed a second later
+   * moves every `finishAt` by a second. Raw timestamps would make the
+   * plan differ from itself on every settle, costing a container write
+   * and two widget reloads for a picture nobody could tell apart.
+   */
+  return {
+    from: midnightOf(from),
+    to: midnightOf(to),
+    now: midnightOf(now),
+    marks: [
+      ...recent.map((item) => ({
+        name: item.name,
+        at: midnightOf(item.finishedAt),
+        label: markLabel(item.finishedAt),
+        colour: -1,
+        done: true,
+      })),
+      ...near.map((item, index) => ({
+        name: item.name,
+        at: midnightOf(item.finishAt),
+        label: markLabel(item.finishAt),
+        colour: index,
+        done: false,
+      })),
+    ],
+    troubleAt: troubleAt != null ? midnightOf(troubleAt) : null,
+    troubleLabel: troubleAt != null ? markLabel(troubleAt) : '',
+    beyond: scheduled.length - near.length,
   };
 }
 
@@ -233,6 +421,8 @@ export interface PlanDay {
   tonight: TonightShape | null;
   /** The seven-day strip as it stands that morning. */
   nights: WeekNightShape[];
+  /** The month, from that morning. Null when there is no plan. */
+  horizon: HorizonShape | null;
   pressure: Pressure;
 }
 
@@ -259,7 +449,13 @@ export function planTimeline(
   weekFor: (at: number) => readonly PlannedEvening[],
   pressureFor: (at: number) => Pressure,
   now: number,
-  days = 7
+  days = 7,
+  /**
+   * The route, for the colours — and the month, from each morning.
+   * Optional so the pure timeline can still be exercised on its own.
+   */
+  order: readonly { id: number }[] = [],
+  horizonFor: (at: number) => HorizonShape | null = () => null
 ): PlanDay[] {
   const start = midnightOf(now);
   const timeline: PlanDay[] = [];
@@ -272,7 +468,8 @@ export function planTimeline(
     timeline.push({
       at,
       tonight: tonightShape(week),
-      nights: weekShape(week),
+      nights: weekShape(week, order),
+      horizon: horizonFor(at),
       pressure: pressureFor(at),
     });
   }
