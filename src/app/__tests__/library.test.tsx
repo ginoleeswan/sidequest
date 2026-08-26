@@ -235,3 +235,34 @@ describe('the last cell', () => {
     expect(screen.queryByLabelText('Find a game to add')).toBeNull();
   });
 });
+
+/**
+ * The shelf's own voice.
+ *
+ * §2.1 says guilt reading is the enemy, and every other surface was
+ * rewritten to answer rather than accuse — the Plan says what will get
+ * done, the misfits say "and that's allowed", a free evening says
+ * "free". The Library was still keeping score in the largest numeral
+ * in the app, on the page opened most.
+ */
+describe('what the shelf calls its hours', () => {
+  it('is an inventory, not a debt', async () => {
+    seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
+    await renderApp(<LibraryScreen />);
+    await waitFor(() => expect(screen.getByText('on your shelf')).toBeTruthy());
+    // "ahead of you" is a road you are late down. Same number, and it
+    // still earns its size — it is what the Plan runs on.
+    expect(screen.queryByText('ahead of you')).toBeNull();
+  });
+
+  it('leads with the credits when there are any', async () => {
+    seed([
+      { game: game(1, 'Celeste', 12), status: 'wishlist' },
+      { game: game(2, 'Inside', 4), status: 'finished' },
+    ]);
+    await renderApp(<LibraryScreen />);
+    // The app's whole thesis is finishing; where the shelf has evidence
+    // of it, it goes first rather than last and quietest.
+    await waitFor(() => expect(screen.getByText(/^1 finished/)).toBeTruthy());
+  });
+});

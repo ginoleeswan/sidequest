@@ -52,6 +52,7 @@ import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { formatHours } from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
 import { usePersistedState } from '@/hooks/usePersistedState';
+import { usePlanStanding } from '@/hooks/usePlanStanding';
 import { findSection } from '@/constants/categories';
 import { COLORS } from '@/styles/colors';
 import { DURATION, EASING } from '@/styles/motion';
@@ -86,14 +87,17 @@ function StatStrip({
   game,
   onEditLength,
   onOpenGenre,
+  onOpenPlan,
 }: {
   game: GameDetail;
   onEditLength: () => void;
   onOpenGenre: (genre: Named) => void;
+  onOpenPlan: () => void;
 }) {
   const { durationOf } = useDurations();
   const duration = durationOf(game);
   const [pace] = usePersistedState('sidequest.plan.pace', 6);
+  const standing = usePlanStanding(game.id);
 
   /**
    * One figure, one sentence, one quiet line.
@@ -192,14 +196,53 @@ function StatStrip({
 
       {/* The sentence no other games database can write. A length is an
           abstraction until it is measured against the hours somebody
-          actually has — which this app knows, because the Plan asked. */}
-      {duration.hours > 0 && (
+          actually has — which this app knows, because the Plan asked.
+
+          And when the game is actually IN the plan, it says the real
+          answer instead. "About 3 weeks at 8h a week" is true of
+          anybody with that pace; "credits around 5 September, third in
+          your route" is true of this reader, and the app already knew
+          it two taps away. One line, not both: two sentences about how
+          long something takes is the soup the Plan was rescued from. */}
+      {standing?.kind === 'scheduled' ? (
+        <Text
+          style={[styles.statPace, styles.statPlan]}
+          onPress={onOpenPlan}
+          suppressHighlighting
+          accessibilityRole="link"
+          accessibilityLabel={`Open your plan — ${game.name} is number ${
+            standing.position + 1
+          }`}
+        >
+          #{standing.position + 1} in your plan · credits around{' '}
+          {new Date(standing.finishAt).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+          })}
+          <Text style={styles.statArrow}> →</Text>
+        </Text>
+      ) : standing?.kind === 'dropped' ? (
+        /* The relief stance, on a page about one game: the window has
+           no room for it and that is a fact about the window, not a
+           failing of the reader. §2.1 — no line in this app tells
+           somebody they are behind. */
+        <Text
+          style={styles.statPace}
+          onPress={onOpenPlan}
+          suppressHighlighting
+          accessibilityRole="link"
+          accessibilityLabel="Open your plan"
+        >
+          More than your window holds. It’ll still be here.
+          <Text style={styles.statArrow}> →</Text>
+        </Text>
+      ) : duration.hours > 0 ? (
         <Text style={styles.statPace}>
           {duration.hours <= pace
             ? `Under a week at ${pace}h a week.`
             : `About ${Math.round(duration.hours / pace)} weeks at ${pace}h a week.`}
         </Text>
-      )}
+      ) : null}
 
       {meta.length > 0 && (
         <View style={styles.metaLine}>
@@ -406,6 +449,7 @@ export default function GameInfoScreen() {
           game={game}
           onEditLength={() => setEditingLength(true)}
           onOpenGenre={openGenre}
+          onOpenPlan={() => router.push('/plan')}
         />
       </View>
     </View>
@@ -474,6 +518,7 @@ export default function GameInfoScreen() {
             game={game}
             onEditLength={() => setEditingLength(true)}
             onOpenGenre={openGenre}
+            onOpenPlan={() => router.push('/plan')}
           />
           {/*
             Stretched on purpose. The copy column top-aligns its
@@ -855,6 +900,14 @@ const styles = StyleSheet.create({
    * was the least readable text in the app.
    */
   statBlock: { gap: SPACING.xs, marginTop: SPACING.xs },
+  /**
+   * The plan's own answer, and a way into it. Amber because it is a
+   * link and every link in this app is amber — and because it is the
+   * one line on the page that is about the reader rather than the
+   * game.
+   */
+  statPlan: { color: COLORS.accent },
+  statArrow: { ...TYPE.labelTiny },
   /** The hours, at the size the Library sets the hours ahead of you. */
   hoursLine: { flexDirection: 'row', alignItems: 'baseline', gap: SPACING.sm },
   hoursValue: {
