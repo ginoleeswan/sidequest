@@ -954,7 +954,38 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: SPACING.xl * 1.5,
   },
-  colLeft: { width: 400, gap: SPACING.xl },
+  /**
+   * The rail, pinned once there is room for one.
+   *
+   * The two columns were designed at a width where both carried
+   * weight; measured at 1280 the left one runs 434px against the
+   * right's 1278, so two thirds of it is empty and a reader scrolls
+   * fifteen hundred pixels past a blank half-page.
+   *
+   * Pinning it rather than moving a block into it, because the order
+   * these appear in is the same list on a phone — colLeft's children
+   * render before colRight's when the columns collapse — and the
+   * mobile order is deliberate: tonight, the week, the route, the
+   * dials, most-used first. Reordering to balance a desktop column
+   * would rewrite the page everyone actually reads on.
+   *
+   * So the empty space becomes the point. Tonight's answer stays on
+   * screen while the week and the month scroll past it, which is the
+   * one thing on this page worth keeping in view.
+   */
+  colLeft: {
+    width: 400,
+    gap: SPACING.xl,
+    ...(Platform.OS === 'web'
+      ? {
+          // Not in RN's type surface; the same cast the app already
+          // makes in `import`, `tidy` and `ScrollStage`.
+          position: 'sticky' as unknown as 'absolute',
+          // Clear of the header bar that is itself pinned up there.
+          top: 96 + SPACING.xl,
+        }
+      : null),
+  },
   colRight: { flex: 1, gap: SPACING.xl },
   routeNote: {
     ...TYPE.p,

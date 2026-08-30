@@ -1078,7 +1078,31 @@ const styles = StyleSheet.create({
   fileSectionLast: { borderBottomWidth: 0 },
   /** A label, at the size of a label — not a fourth headline. */
   fileLabel: { ...TYPE.micro, color: COLORS.mediumGrey },
-  aboutText: { ...TYPE.body, color: COLORS.lightGrey, lineHeight: 23 },
+  /**
+   * A measure, because a wide column is not a readable one.
+   *
+   * At an expanded width this paragraph had 760px to run in, which at
+   * 14px measured 116 characters a line — half again past the 45–75
+   * where the eye still finds the start of the next one. It is the
+   * longest prose in the app and the only place set that wide, so it
+   * was also the only place the problem showed.
+   *
+   * 480 rather than a rounder number because it was measured, in the
+   * face this actually renders in, against the band it has to land in:
+   * 73 characters. 560 would have looked like restraint and still read
+   * at 85.
+   *
+   * A flat cap rather than a branch on the breakpoint: a phone column
+   * is already narrower than this, so the rule does nothing there and
+   * there is no second layout to keep in step. The white space it
+   * leaves beside the paragraph is the point, not a gap to fill.
+   */
+  aboutText: {
+    ...TYPE.body,
+    color: COLORS.lightGrey,
+    lineHeight: 23,
+    maxWidth: 480,
+  },
   metaRow: { gap: 2, marginBottom: SPACING.sm },
   metaLabel: {
     ...TYPE.micro,
