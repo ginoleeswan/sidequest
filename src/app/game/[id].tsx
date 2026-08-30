@@ -83,6 +83,38 @@ function decodeEntities(text: string): string {
 
 /* ------------------------------------------------------------------ atoms */
 
+/**
+ * The length, drawn as the weeks it will actually take.
+ *
+ * "About 12 weeks at 6h a week" is the sentence no other games database
+ * can write — a length is an abstraction until it is measured against
+ * the hours somebody actually has, and this app knows those because the
+ * Plan asked. It was set in 12px grey under the figure, which is fine
+ * print for the one claim the page exists to make.
+ *
+ * So it is drawn. One bar per week, across the column, in the amber the
+ * Plan already uses for an evening that is spoken for — the same
+ * vocabulary as the week strip, so a reader who has seen the Plan has
+ * seen this before. The figure says how long; the rule says how long
+ * that is in the only unit a person schedules in.
+ *
+ * Desktop only, and not because the phone could not hold it: at 375 the
+ * bars for a long game fall below the width where a bar reads as a bar
+ * rather than a hairline, and a rule you cannot count is decoration.
+ */
+function WeekRule({ weeks }: { weeks: number }) {
+  // A year of Sundays is the most this can say and still be counted.
+  // Past that the bars stop being a measure and the caption carries it.
+  const drawn = Math.min(weeks, 52);
+  return (
+    <View style={styles.weekRule} accessibilityElementsHidden>
+      {Array.from({ length: drawn }, (_, index) => (
+        <View key={index} style={styles.weekTick} />
+      ))}
+    </View>
+  );
+}
+
 function StatStrip({
   game,
   onEditLength,
@@ -171,7 +203,7 @@ function StatStrip({
   }
 
   return (
-    <View style={styles.statBlock}>
+    <View style={[styles.statBlock, wide && styles.statBlockWide]}>
       {/* The length is the one fact a person can out-know the data on,
           so it is the one fact they can change. */}
       <Pressable
@@ -196,6 +228,10 @@ function StatStrip({
           </Text>
         </View>
       </Pressable>
+
+      {wide && duration.hours > 0 && pace > 0 ? (
+        <WeekRule weeks={Math.max(1, Math.ceil(duration.hours / pace))} />
+      ) : null}
 
       {/* The sentence no other games database can write. A length is an
           abstraction until it is measured against the hours somebody
@@ -959,6 +995,14 @@ const styles = StyleSheet.create({
    */
   statBlock: { gap: SPACING.xs, marginTop: SPACING.xs },
   /**
+   * The copy column top-aligns its children so pills keep their natural
+   * width, which leaves this block as wide as its widest line — about
+   * 90pt, the width of "74h to finish". The rule inside it has to span
+   * the track or it is a motif rather than a measure, so the block
+   * stretches and the lines inside it go on starting at the left.
+   */
+  statBlockWide: { alignSelf: 'stretch' },
+  /**
    * The plan's own answer, and a way into it. Amber because it is a
    * link and every link in this app is amber — and because it is the
    * one line on the page that is about the reader rather than the
@@ -987,7 +1031,27 @@ const styles = StyleSheet.create({
    * takes. 48 restores the ratio rather than picking a number that
    * looks about right.
    */
-  hoursValueWide: { fontSize: 48, lineHeight: 52 },
+  hoursValueWide: { fontSize: 76, lineHeight: 80 },
+
+  /**
+   * Full width of its track, so the rule is a measure and not a motif.
+   * Equal flex rather than a fixed tick: twelve weeks and thirty-four
+   * both have to span the same distance or the drawing says something
+   * about the column instead of about the game.
+   */
+  weekRule: {
+    flexDirection: 'row',
+    alignSelf: 'stretch',
+    gap: 3,
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.xs,
+  },
+  weekTick: {
+    flex: 1,
+    height: 10,
+    borderRadius: 2,
+    backgroundColor: COLORS.accent,
+  },
   hoursLabel: {
     ...TYPE.body,
     ...OVER_IMAGE.body,
