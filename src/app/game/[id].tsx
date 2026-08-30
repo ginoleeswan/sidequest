@@ -88,11 +88,14 @@ function StatStrip({
   onEditLength,
   onOpenGenre,
   onOpenPlan,
+  wide = false,
 }: {
   game: GameDetail;
   onEditLength: () => void;
   onOpenGenre: (genre: Named) => void;
   onOpenPlan: () => void;
+  /** The desktop masthead, where the type scale is a size larger. */
+  wide?: boolean;
 }) {
   const { durationOf } = useDurations();
   const duration = durationOf(game);
@@ -177,7 +180,7 @@ function StatStrip({
         accessibilityLabel={`Change how long ${game.name} takes`}
       >
         <View style={styles.hoursLine}>
-          <Text style={styles.hoursValue}>
+          <Text style={[styles.hoursValue, wide && styles.hoursValueWide]}>
             {duration.hours > 0 ? formatHours(duration.hours) : 'Set'}
             {duration.rough && duration.hours > 0 ? (
               <Text style={styles.statFlag}> ?</Text>
@@ -519,6 +522,7 @@ export default function GameInfoScreen() {
             onEditLength={() => setEditingLength(true)}
             onOpenGenre={openGenre}
             onOpenPlan={() => router.push('/plan')}
+            wide
           />
           {/*
             Stretched on purpose. The copy column top-aligns its
@@ -918,6 +922,18 @@ const styles = StyleSheet.create({
     ...OVER_IMAGE.heading,
     color: COLORS.white,
   },
+  /**
+   * The same figure, kept ahead of a bigger title.
+   *
+   * This page leads with time — the hours are set larger than the name
+   * on purpose, 34 against a 32 title. The desktop masthead then took
+   * the title to 44 and left the figure at 34, which quietly inverted
+   * the one decision the page is built on: the game's name became the
+   * biggest thing on a page that is supposed to answer how long it
+   * takes. 48 restores the ratio rather than picking a number that
+   * looks about right.
+   */
+  hoursValueWide: { fontSize: 48, lineHeight: 52 },
   hoursLabel: {
     ...TYPE.body,
     ...OVER_IMAGE.body,
@@ -977,22 +993,45 @@ const styles = StyleSheet.create({
     bottom: 0,
     opacity: 0.75,
   },
+  /**
+   * The masthead, on the grid the rest of the page is already on.
+   *
+   * It used to run its own: copy at `flex: 1` against art at 42% with a
+   * 48pt gutter, which at 1280 measured 620 and 484 — while everything
+   * below it measured 760 and 360 with a 32pt gutter. The art's left
+   * edge landed 123pt inside the main column, on neither track, so a
+   * reader scanning down the page met one rhythm at the top and a
+   * different one underneath.
+   *
+   * Same ratio, same gutter, same cap as `twoColumn` now. The artwork
+   * gives up 120pt of width to become the head of the rail rather than
+   * a block floating over the gutter — and the rail reads as one column
+   * from the art down through the file.
+   */
   deskHeroInner: {
     width: '100%',
     maxWidth: LAYOUT.maxExpandedWidth,
     alignSelf: 'center',
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xl * 1.5,
+    // Hung from one line rather than centred against each other. The
+    // artwork is taller than the copy, so centring pushed its top edge
+    // below the title's and left the masthead with no shared line to
+    // read across — the one alignment a two-track header has.
+    alignItems: 'flex-start',
+    gap: SPACING.xl,
     paddingHorizontal: SPACING.xl * 2,
     // clears the fixed immersive header, then the usual breathing room
     paddingTop: 58 + SPACING.xl,
     paddingBottom: SPACING.xl * 1.6,
   },
   deskHeroCopy: {
-    flex: 1,
+    flex: 2,
     gap: SPACING.sm,
     alignItems: 'flex-start',
+    // Yoga hands a flex child its content's width as a floor, and a
+    // long title would otherwise widen this track past its share and
+    // push the art off the rail.
+    minWidth: 0,
   },
   deskStatus: {
     alignSelf: 'stretch',
@@ -1007,8 +1046,8 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
   deskArtFrame: {
-    width: '42%',
-    maxWidth: 520,
+    flex: 1,
+    maxWidth: 360,
     borderRadius: RADIUS.lg,
     ...SHADOW.card,
   },
