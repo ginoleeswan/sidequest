@@ -33,9 +33,19 @@ interface Props {
    * art runs underneath the chrome instead of stopping at it.
    */
   immersive?: boolean;
+  /**
+   * The band the page underneath is using, when it is not the app's.
+   *
+   * The bar spans the window and centres its contents on the app's
+   * expanded cap, which is right for a page that does the same. A page
+   * with a narrower measure ends up with a wordmark at 32 and a title
+   * at 244 — two left edges, and a composition with no spine. Passing
+   * the page's own cap puts them on one.
+   */
+  band?: number;
 }
 
-export function AppHeader({ immersive = false }: Props) {
+export function AppHeader({ immersive = false, band }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
@@ -70,7 +80,7 @@ export function AppHeader({ immersive = false }: Props) {
           pointerEvents="none"
         />
       )}
-      <View style={styles.inner}>
+      <View style={[styles.inner, band ? { maxWidth: band } : null]}>
         <Pressable
           onPress={() => router.push('/')}
           accessibilityRole="link"

@@ -62,6 +62,39 @@ import { OVER_IMAGE, TYPE } from '@/styles/typography';
 
 const HTML_TAGS = /(<([^>]+)>)/gi;
 
+/**
+ * How wide this page is allowed to get, whatever the monitor is.
+ *
+ * The app's expanded cap is 1600, which suits a grid of tiles and
+ * ruins a page of prose: past about 1300 the main column reached 964
+ * while the paragraph inside it stayed at its 480pt measure, so half
+ * the column was empty, the controls floated 460pt from the artwork,
+ * and nothing in the masthead shared an edge with anything else.
+ *
+ * 1080 is derived rather than chosen: 560 for the column — the measure
+ * plus a margin, not a void — 32 for the gutter, 360 for the rail, and
+ * the page's own 64 on each side. Everything past that goes to the
+ * margins, where a wide monitor is supposed to put it.
+ */
+const PAGE_MAX = 1080;
+
+/** The rail, and so the second track of every band on the page. */
+const RAIL = 360;
+
+/**
+ * The band the site header has to use to land on the page's left edge.
+ *
+ * The bar insets its contents by SPACING.xl and this page insets its
+ * bands by twice that, so handing the header the same cap would leave
+ * the wordmark 32pt outside the title — two left edges, which is what
+ * the composition had and what a reader reads as no spine at all.
+ * Narrowing the header's band by the difference puts the wordmark, the
+ * title, About and Player verdict on one line, and the nav on the same
+ * right edge as the rail. The artwork is then the only thing that
+ * crosses either, which is what makes it read as a decision.
+ */
+const HEADER_BAND = PAGE_MAX - SPACING.xl * 2;
+
 /** How far the chrome join reaches below the safe area. */
 const WELD_HEIGHT = 190;
 
@@ -407,7 +440,7 @@ export default function GameInfoScreen() {
             document too, so they need it just as much. */}
         {!isExpanded && <ChromeWeld height={insets.top + WELD_HEIGHT} />}
         {isExpanded ? (
-          <AppHeader immersive />
+          <AppHeader immersive band={HEADER_BAND} />
         ) : (
           <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
             <BackButton onImage />
@@ -438,10 +471,7 @@ export default function GameInfoScreen() {
     game.description.replace(HTML_TAGS, '')
   ).trim();
   const gutter = isExpanded
-    ? Math.max(
-        SPACING.xl * 2,
-        (width - LAYOUT.maxExpandedWidth) / 2 + SPACING.xl * 2
-      )
+    ? Math.max(SPACING.xl * 2, (width - PAGE_MAX) / 2 + SPACING.xl * 2)
     : SPACING.md;
   const railInset = gutter;
 
@@ -592,7 +622,16 @@ export default function GameInfoScreen() {
           <SessionTimer game={game} />
           <Commitment gameId={game.id} />
         </View>
-        <View style={styles.deskArtFrame}>
+        <View
+          style={[
+            styles.deskArtFrame,
+            // The distance from the rail's right edge to the window's,
+            // which is the page margin the cap creates plus the band's
+            // own padding — the same number the media rails already
+            // bleed by, so the two agree on where the page ends.
+            { width: RAIL + gutter, marginRight: -gutter },
+          ]}
+        >
           <CoverImage
             uri={game.background_image}
             style={styles.deskArt}
@@ -858,7 +897,7 @@ export default function GameInfoScreen() {
       <PageTitle>{`${game.name} — Sidequest`}</PageTitle>
       <View style={styles.container}>
         {isExpanded ? (
-          <AppHeader immersive />
+          <AppHeader immersive band={HEADER_BAND} />
         ) : (
           <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
             <BackButton onImage />
@@ -1113,7 +1152,7 @@ const styles = StyleSheet.create({
     gap: SPACING.xl,
     alignItems: 'flex-start',
     width: '100%',
-    maxWidth: LAYOUT.maxExpandedWidth,
+    maxWidth: PAGE_MAX,
     alignSelf: 'center',
     paddingHorizontal: SPACING.xl * 2,
     paddingTop: SPACING.lg,
@@ -1154,7 +1193,7 @@ const styles = StyleSheet.create({
    */
   deskHeroInner: {
     width: '100%',
-    maxWidth: LAYOUT.maxExpandedWidth,
+    maxWidth: PAGE_MAX,
     alignSelf: 'center',
     flexDirection: 'row',
     // Hung from one line rather than centred against each other. The
@@ -1215,18 +1254,16 @@ const styles = StyleSheet.create({
    * spent. The negative margin is the inner's own gutter, so the art
    * reaches the viewport rather than a number that happens to match.
    */
+  /*
+   * Sized, not flexed — the width arrives from the render. A negative
+   * margin on a flex child is taken off the space it asks the row for,
+   * so flexing it made the bleed come out of the tracks themselves:
+   * the art landed at 885 and the copy stretched to 789, against 856
+   * and 760 everywhere else. At the rail's width plus the margin it
+   * spends, the outer box still measures the rail — so the row divides
+   * exactly as the bands below it do, and only the picture crosses.
+   */
   deskArtFrame: {
-    /*
-     * Sized, not flexed. A negative margin on a flex child is taken off
-     * the space it asks the row for, so flexing it made the bleed come
-     * out of the tracks themselves: the art landed at 885 and the copy
-     * stretched to 789, against 856 and 760 everywhere else on the
-     * page. Fixed at the rail's width plus the gutter it spends, the
-     * outer box still measures 360 — so the row divides exactly as the
-     * bands below it do, and only the picture crosses the line.
-     */
-    width: 360 + SPACING.xl * 2,
-    marginRight: -(SPACING.xl * 2),
     borderTopLeftRadius: RADIUS.lg,
     borderBottomLeftRadius: RADIUS.lg,
     overflow: 'hidden',
@@ -1239,14 +1276,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: COLORS.navy,
   },
-  columnMain: { flex: 2, gap: SPACING.sm },
+  columnMain: { flex: 1, minWidth: 0, gap: SPACING.sm },
   /** Full width, and split so neither half runs to a 1152pt measure. */
   recordBand: {
     flexDirection: 'row',
     gap: SPACING.xl,
     alignItems: 'flex-start',
     width: '100%',
-    maxWidth: LAYOUT.maxExpandedWidth,
+    maxWidth: PAGE_MAX,
     alignSelf: 'center',
     paddingHorizontal: SPACING.xl * 2,
   },
@@ -1263,9 +1300,9 @@ const styles = StyleSheet.create({
    * that wrap to fill whatever they are given. Put the other way round
    * the band would stand 60pt taller for the same content.
    */
-  recordDetails: { flex: 2, minWidth: 0 },
-  recordTags: { flex: 1, maxWidth: 360, minWidth: 0 },
-  columnRail: { flex: 1, gap: SPACING.md, maxWidth: 360 },
+  recordDetails: { flex: 1, minWidth: 0 },
+  recordTags: { width: RAIL },
+  columnRail: { width: RAIL, gap: SPACING.md },
   railCard: {
     backgroundColor: COLORS.navy,
     borderRadius: RADIUS.md,
