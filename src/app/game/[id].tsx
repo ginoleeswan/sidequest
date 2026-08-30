@@ -753,6 +753,23 @@ export default function GameInfoScreen() {
    * the way the Plan's does — so the section can be read at a glance
    * and studied only if you want to.
    */
+  /**
+   * The community counts, filed under the verdict rather than the rail.
+   *
+   * "Who else has it" is not something you act on — it is evidence for
+   * what the players concluded, and it sat in the actions column only
+   * because the phone's crate holds everything. Beside the verdict the
+   * two say one thing: this is what people did with it, and this is
+   * what they thought. The rail keeps to its purpose: decide, acquire.
+   */
+  const whoElseWide =
+    isExpanded && game.added_by_status ? (
+      <View style={styles.whoElseRow}>
+        <Text style={styles.fileLabel}>WHO ELSE HAS IT</Text>
+        <CommunityStats status={game.added_by_status} />
+      </View>
+    ) : null;
+
   const ratingsBreakdown =
     game.ratings && game.ratings.length > 0 ? (
       <View style={styles.block}>
@@ -765,6 +782,7 @@ export default function GameInfoScreen() {
         <View style={isExpanded ? null : styles.panel}>
           <RatingsBreakdown ratings={game.ratings} />
         </View>
+        {whoElseWide}
       </View>
     ) : null;
 
@@ -896,6 +914,7 @@ export default function GameInfoScreen() {
         stores={game.stores}
         links={storeLinks}
         website={game.website}
+        list={isExpanded}
       />
     </View>
   ) : null;
@@ -994,9 +1013,7 @@ export default function GameInfoScreen() {
         <SectionHeader title="The file" eyebrow="Where, who and what" />
       )}
       {framed(
-        isExpanded
-          ? [fileGetIt, fileWho]
-          : [fileGetIt, fileWho, fileDetails, fileTags]
+        isExpanded ? [fileGetIt] : [fileGetIt, fileWho, fileDetails, fileTags]
       )}
     </View>
   );
@@ -1487,6 +1504,14 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   fileJoin: { borderBottomWidth: 1, borderBottomColor: COLORS.stroke },
+  /** Ruled off from the bars above it: same finding, second witness. */
+  whoElseRow: {
+    marginTop: SPACING.md,
+    paddingTop: SPACING.md,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.stroke,
+    gap: SPACING.sm,
+  },
   fileSectionLast: { borderBottomWidth: 0 },
   fileFlat: {},
   /** A label, at the size of a label — not a fourth headline. */

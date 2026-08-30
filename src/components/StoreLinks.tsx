@@ -11,6 +11,16 @@ interface Props {
   stores?: StoreRef[];
   links?: StoreLinkT[];
   website?: string;
+  /**
+   * Rows instead of pills, for a rail.
+   *
+   * Wrapped chips take their own widths, so six stores land as a
+   * ragged 3-2-1 cloud — confetti next to a column of full-width
+   * objects. Rows share both edges: the marks make one column on the
+   * left, the open-arrows one on the right, and the list reads as a
+   * list.
+   */
+  list?: boolean;
 }
 
 /**
@@ -80,8 +90,43 @@ const STORE_ICONS: Record<
   8: 'logo-google-playstore',
 };
 
+/** A store as a row: mark, name, and the arrow on a shared edge. */
+function LinkRow({
+  label,
+  url,
+  icon,
+}: {
+  label: string;
+  url: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+}) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <Pressable
+      onPress={() => openSafely(url)}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
+      style={[styles.rowItem, hovered && styles.rowItemHovered]}
+    >
+      <Ionicons
+        name={icon}
+        size={16}
+        color={hovered ? COLORS.white : COLORS.lightGrey}
+      />
+      <Text style={[styles.rowLabel, hovered && styles.labelHovered]}>
+        {label}
+      </Text>
+      <Ionicons
+        name="open-outline"
+        size={13}
+        color={hovered ? COLORS.white : COLORS.mediumGrey}
+      />
+    </Pressable>
+  );
+}
+
 /** Where to get it: storefronts plus the official site. */
-export function StoreLinks({ stores, links, website }: Props) {
+export function StoreLinks({ stores, links, website, list = false }: Props) {
   const byId = new Map((links ?? []).map((l) => [l.store_id, l.url]));
   const items = (stores ?? [])
     .map((s) => ({
@@ -94,6 +139,24 @@ export function StoreLinks({ stores, links, website }: Props) {
     );
 
   if (items.length === 0 && !website) return null;
+
+  if (list) {
+    return (
+      <View>
+        {website ? (
+          <LinkRow label="Official site" url={website} icon="globe-outline" />
+        ) : null}
+        {items.map((item) => (
+          <LinkRow
+            key={item.url}
+            label={item.name}
+            url={item.url}
+            icon={item.icon}
+          />
+        ))}
+      </View>
+    );
+  }
 
   return (
     <View style={styles.row}>
@@ -114,6 +177,15 @@ export function StoreLinks({ stores, links, website }: Props) {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
+  rowItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm + 2,
+    paddingVertical: SPACING.sm + 1,
+    borderRadius: RADIUS.sm,
+  },
+  rowItemHovered: { backgroundColor: 'rgba(255,255,255,0.04)' },
+  rowLabel: { ...TYPE.body, color: COLORS.lightGrey, flex: 1 },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
