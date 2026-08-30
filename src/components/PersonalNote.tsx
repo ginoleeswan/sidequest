@@ -15,6 +15,22 @@ import { TYPE } from '@/styles/typography';
  * asks what *you* made of it, and the only text in the product that is
  * yours. It stays on the device with the rest of the library.
  */
+/**
+ * Whether this game has a note box at all.
+ *
+ * Exported so a caller can decide not to build the block around it. The
+ * component already returns null for a game nobody has saved, but a
+ * null inside a wrapper is still a wrapper: on the game page it left an
+ * empty node at the top of the main column that went on claiming the
+ * column's gap, so the two columns opened 40pt out of step with each
+ * other for every game not in the library — which is most of them, on
+ * the page people arrive at from a link.
+ */
+export function usePersonalNote(gameId: number): boolean {
+  const { entries } = useLibrary();
+  return entries[String(gameId)] != null;
+}
+
 export function PersonalNote({ gameId }: { gameId: number }) {
   const { entries, setNote, setRating, addTag, removeTag, tags } = useLibrary();
   const entry = entries[String(gameId)];

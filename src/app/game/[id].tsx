@@ -29,7 +29,7 @@ import { Message } from '@/components/Message';
 import { Commitment } from '@/components/Commitment';
 import { PageTitle } from '@/components/PageTitle';
 import { Screen } from '@/components/Screen';
-import { PersonalNote } from '@/components/PersonalNote';
+import { PersonalNote, usePersonalNote } from '@/components/PersonalNote';
 import { SessionTimer } from '@/components/SessionTimer';
 import { rememberGame } from '@/lib/recent';
 import { calendarDate } from '@/lib/format';
@@ -310,6 +310,7 @@ export default function GameInfoScreen() {
   const { durationOf, learnDurations } = useDurations();
 
   const { isExpanded, width } = useBreakpoint();
+  const hasNote = usePersonalNote(Number(id));
   const insets = useSafeAreaInsets();
   const opacity = useAnimatedValue(0);
 
@@ -552,11 +553,11 @@ export default function GameInfoScreen() {
     </View>
   );
 
-  const yourTake = (
+  const yourTake = hasNote ? (
     <View style={styles.block}>
       <PersonalNote gameId={game.id} />
     </View>
-  );
+  ) : null;
 
   const about = summary ? (
     <View style={styles.block}>
@@ -687,65 +688,117 @@ export default function GameInfoScreen() {
   const hasLinks =
     (storeLinks.length > 0 && game.stores?.length) || Boolean(game.website);
 
+  /**
+   * The file, in two halves that only separate when there is room.
+   *
+   * All four sections stack in one framed object on a phone, which is
+   * what they were consolidated into and what still works there. On a
+   * desktop they sit in a 360pt rail, and the two halves behave very
+   * differently in it: "Get it" and "Who else has it" are chips and
+   * tiles that were designed narrow, while Details and Tags are long
+   * comma lists and a cloud — at 360 they measured 326 and 265, which
+   * is most of a rail running 466pt past the column beside it and a
+   * void that size at the foot of the page.
+   *
+   * So the record goes full width when the page is wide enough to give
+   * it one. Nothing is hidden and nothing is reordered: the rail
+   * carries what this game is right now, the band under it carries the
+   * catalogue entry, and on a phone they are the same object they were.
+   */
+  const fileGetIt = hasLinks ? (
+    <View style={styles.fileSection}>
+      <Text style={styles.fileLabel}>GET IT</Text>
+      <StoreLinks
+        stores={game.stores}
+        links={storeLinks}
+        website={game.website}
+      />
+    </View>
+  ) : null;
+
+  const fileWho = game.added_by_status ? (
+    <View style={styles.fileSection}>
+      <Text style={styles.fileLabel}>WHO ELSE HAS IT</Text>
+      <CommunityStats status={game.added_by_status} />
+    </View>
+  ) : null;
+
+  const fileDetails = (
+    <View style={styles.fileSection}>
+      <Text style={styles.fileLabel}>DETAILS</Text>
+      <MetaRow
+        label="Platforms"
+        items={game.platforms?.map(({ platform }) => platform)}
+      />
+      {game.esrb_rating?.name ? (
+        <View style={styles.metaRow}>
+          <Text style={styles.metaLabel}>Rated</Text>
+          <Text style={styles.metaValue}>{game.esrb_rating.name}</Text>
+        </View>
+      ) : null}
+      <MetaRow label="Developers" items={game.developers} />
+      <MetaRow label="Publishers" items={game.publishers} />
+      {game.released ? (
+        <View style={styles.metaRow}>
+          <Text style={styles.metaLabel}>Release date</Text>
+          <Text style={styles.metaValue}>{calendarDate(game.released)}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+
+  const fileTags =
+    game.tags && game.tags.length > 0 ? (
+      <View style={styles.fileSection}>
+        <Text style={styles.fileLabel}>TAGS</Text>
+        <View style={styles.tags}>
+          {game.tags.slice(0, isExpanded ? 24 : 12).map((tag) => (
+            <Chip key={tag.id} title={tag.name} quiet />
+          ))}
+        </View>
+      </View>
+    ) : null;
+
+  /**
+   * The rule between sections belongs to the join, not to the section,
+   * so the last one in whichever box it lands in loses it. Applied here
+   * rather than hard-coded on Tags, which is only last in one of the
+   * two arrangements.
+   */
+  const framed = (sections: React.ReactNode[]) => {
+    const present = sections.filter(Boolean);
+    return (
+      <View style={styles.fileBox}>
+        {present.map((section, index) => (
+          <View
+            key={index}
+            style={index === present.length - 1 && styles.fileSectionLast}
+          >
+            {section}
+          </View>
+        ))}
+      </View>
+    );
+  };
+
   const fileBox = (
     <View style={styles.block}>
       <SectionHeader title="The file" eyebrow="Where, who and what" />
-      <View style={styles.fileBox}>
-        {hasLinks ? (
-          <View style={styles.fileSection}>
-            <Text style={styles.fileLabel}>GET IT</Text>
-            <StoreLinks
-              stores={game.stores}
-              links={storeLinks}
-              website={game.website}
-            />
-          </View>
-        ) : null}
-
-        {game.added_by_status ? (
-          <View style={styles.fileSection}>
-            <Text style={styles.fileLabel}>WHO ELSE HAS IT</Text>
-            <CommunityStats status={game.added_by_status} />
-          </View>
-        ) : null}
-
-        <View style={styles.fileSection}>
-          <Text style={styles.fileLabel}>DETAILS</Text>
-          <MetaRow
-            label="Platforms"
-            items={game.platforms?.map(({ platform }) => platform)}
-          />
-          {game.esrb_rating?.name ? (
-            <View style={styles.metaRow}>
-              <Text style={styles.metaLabel}>Rated</Text>
-              <Text style={styles.metaValue}>{game.esrb_rating.name}</Text>
-            </View>
-          ) : null}
-          <MetaRow label="Developers" items={game.developers} />
-          <MetaRow label="Publishers" items={game.publishers} />
-          {game.released ? (
-            <View style={styles.metaRow}>
-              <Text style={styles.metaLabel}>Release date</Text>
-              <Text style={styles.metaValue}>
-                {calendarDate(game.released)}
-              </Text>
-            </View>
-          ) : null}
-        </View>
-
-        {game.tags && game.tags.length > 0 ? (
-          <View style={[styles.fileSection, styles.fileSectionLast]}>
-            <Text style={styles.fileLabel}>TAGS</Text>
-            <View style={styles.tags}>
-              {game.tags.slice(0, isExpanded ? 24 : 12).map((tag) => (
-                <Chip key={tag.id} title={tag.name} quiet />
-              ))}
-            </View>
-          </View>
-        ) : null}
-      </View>
+      {framed(
+        isExpanded
+          ? [fileGetIt, fileWho]
+          : [fileGetIt, fileWho, fileDetails, fileTags]
+      )}
     </View>
   );
+
+  /** The catalogue entry, given the width its lists actually need. */
+  const record = isExpanded ? (
+    <View style={[styles.block, styles.recordBand]}>
+      <View style={styles.recordDetails}>{framed([fileDetails])}</View>
+      <View style={styles.recordTags}>{framed([fileTags])}</View>
+    </View>
+  ) : null;
 
   /* -------------------------------------------------------------- layout */
 
@@ -774,6 +827,7 @@ export default function GameInfoScreen() {
                   </View>
                   <View style={styles.columnRail}>{fileBox}</View>
                 </Animated.View>
+                <Animated.View style={{ opacity }}>{record}</Animated.View>
                 {/* media escapes the column: full-bleed rails, gutter-aligned */}
                 <Animated.View style={{ opacity }}>{media}</Animated.View>
               </View>
@@ -1022,7 +1076,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xl * 2,
     // clears the fixed immersive header, then the usual breathing room
     paddingTop: 58 + SPACING.xl,
-    paddingBottom: SPACING.xl * 1.6,
+    /*
+     * The break after the masthead, not a void.
+     *
+     * 51 here plus the body's own 20 put 75pt between "Start a session"
+     * and the first heading under it — more than twice the 32 this app
+     * puts between one section and the next, on the one join where the
+     * reader is still looking for where the page begins. 24 and 20 make
+     * 44: wider than a section break, which a masthead deserves, and
+     * not a hole.
+     */
+    paddingBottom: SPACING.lg + SPACING.xs,
   },
   deskHeroCopy: {
     flex: 2,
@@ -1061,6 +1125,31 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.navy,
   },
   columnMain: { flex: 2, gap: SPACING.sm },
+  /** Full width, and split so neither half runs to a 1152pt measure. */
+  recordBand: {
+    flexDirection: 'row',
+    gap: SPACING.xl,
+    alignItems: 'flex-start',
+    width: '100%',
+    maxWidth: LAYOUT.maxExpandedWidth,
+    alignSelf: 'center',
+    paddingHorizontal: SPACING.xl * 2,
+  },
+  /**
+   * The same two tracks as everything above, not an even split.
+   *
+   * A 50/50 band would have reintroduced the fault this page just lost:
+   * columns at 560 and 560 under columns at 760 and 360, a third
+   * rhythm on a page that should have one.
+   *
+   * Details takes the wide track and tags the narrow one, which is also
+   * the way round they want. Details is label-and-value rows that fit
+   * one line each at 760 and wrapped to 326pt at 360; tags are chips
+   * that wrap to fill whatever they are given. Put the other way round
+   * the band would stand 60pt taller for the same content.
+   */
+  recordDetails: { flex: 2, minWidth: 0 },
+  recordTags: { flex: 1, maxWidth: 360, minWidth: 0 },
   columnRail: { flex: 1, gap: SPACING.md, maxWidth: 360 },
   railCard: {
     backgroundColor: COLORS.navy,
