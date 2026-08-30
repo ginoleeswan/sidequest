@@ -11,6 +11,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -873,8 +874,12 @@ export default function GameInfoScreen() {
           </Pressable>
         )}
         {frames.length > 1 ? (
-          <View style={styles.stageStrip}>
-            {frames.slice(0, 6).map((frame, index) => (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.stageStrip}
+          >
+            {frames.map((frame, index) => (
               <Pressable
                 key={frame.key}
                 onPress={() => setStageIndex(index)}
@@ -902,7 +907,7 @@ export default function GameInfoScreen() {
                 ) : null}
               </Pressable>
             ))}
-          </View>
+          </ScrollView>
         ) : null}
       </View>
     ) : null;
@@ -949,6 +954,36 @@ export default function GameInfoScreen() {
       ) : null}
     </View>
   );
+
+  /**
+   * The short facts, as the rail's quiet lower half.
+   *
+   * Steam fills its rail with reference material under the actions and
+   * it reads as a column with a job; ours pinned two short groups and
+   * scrolled sparse. These four are the facts that fit a 400pt track —
+   * label and value, one line each. Platforms is the one that does
+   * not: it is a comma list that wrapped to three lines here, so it
+   * stays in the record band where it gets the wide track.
+   */
+  const fileFacts = isExpanded ? (
+    <View style={styles.fileSection}>
+      <Text style={styles.fileLabel}>DETAILS</Text>
+      {game.released ? (
+        <View style={styles.metaRow}>
+          <Text style={styles.metaLabel}>Release date</Text>
+          <Text style={styles.metaValue}>{calendarDate(game.released)}</Text>
+        </View>
+      ) : null}
+      <MetaRow label="Developers" items={game.developers} />
+      <MetaRow label="Publishers" items={game.publishers} />
+      {game.esrb_rating?.name ? (
+        <View style={styles.metaRow}>
+          <Text style={styles.metaLabel}>Rated</Text>
+          <Text style={styles.metaValue}>{game.esrb_rating.name}</Text>
+        </View>
+      ) : null}
+    </View>
+  ) : null;
 
   const fileTags =
     game.tags && game.tags.length > 0 ? (
@@ -1013,7 +1048,9 @@ export default function GameInfoScreen() {
         <SectionHeader title="The file" eyebrow="Where, who and what" />
       )}
       {framed(
-        isExpanded ? [fileGetIt] : [fileGetIt, fileWho, fileDetails, fileTags]
+        isExpanded
+          ? [fileGetIt, fileFacts]
+          : [fileGetIt, fileWho, fileDetails, fileTags]
       )}
     </View>
   );
@@ -1021,7 +1058,17 @@ export default function GameInfoScreen() {
   /** The catalogue entry, given the width its lists actually need. */
   const record = isExpanded ? (
     <View style={[styles.block, styles.recordBand]}>
-      <View style={styles.recordDetails}>{framed([fileDetails])}</View>
+      <View style={styles.recordDetails}>
+        {framed([
+          <View key="platforms" style={styles.fileSection}>
+            <Text style={styles.fileLabel}>PLATFORMS</Text>
+            <MetaRow
+              label=""
+              items={game.platforms?.map(({ platform }) => platform)}
+            />
+          </View>,
+        ])}
+      </View>
       <View style={styles.recordTags}>{framed([fileTags])}</View>
     </View>
   ) : null;
@@ -1386,8 +1433,14 @@ const styles = StyleSheet.create({
    * the others — a strip of darkened thumbnails reads as five disabled
    * controls next to one live one.
    */
+  /**
+   * Fixed at a sixth of the column, so six fill it exactly and a
+   * seventh peeks — the peek is the overflow signal. The strip
+   * scrolls; the old slice(0, 6) silently dropped the rest of every
+   * real gallery.
+   */
   stageThumb: {
-    flex: 1,
+    width: (632 - SPACING.sm * 5) / 6,
     aspectRatio: 16 / 9,
     borderRadius: RADIUS.sm,
     overflow: 'hidden',
