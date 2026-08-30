@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -214,9 +215,6 @@ function StatStrip({
         <View style={styles.hoursLine}>
           <Text style={[styles.hoursValue, wide && styles.hoursValueWide]}>
             {duration.hours > 0 ? formatHours(duration.hours) : 'Set'}
-            {duration.rough && duration.hours > 0 ? (
-              <Text style={styles.statFlag}> ?</Text>
-            ) : null}
           </Text>
           <Text style={styles.hoursLabel}>
             {duration.source === 'yours'
@@ -224,8 +222,25 @@ function StatStrip({
               : duration.source === 'reported'
                 ? 'players report'
                 : 'to finish'}
-            <Text style={styles.statPencil}> ✎</Text>
           </Text>
+          {/* Said, rather than punctuated. A bare "?" after the figure
+              read as text that had failed to render — and it was doing
+              a different job from the "~", which says the number is not
+              yours; this says the number is a guess. A word cannot be
+              mistaken for debris. */}
+          {duration.rough && duration.hours > 0 ? (
+            <Text style={styles.estimateTag}>ESTIMATE</Text>
+          ) : null}
+          {/* The app's own pencil, not U+270E. A dingbat is not in the
+              subset the app ships, so it fell through to whatever face
+              the platform had — which is how an edit affordance ends up
+              rendering as a smudge beside a 76pt number. */}
+          <Ionicons
+            name="pencil"
+            size={wide ? 15 : 12}
+            color={COLORS.mediumGrey}
+            style={styles.statPencil}
+          />
         </View>
       </Pressable>
 
@@ -597,7 +612,7 @@ export default function GameInfoScreen() {
 
   const about = summary ? (
     <View style={styles.block}>
-      <SectionHeader title="About" />
+      <SectionHeader title="About" wide={isExpanded} />
       {/* At reading size. This is the only prose on the page and it was
           set two steps below the app's body copy, so the one block
           somebody actually reads was the smallest text on the screen. */}
@@ -701,7 +716,7 @@ export default function GameInfoScreen() {
   const ratingsBreakdown =
     game.ratings && game.ratings.length > 0 ? (
       <View style={styles.block}>
-        <SectionHeader title="Player verdict" />
+        <SectionHeader wide={isExpanded} title="Player verdict" />
         {/* On a plane, because it is data. The prose above it and the
             artwork below need no frame — a page where every block is a
             card has no rhythm, and the rhythm is what tells you which
@@ -1063,7 +1078,18 @@ const styles = StyleSheet.create({
     color: COLORS.lightGrey,
   },
   statFlag: { color: COLORS.accent },
-  statPencil: { fontSize: 11, color: COLORS.lightGrey },
+  statPencil: { opacity: 0.9 },
+  /**
+   * The middle of the type scale, which the page did not have: 76 for
+   * the figure, 44 for the name, then nothing until 11. A tracked
+   * micro-caps tag is the app's own voice for a qualifier and it reads
+   * as a label rather than as punctuation somebody forgot to finish.
+   */
+  estimateTag: {
+    ...TYPE.micro,
+    color: COLORS.mediumGrey,
+    letterSpacing: 1.2,
+  },
   /** The byline: what you glance at to place a game, in one run. */
   metaLine: {
     flexDirection: 'row',
@@ -1153,7 +1179,7 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.lg + SPACING.xs,
   },
   deskHeroCopy: {
-    flex: 2,
+    flex: 1,
     gap: SPACING.sm,
     alignItems: 'flex-start',
     // Yoga hands a flex child its content's width as a floor, and a
@@ -1173,19 +1199,44 @@ const styles = StyleSheet.create({
     lineHeight: 50,
     color: COLORS.white,
   },
+  /**
+   * A plate that runs off the page, not a card floating on it.
+   *
+   * It was 360 wide with a shadow and four rounded corners — small
+   * enough to read as a thumbnail, chromed enough to read as a
+   * component, and committed to neither. Editorial pages do one of two
+   * things with an opening image and this is the one that does not
+   * fight a masthead built around a number.
+   *
+   * The left edge stays on the rail track, exactly where the file box
+   * below it starts; the right runs to the edge of the window. That is
+   * the distinction between a bleed and a misalignment — the edge that
+   * carries the grid is kept and the edge that carries nothing is
+   * spent. The negative margin is the inner's own gutter, so the art
+   * reaches the viewport rather than a number that happens to match.
+   */
   deskArtFrame: {
-    flex: 1,
-    maxWidth: 360,
-    borderRadius: RADIUS.lg,
-    ...SHADOW.card,
+    /*
+     * Sized, not flexed. A negative margin on a flex child is taken off
+     * the space it asks the row for, so flexing it made the bleed come
+     * out of the tracks themselves: the art landed at 885 and the copy
+     * stretched to 789, against 856 and 760 everywhere else on the
+     * page. Fixed at the rail's width plus the gutter it spends, the
+     * outer box still measures 360 — so the row divides exactly as the
+     * bands below it do, and only the picture crosses the line.
+     */
+    width: 360 + SPACING.xl * 2,
+    marginRight: -(SPACING.xl * 2),
+    borderTopLeftRadius: RADIUS.lg,
+    borderBottomLeftRadius: RADIUS.lg,
+    overflow: 'hidden',
   },
   deskArt: {
     width: '100%',
     aspectRatio: 16 / 9,
-    borderRadius: RADIUS.lg,
+    borderTopLeftRadius: RADIUS.lg,
+    borderBottomLeftRadius: RADIUS.lg,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: COLORS.strokeStrong,
     backgroundColor: COLORS.navy,
   },
   columnMain: { flex: 2, gap: SPACING.sm },

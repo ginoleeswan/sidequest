@@ -10,6 +10,17 @@ interface Props {
   title: string;
   /** Small muted line above the title, e.g. a count. */
   eyebrow?: string;
+  /**
+   * A step up, for a page wide enough to need one.
+   *
+   * The scale on a desktop game page ran 76 for the figure and 44 for
+   * the name, then dropped straight to this at 19 — a gap of 25 points
+   * with nothing in it, so every section below the masthead read as
+   * the same weight as its own caption. Opt-in rather than a
+   * breakpoint inside this component: a section heading in a 360pt
+   * rail wants the small size whatever the window is doing.
+   */
+  wide?: boolean;
   actionLabel?: string;
   /**
    * What a screen reader should say instead of the visible label.
@@ -36,6 +47,7 @@ interface Props {
 export function SectionHeader({
   title,
   eyebrow,
+  wide = false,
   actionLabel,
   actionAccessibilityLabel,
   onAction,
@@ -73,7 +85,7 @@ export function SectionHeader({
           this line now, so both are single lines and can genuinely
           share a baseline. */}
       <View style={styles.row}>
-        <Text style={styles.title}>{title}</Text>
+        <Text style={[styles.title, wide && styles.titleWide]}>{title}</Text>
         {actionLabel && onAction ? (
           <Pressable
             onPress={onAction}
@@ -115,6 +127,7 @@ const styles = StyleSheet.create({
     ...TYPE.micro,
     color: COLORS.mediumGrey,
   },
+  titleWide: { fontSize: 28, lineHeight: 33, color: COLORS.white },
   title: {
     ...TYPE.h2,
     color: COLORS.lightGrey,
