@@ -26,6 +26,16 @@
         "buildType": "apk"
       }
     },
+    "device": {
+      "extends": "development",
+      "env": {
+        "APP_VARIANT": "production"
+      },
+      "ios": {
+        "simulator": false,
+        "resourceClass": "m-medium"
+      }
+    },
     "preview": {
       "extends": "base",
       "environment": "preview",
