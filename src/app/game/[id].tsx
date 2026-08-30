@@ -76,10 +76,10 @@ const HTML_TAGS = /(<([^>]+)>)/gi;
  * the page's own 64 on each side. Everything past that goes to the
  * margins, where a wide monitor is supposed to put it.
  */
-const PAGE_MAX = 1080;
+const PAGE_MAX = 1200;
 
 /** The rail, and so the second track of every band on the page. */
-const RAIL = 360;
+const RAIL = 400;
 
 /**
  * The band the site header has to use to land on the page's left edge.
@@ -656,7 +656,11 @@ export default function GameInfoScreen() {
           set two steps below the app's body copy, so the one block
           somebody actually reads was the smallest text on the screen. */}
       <ReadMoreText
-        style={[TYPE.body, styles.aboutText]}
+        style={[
+          TYPE.body,
+          styles.aboutText,
+          isExpanded && styles.aboutTextWide,
+        ]}
         numberOfLines={isExpanded ? 8 : 6}
       >
         {summary}
@@ -1149,7 +1153,7 @@ const styles = StyleSheet.create({
   expandedInner: { width: '100%' },
   twoColumn: {
     flexDirection: 'row',
-    gap: SPACING.xl,
+    gap: SPACING.xl + SPACING.sm,
     alignItems: 'flex-start',
     width: '100%',
     maxWidth: PAGE_MAX,
@@ -1196,11 +1200,20 @@ const styles = StyleSheet.create({
     maxWidth: PAGE_MAX,
     alignSelf: 'center',
     flexDirection: 'row',
-    // Hung from one line rather than centred against each other. The
-    // artwork is taller than the copy, so centring pushed its top edge
-    // below the title's and left the masthead with no shared line to
-    // read across — the one alignment a two-track header has.
-    alignItems: 'flex-start',
+    /*
+     * A band, not two objects that happen to be side by side.
+     *
+     * Centred, the art's top sat below the title's. Top-aligned, they
+     * started together and ended 52pt apart, so the masthead had one
+     * shared line and one ragged one — which is what "the art isn't
+     * sitting right" is: a rectangle with nothing under it agreeing.
+     *
+     * Stretched, the picture is as tall as the words beside it and the
+     * band closes on both edges. It is the move every store page makes
+     * with its lead media and the reason theirs read as anchored: the
+     * image is a side of the band, not a plate resting on it.
+     */
+    alignItems: 'stretch',
     gap: SPACING.xl,
     paddingHorizontal: SPACING.xl * 2,
     // clears the fixed immersive header, then the usual breathing room
@@ -1270,7 +1283,11 @@ const styles = StyleSheet.create({
   },
   deskArt: {
     width: '100%',
-    aspectRatio: 16 / 9,
+    // Filled rather than proportioned: the height is the band's now, so
+    // a fixed ratio would fight it. The frame keeps a floor for the
+    // short-title case, where the copy alone would leave a letterbox.
+    flex: 1,
+    minHeight: 260,
     borderTopLeftRadius: RADIUS.lg,
     borderBottomLeftRadius: RADIUS.lg,
     overflow: 'hidden',
@@ -1280,7 +1297,7 @@ const styles = StyleSheet.create({
   /** Full width, and split so neither half runs to a 1152pt measure. */
   recordBand: {
     flexDirection: 'row',
-    gap: SPACING.xl,
+    gap: SPACING.xl + SPACING.sm,
     alignItems: 'flex-start',
     width: '100%',
     maxWidth: PAGE_MAX,
@@ -1383,6 +1400,15 @@ const styles = StyleSheet.create({
     lineHeight: 23,
     maxWidth: 480,
   },
+  /**
+   * One step up, and the measure held at the same character count.
+   *
+   * 14pt in a 632pt column is the smallest text on the page carrying
+   * the only prose on it. 16 and 26 put the body where a reader
+   * actually reads, and 560 is the same 73 characters the 480 cap was
+   * buying at the smaller size — a wider page, not a longer line.
+   */
+  aboutTextWide: { fontSize: 16, lineHeight: 26, maxWidth: 560 },
   metaRow: { gap: 2, marginBottom: SPACING.sm },
   metaLabel: {
     ...TYPE.micro,
