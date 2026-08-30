@@ -25,6 +25,9 @@
  * plan screen breaking because a CDN had a bad afternoon.
  */
 
+import { mediaUri } from '@/api/rawg';
+import { widgetStore } from './widgetStore';
+
 /**
  * How much of the shared container artwork may occupy, in base64
  * characters — near enough to bytes for a budget.
@@ -38,37 +41,22 @@
 export const COVER_BUDGET = 200_000;
 
 /**
- * The width to ask the CDN for.
+ * The slot the artwork lands in, in CSS pixels.
  *
- * A small widget is about 158pt across, so 420px is comfortably past
- * retina for it and merely soft on the medium one — which is the right
- * trade when the art sits under a scrim with type over it. Detail is
- * not what it is there for; recognition is, and recognition survives
- * being slightly soft.
- */
-const COVER_WIDTH = 420;
-
-/**
- * RAWG's own resizing path, when the URL is one RAWG serves.
+ * A small widget is about 158pt across; asking for that slot puts the
+ * request on the 420px rung of the app's own ladder, which is
+ * comfortably past retina for it and merely soft on the medium one.
+ * That is the right trade when the art sits under a scrim with type
+ * over it: detail is not what it is there for, recognition is, and
+ * recognition survives being slightly soft.
  *
- * Their media host answers `/media/resize/<width>/-/…` for anything
- * under `/media/`, which turns a 600KB press asset into something a
- * plist can carry. Any other host — a cached copy, a placeholder, a
- * future source — is handed back untouched rather than rewritten into a
- * URL that would 404, and the caller's size guard catches it if it
- * turns out to be enormous.
+ * The rewrite itself belongs to `api/rawg`, which owns the ladder, the
+ * doubling for retina and the rule about not rewriting a derivative
+ * twice. This module knowing how to build the URL as well would be a
+ * second copy of a rule, which is the thing every contract test in
+ * this repo exists because of.
  */
-export function resizedCover(url: string, width = COVER_WIDTH): string {
-  const marker = '/media/';
-  if (!url.includes('media.rawg.io')) return url;
-  const at = url.indexOf(marker);
-  if (at < 0) return url;
-  const tail = url.slice(at + marker.length);
-  // Already resized or cropped by whoever built the URL. Rewriting a
-  // rewrite is how you get `/resize/420/-/resize/420/-/`.
-  if (tail.startsWith('resize/') || tail.startsWith('crop/')) return url;
-  return `${url.slice(0, at + marker.length)}resize/${width}/-/${tail}`;
-}
+const COVER_SLOT = 210;
 
 /**
  * Fill a fixed budget from the front of a list.
@@ -105,7 +93,7 @@ export function withinBudget(
  */
 export async function encodeCover(url: string): Promise<string | null> {
   try {
-    const smaller = resizedCover(url);
+    const smaller = mediaUri(url, COVER_SLOT) ?? url;
     // The resized URL is a convention, not a contract: RAWG serves it
     // today and nothing obliges them to serve it tomorrow. When it does
     // not answer, the original is fetched instead rather than the game
@@ -148,6 +136,13 @@ export async function collectCovers(
   targets: readonly number[],
   artOf: (id: number) => string | null | undefined
 ): Promise<Record<string, string>> {
+  // Nowhere to put them is a reason not to fetch them. The publisher
+  // runs on every platform and `publishCovers` already declines to
+  // write on the ones without an app group — but declining after the
+  // download means a browser spending a megabyte of somebody's
+  // connection on pictures it is about to throw away.
+  if (!widgetStore()) return {};
+
   const collected: { id: number; data: string }[] = [];
   for (const id of targets) {
     const url = artOf(id);
