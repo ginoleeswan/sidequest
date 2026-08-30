@@ -27,7 +27,15 @@ const openSafely = (url: string) => {
   if (/^https?:\/\//i.test(url)) Linking.openURL(url);
 };
 
-export function LinkPill({ label, url }: { label: string; url: string }) {
+export function LinkPill({
+  label,
+  url,
+  icon = 'open-outline',
+}: {
+  label: string;
+  url: string;
+  icon?: React.ComponentProps<typeof Ionicons>['name'];
+}) {
   const [hovered, setHovered] = useState(false);
   return (
     <Pressable
@@ -36,32 +44,69 @@ export function LinkPill({ label, url }: { label: string; url: string }) {
       onHoverOut={() => setHovered(false)}
       style={[styles.pill, hovered && styles.pillHovered]}
     >
+      {/* The mark leads and the arrow is gone. Every pill in this block
+          opens somewhere else, so six little open-arrows said the same
+          thing six times; a storefront's own mark identifies the
+          destination faster than its name does, which is the whole job
+          of an icon on a button. */}
+      <Ionicons
+        name={icon}
+        size={14}
+        color={hovered ? COLORS.white : COLORS.lightGrey}
+      />
       <Text style={[styles.label, hovered && styles.labelHovered]}>
         {label}
       </Text>
-      <Ionicons
-        name="open-outline"
-        size={13}
-        color={hovered ? COLORS.white : COLORS.mediumGrey}
-      />
     </Pressable>
   );
 }
+
+/**
+ * RAWG's store ids, which are stable and documented, to the brand marks
+ * Ionicons actually has. Epic, GOG, Nintendo and itch have no glyph in
+ * the set, and a wrong mark is worse than a plain one — they share a
+ * single neutral storefront icon instead, so the row still reads as
+ * "places to buy" at a glance with no pill pretending to a brand.
+ */
+const STORE_ICONS: Record<
+  number,
+  React.ComponentProps<typeof Ionicons>['name']
+> = {
+  1: 'logo-steam',
+  2: 'logo-xbox',
+  3: 'logo-playstation',
+  4: 'logo-apple-appstore',
+  7: 'logo-xbox',
+  8: 'logo-google-playstore',
+};
 
 /** Where to get it: storefronts plus the official site. */
 export function StoreLinks({ stores, links, website }: Props) {
   const byId = new Map((links ?? []).map((l) => [l.store_id, l.url]));
   const items = (stores ?? [])
-    .map((s) => ({ name: s.store.name, url: byId.get(s.store.id) }))
-    .filter((s): s is { name: string; url: string } => Boolean(s.url));
+    .map((s) => ({
+      name: s.store.name,
+      url: byId.get(s.store.id),
+      icon: STORE_ICONS[s.store.id] ?? ('storefront-outline' as const),
+    }))
+    .filter((s): s is { name: string; url: string; icon: never } =>
+      Boolean(s.url)
+    );
 
   if (items.length === 0 && !website) return null;
 
   return (
     <View style={styles.row}>
-      {website ? <LinkPill label="Official site" url={website} /> : null}
+      {website ? (
+        <LinkPill label="Official site" url={website} icon="globe-outline" />
+      ) : null}
       {items.map((item) => (
-        <LinkPill key={item.url} label={item.name} url={item.url} />
+        <LinkPill
+          key={item.url}
+          label={item.name}
+          url={item.url}
+          icon={item.icon}
+        />
       ))}
     </View>
   );

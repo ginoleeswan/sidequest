@@ -3,11 +3,13 @@ import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import React, { useEffect, useState } from 'react';
 import {
   Linking,
   Animated,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -149,6 +151,26 @@ function WeekRule({ weeks }: { weeks: number }) {
   );
 }
 
+/**
+ * A trailer, at the stage's own size.
+ *
+ * Its own component because `useVideoPlayer` is a hook and the stage
+ * picks its lead at render time. No autoplay: a page that starts
+ * talking when you open it is a page you close, and the play button is
+ * the platform's own.
+ */
+function StageVideo({ movie }: { movie: Movie }) {
+  const player = useVideoPlayer(mediaUri(movie.data.max) ?? '');
+  return (
+    <VideoView
+      player={player}
+      style={styles.stageLead}
+      contentFit="contain"
+      nativeControls
+    />
+  );
+}
+
 function StatStrip({
   game,
   onEditLength,
@@ -238,8 +260,6 @@ function StatStrip({
 
   return (
     <View style={[styles.statBlock, wide && styles.statBlockWide]}>
-      {/* The length is the one fact a person can out-know the data on,
-          so it is the one fact they can change. */}
       <Pressable
         onPress={onEditLength}
         accessibilityRole="button"
@@ -277,20 +297,24 @@ function StatStrip({
         </View>
       </Pressable>
 
+      {/* Two clusters, not an interleave. On the wide page the byline
+          rises to sit under the figure — all of the type together —
+          and the week rule closes the block with its caption, a
+          data-rule where an editorial page would put a plain one. The
+          drawing between two lines of text read as neither. */}
+      {meta.length > 0 && (
+        <View style={styles.metaLine}>
+          {meta.map((bit, i) => (
+            <React.Fragment key={i}>
+              {i > 0 ? <Text style={styles.metaDot}>·</Text> : null}
+              {bit}
+            </React.Fragment>
+          ))}
+        </View>
+      )}
       {wide && duration.hours > 0 && pace > 0 ? (
         <WeekRule weeks={Math.max(1, Math.ceil(duration.hours / pace))} />
       ) : null}
-
-      {/* The sentence no other games database can write. A length is an
-          abstraction until it is measured against the hours somebody
-          actually has — which this app knows, because the Plan asked.
-
-          And when the game is actually IN the plan, it says the real
-          answer instead. "About 3 weeks at 8h a week" is true of
-          anybody with that pace; "credits around 5 September, third in
-          your route" is true of this reader, and the app already knew
-          it two taps away. One line, not both: two sentences about how
-          long something takes is the soup the Plan was rescued from. */}
       {standing?.kind === 'scheduled' ? (
         <Text
           style={[styles.statPace, styles.statPlan]}
@@ -330,17 +354,6 @@ function StatStrip({
             : `About ${Math.round(duration.hours / pace)} weeks at ${pace}h a week.`}
         </Text>
       ) : null}
-
-      {meta.length > 0 && (
-        <View style={styles.metaLine}>
-          {meta.map((bit, i) => (
-            <React.Fragment key={i}>
-              {i > 0 ? <Text style={styles.metaDot}>·</Text> : null}
-              {bit}
-            </React.Fragment>
-          ))}
-        </View>
-      )}
     </View>
   );
 }
@@ -391,6 +404,8 @@ export default function GameInfoScreen() {
   const router = useRouter();
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
   const [editingLength, setEditingLength] = useState(false);
+  /** Which frame the stage shows: 0 is the key art, then screenshots. */
+  const [stageIndex, setStageIndex] = useState(0);
   const { durationOf, learnDurations } = useDurations();
 
   const { isExpanded, width } = useBreakpoint();
@@ -553,7 +568,7 @@ export default function GameInfoScreen() {
    * image RAWG happened to return.
    */
   const controls = (
-    <View style={styles.controls}>
+    <View style={isExpanded ? styles.controlsRail : styles.controls}>
       {/* One object: the decision, then what follows from it.
           The status control, the clock and the two commitment toggles
           were four separate things loose on the page — a filled group
@@ -596,50 +611,32 @@ export default function GameInfoScreen() {
         />
         <GrainScrim style={styles.deskGrain} />
       </View>
-      <View style={styles.deskHeroInner}>
-        <View style={styles.deskHeroCopy}>
-          <Text style={styles.deskTitle}>{game.name}</Text>
-          <StatStrip
-            game={game}
-            onEditLength={() => setEditingLength(true)}
-            onOpenGenre={openGenre}
-            onOpenPlan={() => router.push('/plan')}
-            wide
-          />
-          {/*
-            Stretched on purpose. The copy column top-aligns its
-            children so pills and links keep their natural width — but
-            the status control's three segments are flex-basis zero,
-            which makes its intrinsic width almost nothing, and in a
-            non-stretching column it collapsed until "Want to play"
-            read "Want t…" in the page's primary control. Capped so
-            three words do not become a metre of button on a wide
-            monitor.
-          */}
-          <View style={styles.deskStatus}>
-            <StatusActions game={game} />
-          </View>
-          <SessionTimer game={game} />
-          <Commitment gameId={game.id} />
-        </View>
-        <View
-          style={[
-            styles.deskArtFrame,
-            // The distance from the rail's right edge to the window's,
-            // which is the page margin the cap creates plus the band's
-            // own padding — the same number the media rails already
-            // bleed by, so the two agree on where the page ends.
-            { width: RAIL + gutter, marginRight: -gutter },
-          ]}
-        >
-          <CoverImage
-            uri={game.background_image}
-            style={styles.deskArt}
-            iconSize={64}
-            size="hero"
-          />
-        </View>
-      </View>
+    </View>
+  );
+
+  /**
+   * The title block, as the head of the main column.
+   *
+   * It was a band of its own above the columns, and with the artwork
+   * gone from it the band had nothing on its right half — so the week
+   * rule ran the full 1072pt across both tracks over an empty corner,
+   * the one stripe on the page that ignored the grid everything else
+   * had just been put on. In the column, the title, the figure, the
+   * rule and the stage under them share two edges exactly; and the
+   * rail rises to sit level with the title, so the decision is beside
+   * the name of the thing being decided about — the one arrangement
+   * every store page agrees on.
+   */
+  const titleBlock = (
+    <View style={styles.deskHeroCopy}>
+      <Text style={styles.deskTitle}>{game.name}</Text>
+      <StatStrip
+        game={game}
+        onEditLength={() => setEditingLength(true)}
+        onOpenGenre={openGenre}
+        onOpenPlan={() => router.push('/plan')}
+        wide
+      />
     </View>
   );
 
@@ -670,7 +667,7 @@ export default function GameInfoScreen() {
 
   const media = (
     <>
-      {screenshots.length > 0 && (
+      {screenshots.length > 0 && !isExpanded && (
         <View style={mediaBlock}>
           {/* The trailer link was a lone pill floating between two
               rails, belonging to neither. It is what you do with this
@@ -713,7 +710,7 @@ export default function GameInfoScreen() {
         </View>
       )}
 
-      {trailers.length > 0 ? (
+      {trailers.length > 0 && !isExpanded ? (
         <View style={mediaBlock}>
           <SectionHeader title="Trailers" />
           <Rail<Movie>
@@ -736,7 +733,7 @@ export default function GameInfoScreen() {
 
       {series.length > 0 && (
         <View style={mediaBlock}>
-          <SectionHeader title="More in this series" />
+          <SectionHeader wide={isExpanded} title="More in this series" />
           <Rail<Game>
             data={series}
             keyExtractor={(item) => String(item.id)}
@@ -760,11 +757,12 @@ export default function GameInfoScreen() {
     game.ratings && game.ratings.length > 0 ? (
       <View style={styles.block}>
         <SectionHeader wide={isExpanded} title="Player verdict" />
-        {/* On a plane, because it is data. The prose above it and the
-            artwork below need no frame — a page where every block is a
-            card has no rhythm, and the rhythm is what tells you which
-            kind of thing you are looking at. */}
-        <View style={styles.panel}>
+        {/* On the phone this sits on a plane, because there it is one
+            data block among prose. On the wide page the plane made it
+            the main column's last surviving box after everything else
+            went flush — and a 34pt "92%" needs no crate to read as a
+            finding. */}
+        <View style={isExpanded ? null : styles.panel}>
           <RatingsBreakdown ratings={game.ratings} />
         </View>
       </View>
@@ -799,6 +797,98 @@ export default function GameInfoScreen() {
    * carries what this game is right now, the band under it carries the
    * catalogue entry, and on a phone they are the same object they were.
    */
+  /**
+   * The stage: one big frame, and the strip that changes it.
+   *
+   * The artwork was a plate in the top-right corner that ran off the
+   * side of the window, and the screenshots — the only assets that show
+   * what playing this actually looks like — were a scrolling rail near
+   * the foot of the page. Both store pages this borrows from do it the
+   * other way round for a good reason: the picture is what a person
+   * came to look at, so it is the first object under the title, at the
+   * width of the column rather than the width of a thumbnail.
+   *
+   * The bleed went with it. Running off the right edge made sense while
+   * the art was a corner element and stopped making sense the moment it
+   * became the lead — an object at the head of a column wants the
+   * column's edges, not the window's.
+   *
+   * Key art first and then the screenshots, because the opening frame
+   * has to identify the game: a street at night is not a cover.
+   */
+  /**
+   * Key art, then the trailers, then the screenshots — identity first,
+   * motion second, detail last. The trailers were a rail at the foot of
+   * the page, below the fold of the thing they advertise; a trailer is
+   * the single best answer to "what is this like to play", so it
+   * belongs in the stage with everything else that answers that.
+   */
+  const frames: { key: string; image: string; movie?: Movie }[] = [
+    ...(game.background_image
+      ? [{ key: 'art', image: game.background_image }]
+      : []),
+    ...trailers.slice(0, 2).map((movie) => ({
+      key: `movie-${movie.id}`,
+      image: movie.preview,
+      movie,
+    })),
+    ...screenshots.map((shot) => ({ key: String(shot.id), image: shot.image })),
+  ];
+  const current = frames[stageIndex] ?? frames[0];
+  const stage =
+    isExpanded && frames.length > 0 ? (
+      <View style={styles.stage}>
+        {current.movie ? (
+          <StageVideo movie={current.movie} />
+        ) : (
+          <Pressable
+            onPress={() => setLightboxUri(current.image)}
+            accessibilityRole="button"
+            accessibilityLabel="Open this image full size"
+          >
+            <CoverImage
+              uri={current.image}
+              style={styles.stageLead}
+              iconSize={64}
+              size="hero"
+            />
+          </Pressable>
+        )}
+        {frames.length > 1 ? (
+          <View style={styles.stageStrip}>
+            {frames.slice(0, 6).map((frame, index) => (
+              <Pressable
+                key={frame.key}
+                onPress={() => setStageIndex(index)}
+                style={[
+                  styles.stageThumb,
+                  index === stageIndex && styles.stageThumbOn,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  frame.movie
+                    ? `Play the trailer ${frame.movie.name}`
+                    : `Show image ${index + 1}`
+                }
+              >
+                <Image
+                  source={{ uri: mediaUri(frame.image, 200) }}
+                  style={styles.stageThumbImage}
+                  contentFit="cover"
+                  transition={DURATION.base}
+                />
+                {frame.movie ? (
+                  <View style={styles.stagePlayBadge}>
+                    <Ionicons name="play" size={12} color={COLORS.white} />
+                  </View>
+                ) : null}
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+      </View>
+    ) : null;
+
   const fileGetIt = hasLinks ? (
     <View style={styles.fileSection}>
       <Text style={styles.fileLabel}>GET IT</Text>
@@ -859,14 +949,33 @@ export default function GameInfoScreen() {
    * rather than hard-coded on Tags, which is only last in one of the
    * two arrangements.
    */
+  /**
+   * On a phone the file is a crate: one framed object holding four
+   * labelled sections, which is how a small screen keeps a lookup
+   * table from dissolving into the page. On the wide page the crate
+   * was the awkwardness — a bordered panel beside an unframed prose
+   * column, holding tiles that were themselves bordered, three
+   * container languages on one screen. The rail's width already does
+   * the crate's job there, so the sections sit flush on the ground
+   * with their eyebrows and hairlines, the same treatment the main
+   * column gets, and the decision keeps the page's one card to
+   * itself.
+   */
   const framed = (sections: React.ReactNode[]) => {
     const present = sections.filter(Boolean);
     return (
-      <View style={styles.fileBox}>
+      <View style={isExpanded ? styles.fileFlat : styles.fileBox}>
+        {/* The rule lives on this wrapper, not on the section inside
+            it: an override on a parent never reaches a child's border,
+            which is how the last section kept a stray hairline under
+            it — the one line on the page that ruled off nothing. */}
         {present.map((section, index) => (
           <View
             key={index}
-            style={index === present.length - 1 && styles.fileSectionLast}
+            style={[
+              styles.fileJoin,
+              index === present.length - 1 && styles.fileSectionLast,
+            ]}
           >
             {section}
           </View>
@@ -877,7 +986,13 @@ export default function GameInfoScreen() {
 
   const fileBox = (
     <View style={styles.block}>
-      <SectionHeader title="The file" eyebrow="Where, who and what" />
+      {/* On the phone the crate needs a name. On the wide page the
+          rail's register is the micro label — GET IT, WHO ELSE HAS IT —
+          and a heading above them was a second voice saying nothing
+          the labels don't: two label registers inside 100pt. */}
+      {!isExpanded && (
+        <SectionHeader title="The file" eyebrow="Where, who and what" />
+      )}
       {framed(
         isExpanded
           ? [fileGetIt, fileWho]
@@ -915,11 +1030,22 @@ export default function GameInfoScreen() {
                 {deskHero}
                 <Animated.View style={[styles.twoColumn, { opacity }]}>
                   <View style={styles.columnMain}>
+                    {titleBlock}
+                    {stage}
                     {yourTake}
                     {about}
                     {ratingsBreakdown}
                   </View>
-                  <View style={styles.columnRail}>{fileBox}</View>
+                  {/* What you do about the game, then what the game is.
+                      Both store pages put the action beside the media
+                      rather than under the title, and they are right:
+                      a decision is something you come back to, so it
+                      wants a column rather than a line in a masthead
+                      you have already scrolled past. */}
+                  <View style={styles.columnRail}>
+                    {controls}
+                    {fileBox}
+                  </View>
                 </Animated.View>
                 <Animated.View style={{ opacity }}>{record}</Animated.View>
                 {/* media escapes the column: full-bleed rails, gutter-aligned */}
@@ -1015,6 +1141,16 @@ const styles = StyleSheet.create({
     maxWidth: LAYOUT.maxContentWidth,
     alignSelf: 'center',
   },
+  /**
+   * The card's chrome hangs outside the grid; its content sits on it.
+   *
+   * The decision keeps the page's one card, but a padded card in a
+   * flush rail gives the rail two left edges — the segmented control
+   * started 16pt right of every eyebrow below it. Negative margins the
+   * size of the padding put the content back on the rail's track and
+   * spend the chrome in the gutter, which is what a gutter is for.
+   */
+  controlsRail: { width: '100%', marginHorizontal: -SPACING.md },
   decision: {
     borderRadius: RADIUS.md,
     borderWidth: 1,
@@ -1089,7 +1225,16 @@ const styles = StyleSheet.create({
    * takes. 48 restores the ratio rather than picking a number that
    * looks about right.
    */
-  hoursValueWide: { fontSize: 76, lineHeight: 80 },
+  /**
+   * Amber, because the masthead had two near-equal white slabs — a 44pt
+   * name over a 76pt figure, same face, same ink — and size alone does
+   * not rank two blocks that big; they read as rivals. Amber is what
+   * this app paints time with everywhere (the rule below, the plan's
+   * week, the library's hours), so the figure joins that system and
+   * the name keeps white to itself. One glance now says which line is
+   * the page's subject and which is its title.
+   */
+  hoursValueWide: { fontSize: 76, lineHeight: 80, color: COLORS.accent },
 
   /**
    * Full width of its track, so the rule is a measure and not a motif.
@@ -1159,17 +1304,25 @@ const styles = StyleSheet.create({
     maxWidth: PAGE_MAX,
     alignSelf: 'center',
     paddingHorizontal: SPACING.xl * 2,
-    paddingTop: SPACING.lg,
+    // Clears the fixed immersive header: the job the masthead band was
+    // doing before it dissolved into the columns.
+    paddingTop: 58 + SPACING.xl,
   },
 
   // desktop hero
-  deskHero: { width: '100%' },
+  /**
+   * Atmosphere only. The copy lives in the column now, so this is the
+   * blurred art and its veil as a fixed-height band behind the top of
+   * the page — tall enough to sit under the title and the head of the
+   * stage, gone before the prose starts.
+   */
+  deskHero: { width: '100%', height: 0 },
   deskBackdrop: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    bottom: 0,
+    height: 430,
     overflow: 'hidden',
   },
   deskBackdropImage: {
@@ -1180,68 +1333,10 @@ const styles = StyleSheet.create({
     bottom: 0,
     opacity: 0.75,
   },
-  /**
-   * The masthead, on the grid the rest of the page is already on.
-   *
-   * It used to run its own: copy at `flex: 1` against art at 42% with a
-   * 48pt gutter, which at 1280 measured 620 and 484 — while everything
-   * below it measured 760 and 360 with a 32pt gutter. The art's left
-   * edge landed 123pt inside the main column, on neither track, so a
-   * reader scanning down the page met one rhythm at the top and a
-   * different one underneath.
-   *
-   * Same ratio, same gutter, same cap as `twoColumn` now. The artwork
-   * gives up 120pt of width to become the head of the rail rather than
-   * a block floating over the gutter — and the rail reads as one column
-   * from the art down through the file.
-   */
-  deskHeroInner: {
-    width: '100%',
-    maxWidth: PAGE_MAX,
-    alignSelf: 'center',
-    flexDirection: 'row',
-    /*
-     * A band, not two objects that happen to be side by side.
-     *
-     * Centred, the art's top sat below the title's. Top-aligned, they
-     * started together and ended 52pt apart, so the masthead had one
-     * shared line and one ragged one — which is what "the art isn't
-     * sitting right" is: a rectangle with nothing under it agreeing.
-     *
-     * Stretched, the picture is as tall as the words beside it and the
-     * band closes on both edges. It is the move every store page makes
-     * with its lead media and the reason theirs read as anchored: the
-     * image is a side of the band, not a plate resting on it.
-     */
-    alignItems: 'stretch',
-    gap: SPACING.xl,
-    paddingHorizontal: SPACING.xl * 2,
-    // clears the fixed immersive header, then the usual breathing room
-    paddingTop: 58 + SPACING.xl,
-    /*
-     * The break after the masthead, not a void.
-     *
-     * 51 here plus the body's own 20 put 75pt between "Start a session"
-     * and the first heading under it — more than twice the 32 this app
-     * puts between one section and the next, on the one join where the
-     * reader is still looking for where the page begins. 24 and 20 make
-     * 44: wider than a section break, which a masthead deserves, and
-     * not a hole.
-     */
-    paddingBottom: SPACING.lg + SPACING.xs,
-  },
   deskHeroCopy: {
-    flex: 1,
     gap: SPACING.sm,
-    alignItems: 'flex-start',
-    // Yoga hands a flex child its content's width as a floor, and a
-    // long title would otherwise widen this track past its share and
-    // push the art off the rail.
-    minWidth: 0,
-  },
-  deskStatus: {
-    alignSelf: 'stretch',
-    maxWidth: 430,
+    alignItems: 'stretch',
+    marginBottom: SPACING.md,
   },
   /** The one display size the scale does not carry: a desktop masthead. */
   deskTitle: {
@@ -1251,49 +1346,53 @@ const styles = StyleSheet.create({
     lineHeight: 50,
     color: COLORS.white,
   },
+  columnMain: { flex: 1, minWidth: 0, gap: SPACING.sm },
+
   /**
-   * A plate that runs off the page, not a card floating on it.
-   *
-   * It was 360 wide with a shadow and four rounded corners — small
-   * enough to read as a thumbnail, chromed enough to read as a
-   * component, and committed to neither. Editorial pages do one of two
-   * things with an opening image and this is the one that does not
-   * fight a masthead built around a number.
-   *
-   * The left edge stays on the rail track, exactly where the file box
-   * below it starts; the right runs to the edge of the window. That is
-   * the distinction between a bleed and a misalignment — the edge that
-   * carries the grid is kept and the edge that carries nothing is
-   * spent. The negative margin is the inner's own gutter, so the art
-   * reaches the viewport rather than a number that happens to match.
+   * The lead frame and its strip, sized to the column rather than to
+   * the window. No shadow and no card: it is the first object in the
+   * column, so its edges are the column's and nothing needs to lift it
+   * off a plane it is already sitting on.
    */
-  /*
-   * Sized, not flexed — the width arrives from the render. A negative
-   * margin on a flex child is taken off the space it asks the row for,
-   * so flexing it made the bleed come out of the tracks themselves:
-   * the art landed at 885 and the copy stretched to 789, against 856
-   * and 760 everywhere else. At the rail's width plus the margin it
-   * spends, the outer box still measures the rail — so the row divides
-   * exactly as the bands below it do, and only the picture crosses.
-   */
-  deskArtFrame: {
-    borderTopLeftRadius: RADIUS.lg,
-    borderBottomLeftRadius: RADIUS.lg,
-    overflow: 'hidden',
-  },
-  deskArt: {
+  stage: { gap: SPACING.sm },
+  stageLead: {
     width: '100%',
-    // Filled rather than proportioned: the height is the band's now, so
-    // a fixed ratio would fight it. The frame keeps a floor for the
-    // short-title case, where the copy alone would leave a letterbox.
-    flex: 1,
-    minHeight: 260,
-    borderTopLeftRadius: RADIUS.lg,
-    borderBottomLeftRadius: RADIUS.lg,
+    aspectRatio: 16 / 9,
+    borderRadius: RADIUS.lg,
     overflow: 'hidden',
     backgroundColor: COLORS.navy,
   },
-  columnMain: { flex: 1, minWidth: 0, gap: SPACING.sm },
+  stageStrip: { flexDirection: 'row', gap: SPACING.sm },
+  /**
+   * Equal flex, so six frames and three both fill the column. The
+   * current one is marked by an amber hairline rather than by dimming
+   * the others — a strip of darkened thumbnails reads as five disabled
+   * controls next to one live one.
+   */
+  stageThumb: {
+    flex: 1,
+    aspectRatio: 16 / 9,
+    borderRadius: RADIUS.sm,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'transparent',
+    opacity: 0.65,
+  },
+  stageThumbOn: { borderColor: COLORS.accent, opacity: 1 },
+  stageThumbImage: { width: '100%', height: '100%' },
+  /** Small, solid, bottom-left: says "this one moves" without painting
+      a control over the whole thumb. */
+  stagePlayBadge: {
+    position: 'absolute',
+    left: 4,
+    bottom: 4,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(18,24,36,0.8)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   /** Full width, and split so neither half runs to a 1152pt measure. */
   recordBand: {
     flexDirection: 'row',
@@ -1319,7 +1418,24 @@ const styles = StyleSheet.create({
    */
   recordDetails: { flex: 1, minWidth: 0 },
   recordTags: { width: RAIL },
-  columnRail: { width: RAIL, gap: SPACING.md },
+  /**
+   * Pinned, the same move the Plan's rail makes and for the same
+   * reason: the rail is the short column — a decision and two lookup
+   * sections against the whole argument — and an unpinned short rail
+   * leaves its track empty for the rest of the scroll. Pinned, the
+   * decision stays in reach while the prose and the verdict go by,
+   * which is the point of putting it in a column at all.
+   */
+  columnRail: {
+    width: RAIL,
+    gap: SPACING.md,
+    ...(Platform.OS === 'web'
+      ? {
+          position: 'sticky' as unknown as 'absolute',
+          top: 58 + SPACING.xl,
+        }
+      : null),
+  },
   railCard: {
     backgroundColor: COLORS.navy,
     borderRadius: RADIUS.md,
@@ -1369,10 +1485,10 @@ const styles = StyleSheet.create({
   fileSection: {
     paddingVertical: SPACING.lg,
     gap: SPACING.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.stroke,
   },
+  fileJoin: { borderBottomWidth: 1, borderBottomColor: COLORS.stroke },
   fileSectionLast: { borderBottomWidth: 0 },
+  fileFlat: {},
   /** A label, at the size of a label — not a fourth headline. */
   fileLabel: { ...TYPE.micro, color: COLORS.mediumGrey },
   /**

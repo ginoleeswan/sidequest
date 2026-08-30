@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import type { AddedByStatus } from '@/api/types';
 import { compact } from '@/lib/format';
 import { COLORS } from '@/styles/colors';
-import { RADIUS, SPACING } from '@/styles/theme';
+import { SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 const ROWS: {
@@ -44,16 +44,18 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: SPACING.sm,
   },
+  /**
+   * No chrome. These four sat in bordered tiles, which put boxes inside
+   * whatever held the section — a crate on the phone, a flush rail on
+   * the wide page — and a statistic does not need a container to be
+   * one: the number is the object. Icon, figure, label, in a wrapping
+   * two-up.
+   */
   cell: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.sm,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: COLORS.stroke,
-    borderRadius: RADIUS.sm,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm + 2,
+    paddingVertical: SPACING.xs,
     minWidth: 140,
     flexGrow: 1,
   },
