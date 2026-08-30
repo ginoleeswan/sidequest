@@ -29,7 +29,7 @@ struct TonightProvider: TimelineProvider {
   func placeholder(in context: Context) -> TonightEntry {
     TonightEntry(
       date: Date(),
-      tonight: Tonight(title: "Hades", hours: 2, finishes: false)
+      tonight: Tonight(id: nil, title: "Hades", hours: 2, finishes: false)
     )
   }
 
@@ -252,6 +252,11 @@ struct TonightWidget: Widget {
  * Lock Screen accessories must NOT paint a ground: the system tints
  * them to match the wallpaper, and a filled container there renders as
  * a dark block sitting on somebody's photograph.
+ *
+ * Both branches open the game rather than the plan. This widget names
+ * one title and nothing else, so the tap should land where the name
+ * points; `Deep.game` falls back to the plan on its own when there is
+ * no game to open, which is also the empty state.
  */
 struct TonightSurface: View {
   let entry: TonightEntry
@@ -262,11 +267,11 @@ struct TonightSurface: View {
     case .accessoryCircular, .accessoryRectangular, .accessoryInline:
       TonightAccessory(entry: entry)
         .containerBackground(.clear, for: .widget)
-        .widgetURL(Deep.plan)
+        .widgetURL(Deep.game(entry.tonight?.id))
     default:
       TonightHome(entry: entry, wide: family == .systemMedium)
         .containerBackground(Color("$ground"), for: .widget)
-        .widgetURL(Deep.plan)
+        .widgetURL(Deep.game(entry.tonight?.id))
     }
   }
 }

@@ -1,5 +1,8 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- CommonJS config, no types
+import appConfig = require('../../../app.config.js');
 
 import { HORIZON_DAYS } from '../alerts';
 import { COLORS } from '@/styles/colors';
@@ -121,6 +124,103 @@ describe('the constants the widgets restate', () => {
     expect(groups.length).toBeGreaterThan(0);
     for (const group of groups) {
       expect(read('expo-target.config.js')).toContain(`'${group}'`);
+    }
+  });
+});
+
+/**
+ * Where a tap lands.
+ *
+ * The widgets are the one surface that navigates the app from outside
+ * it, by writing a URL into a binary that cannot be asked whether the
+ * route on the other end exists. A renamed screen does not break a
+ * widget at build time and does not break it at read time — it breaks
+ * on the tap, weeks later, in somebody's hand.
+ *
+ * So the scheme is checked against the one the config hands to iOS, and
+ * every path is checked against the files expo-router actually turns
+ * into routes.
+ */
+describe('the deep links the widgets write', () => {
+  const swift = read('Shared.swift');
+
+  /** Every `sidequest://…` in the Swift, as a path with its dynamic
+   * segments generalised — `game/\(id)` is the route, `game/12` is one
+   * of its addresses. */
+  const linked = Array.from(
+    swift.matchAll(
+      /sidequest:\/\/([A-Za-z0-9\-_/]*(?:\\\([a-z]+\)[A-Za-z0-9\-_/]*)*)/g
+    ),
+    (match) => match[1].replace(/\\\([a-z]+\)/g, ':param')
+  );
+
+  /**
+   * Every route in `src/app`, by the path it answers on.
+   *
+   * Groups are transparent — `(tabs)/plan` is reachable as `plan` —
+   * and a dynamic segment is generalised the same way the links above
+   * are, so the two sides are compared as routes rather than as
+   * strings that happen to match.
+   */
+  const routes = (() => {
+    const root = join(__dirname, '..', '..', 'app');
+    const found = new Set<string>();
+    const walk = (dir: string, prefix: string[]) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const name = entry.name;
+        if (
+          name === '__tests__' ||
+          name.startsWith('+') ||
+          name.startsWith('_')
+        ) {
+          continue;
+        }
+        if (entry.isDirectory()) {
+          const segment = /^\(.*\)$/.test(name) ? [] : [name];
+          walk(join(dir, name), [...prefix, ...segment]);
+          continue;
+        }
+        if (!name.endsWith('.tsx')) continue;
+        const base = name.replace(/\.tsx$/, '');
+        const segment = base === 'index' ? [] : [base];
+        found.add(
+          [...prefix, ...segment]
+            .map((part) => (/^\[.+\]$/.test(part) ? ':param' : part))
+            .join('/')
+        );
+      }
+    };
+    walk(root, []);
+    return found;
+  })();
+
+  it('writes at least the links the widgets are known to have', () => {
+    // A regex that quietly matched nothing would make every assertion
+    // below vacuously true, which is the failure mode a contract test
+    // has to be most careful about.
+    expect(linked).toEqual(
+      expect.arrayContaining(['plan', 'memcard', 'game/:param'])
+    );
+  });
+
+  it.each(Array.from(new Set(linked)))(
+    'sidequest://%s is a route the app still has',
+    (path) => {
+      expect(Array.from(routes)).toContain(path);
+    }
+  );
+
+  it('uses the scheme the config gives iOS', () => {
+    const appJson = JSON.parse(
+      readFileSync(join(__dirname, '..', '..', '..', 'app.json'), 'utf8')
+    );
+    // No APP_VARIANT under test, which the config reads as production —
+    // the variant whose scheme is the plain one the Swift hard-codes.
+    // A dev build's widgets are rewritten by prebuild; this is the
+    // build that ships.
+    const { scheme } = appConfig({ config: appJson.expo });
+    for (const url of swift.matchAll(/"([a-z-]+):\/\//g)) {
+      expect(url[1]).toBe(scheme);
     }
   });
 });

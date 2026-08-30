@@ -24,7 +24,7 @@ jest.mock('../widgetStore', () => ({
 
 const morning = (title: string): PlanDay => ({
   at: new Date('2026-08-28T00:00:00').getTime(),
-  tonight: { title, hours: 2, finishes: false },
+  tonight: { id: 1, title, hours: 2, finishes: false },
   nights: [
     {
       day: 'FRI',

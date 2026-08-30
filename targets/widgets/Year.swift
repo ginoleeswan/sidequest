@@ -94,6 +94,29 @@ struct Shell: Shape {
   }
 }
 
+/**
+ * How lit a month is, by how much happened in it.
+ *
+ * The card used to be binary — a month either glowed or it did not —
+ * which threw away the difference between a March that finished one
+ * game and a March that finished four. The app has always sent the
+ * count (see `yearShape` in `lib/widgetData`, which says so in as many
+ * words); only this side was rounding it to a yes.
+ *
+ * Three steps and then a ceiling, because a card read at a glance can
+ * carry "some", "more" and "a lot" and cannot carry eleven gradations.
+ * An empty month is not a faint one: it stays the hairline well, so the
+ * grid still reads as twelve slots rather than as a fading ramp.
+ */
+func monthFill(_ finished: Int) -> Color {
+  switch finished {
+  case 0: return Color.white.opacity(0.07)
+  case 1: return Color("$accent").opacity(0.5)
+  case 2: return Color("$accent").opacity(0.75)
+  default: return Color("$accent")
+  }
+}
+
 struct YearView: View {
   let entry: YearEntry
   var wide: Bool
@@ -115,9 +138,9 @@ struct YearView: View {
 
         LazyVGrid(columns: columns, spacing: 3) {
           ForEach(0..<12, id: \.self) { month in
-            let lit = month < year.months.count && year.months[month] > 0
+            let finished = month < year.months.count ? year.months[month] : 0
             RoundedRectangle(cornerRadius: 2)
-              .fill(lit ? Color("$accent") : Color.white.opacity(0.07))
+              .fill(monthFill(finished))
               .aspectRatio(1.35, contentMode: .fit)
           }
         }

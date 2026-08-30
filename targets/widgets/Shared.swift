@@ -29,11 +29,37 @@ let appGroup = "group.com.glstudio.sidequest"
 enum Deep {
   static let plan = URL(string: "sidequest://plan")!
   static let memcard = URL(string: "sidequest://memcard")!
+
+  /**
+   * One game's own page.
+   *
+   * For the widget that names a single game: a card that says Hades
+   * and opens a list of seven evenings has answered a question nobody
+   * asked. Falls back to the plan when the id is missing, which is
+   * what an older payload written before the app knew to send it
+   * looks like.
+   */
+  static func game(_ id: Int?) -> URL {
+    guard let id, let url = URL(string: "sidequest://game/\(id)") else {
+      return plan
+    }
+    return url
+  }
 }
 
 // MARK: - What the app writes
 
 struct Tonight: Codable {
+  /**
+   * The lead game's id, for the tap target.
+   *
+   * Optional, and that is load-bearing rather than timid. The plan is
+   * decoded whole — one missing required field fails the entire array
+   * and blanks the widget — so a build that lands before the app has
+   * republished must still read the payload it finds. It resolves to
+   * the plan page, exactly as it did before this field existed.
+   */
+  let id: Int?
   let title: String
   let hours: Int
   /// Whether this evening rolls the credits — the app's own word for it.

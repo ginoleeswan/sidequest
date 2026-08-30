@@ -32,10 +32,28 @@ const night = (
 describe('tonightShape', () => {
   it('names the lead game and the evening it belongs to', () => {
     expect(tonightShape([night(2, [{ name: 'Hades', hours: 2 }])])).toEqual({
+      id: 0,
       title: 'Hades',
       hours: 2,
       finishes: false,
     });
+  });
+
+  /**
+   * The id is the widget's tap target: it opens the game rather than
+   * the plan. It has to be the LEAD game's, not the evening's first by
+   * some other ordering, or a widget naming one game opens another.
+   */
+  it('carries the lead game id, so the widget can open that game', () => {
+    const week = [
+      night(2, [
+        { name: 'Hades', hours: 2 },
+        { name: 'Celeste', hours: 1 },
+      ]),
+    ];
+    const tonight = tonightShape(week);
+    expect(tonight?.id).toBe(week[0].games[0].id);
+    expect(tonight?.title).toBe('Hades');
   });
 
   /**

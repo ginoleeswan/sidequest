@@ -25,6 +25,15 @@ import type { PlannedEvening } from './week';
 
 /** Tonight's pick, or nothing if there is no plan. */
 export interface TonightShape {
+  /**
+   * The lead game, so the widget can open it rather than the plan.
+   *
+   * Tapping a card that names one game and landing on a list of seven
+   * is a small betrayal of the tap. Sent as the id alone — the widget
+   * builds the link, because the URL scheme is a thing the native side
+   * already knows and the app should not spell twice.
+   */
+  id: number;
   title: string;
   hours: number;
   finishes: boolean;
@@ -236,6 +245,7 @@ export function tonightShape(
   const lead = evening?.games[0];
   if (!lead) return null;
   return {
+    id: lead.id,
     title: lead.name,
     // The evening's whole length, not the lead game's: two games on one
     // night is still one evening, and the number answers "how long am I
