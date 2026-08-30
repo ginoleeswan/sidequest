@@ -66,6 +66,11 @@ export async function publishPlan(days: readonly PlanDay[]) {
     bridge.store.set('plan', JSON.stringify(days));
   } else {
     bridge.store.remove('plan');
+    // The art goes with it. A cover left behind outlives the plan that
+    // asked for it, and the card it decorates now says "no plan yet" —
+    // a game's key art behind those words is the widget contradicting
+    // itself on somebody's home screen.
+    bridge.store.remove('covers');
   }
 
   // Every widget drawn from `plan`, which is now three of the four.
@@ -75,6 +80,36 @@ export async function publishPlan(days: readonly PlanDay[]) {
   bridge.reload(KINDS.tonight);
   bridge.reload(KINDS.week);
   bridge.reload(KINDS.month);
+}
+
+/**
+ * Publish the artwork, after the plan and separately from it.
+ *
+ * Two writes rather than one, deliberately. The plan is local and
+ * instant; the covers are a download, and holding the week's text
+ * hostage to a CDN would mean a widget showing last Tuesday's game
+ * because a picture was slow. The card gets its words immediately and
+ * its art when the art arrives, which is the order a reader would
+ * choose if asked.
+ *
+ * Only Tonight is reloaded. It is the one widget that draws a cover —
+ * the week is seven names and a month is a timeline, and neither gets
+ * better for having photographs in it — so nudging the others would be
+ * three wake-ups to redraw something that has not changed.
+ */
+export async function publishCovers(covers: Record<string, string>) {
+  const bridge = widgetStore();
+  if (!bridge) return;
+
+  // Removed rather than written empty, the same as the plan: an empty
+  // object is a thing Swift has to decode before finding out it holds
+  // nothing.
+  if (Object.keys(covers).length > 0) {
+    bridge.store.set('covers', JSON.stringify(covers));
+  } else {
+    bridge.store.remove('covers');
+  }
+  bridge.reload(KINDS.tonight);
 }
 
 /** Publish the year's card — the twelve slots and what fills them. */
@@ -99,7 +134,7 @@ export async function clearWidgets() {
   // 'tonight' and 'week' are what builds before the timeline wrote;
   // cleared too, so an upgrade does not leave a copy of somebody's plan
   // in the container with nothing left that reads it.
-  for (const key of ['plan', 'tonight', 'week', 'year']) {
+  for (const key of ['plan', 'tonight', 'week', 'year', 'covers']) {
     bridge.store.remove(key);
   }
   // Removing the data is only half of forgetting. A widget holds a

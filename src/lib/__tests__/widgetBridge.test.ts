@@ -1,7 +1,12 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { publishPlan, clearWidgets, KINDS } from '../widgetBridge';
+import {
+  publishCovers,
+  publishPlan,
+  clearWidgets,
+  KINDS,
+} from '../widgetBridge';
 import type { PlanDay } from '../widgetData';
 
 /**
@@ -90,6 +95,7 @@ describe('the widget bridge', () => {
   it('clearWidgets forgets every key and wakes every widget', async () => {
     await clearWidgets();
     expect(mockRemove.mock.calls.map(([k]) => k).sort()).toEqual([
+      'covers',
       'plan',
       'tonight',
       'week',
@@ -134,5 +140,39 @@ describe('the widget kinds, against the Swift that declares them', () => {
 
   it('knows the name of every widget the app ships', () => {
     expect(declared.sort()).toEqual([...Object.values(KINDS)].sort());
+  });
+});
+
+describe('the artwork, which travels separately from the plan', () => {
+  it('writes the covers under their own key', async () => {
+    await publishCovers({ '12': 'QUJD' });
+    expect(mockSet).toHaveBeenCalledWith('covers', '{"12":"QUJD"}');
+  });
+
+  it('removes them rather than writing an empty object', async () => {
+    await publishCovers({});
+    expect(mockRemove).toHaveBeenCalledWith('covers');
+    expect(mockSet).not.toHaveBeenCalledWith('covers', expect.anything());
+  });
+
+  /**
+   * Tonight is the only widget that draws a cover. The week is seven
+   * names and the month is a timeline; waking either to redraw
+   * something that cannot have changed is three wake-ups spent on
+   * nothing, inside a budget iOS meters.
+   */
+  it('wakes only the widget that draws one', async () => {
+    await publishCovers({ '12': 'QUJD' });
+    expect(mockReload).toHaveBeenCalledTimes(1);
+    expect(mockReload).toHaveBeenCalledWith('Tonight');
+  });
+
+  /**
+   * A cover outliving its plan is the widget contradicting itself: key
+   * art behind the words "no plan yet".
+   */
+  it('drops the art when the plan empties', async () => {
+    await publishPlan([]);
+    expect(mockRemove).toHaveBeenCalledWith('covers');
   });
 });

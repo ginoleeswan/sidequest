@@ -4,7 +4,9 @@ import { usePersistedState } from '@/hooks/usePersistedState';
 import { useDurations } from '@/lib/durations';
 import { useLibrary } from '@/lib/library';
 import { buildMemcard } from '@/lib/memcard';
-import { publishPlan, publishYear } from '@/lib/widgetBridge';
+import { publishCovers, publishPlan, publishYear } from '@/lib/widgetBridge';
+import { collectCovers } from '@/lib/widgetCovers';
+import { coverTargets } from '@/lib/widgetData';
 import { widgetPlan } from '@/lib/widgetPlan';
 
 /**
@@ -96,6 +98,26 @@ export function WidgetPublisher() {
 
       void publishPlan(days);
       void publishYear(card);
+
+      /*
+       * The artwork, chased after the words are already through.
+       *
+       * `publishPlan` has written and reloaded by now, so the card is
+       * correct before this starts and merely plainer than it will be.
+       * The library is the only place a cover URL exists — the plan
+       * shapes carry ids and names, never assets — so the lookup
+       * happens here rather than inside the bridge.
+       *
+       * Unawaited on purpose. Nothing on screen is waiting for a
+       * picture, and an effect that resolves a network call is an
+       * effect that can still be running when the next edit lands.
+       */
+      const art = new Map(
+        all.map((entry) => [entry.game.id, entry.game.background_image])
+      );
+      void collectCovers(coverTargets(days), (id) => art.get(id)).then(
+        publishCovers
+      );
     }, SETTLE_MS);
     return () => clearTimeout(timer);
     // `overrides` is here because a corrected length changes every

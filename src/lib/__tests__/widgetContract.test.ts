@@ -224,3 +224,37 @@ describe('the deep links the widgets write', () => {
     }
   });
 });
+
+/**
+ * The keys, which are the container's whole schema.
+ *
+ * The app writes strings into `UserDefaults` under names it chooses and
+ * the widgets read them back under names they were compiled with. There
+ * is no type, no handshake and no error — a key written on one side and
+ * spelled differently on the other is not a crash, it is a widget that
+ * quietly never finds anything, which is indistinguishable from a
+ * reader who has not made a plan yet.
+ *
+ * Only writes are checked. `clearWidgets` also removes `tonight` and
+ * `week`, which are what builds before the timeline wrote and which
+ * nothing reads on purpose — forgetting a key no longer in use is the
+ * correct thing to do with it, not a contract to keep.
+ */
+describe('the keys the two binaries share', () => {
+  const bridge = readFileSync(join(__dirname, '..', 'widgetBridge.ts'), 'utf8');
+  const swift = read('Shared.swift');
+
+  const written = Array.from(
+    new Set(
+      Array.from(bridge.matchAll(/store\.set\(\s*'([a-z]+)'/g), (m) => m[1])
+    )
+  );
+
+  it('finds the writes it is about to make claims about', () => {
+    expect(written.sort()).toEqual(['covers', 'plan', 'year']);
+  });
+
+  it.each(written)('the widgets read the “%s” the app writes', (key) => {
+    expect(swift).toContain(`"${key}"`);
+  });
+});

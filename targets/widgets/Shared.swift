@@ -256,6 +256,42 @@ enum Store {
   }
 
   static func year() -> Year? { decode(Year.self, "year") }
+
+  /**
+   * The week's artwork, by game id, as the app encoded it.
+   *
+   * Base64 rather than files because the shared container the two
+   * binaries have is `UserDefaults` and nothing else — see
+   * `lib/widgetCovers`, which spends a fixed budget on the covers the
+   * week actually needs and drops the furthest-away one first.
+   *
+   * Read once per timeline rather than once per entry: seven mornings
+   * usually name two or three games between them, and decoding the same
+   * picture five times is work done inside a window the system is
+   * timing.
+   */
+  static func covers() -> [String: String] {
+    decode([String: String].self, "covers") ?? [:]
+  }
+}
+
+/**
+ * One game's cover, if there is one, decoded.
+ *
+ * Every step is allowed to come back empty and none of them is an
+ * error: a plan written before this build existed has no covers key, a
+ * game the budget could not fit has no entry, and a string that is not
+ * an image is a string that is not an image. Each of those is a card
+ * that looks the way the card looked before it had artwork, which is a
+ * design that still works — the type was never sitting on the picture
+ * for legibility.
+ */
+func coverImage(_ id: Int?, in covers: [String: String]) -> UIImage? {
+  guard let id,
+    let encoded = covers["\(id)"],
+    let data = Data(base64Encoded: encoded)
+  else { return nil }
+  return UIImage(data: data)
 }
 
 /**

@@ -436,6 +436,34 @@ export interface PlanDay {
   pressure: Pressure;
 }
 
+/**
+ * Which games the widget will need a picture of, in the order it needs
+ * them.
+ *
+ * The plan is a week of mornings and each morning names its own lead
+ * game, so art for tonight alone is art that is wrong by Wednesday —
+ * the card would carry Thursday's title over Monday's cover, which is
+ * worse than carrying no cover at all. The set is small in practice: a
+ * route of two or three games covers a week, and a day that repeats
+ * yesterday's game asks for nothing new.
+ *
+ * Ordered by when it is first needed rather than by anything else. The
+ * budget downstream is spent from the front, so the cover that runs
+ * out is always the one furthest away — tonight is never the picture
+ * that got dropped.
+ */
+export function coverTargets(days: readonly PlanDay[]): number[] {
+  const seen = new Set<number>();
+  const targets: number[] = [];
+  for (const day of days) {
+    const id = day.tonight?.id;
+    if (id == null || seen.has(id)) continue;
+    seen.add(id);
+    targets.push(id);
+  }
+  return targets;
+}
+
 /** Local midnight on the day `at` falls in. */
 export const midnightOf = (at: number): number => {
   const date = new Date(at);

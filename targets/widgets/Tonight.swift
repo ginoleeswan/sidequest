@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import WidgetKit
 
 /**
@@ -21,6 +22,8 @@ struct TonightEntry: TimelineEntry {
   let date: Date
   let tonight: Tonight?
   var pressure: Pressure = .calm
+  /// Decoded once when the timeline is built, not once per draw.
+  var cover: UIImage? = nil
 }
 
 struct TonightProvider: TimelineProvider {
@@ -46,7 +49,8 @@ struct TonightProvider: TimelineProvider {
       TonightEntry(
         date: Date(),
         tonight: today?.tonight,
-        pressure: today?.pressure ?? .calm
+        pressure: today?.pressure ?? .calm,
+        cover: coverImage(today?.tonight?.id, in: Store.covers())
       )
     )
   }
@@ -64,11 +68,16 @@ struct TonightProvider: TimelineProvider {
     in context: Context,
     completion: @escaping (Timeline<TonightEntry>) -> Void
   ) {
+    // Read once, outside the loop. Seven mornings usually name two or
+    // three games between them, and re-reading the container per entry
+    // is work done inside a window the system is timing.
+    let covers = Store.covers()
     let entries = planEntries(Store.plan()) { date, day in
       TonightEntry(
         date: date,
         tonight: day?.tonight,
-        pressure: day?.pressure ?? .calm
+        pressure: day?.pressure ?? .calm,
+        cover: coverImage(day?.tonight?.id, in: covers)
       )
     }
     completion(Timeline(entries: entries, policy: .atEnd))
@@ -229,6 +238,58 @@ struct TonightAccessory: View {
 
 // MARK: -
 
+/**
+ * The ground under Tonight: the game's own art, or the app's navy.
+ *
+ * Artwork earns its place on this widget and on no other. Tonight names
+ * exactly one game, and a cover is recognised across a room in a way a
+ * word set at 19pt is not — which is the whole use of a widget somebody
+ * glances at from the sofa. The week is seven names and the month is a
+ * timeline; art there would be a mosaic and a decoration respectively,
+ * so both keep the flat navy.
+ *
+ * The scrim is not a mood. Key art is somebody else's composition,
+ * arriving at whatever exposure it happens to have, and the type on top
+ * of it has to be readable over a night sky and a white snowfield
+ * alike. A gradient in the app's own ground colour — heavier at the
+ * foot, where the pressure line sits, than at the head — buys that
+ * without tinting the picture some colour the game is not.
+ *
+ * The navy is painted first and unconditionally, so a card whose art
+ * never arrived is the card as it was designed rather than a hole.
+ */
+struct CoverGround: View {
+  let cover: UIImage?
+
+  var body: some View {
+    ZStack {
+      Color("$ground")
+      if let cover {
+        // Sized from the geometry rather than left to fill: an
+        // unconstrained `scaledToFill` reports the image's own size as
+        // its ideal, which is how a 420px picture ends up deciding how
+        // big the card wants to be.
+        GeometryReader { geo in
+          Image(uiImage: cover)
+            .resizable()
+            .scaledToFill()
+            .frame(width: geo.size.width, height: geo.size.height)
+            .clipped()
+        }
+        LinearGradient(
+          colors: [
+            Color("$ground").opacity(0.58),
+            Color("$ground").opacity(0.86),
+            Color("$ground").opacity(0.96),
+          ],
+          startPoint: .top,
+          endPoint: .bottom
+        )
+      }
+    }
+  }
+}
+
 struct TonightWidget: Widget {
   var body: some WidgetConfiguration {
     StaticConfiguration(kind: "Tonight", provider: TonightProvider()) { entry in
@@ -270,7 +331,7 @@ struct TonightSurface: View {
         .widgetURL(Deep.game(entry.tonight?.id))
     default:
       TonightHome(entry: entry, wide: family == .systemMedium)
-        .containerBackground(Color("$ground"), for: .widget)
+        .containerBackground(for: .widget) { CoverGround(cover: entry.cover) }
         .widgetURL(Deep.game(entry.tonight?.id))
     }
   }

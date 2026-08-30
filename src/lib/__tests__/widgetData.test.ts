@@ -2,6 +2,7 @@ import type { Alert } from '../alerts';
 import type { Memcard } from '../memcard';
 import type { PlannedEvening } from '../week';
 import {
+  coverTargets,
   horizonShape,
   midnightOf,
   planTimeline,
@@ -562,5 +563,42 @@ describe('horizonShape', () => {
   it('never draws a horizon shorter than a fortnight', () => {
     const shape = horizonShape([land(1, 'Quick', 2)], [], null, NOW);
     expect(shape!.to - NOW).toBeGreaterThan(14 * DAY);
+  });
+});
+
+describe('coverTargets', () => {
+  const day = (id: number | null) => ({
+    at: DAY_ONE,
+    tonight: id == null ? null : { id, title: 'x', hours: 2, finishes: false },
+    nights: [],
+    horizon: null,
+    pressure: { urgency: 'calm' as const, note: '', days: null },
+  });
+
+  /**
+   * Art for tonight alone is art that is wrong by Wednesday: the card
+   * would carry Thursday's title over Monday's cover. Every morning
+   * that names a different game needs its own picture.
+   */
+  it('names every game the week will show, not only tonight', () => {
+    expect(coverTargets([day(1), day(2), day(3)])).toEqual([1, 2, 3]);
+  });
+
+  it('asks for a repeated game once', () => {
+    expect(coverTargets([day(1), day(1), day(2), day(1)])).toEqual([1, 2]);
+  });
+
+  /**
+   * Order is the budget's priority downstream — it is spent from the
+   * front — so first-needed has to come first or the picture that gets
+   * dropped could be tonight's.
+   */
+  it('orders them by the morning that first needs them', () => {
+    expect(coverTargets([day(9), day(4)])).toEqual([9, 4]);
+  });
+
+  it('skips an evening with nothing on it', () => {
+    expect(coverTargets([day(null), day(5)])).toEqual([5]);
+    expect(coverTargets([])).toEqual([]);
   });
 });
