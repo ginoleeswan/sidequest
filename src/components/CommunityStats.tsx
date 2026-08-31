@@ -56,8 +56,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: SPACING.sm,
     paddingVertical: SPACING.xs,
-    minWidth: 140,
+    /*
+     * Equal shares, not content widths. The bordered tiles hid this:
+     * with flexGrow alone each cell took the width of its own number
+     * and label, so the second column started at 210 on one row and
+     * 205 on the next — invisible behind a border, obvious once the
+     * border went. A zero basis makes every cell on a row the same
+     * width, and the min forces the wrap to two-up on a phone.
+     */
+    flexBasis: 0,
     flexGrow: 1,
+    minWidth: 140,
   },
   value: {
     ...TYPE.h3,

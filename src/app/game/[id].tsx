@@ -666,7 +666,21 @@ export default function GameInfoScreen() {
     </View>
   ) : null;
 
-  const media = (
+  /**
+   * What shows you the game, and what comes after it.
+   *
+   * The phone ran hero → controls → About → verdict → screenshots →
+   * trailers, so the two assets that answer "what is this actually
+   * like" sat at 1182 and 1442 of a 3562pt page — below the argument
+   * they are evidence for. The desktop fixed this by making them the
+   * stage; the phone has no room for a stage, but it can put them
+   * where the stage is: straight after the controls.
+   *
+   * Live streams and the series stay at the foot. They are about other
+   * things — other people playing, other games — so they belong after
+   * this game has been dealt with.
+   */
+  const mediaStage = (
     <>
       {screenshots.length > 0 && !isExpanded && (
         <View style={mediaBlock}>
@@ -722,7 +736,11 @@ export default function GameInfoScreen() {
           />
         </View>
       ) : null}
+    </>
+  );
 
+  const mediaTail = (
+    <>
       {/* Below the trailers on purpose. A trailer is what the publisher
           wants this game to look like; a live stream is what it looks
           like. Renders nothing when nobody is live, when Twitch has no
@@ -1113,7 +1131,7 @@ export default function GameInfoScreen() {
                 </Animated.View>
                 <Animated.View style={{ opacity }}>{record}</Animated.View>
                 {/* media escapes the column: full-bleed rails, gutter-aligned */}
-                <Animated.View style={{ opacity }}>{media}</Animated.View>
+                <Animated.View style={{ opacity }}>{mediaTail}</Animated.View>
               </View>
             ) : (
               <>
@@ -1126,11 +1144,12 @@ export default function GameInfoScreen() {
                       game you have not played it is an empty box in the
                       most valuable position on the screen. It is a
                       response, so it follows what it responds to. */}
+                  {mediaStage}
                   {about}
                   {ratingsBreakdown}
-                  {media}
                   {yourTake}
                   {fileBox}
+                  {mediaTail}
                 </Animated.View>
               </>
             )}
@@ -1270,13 +1289,27 @@ const styles = StyleSheet.create({
   statArrow: { ...TYPE.labelTiny },
   /** The hours, at the size the Library sets the hours ahead of you. */
   hoursLine: { flexDirection: 'row', alignItems: 'baseline', gap: SPACING.sm },
+  /**
+   * Amber on both widths, not just the wide one.
+   *
+   * The desktop got this when a 44pt white name over a 76pt white
+   * figure read as two rivals rather than a rank. The phone has the
+   * same fault at 32 and 34 — a two-point difference is not a
+   * hierarchy — and it was left white because the masthead sits on
+   * artwork. But it sits on the FOOT of that artwork, where the hero's
+   * own gradient is already #333D51D9 running to solid: 85% navy to
+   * 100%, not a photograph. The contrast that ruled amber out over a
+   * bright frame does not apply where the copy actually lands.
+   */
   hoursValue: {
     fontFamily: 'Noah-Black',
     fontSize: 34,
     lineHeight: 38,
     letterSpacing: -0.6,
+    // The shadow from OVER_IMAGE, but not its white: the spread has to
+    // come first or it takes the colour back.
     ...OVER_IMAGE.heading,
-    color: COLORS.white,
+    color: COLORS.accent,
   },
   /**
    * The same figure, kept ahead of a bigger title.
@@ -1289,16 +1322,8 @@ const styles = StyleSheet.create({
    * takes. 48 restores the ratio rather than picking a number that
    * looks about right.
    */
-  /**
-   * Amber, because the masthead had two near-equal white slabs — a 44pt
-   * name over a 76pt figure, same face, same ink — and size alone does
-   * not rank two blocks that big; they read as rivals. Amber is what
-   * this app paints time with everywhere (the rule below, the plan's
-   * week, the library's hours), so the figure joins that system and
-   * the name keeps white to itself. One glance now says which line is
-   * the page's subject and which is its title.
-   */
-  hoursValueWide: { fontSize: 76, lineHeight: 80, color: COLORS.accent },
+  /** The wide page's step; the colour is the shared rule above. */
+  hoursValueWide: { fontSize: 76, lineHeight: 80 },
 
   /**
    * Full width of its track, so the rule is a measure and not a motif.
