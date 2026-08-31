@@ -14,6 +14,17 @@ const ROWS: {
 }[] = [
   { key: 'playing', label: 'Playing now', icon: 'game-controller' },
   { key: 'beaten', label: 'Beaten', icon: 'checkmark-circle' },
+  /**
+   * The one no store will print.
+   *
+   * HowLongToBeat shows "1.4% Retired" and it is the most useful number
+   * on their page: how many people put it down. RAWG has sent `dropped`
+   * in this same payload all along and nothing read it. An app whose
+   * whole stance is permission to let go should say out loud that other
+   * people did — it is the relief position (§2.1) as a statistic
+   * rather than a sentence.
+   */
+  { key: 'dropped', label: 'Put it down', icon: 'arrow-undo' },
   { key: 'toplay', label: 'Want to play', icon: 'bookmark' },
   { key: 'owned', label: 'In libraries', icon: 'albums' },
 ];

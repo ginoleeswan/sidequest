@@ -4,7 +4,12 @@ import { LAYOUT, SHADOW_ROOM } from '@/styles/theme';
 
 interface Props<T> {
   data: T[];
-  renderItem: (item: T) => React.ReactElement;
+  /**
+   * The index comes through because callers legitimately need to know
+   * which one is first — a gallery that opens on a running trailer has
+   * to be able to ask.
+   */
+  renderItem: (item: T, index: number) => React.ReactElement;
   keyExtractor: (item: T) => string;
   /**
    * The parent's horizontal padding. The rail bleeds across it with negative
@@ -41,7 +46,7 @@ export function Rail<T>({
       data={data}
       showsHorizontalScrollIndicator={false}
       keyExtractor={keyExtractor}
-      renderItem={({ item }) => renderItem(item)}
+      renderItem={({ item, index }) => renderItem(item, index)}
       style={[
         inset > 0 && { marginHorizontal: -inset },
         // Pull the surrounding layout back over the shadow room so it

@@ -81,8 +81,11 @@ const HTML_TAGS = /(<([^>]+)>)/gi;
  */
 const PAGE_MAX = 1200;
 
-/** The rail, and so the second track of every band on the page. */
-const RAIL = 400;
+/**
+ * The rail's ceiling. Steam's is 375 and Epic's 280; 340 sits between
+ * them and leaves the picture the 70% both give it.
+ */
+const RAIL = 340;
 
 /**
  * The band the site header has to use to land on the page's left edge.
@@ -163,12 +166,47 @@ function WeekRule({ weeks }: { weeks: number }) {
 function StageVideo({
   movie,
   style,
+  autoPlay = false,
 }: {
   movie: Movie;
   /** The stage fills its column; the phone's carousel sizes each frame. */
   style?: StyleProp<ViewStyle>;
+  /**
+   * Start it, silently.
+   *
+   * Both stores open their gallery on a moving trailer, and they are
+   * right: a still asks you to imagine the game, a trailer shows it.
+   * Muted is not a detail — a page that makes noise when you open it is
+   * a page people close, and every browser refuses to autoplay sound
+   * anyway. The controls are there the moment somebody wants them.
+   */
+  autoPlay?: boolean;
 }) {
-  const player = useVideoPlayer(mediaUri(movie.data.max) ?? '');
+  const player = useVideoPlayer(mediaUri(movie.data.max) ?? '', (p) => {
+    if (!autoPlay) return;
+    p.muted = true;
+    p.loop = true;
+  });
+
+  /*
+   * Started from an effect, not from the setup callback. The callback
+   * runs while the player is still being wired to a source, so a
+   * `play()` there resolves into nothing — measured as muted-but-paused
+   * on the first frame. After mount it takes.
+   */
+  useEffect(() => {
+    if (!autoPlay) return;
+    const started = setTimeout(() => {
+      try {
+        player.muted = true;
+        player.play();
+      } catch {
+        // An autoplay a browser declines is a trailer with a play
+        // button on it, which is the state it would have had anyway.
+      }
+    }, 0);
+    return () => clearTimeout(started);
+  }, [autoPlay, player]);
   return (
     <VideoView
       player={player}
@@ -439,8 +477,6 @@ export default function GameInfoScreen() {
    * stands in until somebody actually asks.
    */
   const [playing, setPlaying] = useState<number | null>(null);
-  /** Which frame the phone's masthead gallery is on, for the dots. */
-  const [heroPage, setHeroPage] = useState(0);
   const { durationOf, learnDurations } = useDurations();
 
   const { isExpanded, width } = useBreakpoint();
@@ -525,6 +561,13 @@ export default function GameInfoScreen() {
     : SPACING.md;
   const railInset = gutter;
 
+  /**
+   * A frame nearly the width of the screen, with the next one showing
+   * at the edge to say the rail scrolls.
+   */
+  const shotWidth = Math.min(width - gutter * 2 - SPACING.xl, 460);
+  const shotHeight = Math.round(shotWidth / (16 / 9));
+
   const mediaBlock = [
     styles.block,
     isExpanded && { paddingHorizontal: gutter },
@@ -561,64 +604,22 @@ export default function GameInfoScreen() {
   const hero = (
     <View style={styles.hero}>
       {/*
-        The masthead picture is the gallery.
-        
-        It was one 480pt frame of key art with a second, smaller
-        carousel of screenshots and trailers below it — the largest
-        object on the page showing the least, and the material that
-        answers "what is this like to play" shown at two thirds the
-        size in a section of its own. One pager, at the size the hero
-        already had: key art first because that is what identifies the
-        game on arrival, then everything else.
+        Artwork, and enough of it to be worth looking at.
 
-        Scrolled rather than paged so the frames snap: `pagingEnabled`
-        would be right if the frames were the window's width, and they
-        are, but snapping to the interval says the same thing and keeps
-        the peek honest at other widths.
+        The masthead was briefly the gallery itself, which worked and
+        cost the page its one beautiful thing: key art is composed to be
+        looked at whole, and a frame you swipe past is a frame nobody
+        looks at. The screens and the trailers went back to a carousel
+        of their own, which is also what they are — evidence, not
+        identity — and the masthead went back to being a picture.
       */}
-      <ScrollView
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
+      <CoverImage
+        uri={game.background_image}
         style={styles.heroImage}
-        onScroll={(event) =>
-          setHeroPage(
-            Math.round(event.nativeEvent.contentOffset.x / Math.max(width, 1))
-          )
-        }
-        scrollEventThrottle={64}
-      >
-        {frames.map((frame) => (
-          <Pressable
-            key={frame.key}
-            style={{ width, height: 480 }}
-            onPress={() =>
-              frame.movie
-                ? setPlaying(frame.movie.id)
-                : setLightboxUri(frame.image)
-            }
-            accessibilityRole="button"
-            accessibilityLabel={
-              frame.movie
-                ? `Play the trailer ${frame.movie.name}`
-                : `${game.name} artwork`
-            }
-          >
-            <CoverImage
-              uri={frame.image}
-              style={styles.heroImage}
-              iconSize={72}
-              size="hero"
-              label={`${game.name} cover art`}
-            />
-            {frame.movie ? (
-              <View style={styles.posterPlay}>
-                <Ionicons name="play" size={22} color={COLORS.navy} />
-              </View>
-            ) : null}
-          </Pressable>
-        ))}
-      </ScrollView>
+        iconSize={72}
+        size="hero"
+        label={`${game.name} cover art`}
+      />
       {/* Art dissolves into the page colour — the hero belongs to the page,
           not to a box sitting on it. */}
       {/* The ramp starts where the copy does, not a third of the way
@@ -626,23 +627,19 @@ export default function GameInfoScreen() {
           roughly a quarter of a scrim, which is legible over dark art
           and invisible over light — and RAWG returns both. */}
       <LinearGradient
-        colors={['#333D5100', '#333D514D', '#333D51D9', COLORS.darkGrey]}
-        locations={[0.18, 0.5, 0.86, 1]}
+        /* Held back so the picture survives. The ramp used to reach a
+           third of its weight by the halfway mark, veiling the part of
+           the art that is actually composed — a portrait crop of key
+           art puts the faces high, and they were sitting under a
+           scrim. It stays clear to two thirds and then closes fast,
+           which is all the copy at the foot needs. */
+        colors={['#333D5100', '#333D5126', '#333D51D9', COLORS.darkGrey]}
+        locations={[0.4, 0.66, 0.9, 1]}
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
       <GrainScrim style={styles.heroGrain} />
       <ChromeWeld height={insets.top + WELD_HEIGHT} />
-      {frames.length > 1 ? (
-        <View style={styles.heroDots} pointerEvents="none">
-          {frames.map((frame, index) => (
-            <View
-              key={frame.key}
-              style={[styles.heroDot, index === heroPage && styles.heroDotOn]}
-            />
-          ))}
-        </View>
-      ) : null}
       <View style={styles.heroCopy}>
         {/* No platform glyphs here any more: eight of them opened the
             masthead with a row of noise, and every one is spelled out
@@ -814,6 +811,76 @@ export default function GameInfoScreen() {
    * things — other people playing, other games — so they belong after
    * this game has been dealt with.
    */
+
+  /**
+   * The evidence, in one carousel under the decision.
+   *
+   * Trailers first because motion answers "what is this like to play"
+   * better than a still, and the first one is already running when the
+   * page settles — the masthead above carries identity, so this
+   * section has nothing to introduce and can get straight to showing.
+   * Everything at nearly the screen's width, snapped to the frame
+   * pitch so a thumb-flick never parks between two pictures.
+   */
+  const mediaStage =
+    isExpanded || frames.length <= 1 ? null : (
+      <View style={mediaBlock}>
+        <SectionHeader
+          title="What it looks like"
+          eyebrow={`${frames.length - 1} screens and trailers`}
+        />
+        <Rail<(typeof frames)[number]>
+          data={frames.slice(1)}
+          keyExtractor={(item) => item.key}
+          inset={railInset}
+          gap={SPACING.sm}
+          snapInterval={shotWidth + SPACING.sm}
+          renderItem={(item, index) =>
+            /* Only the frame that plays gets a player. The others are
+               poster frames until asked, which is what keeps a rail of
+               six trailers from mounting six video elements. */
+            item.movie && index === 0 ? (
+              <StageVideo
+                movie={item.movie}
+                autoPlay
+                style={{ width: shotWidth, height: shotHeight }}
+              />
+            ) : item.movie ? (
+              <Pressable
+                onPress={() => setPlaying(item.movie?.id ?? null)}
+                accessibilityRole="button"
+                accessibilityLabel={`Play the trailer ${item.movie.name}`}
+              >
+                <Image
+                  source={{ uri: mediaUri(item.image, 640) }}
+                  style={[
+                    styles.screenshot,
+                    { width: shotWidth, height: shotHeight },
+                  ]}
+                  contentFit="cover"
+                  transition={DURATION.base}
+                />
+                <View style={styles.posterPlay}>
+                  <Ionicons name="play" size={22} color={COLORS.navy} />
+                </View>
+              </Pressable>
+            ) : (
+              <Pressable onPress={() => setLightboxUri(item.image)}>
+                <Image
+                  source={{ uri: mediaUri(item.image, 640) }}
+                  style={[
+                    styles.screenshot,
+                    { width: shotWidth, height: shotHeight },
+                  ]}
+                  contentFit="cover"
+                  transition={DURATION.base}
+                />
+              </Pressable>
+            )
+          }
+        />
+      </View>
+    );
 
   const mediaTail = (
     <>
@@ -1253,6 +1320,7 @@ export default function GameInfoScreen() {
                       game you have not played it is an empty box in the
                       most valuable position on the screen. It is a
                       response, so it follows what it responds to. */}
+                  {mediaStage}
                   {about}
                   {ratingsBreakdown}
                   {yourTake}
@@ -1310,25 +1378,6 @@ const styles = StyleSheet.create({
 
   // hero
   hero: { height: 480, justifyContent: 'flex-end' },
-  /**
-   * Above the copy, not over it. The pager has no affordance of its own
-   * once the frames fill the window, so the dots are the only thing
-   * saying there is more than one — and they are the app's own amber
-   * for the frame you are on, muted for the rest.
-   */
-  heroDots: {
-    flexDirection: 'row',
-    gap: 5,
-    alignSelf: 'center',
-    paddingBottom: SPACING.sm,
-  },
-  heroDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.32)',
-  },
-  heroDotOn: { backgroundColor: COLORS.accent, width: 14 },
   heroGrain: {
     position: 'absolute',
     left: 0,
@@ -1569,7 +1618,7 @@ const styles = StyleSheet.create({
    * do. 61/39 is the ratio the cap was designed at; the rail keeps its
    * 400 ceiling so a wide monitor does not stretch a lookup column.
    */
-  columnMain: { flex: 61, minWidth: 0, gap: SPACING.sm },
+  columnMain: { flex: 70, minWidth: 0, gap: SPACING.sm },
 
   /**
    * The lead frame and its strip, sized to the column rather than to
@@ -1659,8 +1708,8 @@ const styles = StyleSheet.create({
    * that wrap to fill whatever they are given. Put the other way round
    * the band would stand 60pt taller for the same content.
    */
-  recordDetails: { flex: 61, minWidth: 0 },
-  recordTags: { flex: 39, maxWidth: RAIL, minWidth: 0 },
+  recordDetails: { flex: 70, minWidth: 0 },
+  recordTags: { flex: 30, maxWidth: RAIL, minWidth: 0 },
   /**
    * Pinned, the same move the Plan's rail makes and for the same
    * reason: the rail is the short column — a decision and two lookup
@@ -1670,7 +1719,7 @@ const styles = StyleSheet.create({
    * which is the point of putting it in a column at all.
    */
   columnRail: {
-    flex: 39,
+    flex: 30,
     maxWidth: RAIL,
     minWidth: 0,
     gap: SPACING.md,

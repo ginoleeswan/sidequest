@@ -11,6 +11,7 @@ export const SUBSET_ICONS = [
   'alert-circle',
   'alert-circle-outline',
   'arrow-forward',
+  'arrow-undo',
   'bookmark',
   'bookmark-outline',
   'briefcase',
