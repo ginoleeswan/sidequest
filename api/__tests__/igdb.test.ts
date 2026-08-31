@@ -88,4 +88,63 @@ describe('api/igdb', () => {
     expect(sent.code).toBe(502);
     expect(JSON.stringify(sent.body)).not.toContain('internal');
   });
+
+  /**
+   * The enrichment half of the payload: what the page draws that the
+   * durations do not carry. The shape is a contract with two clients
+   * (src/api/igdb and the page), so it is pinned here where a drift
+   * fails a test instead of quietly blanking a shelf.
+   */
+  it('carries cover, critic, storyline and the similar graph per slug', async () => {
+    fetchMock.mockImplementation((url: string, init?: { body?: string }) => {
+      if (url.includes('oauth2/token'))
+        return ok({ access_token: 'tok', expires_in: 0 });
+      if (init?.body?.includes('game_time_to_beats')) return ok([]);
+      if (init?.body) {
+        bodies.push(init.body);
+        return ok([
+          {
+            id: 1,
+            slug: 'hades',
+            cover: { image_id: 'co123' },
+            aggregated_rating: 92.4,
+            aggregated_rating_count: 31,
+            storyline: 'Escape the underworld.',
+            similar_games: [
+              { slug: 'celeste', name: 'Celeste', cover: { image_id: 'co9' } },
+              { slug: 'no-cover', name: 'No Cover' },
+              { name: 'No Slug', cover: { image_id: 'co8' } },
+            ],
+          },
+        ]);
+      }
+      return ok([]);
+    });
+    const sent = await call({ query: { slugs: 'hades' } });
+    const extras = (
+      sent.body as {
+        extras: Record<
+          string,
+          {
+            cover: string;
+            critic: number;
+            criticCount: number;
+            storyline: string;
+            similar: { slug: string; name: string; cover: string }[];
+          }
+        >;
+      }
+    ).extras.hades;
+    expect(extras.cover).toBe('co123');
+    // Rounded: a critic aggregate with decimals promises a precision
+    // thirty-one reviews do not have.
+    expect(extras.critic).toBe(92);
+    expect(extras.criticCount).toBe(31);
+    expect(extras.storyline).toBe('Escape the underworld.');
+    // Only entries with both a destination and a picture survive: a
+    // card missing either is not a recommendation.
+    expect(extras.similar).toEqual([
+      { slug: 'celeste', name: 'Celeste', cover: 'co9' },
+    ]);
+  });
 });

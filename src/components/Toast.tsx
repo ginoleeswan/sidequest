@@ -75,7 +75,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           pointerEvents="none"
           style={[
             styles.toast,
-            { bottom: insets.bottom + 72 },
+            {
+              // 72 clears the native tab bar; the web has none, so the
+              // same offset left a toast hovering mid-air. 28 sits it
+              // where a confirmation reads as arriving from the edge.
+              bottom: insets.bottom + (Platform.OS === 'web' ? 28 : 72),
+            },
             {
               opacity: progress,
               transform: [

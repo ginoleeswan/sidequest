@@ -116,6 +116,14 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
+    // The pill, moved in from the page wrappers: a floating chevron
+    // needs a ground to read as a control, and it is the only branch
+    // of this component that does.
+    borderRadius: 20,
+    backgroundColor: COLORS.plate,
+    borderWidth: 1,
+    borderColor: COLORS.strokeOnImage,
+    overflow: 'hidden',
   },
   icon: {
     color: COLORS.lightGrey,

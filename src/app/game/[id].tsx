@@ -1777,11 +1777,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: SPACING.lg,
     zIndex: 30,
-    borderRadius: 22,
-    backgroundColor: COLORS.plate,
-    borderWidth: 1,
-    borderColor: COLORS.strokeOnImage,
-    overflow: 'hidden',
+    // No chrome of its own: the pill belonged to the chevron it used
+    // to hold, and the brand lockup that stands here in a browser is a
+    // wordmark, not a button — a wordmark in a box is a sticker. The
+    // chevron carries its own pill now, where only the installed app
+    // sees it.
   },
 
   // hero
