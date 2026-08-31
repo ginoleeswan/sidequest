@@ -6,7 +6,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import React, { useEffect, useState } from 'react';
 import {
-  Linking,
   Animated,
   Modal,
   Platform,
@@ -15,12 +14,14 @@ import {
   StyleSheet,
   Text,
   View,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { gameDetailQuery } from '@/api/gameDetail';
 import { friendlyError, mediaUri } from '@/api/rawg';
-import type { Game, GameDetail, Movie, Named, Screenshot } from '@/api/types';
+import type { Game, GameDetail, Movie, Named } from '@/api/types';
 import { RouteError } from '@/components/RouteError';
 import { AppHeader } from '@/components/AppHeader';
 import { BackButton } from '@/components/BackButton';
@@ -50,7 +51,6 @@ import { StoreLinks } from '@/components/StoreLinks';
 import { DurationSheet } from '@/components/DurationSheet';
 import { SiteFooter } from '@/components/SiteFooter';
 import { GrainScrim, Textured } from '@/components/Textured';
-import { TrailerCard } from '@/components/TrailerCard';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { formatHours } from '@/lib/duration';
@@ -60,7 +60,7 @@ import { usePlanStanding } from '@/hooks/usePlanStanding';
 import { findSection } from '@/constants/categories';
 import { COLORS } from '@/styles/colors';
 import { DURATION, EASING } from '@/styles/motion';
-import { LAYOUT, RADIUS, SHADOW, SHADOW_ROOM, SPACING } from '@/styles/theme';
+import { LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
 import { OVER_IMAGE, TYPE } from '@/styles/typography';
 
 const HTML_TAGS = /(<([^>]+)>)/gi;
@@ -160,12 +160,19 @@ function WeekRule({ weeks }: { weeks: number }) {
  * talking when you open it is a page you close, and the play button is
  * the platform's own.
  */
-function StageVideo({ movie }: { movie: Movie }) {
+function StageVideo({
+  movie,
+  style,
+}: {
+  movie: Movie;
+  /** The stage fills its column; the phone's carousel sizes each frame. */
+  style?: StyleProp<ViewStyle>;
+}) {
   const player = useVideoPlayer(mediaUri(movie.data.max) ?? '');
   return (
     <VideoView
       player={player}
-      style={styles.stageLead}
+      style={[styles.stageLead, style]}
       contentFit="contain"
       nativeControls
     />
@@ -409,6 +416,15 @@ export default function GameInfoScreen() {
   const [stageIndex, setStageIndex] = useState(0);
   /** The stage's measured width, so the strip divides the column it is in. */
   const [stageWidth, setStageWidth] = useState(0);
+  /**
+   * Which trailer the phone's carousel has been asked to play.
+   *
+   * A `VideoView` renders black until it is started, so a carousel that
+   * opens on one opens on a black box — and mounting a player for every
+   * trailer in the rail buys that for each of them. The poster frame
+   * stands in until somebody actually asks.
+   */
+  const [playing, setPlaying] = useState<number | null>(null);
   const { durationOf, learnDurations } = useDurations();
 
   const { isExpanded, width } = useBreakpoint();
@@ -714,35 +730,87 @@ export default function GameInfoScreen() {
    * things — other people playing, other games — so they belong after
    * this game has been dealt with.
    */
-  const mediaStage = (
-    <>
-      {screenshots.length > 0 && !isExpanded && (
-        <View style={mediaBlock}>
-          {/* The trailer link was a lone pill floating between two
-              rails, belonging to neither. It is what you do with this
-              section, so it sits where every other section in the app
-              puts its action. */}
-          <SectionHeader
-            title="Screenshots"
-            actionLabel={trailers.length === 0 ? 'Trailer →' : undefined}
-            actionAccessibilityLabel="Watch the trailer on YouTube"
-            onAction={
-              trailers.length === 0
-                ? () =>
-                    Linking.openURL(
-                      `https://www.youtube.com/results?search_query=${encodeURIComponent(
-                        `${game.name} trailer`
-                      )}`
-                    )
-                : undefined
-            }
-          />
-          <Rail<Screenshot>
-            data={screenshots}
-            keyExtractor={(item) => String(item.id)}
-            inset={railInset}
-            shadowRoom={SHADOW_ROOM.card}
-            renderItem={(item) => (
+  /**
+   * Key art, then the trailers, then the screenshots — identity first,
+   * motion second, detail last. The trailers were a rail at the foot of
+   * the page, below the fold of the thing they advertise; a trailer is
+   * the single best answer to "what is this like to play", so it
+   * belongs in the stage with everything else that answers that.
+   */
+  const frames: { key: string; image: string; movie?: Movie }[] = [
+    ...(game.background_image
+      ? [{ key: 'art', image: game.background_image }]
+      : []),
+    ...trailers.slice(0, 2).map((movie) => ({
+      key: `movie-${movie.id}`,
+      image: movie.preview,
+      movie,
+    })),
+    ...screenshots.map((shot) => ({ key: String(shot.id), image: shot.image })),
+  ];
+  const current = frames[stageIndex] ?? frames[0];
+
+  /**
+   * One carousel, not two rails and a wall of key art.
+   *
+   * The phone showed the same material three times over: a 480pt hero
+   * of key art, then a Screenshots rail, then a Trailers rail — three
+   * headers, three scroll gestures, three sizes of the same idea, and
+   * the two things that actually show what playing looks like arriving
+   * as the smallest of them.
+   *
+   * They are one question, so they are one object. Trailers first
+   * because motion answers it better than a still, then every
+   * screenshot, in frames nearly the width of the screen so a phone
+   * gives its best asset the space it gives its worst. The hero above
+   * keeps the key art, which is identity rather than evidence, so
+   * nothing here repeats it.
+   *
+   * Snapped to the frame pitch: a carousel that stops between two
+   * pictures is a carousel that has to be tidied up after, and this
+   * one is scrolled with a thumb.
+   */
+  const mediaStage =
+    isExpanded || frames.length <= 1 ? null : (
+      <View style={mediaBlock}>
+        <SectionHeader
+          title="What it looks like"
+          eyebrow={`${frames.length - 1} screens and trailers`}
+        />
+        <Rail<(typeof frames)[number]>
+          data={frames.slice(1)}
+          keyExtractor={(item) => item.key}
+          inset={railInset}
+          gap={SPACING.sm}
+          snapInterval={shotWidth + SPACING.sm}
+          renderItem={(item) =>
+            item.movie && playing === item.movie.id ? (
+              <StageVideo
+                movie={item.movie}
+                style={{ width: shotWidth, height: shotHeight }}
+              />
+            ) : item.movie ? (
+              <Pressable
+                onPress={() => setPlaying(item.movie?.id ?? null)}
+                accessibilityRole="button"
+                accessibilityLabel={`Play the trailer ${item.movie.name}`}
+              >
+                <Image
+                  source={{ uri: mediaUri(item.image, 640) }}
+                  style={[
+                    styles.screenshot,
+                    { width: shotWidth, height: shotHeight },
+                  ]}
+                  contentFit="cover"
+                  transition={DURATION.base}
+                />
+                {/* The mark that says this one moves. A poster frame
+                    with no affordance is just a dark screenshot. */}
+                <View style={styles.posterPlay}>
+                  <Ionicons name="play" size={22} color={COLORS.navy} />
+                </View>
+              </Pressable>
+            ) : (
               <Pressable onPress={() => setLightboxUri(item.image)}>
                 <Image
                   source={{ uri: mediaUri(item.image, 640) }}
@@ -754,24 +822,11 @@ export default function GameInfoScreen() {
                   transition={DURATION.base}
                 />
               </Pressable>
-            )}
-          />
-        </View>
-      )}
-
-      {trailers.length > 0 && !isExpanded ? (
-        <View style={mediaBlock}>
-          <SectionHeader title="Trailers" />
-          <Rail<Movie>
-            data={trailers}
-            keyExtractor={(item) => String(item.id)}
-            inset={railInset}
-            renderItem={(item) => <TrailerCard trailer={item} />}
-          />
-        </View>
-      ) : null}
-    </>
-  );
+            )
+          }
+        />
+      </View>
+    );
 
   const mediaTail = (
     <>
@@ -924,25 +979,6 @@ export default function GameInfoScreen() {
    * Key art first and then the screenshots, because the opening frame
    * has to identify the game: a street at night is not a cover.
    */
-  /**
-   * Key art, then the trailers, then the screenshots — identity first,
-   * motion second, detail last. The trailers were a rail at the foot of
-   * the page, below the fold of the thing they advertise; a trailer is
-   * the single best answer to "what is this like to play", so it
-   * belongs in the stage with everything else that answers that.
-   */
-  const frames: { key: string; image: string; movie?: Movie }[] = [
-    ...(game.background_image
-      ? [{ key: 'art', image: game.background_image }]
-      : []),
-    ...trailers.slice(0, 2).map((movie) => ({
-      key: `movie-${movie.id}`,
-      image: movie.preview,
-      movie,
-    })),
-    ...screenshots.map((shot) => ({ key: String(shot.id), image: shot.image })),
-  ];
-  const current = frames[stageIndex] ?? frames[0];
   const stage =
     isExpanded && frames.length > 0 ? (
       <View
@@ -1561,6 +1597,20 @@ const styles = StyleSheet.create({
   stageThumbOn: { borderColor: COLORS.accent, opacity: 1 },
   stageThumbImage: { width: '100%', height: '100%' },
   stageThumbMovie: { opacity: 0.85, transform: [{ scale: 1.08 }] },
+  /** Centred on the poster, in the app's amber, sized for a thumb. */
+  posterPlay: {
+    position: 'absolute',
+    alignSelf: 'center',
+    top: '50%',
+    marginTop: -26,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: COLORS.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingLeft: 3,
+  },
   /** Small, solid, bottom-left: says "this one moves" without painting
       a control over the whole thumb. */
   stagePlayBadge: {
