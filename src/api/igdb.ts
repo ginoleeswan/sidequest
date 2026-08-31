@@ -70,6 +70,8 @@ export interface IgdbExtras {
   criticCount: number;
   /** Short spoiler-safe synopsis; often better prose than marketing. */
   storyline: string | null;
+  /** IGDB's "games like this", slug-routable and covered. */
+  similar: { slug: string; name: string; cover: string }[];
 }
 
 /** t_cover_big is 264x352 — the box-art rung; t_720p for a lead. */

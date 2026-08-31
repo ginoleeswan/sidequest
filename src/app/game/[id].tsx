@@ -525,7 +525,10 @@ export default function GameInfoScreen() {
    * purpose — every consumer below falls back to the page as it was.
    */
   const { data: igdb } = useQuery({
-    queryKey: ['igdb-extras', data?.game?.slug],
+    // v2: the persisted cache outlives shape changes — a 24h staleTime
+    // happily serves yesterday's response without `similar`, and the
+    // rail silently never appears. The version retires old entries.
+    queryKey: ['igdb-extras', 'v2', data?.game?.slug],
     queryFn: () => fetchIgdbExtras(data!.game.slug),
     enabled: Boolean(data?.game?.slug),
     staleTime: 24 * 60 * 60 * 1000,
@@ -994,6 +997,40 @@ export default function GameInfoScreen() {
       <View style={mediaBlock}>
         <LiveStreams game={game.name} />
       </View>
+
+      {/* IGDB's graph, beside RAWG's series: the series answers "what
+          else is THIS", similar answers "what else is LIKE this" —
+          different questions, and the second one is the one a person
+          who finished the game is actually asking. Portrait covers,
+          because that is the shape a recommendation shelf has. */}
+      {(igdb?.similar?.length ?? 0) > 0 && (
+        <View style={mediaBlock}>
+          <SectionHeader wide={isExpanded} title="More like this" />
+          <Rail<{ slug: string; name: string; cover: string }>
+            data={igdb!.similar}
+            keyExtractor={(item) => item.slug}
+            inset={isExpanded ? 0 : railInset}
+            renderItem={(item) => (
+              <Pressable
+                onPress={() => router.push(`/game/${item.slug}`)}
+                accessibilityRole="link"
+                accessibilityLabel={`Open ${item.name}`}
+                style={styles.similarCard}
+              >
+                <Image
+                  source={{ uri: igdbCoverUri(item.cover) }}
+                  style={styles.similarCover}
+                  contentFit="cover"
+                  transition={DURATION.base}
+                />
+                <Text style={styles.similarName} numberOfLines={2}>
+                  {item.name}
+                </Text>
+              </Pressable>
+            )}
+          />
+        </View>
+      )}
 
       {series.length > 0 && (
         <View style={mediaBlock}>
@@ -1804,6 +1841,17 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
   },
   /** 3:4, at a stamp's size; hairline so dark covers keep an edge. */
+  similarCard: { width: 132, gap: SPACING.xs },
+  similarCover: {
+    width: 132,
+    aspectRatio: 3 / 4,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.stroke,
+    backgroundColor: COLORS.navy,
+  },
+  similarName: { ...TYPE.caption, color: COLORS.lightGrey },
+
   /** The rail's crown: full width, the cover's own 3:4, one hairline. */
   railCover: {
     width: '100%',

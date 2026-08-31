@@ -189,11 +189,16 @@ export default async function handler(
       aggregated_rating?: number;
       aggregated_rating_count?: number;
       storyline?: string;
+      similar_games?: {
+        slug?: string;
+        name?: string;
+        cover?: { image_id?: string };
+      }[];
     }>(
       clientId,
       accessToken,
       'games',
-      `fields id,slug,cover.image_id,aggregated_rating,aggregated_rating_count,storyline; where slug = (${slugs
+      `fields id,slug,cover.image_id,aggregated_rating,aggregated_rating_count,storyline,similar_games.slug,similar_games.name,similar_games.cover.image_id; where slug = (${slugs
         .map((slug) => `"${slug}"`)
         .join(',')}); limit ${MAX_SLUGS * 2};`
     );
@@ -244,6 +249,7 @@ export default async function handler(
         critic: number | null;
         criticCount: number;
         storyline: string | null;
+        similar: { slug: string; name: string; cover: string }[];
       }
     > = {};
     for (const game of games) {
@@ -255,6 +261,21 @@ export default async function handler(
             : null,
         criticCount: game.aggregated_rating_count ?? 0,
         storyline: game.storyline ?? null,
+        /**
+         * IGDB's own graph, which RAWG's flat series cannot draw:
+         * "games like this one", with covers, capped so a hub game
+         * does not ship a catalogue. Only entries with both a slug
+         * and a cover — a card with no picture or no destination is
+         * not a recommendation.
+         */
+        similar: (game.similar_games ?? [])
+          .filter((similar) => similar.slug && similar.cover?.image_id)
+          .slice(0, 8)
+          .map((similar) => ({
+            slug: similar.slug as string,
+            name: (similar.name ?? similar.slug) as string,
+            cover: similar.cover?.image_id as string,
+          })),
       };
     }
 
