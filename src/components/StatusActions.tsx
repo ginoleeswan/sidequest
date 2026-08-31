@@ -74,7 +74,7 @@ export function StatusActions({ game }: { game: Game }) {
               name={
                 (active
                   ? meta.icon
-                  : `${meta.icon}-outline`) as keyof typeof Ionicons.glyphMap
+                  : meta.iconOutline) as keyof typeof Ionicons.glyphMap
               }
               size={15}
               color={active ? COLORS.navy : COLORS.lightGrey}

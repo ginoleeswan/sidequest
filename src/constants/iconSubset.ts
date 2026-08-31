@@ -20,6 +20,7 @@ export const SUBSET_ICONS = [
   'checkbox',
   'checkmark',
   'checkmark-circle',
+  'checkmark-circle-outline',
   'chevron-back',
   'chevron-forward',
   'close',

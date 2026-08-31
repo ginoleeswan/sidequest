@@ -570,8 +570,40 @@ export default function GameInfoScreen() {
    * where their contrast is a property of the page and not of whichever
    * image RAWG happened to return.
    */
-  const controls = (
-    <View style={isExpanded ? styles.controlsRail : styles.controls}>
+  /**
+   * The decision: what are you doing about this game.
+   *
+   * On a phone it is a card, because there it holds four loose
+   * controls together on a long scroll — the reason it was built.
+   *
+   * In the rail that card was the page's last box-in-a-box.
+   * `StatusActions` already carries its own border and its own filled
+   * plate; wrapping it in a second bordered panel framed a frame, and
+   * it did so at the head of a column where every other section — GET
+   * IT, DETAILS, WHO ELSE HAS IT — sits flush under a micro label. So
+   * the rail opened in one language and continued in another, which is
+   * what makes it read as awkward rather than as the primary control.
+   *
+   * Flush, it joins the column: a label, the control that is already
+   * an object, and what follows from it — and the segmented group's
+   * own amber selection is what marks it as the thing you act on. The
+   * frame was never what made it primary.
+   */
+  const controls = isExpanded ? (
+    <View style={styles.fileSection}>
+      <Text style={styles.fileLabel}>ON YOUR SHELF</Text>
+      <StatusActions game={game} />
+      {/* Stacked, not a wrapping row: at 400 the button and the two
+          commitment toggles wrapped into a ragged three lines that
+          belonged to nothing. The action gets its own line, the
+          toggles theirs. */}
+      <SessionTimer game={game} block />
+      <View style={styles.decisionActions}>
+        <Commitment gameId={game.id} />
+      </View>
+    </View>
+  ) : (
+    <View style={styles.controls}>
       {/* One object: the decision, then what follows from it.
           The status control, the clock and the two commitment toggles
           were four separate things loose on the page — a filled group
@@ -1124,7 +1156,7 @@ export default function GameInfoScreen() {
       )}
       {framed(
         isExpanded
-          ? [fileGetIt, fileFacts]
+          ? [controls, fileGetIt, fileFacts]
           : [fileGetIt, fileWho, fileDetails, fileTags]
       )}
     </View>
@@ -1181,10 +1213,7 @@ export default function GameInfoScreen() {
                       a decision is something you come back to, so it
                       wants a column rather than a line in a masthead
                       you have already scrolled past. */}
-                  <View style={styles.columnRail}>
-                    {controls}
-                    {fileBox}
-                  </View>
+                  <View style={styles.columnRail}>{fileBox}</View>
                 </Animated.View>
                 <Animated.View style={{ opacity }}>{record}</Animated.View>
                 {/* media escapes the column: full-bleed rails, gutter-aligned */}
@@ -1281,16 +1310,6 @@ const styles = StyleSheet.create({
     maxWidth: LAYOUT.maxContentWidth,
     alignSelf: 'center',
   },
-  /**
-   * The card's chrome hangs outside the grid; its content sits on it.
-   *
-   * The decision keeps the page's one card, but a padded card in a
-   * flush rail gives the rail two left edges — the segmented control
-   * started 16pt right of every eyebrow below it. Negative margins the
-   * size of the padding put the content back on the rail's track and
-   * spend the chrome in the gutter, which is what a gutter is for.
-   */
-  controlsRail: { width: '100%', marginHorizontal: -SPACING.md },
   decision: {
     borderRadius: RADIUS.md,
     borderWidth: 1,

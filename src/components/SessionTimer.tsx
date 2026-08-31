@@ -31,7 +31,22 @@ const TICK_MS = 15_000;
  * the only question that matters afterwards, which is whether the
  * credits rolled.
  */
-export function SessionTimer({ game }: { game: Game }) {
+export function SessionTimer({
+  game,
+  block = false,
+}: {
+  game: Game;
+  /**
+   * A button on its own line, for the rail.
+   *
+   * Inline, this is an icon and a label sharing a wrapping row with the
+   * commitment toggles — which was right inside the phone's decision
+   * card, where a frame held the group together. In a 400pt rail with
+   * that card gone it is the page's primary action rendered as grey
+   * text next to two other grey texts, and it reads as a leftover.
+   */
+  block?: boolean;
+}) {
   const hydrated = useHydrated();
   const { addPlayTime, entries, setStatus } = useLibrary();
   const toast = useToast();
@@ -151,12 +166,16 @@ export function SessionTimer({ game }: { game: Game }) {
         setRunning(startSession(game.id, game.name));
         setNow(Date.now());
       }}
-      style={styles.start}
+      style={block ? styles.startBlock : styles.start}
       accessibilityRole="button"
       accessibilityLabel={`Start a session on ${game.name}`}
     >
-      <Ionicons name="play" size={14} color={COLORS.lightGrey} />
-      <Text style={styles.startText}>
+      <Ionicons
+        name="play"
+        size={block ? 15 : 14}
+        color={block ? COLORS.white : COLORS.lightGrey}
+      />
+      <Text style={[styles.startText, block && styles.startBlockText]}>
         {running
           ? `Start a session (stops ${running.name})`
           : 'Start a session'}
@@ -209,6 +228,31 @@ const styles = StyleSheet.create({
     ...TYPE.labelSmall,
     color: COLORS.lightGrey,
   },
+  /**
+   * The same action, given a surface and a line of its own.
+   *
+   * Not the white lozenge it used to be: white would shout over the
+   * amber selection in the control above it, and the status group
+   * already owns the loudest ink in that column. A raised plate with
+   * the app's own stroke is a button without a contest — and spanning
+   * the rail it reads as what follows from the decision rather than as
+   * something dropped beside it.
+   */
+  startBlock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    paddingVertical: SPACING.sm + 4,
+    // The status control's radius, not a softer one. They stack at the
+    // same width, so two different corner treatments on two rectangles
+    // that share an edge read as an accident.
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.strokeStrong,
+    backgroundColor: COLORS.raised,
+  },
+  startBlockText: { ...TYPE.label, color: COLORS.white },
   primary: {
     flexDirection: 'row',
     alignItems: 'center',
