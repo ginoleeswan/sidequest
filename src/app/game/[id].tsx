@@ -4,9 +4,10 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { VideoView, useVideoPlayer } from 'expo-video';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  FlatList,
   Modal,
   Platform,
   Pressable,
@@ -184,6 +185,110 @@ function StageVideo({
       contentFit="contain"
       nativeControls
     />
+  );
+}
+
+/**
+ * A desktop media shelf, the way the pages that live off them build it.
+ *
+ * Not a panel. Steam, Epic and every storefront shelf put media on the
+ * page ground — thumbnails are already rich objects, and a border
+ * around them is chrome on chrome. Containment is said three ways
+ * instead: the clip ends at the band, the last visible card is cut
+ * mid-frame, and a fade at the right edge dissolves it — the same
+ * sentence "there is more" in three registers. The chevrons beside the
+ * header are what make it a desktop object: a shelf you can page is
+ * browsable; one you can only drag is a phone gesture on a mouse.
+ */
+function Shelf<T>({
+  title,
+  data,
+  keyExtractor,
+  renderItem,
+}: {
+  title: string;
+  data: T[];
+  keyExtractor: (item: T) => string;
+  renderItem: (item: T, index: number) => React.ReactElement;
+}) {
+  const listRef = useRef<FlatList<T> | null>(null);
+  const offset = useRef(0);
+  const [width, setWidth] = useState(0);
+
+  const page = (direction: 1 | -1) => {
+    // A page is most of the visible width; the 100pt held back keeps
+    // one card straddling the turn, so the eye carries across pages.
+    const step = Math.max(width - 100, 200);
+    offset.current = Math.max(0, offset.current + direction * step);
+    /*
+     * The DOM node first: react-native-web's FlatList quietly ignored
+     * scrollToOffset here — measured as scrollLeft never moving — while
+     * the underlying element scrolls fine. The RN call stays as the
+     * fallback for any platform where the node accessor is missing.
+     */
+    const node = (
+      listRef.current as unknown as {
+        getScrollableNode?: () => HTMLElement;
+      } | null
+    )?.getScrollableNode?.();
+    if (node) {
+      // Assignment, not scrollTo({behavior:'smooth'}): the smooth call
+      // is silently inert in some embedded-Chromium contexts (measured:
+      // scrollLeft never moved) while assignment always lands.
+      node.scrollLeft = offset.current;
+    } else {
+      listRef.current?.scrollToOffset({
+        offset: offset.current,
+        animated: true,
+      });
+    }
+  };
+
+  return (
+    <View style={styles.block}>
+      <View style={styles.shelfHead}>
+        <SectionHeader wide title={title} />
+        <View style={styles.shelfPager}>
+          {(
+            [
+              ['chevron-back', -1],
+              ['chevron-forward', 1],
+            ] as const
+          ).map(([icon, direction]) => (
+            <Pressable
+              key={icon}
+              onPress={() => page(direction)}
+              style={styles.shelfChevron}
+              accessibilityRole="button"
+              accessibilityLabel={
+                direction === 1 ? 'Show more' : 'Show previous'
+              }
+            >
+              <Ionicons name={icon} size={16} color={COLORS.lightGrey} />
+            </Pressable>
+          ))}
+        </View>
+      </View>
+      <View
+        style={styles.shelfClip}
+        onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
+      >
+        <Rail<T>
+          data={data}
+          keyExtractor={keyExtractor}
+          inset={0}
+          listRef={listRef}
+          renderItem={renderItem}
+        />
+        <LinearGradient
+          colors={['#333D5100', COLORS.darkGrey]}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={styles.shelfFade}
+          pointerEvents="none"
+        />
+      </View>
+    </View>
   );
 }
 
@@ -1001,16 +1106,14 @@ export default function GameInfoScreen() {
       {/* IGDB's graph, beside RAWG's series: the series answers "what
           else is THIS", similar answers "what else is LIKE this" —
           different questions, and the second one is the one a person
-          who finished the game is actually asking. Portrait covers,
-          because that is the shape a recommendation shelf has. */}
-      {(igdb?.similar?.length ?? 0) > 0 && (
-        <View style={mediaBlock}>
-          <SectionHeader wide={isExpanded} title="More like this" />
-          <View style={isExpanded ? styles.railShelf : null}>
-            <Rail<{ slug: string; name: string; cover: string }>
+          who finished the game is actually asking. */}
+      {(igdb?.similar?.length ?? 0) > 0 &&
+        (isExpanded ? (
+          <View style={mediaBlock}>
+            <Shelf
+              title="More like this"
               data={igdb!.similar}
               keyExtractor={(item) => item.slug}
-              inset={isExpanded ? 0 : railInset}
               renderItem={(item) => (
                 <Pressable
                   onPress={() => router.push(`/game/${item.slug}`)}
@@ -1031,62 +1134,80 @@ export default function GameInfoScreen() {
               )}
             />
           </View>
-        </View>
-      )}
+        ) : (
+          <View style={mediaBlock}>
+            <SectionHeader title="More like this" />
+            <Rail<{ slug: string; name: string; cover: string }>
+              data={igdb!.similar}
+              keyExtractor={(item) => item.slug}
+              inset={railInset}
+              renderItem={(item) => (
+                <Pressable
+                  onPress={() => router.push(`/game/${item.slug}`)}
+                  accessibilityRole="link"
+                  accessibilityLabel={`Open ${item.name}`}
+                  style={styles.similarCard}
+                >
+                  <Image
+                    source={{ uri: igdbCoverUri(item.cover) }}
+                    style={styles.similarCover}
+                    contentFit="cover"
+                    transition={DURATION.base}
+                  />
+                  <Text style={styles.similarName} numberOfLines={2}>
+                    {item.name}
+                  </Text>
+                </Pressable>
+              )}
+            />
+          </View>
+        ))}
 
       {series.length > 0 && (
         <View style={mediaBlock}>
-          <SectionHeader wide={isExpanded} title="More in this series" />
-          {/* Contained on desktop. A rail bleeding off the window is a
-              thumb gesture — on a phone the screen edge is where
-              content naturally runs. On a desktop the page has margins,
-              and cards vanishing under them read as a layout accident
-              rather than an invitation; the scroll lives inside the
-              band, clipped at the page's own edges. */}
-          <View style={isExpanded ? styles.railShelf : null}>
-            <Rail<Game>
+          {isExpanded ? (
+            <Shelf
+              title="More in this series"
               data={series}
               keyExtractor={(item) => String(item.id)}
-              inset={isExpanded ? 0 : railInset}
-              renderItem={(item) =>
-                isExpanded ? (
-                  /* The shelf language the page settled on: picture,
-                   caption below. The GameCard blob — rounded mask,
-                   title and stars painted over a gradient — belongs to
-                   the home shelves it was drawn for; here it sat
-                   between two flat rails looking like a sticker. RAWG
-                   has no covers, so the series keeps its landscape art
-                   at 16:9 and the same hairline as its neighbour. */
-                  <Pressable
-                    onPress={() => router.push(`/game/${item.id}`)}
-                    accessibilityRole="link"
-                    accessibilityLabel={`Open ${item.name}`}
-                    style={styles.seriesCard}
-                  >
-                    <Image
-                      source={{ uri: mediaUri(item.background_image, 400) }}
-                      style={styles.seriesCover}
-                      contentFit="cover"
-                      transition={DURATION.base}
-                    />
-                    <Text style={styles.similarName} numberOfLines={1}>
-                      {item.name}
-                    </Text>
-                    <Text style={styles.seriesMeta}>
-                      {[
-                        item.released?.slice(0, 4),
-                        item.rating > 0 ? `★ ${item.rating.toFixed(1)}` : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </Text>
-                  </Pressable>
-                ) : (
-                  <GameCard game={item} />
-                )
-              }
+              renderItem={(item) => (
+                <Pressable
+                  onPress={() => router.push(`/game/${item.id}`)}
+                  accessibilityRole="link"
+                  accessibilityLabel={`Open ${item.name}`}
+                  style={styles.seriesCard}
+                >
+                  <Image
+                    source={{ uri: mediaUri(item.background_image, 400) }}
+                    style={styles.seriesCover}
+                    contentFit="cover"
+                    transition={DURATION.base}
+                  />
+                  <Text style={styles.similarName} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  <Text style={styles.seriesMeta}>
+                    {[
+                      item.released?.slice(0, 4),
+                      item.rating > 0 ? `★ ${item.rating.toFixed(1)}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </Text>
+                </Pressable>
+              )}
             />
-          </View>
+          ) : (
+            <>
+              <SectionHeader title="More in this series" />
+              <Rail<Game>
+                data={series}
+                keyExtractor={(item) => String(item.id)}
+                inset={railInset}
+                renderItem={(item) => <GameCard game={item} />}
+              />
+            </>
+          )}
         </View>
       )}
     </>
@@ -1902,15 +2023,31 @@ const styles = StyleSheet.create({
    * cards inside it. The clip rides along, so the scroll still ends
    * where the shelf does.
    */
-  railShelf: {
-    overflow: 'hidden',
-    width: '100%',
-    borderRadius: RADIUS.md,
+  shelfHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: SPACING.md,
+  },
+  shelfPager: { flexDirection: 'row', gap: SPACING.sm },
+  shelfChevron: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: COLORS.stroke,
     backgroundColor: COLORS.raised,
-    padding: SPACING.lg,
-    ...SHADOW.card,
+  },
+  shelfClip: { overflow: 'hidden', width: '100%' },
+  /** The dissolve at the edge: the third way the shelf says "more". */
+  shelfFade: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 56,
   },
   similarCover: {
     width: 132,

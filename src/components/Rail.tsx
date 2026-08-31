@@ -12,6 +12,12 @@ interface Props<T> {
   renderItem: (item: T, index: number) => React.ReactElement;
   keyExtractor: (item: T) => string;
   /**
+   * A handle for paging. Desktop shelves page by chevron rather than
+   * mystery-scroll, and the buttons live with the caller's header —
+   * so the caller owns the ref and this list obeys it.
+   */
+  listRef?: React.RefObject<FlatList<T> | null>;
+  /**
    * The parent's horizontal padding. The rail bleeds across it with negative
    * margins so content scrolls to the true edge, while the first and last
    * items stay aligned with the page via matching content insets.
@@ -30,6 +36,7 @@ interface Props<T> {
 
 /** Edge-to-edge horizontal scroller. All horizontal rails go through this. */
 export function Rail<T>({
+  listRef,
   data,
   renderItem,
   keyExtractor,
@@ -42,6 +49,7 @@ export function Rail<T>({
 
   return (
     <FlatList
+      ref={listRef}
       horizontal
       data={data}
       showsHorizontalScrollIndicator={false}
