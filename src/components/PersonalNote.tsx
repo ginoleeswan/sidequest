@@ -1,6 +1,13 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
 import { useLibrary } from '@/lib/library';
 import { COLORS } from '@/styles/colors';
@@ -89,7 +96,7 @@ export function PersonalNote({ gameId }: { gameId: number }) {
         placeholder="Where you got to, why you bounced, who to lend it to…"
         placeholderTextColor={COLORS.mediumGrey}
         multiline
-        style={styles.input}
+        style={[styles.input, WEB_INPUT]}
         accessibilityLabel="Your note on this game"
       />
 
@@ -115,7 +122,7 @@ export function PersonalNote({ gameId }: { gameId: number }) {
           }}
           placeholder="+ shelf"
           placeholderTextColor={COLORS.mediumGrey}
-          style={styles.tagInput}
+          style={[styles.tagInput, WEB_INPUT]}
           accessibilityLabel="Add this game to one of your shelves"
           returnKeyType="done"
         />
@@ -154,6 +161,9 @@ export function PersonalNote({ gameId }: { gameId: number }) {
     </View>
   );
 }
+
+/** 16 on web, or iOS Safari zooms the page on focus and stays there. */
+const WEB_INPUT = Platform.OS === 'web' ? { fontSize: 16 } : null;
 
 const styles = StyleSheet.create({
   card: {

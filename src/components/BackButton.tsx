@@ -5,6 +5,7 @@ import { Platform, StyleSheet, Text } from 'react-native';
 import { Mark } from './Mark';
 import { ScaleButton } from './ScaleButton';
 import { COLORS } from '@/styles/colors';
+import { SPACING } from '@/styles/theme';
 import { OVER_IMAGE, TYPE } from '@/styles/typography';
 
 /**
@@ -77,7 +78,7 @@ export function BackButton({ onImage = false }: { onImage?: boolean }) {
             the header and the footer set them. A brand drawn three
             ways is three brands; this corner had invented a fourth by
             setting the name in bare label type. */}
-        <Mark size={16} />
+        <Mark size={20} />
         <Text style={[styles.brandMark, onImage && OVER_IMAGE.heading]}>
           SIDEQUEST
         </Text>
@@ -103,13 +104,17 @@ const styles = StyleSheet.create({
   brand: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 14,
-    height: 36,
+    gap: SPACING.sm,
+    height: 40,
   },
+  /**
+   * The home page's exact lockup — Mark at 20, wordmark at h1 in
+   * lightGrey — not a smaller cousin of it. One brand, one size,
+   * whichever page's corner it stands in.
+   */
   brandMark: {
-    ...TYPE.h3,
-    color: COLORS.white,
+    ...TYPE.h1,
+    color: COLORS.lightGrey,
   },
   button: {
     width: 40,

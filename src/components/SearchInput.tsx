@@ -42,7 +42,7 @@ export function SearchInput({
         onChangeText={onChangeText}
         placeholder="Search games…"
         placeholderTextColor={COLORS.mediumGrey}
-        style={styles.input}
+        style={[styles.input, WEB_INPUT]}
         returnKeyType="search"
         autoCorrect={false}
         autoCapitalize="none"
@@ -65,6 +65,9 @@ export function SearchInput({
     </View>
   );
 }
+
+/** 16 on web, or iOS Safari zooms the page on focus and stays there. */
+const WEB_INPUT = Platform.OS === 'web' ? { fontSize: 16 } : null;
 
 const styles = StyleSheet.create({
   container: {

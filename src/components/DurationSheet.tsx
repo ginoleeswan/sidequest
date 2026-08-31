@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import {
+  Platform,
   Modal,
   Pressable,
   StyleSheet,
@@ -103,7 +104,7 @@ function Sheet({
               placeholder="or type it — 14, 2.5, 90m"
               placeholderTextColor={COLORS.mediumGrey}
               keyboardType="numeric"
-              style={styles.input}
+              style={[styles.input, WEB_INPUT]}
               onSubmitEditing={() => typed && commit(typed)}
               accessibilityLabel="Hours to finish"
             />
@@ -134,6 +135,9 @@ function Sheet({
     </Modal>
   );
 }
+
+/** 16 on web, or iOS Safari zooms the page on focus and stays there. */
+const WEB_INPUT = Platform.OS === 'web' ? { fontSize: 16 } : null;
 
 const styles = StyleSheet.create({
   backdrop: {

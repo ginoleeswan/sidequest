@@ -15,7 +15,12 @@ export default function Root({ children }: PropsWithChildren) {
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta
           name="viewport"
-          content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover"
+          /* maximum-scale=1 exists for one reason: iOS Safari zooms the whole
+   page when focus lands in an input set under 16px, and never zooms
+   back. Since iOS 10 Safari ignores this cap for pinch — people who
+   zoom on purpose still can — so it disables only the accidental
+   zoom, not the deliberate one. */
+          content="width=device-width, initial-scale=1, maximum-scale=1, shrink-to-fit=no, viewport-fit=cover"
         />
         {/* Must equal the html/body canvas below: iOS Safari paints the
             status bar and toolbar with it, and any disagreement shows up
