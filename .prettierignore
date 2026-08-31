@@ -19,3 +19,4 @@ android
 # format. The Swift beside them is still ours; only the generated
 # catalogue is exempt.
 targets/**/Assets.xcassets
+.vercel

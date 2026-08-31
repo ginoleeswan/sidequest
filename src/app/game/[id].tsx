@@ -126,38 +126,6 @@ function decodeEntities(text: string): string {
 /* ------------------------------------------------------------------ atoms */
 
 /**
- * The length, drawn as the weeks it will actually take.
- *
- * "About 12 weeks at 6h a week" is the sentence no other games database
- * can write — a length is an abstraction until it is measured against
- * the hours somebody actually has, and this app knows those because the
- * Plan asked. It was set in 12px grey under the figure, which is fine
- * print for the one claim the page exists to make.
- *
- * So it is drawn. One bar per week, across the column, in the amber the
- * Plan already uses for an evening that is spoken for — the same
- * vocabulary as the week strip, so a reader who has seen the Plan has
- * seen this before. The figure says how long; the rule says how long
- * that is in the only unit a person schedules in.
- *
- * Desktop only, and not because the phone could not hold it: at 375 the
- * bars for a long game fall below the width where a bar reads as a bar
- * rather than a hairline, and a rule you cannot count is decoration.
- */
-function WeekRule({ weeks }: { weeks: number }) {
-  // A year of Sundays is the most this can say and still be counted.
-  // Past that the bars stop being a measure and the caption carries it.
-  const drawn = Math.min(weeks, 52);
-  return (
-    <View style={styles.weekRule} accessibilityElementsHidden>
-      {Array.from({ length: drawn }, (_, index) => (
-        <View key={index} style={styles.weekTick} />
-      ))}
-    </View>
-  );
-}
-
-/**
  * A trailer, at the stage's own size.
  *
  * Its own component because `useVideoPlayer` is a hook and the stage
@@ -395,9 +363,6 @@ function StatStrip({
               </Text>
             ) : null}
           </View>
-          {wide && duration.hours > 0 && pace > 0 ? (
-            <WeekRule weeks={Math.max(1, Math.ceil(duration.hours / pace))} />
-          ) : null}
         </>
       ) : (
         <>
@@ -860,20 +825,6 @@ export default function GameInfoScreen() {
    */
   const titleBlock = (
     <View style={styles.titleLockup}>
-      {/* The box art, finally. RAWG has no cover field, so the page
-          spent months representing games with crops of key art; IGDB's
-          cover is the object a shelf would hold, and a masthead that
-          opens with it reads as being about a THING. Small on purpose:
-          identity is a stamp, not a poster — the stage below is where
-          pictures get to be big. */}
-      {igdb?.cover ? (
-        <Image
-          source={{ uri: igdbCoverUri(igdb.cover) }}
-          style={styles.boxArt}
-          contentFit="cover"
-          transition={DURATION.base}
-        />
-      ) : null}
       <View style={styles.deskHeroCopy}>
         <Text style={styles.deskTitle}>{game.name}</Text>
         <StatStrip
@@ -893,11 +844,17 @@ export default function GameInfoScreen() {
         (igdb.times.hastily || igdb.times.completely) ? (
           <Text style={styles.splitLegend}>
             {[
-              igdb.times.hastily ? `Rushing it ${igdb.times.hastily}h` : null,
-              igdb.times.normally
-                ? `Most people ${igdb.times.normally}h`
+              /* Whole hours: 119.3 promises a precision 68
+                 submissions cannot keep. */
+              igdb.times.hastily
+                ? `Rushing it ${Math.round(igdb.times.hastily)}h`
                 : null,
-              igdb.times.completely ? `100% ${igdb.times.completely}h` : null,
+              igdb.times.normally
+                ? `Most people ${Math.round(igdb.times.normally)}h`
+                : null,
+              igdb.times.completely
+                ? `100% ${Math.round(igdb.times.completely)}h`
+                : null,
             ]
               .filter(Boolean)
               .join(' · ')}
@@ -1208,6 +1165,22 @@ export default function GameInfoScreen() {
               iconSize={64}
               size="hero"
             />
+            {/* The masthead lives on the art, the way the phone's
+                always has. Floating beside it, the copy was a text
+                island in an empty band; on the image, name and figure
+                anchor the one object the page opens with — and the
+                scrim is the phone's own, so both platforms speak one
+                design. Image frames only: a video's controls own its
+                lower strip. */}
+            <LinearGradient
+              colors={['#333D5100', '#333D5126', '#333D51E6']}
+              locations={[0.45, 0.62, 1]}
+              style={StyleSheet.absoluteFill}
+              pointerEvents="none"
+            />
+            <View style={styles.stageCopy} pointerEvents="box-none">
+              {titleBlock}
+            </View>
           </Pressable>
         )}
         {frames.length > 1 ? (
@@ -1421,6 +1394,18 @@ export default function GameInfoScreen() {
 
   const fileBox = (
     <View style={styles.block}>
+      {/* The cover crowns the rail — the move every store makes, and
+          the right one: this is the column about having the game, and
+          the box is the object you'd have. Full width, because a stamp
+          floating in a 340pt column reads as lost. */}
+      {isExpanded && igdb?.cover ? (
+        <Image
+          source={{ uri: igdbCoverUri(igdb.cover, '720p') }}
+          style={styles.railCover}
+          contentFit="cover"
+          transition={DURATION.base}
+        />
+      ) : null}
       {/* On the phone the crate needs a name. On the wide page the
           rail's register is the micro label — GET IT, WHO ELSE HAS IT —
           and a heading above them was a second voice saying nothing
@@ -1475,7 +1460,8 @@ export default function GameInfoScreen() {
                 {deskHero}
                 <Animated.View style={[styles.twoColumn, { opacity }]}>
                   <View style={styles.columnMain}>
-                    {titleBlock}
+                    {stage ? null : titleBlock}
+                    {current?.movie ? titleBlock : null}
                     {stage}
                     {yourTake}
                     {about}
@@ -1709,22 +1695,6 @@ const styles = StyleSheet.create({
    * both have to span the same distance or the drawing says something
    * about the column instead of about the game.
    */
-  weekRule: {
-    flexDirection: 'row',
-    alignSelf: 'stretch',
-    gap: 3,
-    marginTop: SPACING.xs,
-    marginBottom: SPACING.xs,
-  },
-  weekTick: {
-    flex: 1,
-    // 6, down from 10. At 10 the strip outweighed the figure it
-    // supports — a divider bar where a data-rule was meant. At 6 it
-    // still counts as weeks and reads as a rule.
-    height: 6,
-    borderRadius: 2,
-    backgroundColor: COLORS.accent,
-  },
   hoursLabel: {
     ...TYPE.body,
     ...OVER_IMAGE.body,
@@ -1825,16 +1795,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: SPACING.lg,
     alignItems: 'flex-start',
-    marginBottom: SPACING.lg,
+  },
+  stageCopy: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: SPACING.lg,
   },
   /** 3:4, at a stamp's size; hairline so dark covers keep an edge. */
-  boxArt: {
-    width: 96,
+  /** The rail's crown: full width, the cover's own 3:4, one hairline. */
+  railCover: {
+    width: '100%',
     aspectRatio: 3 / 4,
-    borderRadius: RADIUS.sm,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
     borderColor: COLORS.strokeStrong,
     backgroundColor: COLORS.navy,
+    marginBottom: SPACING.md,
   },
   deskHeroCopy: {
     flex: 1,
