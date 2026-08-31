@@ -343,63 +343,123 @@ function StatStrip({
         </View>
       </Pressable>
 
-      {/* Two clusters, not an interleave. On the wide page the byline
-          rises to sit under the figure — all of the type together —
-          and the week rule closes the block with its caption, a
-          data-rule where an editorial page would put a plain one. The
-          drawing between two lines of text read as neither. */}
-      {meta.length > 0 && (
-        <View style={styles.metaLine}>
-          {meta.map((bit, i) => (
-            <React.Fragment key={i}>
-              {i > 0 ? <Text style={styles.metaDot}>·</Text> : null}
-              {bit}
-            </React.Fragment>
-          ))}
-        </View>
-      )}
-      {wide && duration.hours > 0 && pace > 0 ? (
-        <WeekRule weeks={Math.max(1, Math.ceil(duration.hours / pace))} />
-      ) : null}
-      {standing?.kind === 'scheduled' ? (
-        <Text
-          style={[styles.statPace, styles.statPlan]}
-          onPress={onOpenPlan}
-          suppressHighlighting
-          accessibilityRole="link"
-          accessibilityLabel={`Open your plan — ${game.name} is number ${
-            standing.position + 1
-          }`}
-        >
-          #{standing.position + 1} in your plan · credits around{' '}
-          {new Date(standing.finishAt).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-          })}
-          <Text style={styles.statArrow}> →</Text>
-        </Text>
-      ) : standing?.kind === 'dropped' ? (
-        /* The relief stance, on a page about one game: the window has
+      {/* On the wide page the byline and the pace share one line —
+          identity on the left, the plan's arithmetic on the right —
+          because the pace sentence alone was an orphan: a tiny grey
+          line hanging under the rule with a column of empty space
+          beside it. Paired, the line balances and the rule closes the
+          block under both. The phone keeps them stacked; at 358 the
+          two would fight for the width. */}
+      {wide ? (
+        <>
+          <View style={styles.bylineRow}>
+            {meta.length > 0 && (
+              <View style={styles.metaLine}>
+                {meta.map((bit, i) => (
+                  <React.Fragment key={i}>
+                    {i > 0 ? <Text style={styles.metaDot}>·</Text> : null}
+                    {bit}
+                  </React.Fragment>
+                ))}
+              </View>
+            )}
+            {standing?.kind === 'scheduled' ? (
+              <Text
+                style={[styles.statPace, styles.statPlan]}
+                onPress={onOpenPlan}
+                suppressHighlighting
+                accessibilityRole="link"
+                accessibilityLabel={`Open your plan — ${game.name} is number ${
+                  standing.position + 1
+                }`}
+              >
+                #{standing.position + 1} in your plan · credits around{' '}
+                {new Date(standing.finishAt).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                })}
+                <Text style={styles.statArrow}> →</Text>
+              </Text>
+            ) : standing?.kind === 'dropped' ? (
+              /* The relief stance, on a page about one game: the window has
            no room for it and that is a fact about the window, not a
            failing of the reader. §2.1 — no line in this app tells
            somebody they are behind. */
-        <Text
-          style={styles.statPace}
-          onPress={onOpenPlan}
-          suppressHighlighting
-          accessibilityRole="link"
-          accessibilityLabel="Open your plan"
-        >
-          More than your window holds. It’ll still be here.
-          <Text style={styles.statArrow}> →</Text>
-        </Text>
-      ) : duration.hours > 0 ? (
-        <Text style={styles.statPace}>
-          {duration.hours <= pace
-            ? `Under a week at ${pace}h a week.`
-            : `About ${Math.round(duration.hours / pace)} weeks at ${pace}h a week.`}
-        </Text>
-      ) : null}
+              <Text
+                style={styles.statPace}
+                onPress={onOpenPlan}
+                suppressHighlighting
+                accessibilityRole="link"
+                accessibilityLabel="Open your plan"
+              >
+                More than your window holds. It’ll still be here.
+                <Text style={styles.statArrow}> →</Text>
+              </Text>
+            ) : duration.hours > 0 ? (
+              <Text style={styles.statPace}>
+                {duration.hours <= pace
+                  ? `Under a week at ${pace}h a week.`
+                  : `About ${Math.round(duration.hours / pace)} weeks at ${pace}h a week.`}
+              </Text>
+            ) : null}
+          </View>
+          {wide && duration.hours > 0 && pace > 0 ? (
+            <WeekRule weeks={Math.max(1, Math.ceil(duration.hours / pace))} />
+          ) : null}
+        </>
+      ) : (
+        <>
+          {meta.length > 0 && (
+            <View style={styles.metaLine}>
+              {meta.map((bit, i) => (
+                <React.Fragment key={i}>
+                  {i > 0 ? <Text style={styles.metaDot}>·</Text> : null}
+                  {bit}
+                </React.Fragment>
+              ))}
+            </View>
+          )}
+          {standing?.kind === 'scheduled' ? (
+            <Text
+              style={[styles.statPace, styles.statPlan]}
+              onPress={onOpenPlan}
+              suppressHighlighting
+              accessibilityRole="link"
+              accessibilityLabel={`Open your plan — ${game.name} is number ${
+                standing.position + 1
+              }`}
+            >
+              #{standing.position + 1} in your plan · credits around{' '}
+              {new Date(standing.finishAt).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+              })}
+              <Text style={styles.statArrow}> →</Text>
+            </Text>
+          ) : standing?.kind === 'dropped' ? (
+            /* The relief stance, on a page about one game: the window has
+           no room for it and that is a fact about the window, not a
+           failing of the reader. §2.1 — no line in this app tells
+           somebody they are behind. */
+            <Text
+              style={styles.statPace}
+              onPress={onOpenPlan}
+              suppressHighlighting
+              accessibilityRole="link"
+              accessibilityLabel="Open your plan"
+            >
+              More than your window holds. It’ll still be here.
+              <Text style={styles.statArrow}> →</Text>
+            </Text>
+          ) : duration.hours > 0 ? (
+            <Text style={styles.statPace}>
+              {duration.hours <= pace
+                ? `Under a week at ${pace}h a week.`
+                : `About ${Math.round(duration.hours / pace)} weeks at ${pace}h a week.`}
+            </Text>
+          ) : null}
+        </>
+      )}
     </View>
   );
 }
@@ -1077,11 +1137,20 @@ export default function GameInfoScreen() {
               <Pressable
                 key={frame.key}
                 onPress={() => setStageIndex(index)}
-                style={[
+                /* The hover is the invitation. At rest the strip sits
+                   at 65% so the lead owns the light; a thumb that
+                   brightens under the cursor says "this one opens"
+                   without a border or a caption — the response IS the
+                   affordance. (Cast because react-native-web reports
+                   hover in the state callback and core RN's types do
+                   not know it.) */
+                style={(state) => [
                   styles.stageThumb,
                   stageWidth > 0 && {
                     width: (stageWidth - SPACING.sm * 5) / 6,
                   },
+                  (state as { hovered?: boolean }).hovered &&
+                    styles.stageThumbHover,
                   index === stageIndex && styles.stageThumbOn,
                 ]}
                 accessibilityRole="button"
@@ -1554,6 +1623,12 @@ const styles = StyleSheet.create({
     ...OVER_IMAGE.body,
     color: COLORS.lightGrey,
   },
+  bylineRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    gap: SPACING.md,
+  },
   statPace: {
     ...TYPE.caption,
     ...OVER_IMAGE.body,
@@ -1687,6 +1762,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
     opacity: 0.65,
   },
+  stageThumbHover: { opacity: 0.9 },
   stageThumbOn: { borderColor: COLORS.accent, opacity: 1 },
   stageThumbImage: { width: '100%', height: '100%' },
   stageThumbMovie: { opacity: 0.85, transform: [{ scale: 1.08 }] },
