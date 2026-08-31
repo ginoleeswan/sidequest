@@ -1006,7 +1006,7 @@ export default function GameInfoScreen() {
       {(igdb?.similar?.length ?? 0) > 0 && (
         <View style={mediaBlock}>
           <SectionHeader wide={isExpanded} title="More like this" />
-          <View style={isExpanded ? styles.railClip : null}>
+          <View style={isExpanded ? styles.railShelf : null}>
             <Rail<{ slug: string; name: string; cover: string }>
               data={igdb!.similar}
               keyExtractor={(item) => item.slug}
@@ -1043,7 +1043,7 @@ export default function GameInfoScreen() {
               and cards vanishing under them read as a layout accident
               rather than an invitation; the scroll lives inside the
               band, clipped at the page's own edges. */}
-          <View style={isExpanded ? styles.railClip : null}>
+          <View style={isExpanded ? styles.railShelf : null}>
             <Rail<Game>
               data={series}
               keyExtractor={(item) => String(item.id)}
@@ -1892,9 +1892,26 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.navy,
   },
   seriesMeta: { ...TYPE.micro, color: COLORS.mediumGrey },
-  /** The wall. Whatever the scroll machinery thinks its width is, a
-      desktop rail ends where the band ends. */
-  railClip: { overflow: 'hidden', width: '100%' },
+  /**
+   * The shelf, on the app's own plane.
+   *
+   * An invisible clip contained the cards but left them floating on
+   * the page ground — walled in and still homeless. The panel is the
+   * container the rest of the app already uses for grouped data (the
+   * verdict's phone plane, the Plan's week): raised, one hairline,
+   * cards inside it. The clip rides along, so the scroll still ends
+   * where the shelf does.
+   */
+  railShelf: {
+    overflow: 'hidden',
+    width: '100%',
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.stroke,
+    backgroundColor: COLORS.raised,
+    padding: SPACING.lg,
+    ...SHADOW.card,
+  },
   similarCover: {
     width: 132,
     aspectRatio: 3 / 4,
