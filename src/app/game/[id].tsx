@@ -964,10 +964,16 @@ export default function GameInfoScreen() {
       {series.length > 0 && (
         <View style={mediaBlock}>
           <SectionHeader wide={isExpanded} title="More in this series" />
+          {/* Contained on desktop. A rail bleeding off the window is a
+              thumb gesture — on a phone the screen edge is where
+              content naturally runs. On a desktop the page has margins,
+              and cards vanishing under them read as a layout accident
+              rather than an invitation; the scroll lives inside the
+              band, clipped at the page's own edges. */}
           <Rail<Game>
             data={series}
             keyExtractor={(item) => String(item.id)}
-            inset={railInset}
+            inset={isExpanded ? 0 : railInset}
             renderItem={(item) => <GameCard game={item} />}
           />
         </View>
@@ -1112,7 +1118,7 @@ export default function GameInfoScreen() {
         onLayout={(event) => setStageWidth(event.nativeEvent.layout.width)}
       >
         {current.movie ? (
-          <StageVideo movie={current.movie} />
+          <StageVideo movie={current.movie} autoPlay />
         ) : (
           <Pressable
             onPress={() => setLightboxUri(current.image)}
@@ -1691,7 +1697,9 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 430,
+    // 560, up from 430: at 430 the atmosphere died before the stage
+    // began, so the art's colour never reached the thing made from it.
+    height: 560,
     overflow: 'hidden',
   },
   deskBackdropImage: {
