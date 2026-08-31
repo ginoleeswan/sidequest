@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { Platform, StyleSheet, Text } from 'react-native';
 
+import { Mark } from './Mark';
 import { ScaleButton } from './ScaleButton';
 import { COLORS } from '@/styles/colors';
 import { OVER_IMAGE, TYPE } from '@/styles/typography';
@@ -72,6 +73,11 @@ export function BackButton({ onImage = false }: { onImage?: boolean }) {
         style={styles.brand}
         accessibilityLabel="Go to the Sidequest home page"
       >
+        {/* The app's one lockup — the mark and the wordmark, exactly as
+            the header and the footer set them. A brand drawn three
+            ways is three brands; this corner had invented a fourth by
+            setting the name in bare label type. */}
+        <Mark size={16} />
         <Text style={[styles.brandMark, onImage && OVER_IMAGE.heading]}>
           SIDEQUEST
         </Text>
@@ -95,15 +101,15 @@ export function BackButton({ onImage = false }: { onImage?: boolean }) {
 
 const styles = StyleSheet.create({
   brand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     paddingHorizontal: 14,
     height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   brandMark: {
-    ...TYPE.label,
+    ...TYPE.h3,
     color: COLORS.white,
-    letterSpacing: 1.6,
   },
   button: {
     width: 40,

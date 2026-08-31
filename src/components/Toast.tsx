@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Animated, StyleSheet, Text } from 'react-native';
+import { Animated, StyleSheet, Text, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
@@ -99,7 +99,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
 const styles = StyleSheet.create({
   toast: {
-    position: 'absolute',
+    /*
+     * Absolute anchors to the root view, which on native never scrolls
+     * — but on web the document itself is the scroller, so an absolute
+     * toast rides up the page with it. Fixed pins it to the viewport,
+     * which is where a confirmation lives: it talks to the person, not
+     * to the paragraph they happened to be near.
+     */
+    position: Platform.OS === 'web' ? ('fixed' as 'absolute') : 'absolute',
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',

@@ -823,6 +823,30 @@ export default function GameInfoScreen() {
           onOpenGenre={openGenre}
           onOpenPlan={() => router.push('/plan')}
         />
+        {/* The same split the desktop reads under its figure. It was
+            desktop-only by accident of living in that layout's title
+            block — but the phone reader is the one deciding on a
+            sofa, and "100% takes four times the story" changes that
+            decision the most. */}
+        {igdb?.times &&
+        igdb.times.submissions >= 5 &&
+        (igdb.times.hastily || igdb.times.completely) ? (
+          <Text style={[styles.splitLegend, OVER_IMAGE.body]}>
+            {[
+              igdb.times.hastily
+                ? `Rushing it ${Math.round(igdb.times.hastily)}h`
+                : null,
+              igdb.times.normally
+                ? `Most people ${Math.round(igdb.times.normally)}h`
+                : null,
+              igdb.times.completely
+                ? `100% ${Math.round(igdb.times.completely)}h`
+                : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </Text>
+        ) : null}
       </View>
     </View>
   );
@@ -1611,6 +1635,18 @@ export default function GameInfoScreen() {
       {!isExpanded && (
         <SectionHeader title="The file" eyebrow="Where, who and what" />
       )}
+      {/* The cover, at the crate's head on the phone too — parity is
+          the rule, and the box was desktop-only by omission. A stamp
+          here rather than the rail's crown: the phone masthead already
+          owns the big picture. */}
+      {!isExpanded && igdb?.cover ? (
+        <Image
+          source={{ uri: igdbCoverUri(igdb.cover) }}
+          style={styles.crateCover}
+          contentFit="cover"
+          transition={DURATION.base}
+        />
+      ) : null}
       {framed(
         isExpanded
           ? [controls, fileGetIt, fileFacts]
@@ -2059,6 +2095,15 @@ const styles = StyleSheet.create({
   },
   similarName: { ...TYPE.caption, color: COLORS.lightGrey },
 
+  crateCover: {
+    width: 108,
+    aspectRatio: 3 / 4,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.strokeStrong,
+    backgroundColor: COLORS.navy,
+    marginBottom: SPACING.sm,
+  },
   /** The rail's crown: full width, the cover's own 3:4, one hairline. */
   railCover: {
     width: '100%',
