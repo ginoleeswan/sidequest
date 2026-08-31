@@ -378,28 +378,42 @@ function MetaRow({ label, items }: { label: string; items?: Named[] }) {
   );
 }
 
+/**
+ * Full screen, for a picture or a trailer.
+ *
+ * The trailer needed somewhere to go. It cannot play inside the
+ * masthead gallery: the title, the figure and the byline sit over the
+ * bottom of that frame, and a video's own controls live in exactly the
+ * same place — two sets of type fighting for one strip. Full screen it
+ * has the room, the controls have nothing to collide with, and the
+ * gesture is the one people already use on a picture here.
+ */
 function Lightbox({
   uri,
+  movie,
   onClose,
 }: {
   uri: string | null;
+  movie: Movie | null;
   onClose: () => void;
 }) {
   return (
     <Modal
-      visible={uri != null}
+      visible={uri != null || movie != null}
       transparent
       animationType="fade"
       onRequestClose={onClose}
     >
       <Pressable style={styles.lightbox} onPress={onClose}>
-        {uri && (
+        {movie ? (
+          <StageVideo movie={movie} style={styles.lightboxImage} />
+        ) : uri ? (
           <Image
             source={{ uri: mediaUri(uri, 640) }}
             style={styles.lightboxImage}
             contentFit="contain"
           />
-        )}
+        ) : null}
       </Pressable>
     </Modal>
   );
@@ -425,6 +439,8 @@ export default function GameInfoScreen() {
    * stands in until somebody actually asks.
    */
   const [playing, setPlaying] = useState<number | null>(null);
+  /** Which frame the phone's masthead gallery is on, for the dots. */
+  const [heroPage, setHeroPage] = useState(0);
   const { durationOf, learnDurations } = useDurations();
 
   const { isExpanded, width } = useBreakpoint();
@@ -509,20 +525,6 @@ export default function GameInfoScreen() {
     : SPACING.md;
   const railInset = gutter;
 
-  /**
-   * Screenshots at the size of the thing they are.
-   *
-   * They were three hundred points wide in a rail, which on a phone is
-   * a thumbnail with two more peeking — the same scale as a related-game
-   * card, for the only asset on this page that shows you what playing
-   * it actually looks like. A lead frame nearly the width of the
-   * viewport, with the next one showing at the edge to say the rail
-   * scrolls, is how a feature opens a photo essay.
-   */
-  const shotWidth = isExpanded
-    ? LAYOUT.mediaWidth * 1.4
-    : Math.min(width - gutter * 2 - SPACING.xl, 460);
-  const shotHeight = Math.round(shotWidth / (16 / 9));
   const mediaBlock = [
     styles.block,
     isExpanded && { paddingHorizontal: gutter },
@@ -536,15 +538,87 @@ export default function GameInfoScreen() {
 
   /* -------------------------------------------------------------- pieces */
 
+  /**
+   * Key art, then the trailers, then the screenshots — identity first,
+   * motion second, detail last. The trailers were a rail at the foot of
+   * the page, below the fold of the thing they advertise; a trailer is
+   * the single best answer to "what is this like to play", so it
+   * belongs in the stage with everything else that answers that.
+   */
+  const frames: { key: string; image: string; movie?: Movie }[] = [
+    ...(game.background_image
+      ? [{ key: 'art', image: game.background_image }]
+      : []),
+    ...trailers.slice(0, 2).map((movie) => ({
+      key: `movie-${movie.id}`,
+      image: movie.preview,
+      movie,
+    })),
+    ...screenshots.map((shot) => ({ key: String(shot.id), image: shot.image })),
+  ];
+  const current = frames[stageIndex] ?? frames[0];
+
   const hero = (
     <View style={styles.hero}>
-      <CoverImage
-        uri={game.background_image}
+      {/*
+        The masthead picture is the gallery.
+        
+        It was one 480pt frame of key art with a second, smaller
+        carousel of screenshots and trailers below it — the largest
+        object on the page showing the least, and the material that
+        answers "what is this like to play" shown at two thirds the
+        size in a section of its own. One pager, at the size the hero
+        already had: key art first because that is what identifies the
+        game on arrival, then everything else.
+
+        Scrolled rather than paged so the frames snap: `pagingEnabled`
+        would be right if the frames were the window's width, and they
+        are, but snapping to the interval says the same thing and keeps
+        the peek honest at other widths.
+      */}
+      <ScrollView
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
         style={styles.heroImage}
-        iconSize={72}
-        size="hero"
-        label={`${game.name} cover art`}
-      />
+        onScroll={(event) =>
+          setHeroPage(
+            Math.round(event.nativeEvent.contentOffset.x / Math.max(width, 1))
+          )
+        }
+        scrollEventThrottle={64}
+      >
+        {frames.map((frame) => (
+          <Pressable
+            key={frame.key}
+            style={{ width, height: 480 }}
+            onPress={() =>
+              frame.movie
+                ? setPlaying(frame.movie.id)
+                : setLightboxUri(frame.image)
+            }
+            accessibilityRole="button"
+            accessibilityLabel={
+              frame.movie
+                ? `Play the trailer ${frame.movie.name}`
+                : `${game.name} artwork`
+            }
+          >
+            <CoverImage
+              uri={frame.image}
+              style={styles.heroImage}
+              iconSize={72}
+              size="hero"
+              label={`${game.name} cover art`}
+            />
+            {frame.movie ? (
+              <View style={styles.posterPlay}>
+                <Ionicons name="play" size={22} color={COLORS.navy} />
+              </View>
+            ) : null}
+          </Pressable>
+        ))}
+      </ScrollView>
       {/* Art dissolves into the page colour — the hero belongs to the page,
           not to a box sitting on it. */}
       {/* The ramp starts where the copy does, not a third of the way
@@ -559,6 +633,16 @@ export default function GameInfoScreen() {
       />
       <GrainScrim style={styles.heroGrain} />
       <ChromeWeld height={insets.top + WELD_HEIGHT} />
+      {frames.length > 1 ? (
+        <View style={styles.heroDots} pointerEvents="none">
+          {frames.map((frame, index) => (
+            <View
+              key={frame.key}
+              style={[styles.heroDot, index === heroPage && styles.heroDotOn]}
+            />
+          ))}
+        </View>
+      ) : null}
       <View style={styles.heroCopy}>
         {/* No platform glyphs here any more: eight of them opened the
             masthead with a row of noise, and every one is spelled out
@@ -730,103 +814,6 @@ export default function GameInfoScreen() {
    * things — other people playing, other games — so they belong after
    * this game has been dealt with.
    */
-  /**
-   * Key art, then the trailers, then the screenshots — identity first,
-   * motion second, detail last. The trailers were a rail at the foot of
-   * the page, below the fold of the thing they advertise; a trailer is
-   * the single best answer to "what is this like to play", so it
-   * belongs in the stage with everything else that answers that.
-   */
-  const frames: { key: string; image: string; movie?: Movie }[] = [
-    ...(game.background_image
-      ? [{ key: 'art', image: game.background_image }]
-      : []),
-    ...trailers.slice(0, 2).map((movie) => ({
-      key: `movie-${movie.id}`,
-      image: movie.preview,
-      movie,
-    })),
-    ...screenshots.map((shot) => ({ key: String(shot.id), image: shot.image })),
-  ];
-  const current = frames[stageIndex] ?? frames[0];
-
-  /**
-   * One carousel, not two rails and a wall of key art.
-   *
-   * The phone showed the same material three times over: a 480pt hero
-   * of key art, then a Screenshots rail, then a Trailers rail — three
-   * headers, three scroll gestures, three sizes of the same idea, and
-   * the two things that actually show what playing looks like arriving
-   * as the smallest of them.
-   *
-   * They are one question, so they are one object. Trailers first
-   * because motion answers it better than a still, then every
-   * screenshot, in frames nearly the width of the screen so a phone
-   * gives its best asset the space it gives its worst. The hero above
-   * keeps the key art, which is identity rather than evidence, so
-   * nothing here repeats it.
-   *
-   * Snapped to the frame pitch: a carousel that stops between two
-   * pictures is a carousel that has to be tidied up after, and this
-   * one is scrolled with a thumb.
-   */
-  const mediaStage =
-    isExpanded || frames.length <= 1 ? null : (
-      <View style={mediaBlock}>
-        <SectionHeader
-          title="What it looks like"
-          eyebrow={`${frames.length - 1} screens and trailers`}
-        />
-        <Rail<(typeof frames)[number]>
-          data={frames.slice(1)}
-          keyExtractor={(item) => item.key}
-          inset={railInset}
-          gap={SPACING.sm}
-          snapInterval={shotWidth + SPACING.sm}
-          renderItem={(item) =>
-            item.movie && playing === item.movie.id ? (
-              <StageVideo
-                movie={item.movie}
-                style={{ width: shotWidth, height: shotHeight }}
-              />
-            ) : item.movie ? (
-              <Pressable
-                onPress={() => setPlaying(item.movie?.id ?? null)}
-                accessibilityRole="button"
-                accessibilityLabel={`Play the trailer ${item.movie.name}`}
-              >
-                <Image
-                  source={{ uri: mediaUri(item.image, 640) }}
-                  style={[
-                    styles.screenshot,
-                    { width: shotWidth, height: shotHeight },
-                  ]}
-                  contentFit="cover"
-                  transition={DURATION.base}
-                />
-                {/* The mark that says this one moves. A poster frame
-                    with no affordance is just a dark screenshot. */}
-                <View style={styles.posterPlay}>
-                  <Ionicons name="play" size={22} color={COLORS.navy} />
-                </View>
-              </Pressable>
-            ) : (
-              <Pressable onPress={() => setLightboxUri(item.image)}>
-                <Image
-                  source={{ uri: mediaUri(item.image, 640) }}
-                  style={[
-                    styles.screenshot,
-                    { width: shotWidth, height: shotHeight },
-                  ]}
-                  contentFit="cover"
-                  transition={DURATION.base}
-                />
-              </Pressable>
-            )
-          }
-        />
-      </View>
-    );
 
   const mediaTail = (
     <>
@@ -1266,7 +1253,6 @@ export default function GameInfoScreen() {
                       game you have not played it is an empty box in the
                       most valuable position on the screen. It is a
                       response, so it follows what it responds to. */}
-                  {mediaStage}
                   {about}
                   {ratingsBreakdown}
                   {yourTake}
@@ -1284,7 +1270,14 @@ export default function GameInfoScreen() {
           duration={editingLength ? durationOf(game) : null}
           onClose={() => setEditingLength(false)}
         />
-        <Lightbox uri={lightboxUri} onClose={() => setLightboxUri(null)} />
+        <Lightbox
+          uri={lightboxUri}
+          movie={trailers.find((t) => t.id === playing) ?? null}
+          onClose={() => {
+            setLightboxUri(null);
+            setPlaying(null);
+          }}
+        />
       </View>
     </Textured>
   );
@@ -1317,6 +1310,25 @@ const styles = StyleSheet.create({
 
   // hero
   hero: { height: 480, justifyContent: 'flex-end' },
+  /**
+   * Above the copy, not over it. The pager has no affordance of its own
+   * once the frames fill the window, so the dots are the only thing
+   * saying there is more than one — and they are the app's own amber
+   * for the frame you are on, muted for the rest.
+   */
+  heroDots: {
+    flexDirection: 'row',
+    gap: 5,
+    alignSelf: 'center',
+    paddingBottom: SPACING.sm,
+  },
+  heroDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.32)',
+  },
+  heroDotOn: { backgroundColor: COLORS.accent, width: 14 },
   heroGrain: {
     position: 'absolute',
     left: 0,
