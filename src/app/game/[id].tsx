@@ -1464,6 +1464,25 @@ export default function GameInfoScreen() {
       </View>
     ) : null;
 
+  /**
+   * Who made it and when, in one quiet line near the title — Steam's
+   * move on mobile, and the right one: developer, publisher and year
+   * are identity, and identity was living at the bottom of the crate,
+   * three screens from the name it belongs to. The crate keeps the
+   * full record; this is the reading copy.
+   */
+  const factsLine = !isExpanded
+    ? [
+        game.developers?.[0]?.name,
+        game.publishers?.[0]?.name !== game.developers?.[0]?.name
+          ? game.publishers?.[0]?.name
+          : null,
+        game.released?.slice(0, 4),
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : '';
+
   const fileGetIt = hasLinks ? (
     <View style={styles.fileSection}>
       <Text style={styles.fileLabel}>GET IT</Text>
@@ -1650,7 +1669,7 @@ export default function GameInfoScreen() {
       {framed(
         isExpanded
           ? [controls, fileGetIt, fileFacts]
-          : [fileGetIt, fileWho, fileDetails, fileTags]
+          : [fileGetIt, fileWho, fileDetails]
       )}
     </View>
   );
@@ -1728,8 +1747,18 @@ export default function GameInfoScreen() {
                       game you have not played it is an empty box in the
                       most valuable position on the screen. It is a
                       response, so it follows what it responds to. */}
+                  {factsLine ? (
+                    <Text style={styles.factsLine}>{factsLine}</Text>
+                  ) : null}
                   {mediaStage}
                   {about}
+                  {/* Tags right after the prose, as Steam files them:
+                      they are the description's index, not archive
+                      material — and they were three screens deep in
+                      the crate. */}
+                  {!isExpanded && game.tags && game.tags.length > 0 ? (
+                    <View style={styles.block}>{fileTags}</View>
+                  ) : null}
                   {ratingsBreakdown}
                   {yourTake}
                   {fileBox}
@@ -2095,6 +2124,12 @@ const styles = StyleSheet.create({
   },
   similarName: { ...TYPE.caption, color: COLORS.lightGrey },
 
+  factsLine: {
+    ...TYPE.caption,
+    color: COLORS.mediumGrey,
+    paddingHorizontal: SPACING.md,
+    marginTop: -SPACING.xs,
+  },
   crateCover: {
     width: 108,
     aspectRatio: 3 / 4,
