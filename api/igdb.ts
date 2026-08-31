@@ -175,11 +175,25 @@ export default async function handler(
   try {
     const accessToken = await token(clientId, clientSecret);
 
-    const games = await igdb<{ id: number; slug: string }>(
+    /**
+     * One query carries everything the page enriches with, not just the
+     * ids the durations need: the cover (the box art RAWG simply does
+     * not have), the critic aggregate, and the storyline — a short,
+     * spoiler-safe synopsis that is often better prose than the
+     * marketing description. Same request, same rate-limit spend.
+     */
+    const games = await igdb<{
+      id: number;
+      slug: string;
+      cover?: { image_id?: string };
+      aggregated_rating?: number;
+      aggregated_rating_count?: number;
+      storyline?: string;
+    }>(
       clientId,
       accessToken,
       'games',
-      `fields id,slug; where slug = (${slugs
+      `fields id,slug,cover.image_id,aggregated_rating,aggregated_rating_count,storyline; where slug = (${slugs
         .map((slug) => `"${slug}"`)
         .join(',')}); limit ${MAX_SLUGS * 2};`
     );
@@ -223,10 +237,31 @@ export default async function handler(
       }
     }
 
+    const extras: Record<
+      string,
+      {
+        cover: string | null;
+        critic: number | null;
+        criticCount: number;
+        storyline: string | null;
+      }
+    > = {};
+    for (const game of games) {
+      extras[game.slug] = {
+        cover: game.cover?.image_id ?? null,
+        critic:
+          game.aggregated_rating != null
+            ? Math.round(game.aggregated_rating)
+            : null,
+        criticCount: game.aggregated_rating_count ?? 0,
+        storyline: game.storyline ?? null,
+      };
+    }
+
     // A day at the edge, a week in a browser: these numbers move by
     // minutes a year, and the rate limit is shared by every visitor.
     res.setHeader('Cache-Control', 's-maxage=86400, max-age=604800');
-    res.status(200).json({ durations });
+    res.status(200).json({ durations, extras });
   } catch {
     res.status(502).json({ error: 'IGDB did not answer — try again shortly.' });
   }

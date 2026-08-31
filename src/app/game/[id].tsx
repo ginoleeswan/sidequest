@@ -20,6 +20,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { gameDetailQuery } from '@/api/gameDetail';
+import { fetchIgdbExtras, igdbCoverUri } from '@/api/igdb';
 import { friendlyError, mediaUri } from '@/api/rawg';
 import type { Game, GameDetail, Movie, Named } from '@/api/types';
 import { RouteError } from '@/components/RouteError';
@@ -553,6 +554,18 @@ export default function GameInfoScreen() {
   // state, and a hovered tile can prefetch exactly this.
   const { data, isPending, error } = useQuery(gameDetailQuery(id));
 
+  /**
+   * IGDB's half of the page: box art, the critic aggregate, the
+   * completion split and a storyline. Missing answers are missing on
+   * purpose — every consumer below falls back to the page as it was.
+   */
+  const { data: igdb } = useQuery({
+    queryKey: ['igdb-extras', data?.game?.slug],
+    queryFn: () => fetchIgdbExtras(data!.game.slug),
+    enabled: Boolean(data?.game?.slug),
+    staleTime: 24 * 60 * 60 * 1000,
+  });
+
   // What people reported finishing this in, if anyone has.
   useEffect(() => {
     if (data?.game.slug) learnDurations([data.game.slug]);
@@ -846,15 +859,52 @@ export default function GameInfoScreen() {
    * every store page agrees on.
    */
   const titleBlock = (
-    <View style={styles.deskHeroCopy}>
-      <Text style={styles.deskTitle}>{game.name}</Text>
-      <StatStrip
-        game={game}
-        onEditLength={() => setEditingLength(true)}
-        onOpenGenre={openGenre}
-        onOpenPlan={() => router.push('/plan')}
-        wide
-      />
+    <View style={styles.titleLockup}>
+      {/* The box art, finally. RAWG has no cover field, so the page
+          spent months representing games with crops of key art; IGDB's
+          cover is the object a shelf would hold, and a masthead that
+          opens with it reads as being about a THING. Small on purpose:
+          identity is a stamp, not a poster — the stage below is where
+          pictures get to be big. */}
+      {igdb?.cover ? (
+        <Image
+          source={{ uri: igdbCoverUri(igdb.cover) }}
+          style={styles.boxArt}
+          contentFit="cover"
+          transition={DURATION.base}
+        />
+      ) : null}
+      <View style={styles.deskHeroCopy}>
+        <Text style={styles.deskTitle}>{game.name}</Text>
+        <StatStrip
+          game={game}
+          onEditLength={() => setEditingLength(true)}
+          onOpenGenre={openGenre}
+          onOpenPlan={() => router.push('/plan')}
+          wide
+        />
+        {/* The split HowLongToBeat built a site on, under the rule it
+          annotates: the same 74 hours is a different promise to
+          someone who mainlines than to a completionist, and one
+          number was always a compromise between them. Submitted
+          times, so it only speaks when enough people have. */}
+        {igdb?.times &&
+        igdb.times.submissions >= 5 &&
+        (igdb.times.hastily || igdb.times.completely) ? (
+          <Text style={styles.splitLegend}>
+            {[
+              igdb.times.hastily ? `Rushing it ${igdb.times.hastily}h` : null,
+              igdb.times.normally
+                ? `Most people ${igdb.times.normally}h`
+                : null,
+              igdb.times.completely ? `100% ${igdb.times.completely}h` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+            {`  — ${igdb.times.submissions} players, via IGDB`}
+          </Text>
+        ) : null}
+      </View>
     </View>
   );
 
@@ -873,7 +923,8 @@ export default function GameInfoScreen() {
    * heading register now belongs to the sections that genuinely need
    * naming: the verdict, the series.
    */
-  const about = summary ? (
+  const prose = summary || igdb?.storyline?.trim() || '';
+  const about = prose ? (
     <View style={styles.block}>
       {/* At reading size. This is the only prose on the page and it was
           set two steps below the app's body copy, so the one block
@@ -886,7 +937,7 @@ export default function GameInfoScreen() {
         ]}
         numberOfLines={isExpanded ? 8 : 6}
       >
-        {summary}
+        {prose}
       </ReadMoreText>
     </View>
   ) : null;
@@ -1765,10 +1816,31 @@ const styles = StyleSheet.create({
     bottom: 0,
     opacity: 0.75,
   },
+  splitLegend: {
+    ...TYPE.caption,
+    color: COLORS.mediumGrey,
+    marginTop: -SPACING.xs,
+  },
+  titleLockup: {
+    flexDirection: 'row',
+    gap: SPACING.lg,
+    alignItems: 'flex-start',
+    marginBottom: SPACING.lg,
+  },
+  /** 3:4, at a stamp's size; hairline so dark covers keep an edge. */
+  boxArt: {
+    width: 96,
+    aspectRatio: 3 / 4,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.strokeStrong,
+    backgroundColor: COLORS.navy,
+  },
   deskHeroCopy: {
+    flex: 1,
+    minWidth: 0,
     gap: SPACING.sm + 2,
     alignItems: 'stretch',
-    marginBottom: SPACING.lg,
   },
   /** The one display size the scale does not carry: a desktop masthead. */
   deskTitle: {

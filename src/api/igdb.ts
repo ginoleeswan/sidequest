@@ -56,3 +56,41 @@ export async function fetchTimesToBeat(
 
   return Object.assign({}, ...results) as TimeToBeatBySlug;
 }
+
+/**
+ * The enrichment beside the durations: what IGDB knows that RAWG does
+ * not. Same endpoint, same response — the server sends both maps and
+ * each caller reads its half.
+ */
+export interface IgdbExtras {
+  /** IGDB cover image id — the box art RAWG has no field for. */
+  cover: string | null;
+  /** Critic aggregate, 0-100, rounded. */
+  critic: number | null;
+  criticCount: number;
+  /** Short spoiler-safe synopsis; often better prose than marketing. */
+  storyline: string | null;
+}
+
+/** t_cover_big is 264x352 — the box-art rung; t_720p for a lead. */
+export function igdbCoverUri(imageId: string, size = 'cover_big'): string {
+  return `https://images.igdb.com/igdb/image/upload/t_${size}/${imageId}.jpg`;
+}
+
+export async function fetchIgdbExtras(
+  slug: string
+): Promise<(IgdbExtras & { times: TimeToBeat | null }) | null> {
+  try {
+    const response = await fetch(`/api/igdb?slugs=${encodeURIComponent(slug)}`);
+    if (!response.ok) return null;
+    const body = (await response.json()) as {
+      durations?: TimeToBeatBySlug;
+      extras?: Record<string, IgdbExtras>;
+    };
+    const extras = body.extras?.[slug];
+    if (!extras) return null;
+    return { ...extras, times: body.durations?.[slug] ?? null };
+  } catch {
+    return null;
+  }
+}
