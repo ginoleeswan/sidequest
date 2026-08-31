@@ -244,13 +244,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: SPACING.sm,
     paddingVertical: SPACING.sm + 4,
-    // The status control's radius, not a softer one. They stack at the
-    // same width, so two different corner treatments on two rectangles
-    // that share an edge read as an accident.
+    // The status control's radius, its stroke and its ground — all
+    // three, not just the radius. On COLORS.raised this was a light
+    // plate under a dark one: two adjacent controls on two different
+    // surfaces, which is what made the shelf cluster read as clutter
+    // however the spacing moved. One family now — the group's plate,
+    // the group's stroke — and the amber selection above stays the
+    // only louder thing in the column.
     borderRadius: RADIUS.sm,
     borderWidth: 1,
-    borderColor: COLORS.strokeStrong,
-    backgroundColor: COLORS.raised,
+    borderColor: COLORS.strokeOnImage,
+    backgroundColor: COLORS.plate,
   },
   startBlockText: { ...TYPE.label, color: COLORS.white },
   primary: {

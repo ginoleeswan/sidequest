@@ -103,8 +103,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.strokeOnImage,
     backgroundColor: COLORS.plate,
-    padding: 3,
-    gap: 3,
+    // A point more air inside the frame; at 3 the segments touched
+    // their own plate and the group read as compressed even when the
+    // segments themselves had room.
+    padding: 4,
+    gap: 4,
   },
   segment: {
     flex: 1,

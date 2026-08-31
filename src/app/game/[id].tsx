@@ -778,9 +778,17 @@ export default function GameInfoScreen() {
     </View>
   ) : null;
 
+  /**
+   * No heading. "About" was a label stating the obvious — the only
+   * prose on a page about one game does not need to announce that it
+   * is about the game, and Epic runs its description with no header
+   * for the same reason. The paragraph opens with its own first
+   * sentence, which is a better introduction than a label, and the
+   * heading register now belongs to the sections that genuinely need
+   * naming: the verdict, the series.
+   */
   const about = summary ? (
     <View style={styles.block}>
-      <SectionHeader title="About" wide={isExpanded} />
       {/* At reading size. This is the only prose on the page and it was
           set two steps below the app's body copy, so the one block
           somebody actually reads was the smallest text on the screen. */}
@@ -1171,6 +1179,10 @@ export default function GameInfoScreen() {
           <Text style={styles.metaValue}>{calendarDate(game.released)}</Text>
         </View>
       ) : null}
+      <MetaRow
+        label="Platforms"
+        items={game.platforms?.map(({ platform }) => platform)}
+      />
       <MetaRow label="Developers" items={game.developers} />
       <MetaRow label="Publishers" items={game.publishers} />
       {game.esrb_rating?.name ? (
@@ -1451,7 +1463,15 @@ const styles = StyleSheet.create({
    * the track or it is a motif rather than a measure, so the block
    * stretches and the lines inside it go on starting at the left.
    */
-  statBlockWide: { alignSelf: 'stretch' },
+  /**
+   * Stretched, and given air. The block's 4pt gap is right over
+   * artwork on a phone, where the cluster huddles against a bright
+   * ground; on the wide page's solid navy the same 4pt read as
+   * squeezed — five kinds of information with no room to be five
+   * things. 10 between lines is still one block, now legible as
+   * title, figure, byline, rule.
+   */
+  statBlockWide: { alignSelf: 'stretch', gap: SPACING.sm + 2 },
   /**
    * The plan's own answer, and a way into it. Amber because it is a
    * link and every link in this app is amber — and because it is the
@@ -1522,7 +1542,10 @@ const styles = StyleSheet.create({
   },
   weekTick: {
     flex: 1,
-    height: 10,
+    // 6, down from 10. At 10 the strip outweighed the figure it
+    // supports — a divider bar where a data-rule was meant. At 6 it
+    // still counts as weeks and reads as a rule.
+    height: 6,
     borderRadius: 2,
     backgroundColor: COLORS.accent,
   },
@@ -1605,9 +1628,9 @@ const styles = StyleSheet.create({
     opacity: 0.75,
   },
   deskHeroCopy: {
-    gap: SPACING.sm,
+    gap: SPACING.sm + 2,
     alignItems: 'stretch',
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.lg,
   },
   /** The one display size the scale does not carry: a desktop masthead. */
   deskTitle: {

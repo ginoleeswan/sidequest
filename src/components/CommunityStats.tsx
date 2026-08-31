@@ -77,7 +77,11 @@ const styles = StyleSheet.create({
      */
     flexBasis: 0,
     flexGrow: 1,
-    minWidth: 140,
+    // 120, not 140: five stats at 140 measure 732 in a 722 column, so
+    // the last one wrapped alone — an orphan row for the sake of 10pt.
+    // At 120 all five sit on one line wide, and the phone still wraps
+    // two-up exactly as before.
+    minWidth: 120,
   },
   value: {
     ...TYPE.h3,
