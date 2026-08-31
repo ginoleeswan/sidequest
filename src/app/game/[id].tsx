@@ -1006,29 +1006,31 @@ export default function GameInfoScreen() {
       {(igdb?.similar?.length ?? 0) > 0 && (
         <View style={mediaBlock}>
           <SectionHeader wide={isExpanded} title="More like this" />
-          <Rail<{ slug: string; name: string; cover: string }>
-            data={igdb!.similar}
-            keyExtractor={(item) => item.slug}
-            inset={isExpanded ? 0 : railInset}
-            renderItem={(item) => (
-              <Pressable
-                onPress={() => router.push(`/game/${item.slug}`)}
-                accessibilityRole="link"
-                accessibilityLabel={`Open ${item.name}`}
-                style={styles.similarCard}
-              >
-                <Image
-                  source={{ uri: igdbCoverUri(item.cover) }}
-                  style={styles.similarCover}
-                  contentFit="cover"
-                  transition={DURATION.base}
-                />
-                <Text style={styles.similarName} numberOfLines={2}>
-                  {item.name}
-                </Text>
-              </Pressable>
-            )}
-          />
+          <View style={isExpanded ? styles.railClip : null}>
+            <Rail<{ slug: string; name: string; cover: string }>
+              data={igdb!.similar}
+              keyExtractor={(item) => item.slug}
+              inset={isExpanded ? 0 : railInset}
+              renderItem={(item) => (
+                <Pressable
+                  onPress={() => router.push(`/game/${item.slug}`)}
+                  accessibilityRole="link"
+                  accessibilityLabel={`Open ${item.name}`}
+                  style={styles.similarCard}
+                >
+                  <Image
+                    source={{ uri: igdbCoverUri(item.cover) }}
+                    style={styles.similarCover}
+                    contentFit="cover"
+                    transition={DURATION.base}
+                  />
+                  <Text style={styles.similarName} numberOfLines={2}>
+                    {item.name}
+                  </Text>
+                </Pressable>
+              )}
+            />
+          </View>
         </View>
       )}
 
@@ -1041,12 +1043,50 @@ export default function GameInfoScreen() {
               and cards vanishing under them read as a layout accident
               rather than an invitation; the scroll lives inside the
               band, clipped at the page's own edges. */}
-          <Rail<Game>
-            data={series}
-            keyExtractor={(item) => String(item.id)}
-            inset={isExpanded ? 0 : railInset}
-            renderItem={(item) => <GameCard game={item} />}
-          />
+          <View style={isExpanded ? styles.railClip : null}>
+            <Rail<Game>
+              data={series}
+              keyExtractor={(item) => String(item.id)}
+              inset={isExpanded ? 0 : railInset}
+              renderItem={(item) =>
+                isExpanded ? (
+                  /* The shelf language the page settled on: picture,
+                   caption below. The GameCard blob — rounded mask,
+                   title and stars painted over a gradient — belongs to
+                   the home shelves it was drawn for; here it sat
+                   between two flat rails looking like a sticker. RAWG
+                   has no covers, so the series keeps its landscape art
+                   at 16:9 and the same hairline as its neighbour. */
+                  <Pressable
+                    onPress={() => router.push(`/game/${item.id}`)}
+                    accessibilityRole="link"
+                    accessibilityLabel={`Open ${item.name}`}
+                    style={styles.seriesCard}
+                  >
+                    <Image
+                      source={{ uri: mediaUri(item.background_image, 400) }}
+                      style={styles.seriesCover}
+                      contentFit="cover"
+                      transition={DURATION.base}
+                    />
+                    <Text style={styles.similarName} numberOfLines={1}>
+                      {item.name}
+                    </Text>
+                    <Text style={styles.seriesMeta}>
+                      {[
+                        item.released?.slice(0, 4),
+                        item.rating > 0 ? `★ ${item.rating.toFixed(1)}` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </Text>
+                  </Pressable>
+                ) : (
+                  <GameCard game={item} />
+                )
+              }
+            />
+          </View>
         </View>
       )}
     </>
@@ -1842,6 +1882,19 @@ const styles = StyleSheet.create({
   },
   /** 3:4, at a stamp's size; hairline so dark covers keep an edge. */
   similarCard: { width: 132, gap: SPACING.xs },
+  seriesCard: { width: 210, gap: SPACING.xs },
+  seriesCover: {
+    width: 210,
+    aspectRatio: 16 / 9,
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.stroke,
+    backgroundColor: COLORS.navy,
+  },
+  seriesMeta: { ...TYPE.micro, color: COLORS.mediumGrey },
+  /** The wall. Whatever the scroll machinery thinks its width is, a
+      desktop rail ends where the band ends. */
+  railClip: { overflow: 'hidden', width: '100%' },
   similarCover: {
     width: 132,
     aspectRatio: 3 / 4,
