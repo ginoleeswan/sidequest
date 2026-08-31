@@ -974,7 +974,18 @@ const styles = StyleSheet.create({
    * one thing on this page worth keeping in view.
    */
   colLeft: {
-    width: 400,
+    /*
+     * Proportional, with a ceiling — the same fault the game page had.
+     * Pinned at 400 whatever the window did, the rail took 39% of the
+     * content at a wide desktop and 44% at 1024, where the main column
+     * shrank to 512 and the two read as a pair rather than a rail and
+     * a column. 39/61 holds the relationship at every width; the
+     * ceiling stops a wide monitor stretching a card that has one
+     * evening in it.
+     */
+    flex: 39,
+    maxWidth: 400,
+    minWidth: 0,
     gap: SPACING.xl,
     ...(Platform.OS === 'web'
       ? {
@@ -986,7 +997,7 @@ const styles = StyleSheet.create({
         }
       : null),
   },
-  colRight: { flex: 1, gap: SPACING.xl },
+  colRight: { flex: 61, minWidth: 0, gap: SPACING.xl },
   routeNote: {
     ...TYPE.p,
     color: COLORS.mediumGrey,

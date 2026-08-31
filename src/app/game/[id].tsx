@@ -783,6 +783,33 @@ export default function GameInfoScreen() {
    * two say one thing: this is what people did with it, and this is
    * what they thought. The rail keeps to its purpose: decide, acquire.
    */
+  /**
+   * The finishing rate — the verdict this app can give and no store can.
+   *
+   * "92% recommended" is RAWG's opinion of the game. It says nothing
+   * about the thing this whole app is built on, which is whether a
+   * game is a good use of the hours it asks for. Beaten against owned
+   * is exactly that, out of the same payload that was already sitting
+   * in the rail as trivia: of the people who have it, this many
+   * reached the credits.
+   *
+   * Coloured on the app's own semantics rather than a curve — mint is
+   * time well spent, amber is a maybe, coral is a shelf. And it is
+   * only claimed where the sample can carry it: under a few hundred
+   * owners the ratio is noise wearing a percentage.
+   */
+  const finishRate = (() => {
+    const st = game.added_by_status;
+    if (!st) return null;
+    const owned = st.owned ?? 0;
+    const beaten = st.beaten ?? 0;
+    if (owned < 300) return null;
+    const pct = Math.round((beaten / owned) * 100);
+    const tint =
+      pct >= 45 ? COLORS.mint : pct >= 20 ? COLORS.accent : COLORS.coral;
+    return { pct, tint };
+  })();
+
   const whoElseWide =
     isExpanded && game.added_by_status ? (
       <View style={styles.whoElseRow}>
@@ -803,6 +830,16 @@ export default function GameInfoScreen() {
         <View style={isExpanded ? null : styles.panel}>
           <RatingsBreakdown ratings={game.ratings} />
         </View>
+        {finishRate ? (
+          <View style={styles.finishRow}>
+            <Text style={[styles.finishFigure, { color: finishRate.tint }]}>
+              {finishRate.pct}%
+            </Text>
+            <Text style={styles.finishLabel}>
+              of the people who own it reached the credits
+            </Text>
+          </View>
+        ) : null}
         {whoElseWide}
       </View>
     ) : null;
@@ -926,7 +963,15 @@ export default function GameInfoScreen() {
               >
                 <Image
                   source={{ uri: mediaUri(frame.image, 200) }}
-                  style={styles.stageThumbImage}
+                  style={[
+                    styles.stageThumbImage,
+                    // RAWG's trailer preview frames are near-black —
+                    // a fade-to-title held on the first frame — so the
+                    // play badge was doing all the identifying and the
+                    // thumb read as a dead slot. Lifted, the frame at
+                    // least shows it is a frame.
+                    frame.movie && styles.stageThumbMovie,
+                  ]}
                   contentFit="cover"
                   transition={DURATION.base}
                 />
@@ -1496,6 +1541,7 @@ const styles = StyleSheet.create({
   },
   stageThumbOn: { borderColor: COLORS.accent, opacity: 1 },
   stageThumbImage: { width: '100%', height: '100%' },
+  stageThumbMovie: { opacity: 0.85, transform: [{ scale: 1.08 }] },
   /** Small, solid, bottom-left: says "this one moves" without painting
       a control over the whole thumb. */
   stagePlayBadge: {
@@ -1605,6 +1651,27 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   fileJoin: { borderBottomWidth: 1, borderBottomColor: COLORS.stroke },
+  /**
+   * The second figure, at the first one's size and on its baseline.
+   *
+   * Set to match the ratings' own lead rather than shrunk into a
+   * caption: it is not a footnote to that number, it is the other half
+   * of the verdict — what players thought, then whether they stayed.
+   */
+  finishRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: SPACING.sm,
+    marginTop: SPACING.md,
+  },
+  finishFigure: {
+    fontFamily: 'Noah-Black',
+    fontSize: 34,
+    lineHeight: 38,
+    letterSpacing: -0.6,
+  },
+  finishLabel: { ...TYPE.body, color: COLORS.lightGrey, flexShrink: 1 },
+
   /** Ruled off from the bars above it: same finding, second witness. */
   whoElseRow: {
     marginTop: SPACING.md,
