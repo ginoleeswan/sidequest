@@ -407,6 +407,8 @@ export default function GameInfoScreen() {
   const [editingLength, setEditingLength] = useState(false);
   /** Which frame the stage shows: 0 is the key art, then screenshots. */
   const [stageIndex, setStageIndex] = useState(0);
+  /** The stage's measured width, so the strip divides the column it is in. */
+  const [stageWidth, setStageWidth] = useState(0);
   const { durationOf, learnDurations } = useDurations();
 
   const { isExpanded, width } = useBreakpoint();
@@ -874,7 +876,14 @@ export default function GameInfoScreen() {
   const current = frames[stageIndex] ?? frames[0];
   const stage =
     isExpanded && frames.length > 0 ? (
-      <View style={styles.stage}>
+      <View
+        style={styles.stage}
+        // Measured, not derived. The thumb width was hard-coded from
+        // the 1200-cap column, so below the cap six of them no longer
+        // filled the lead above them and the strip lost its rhythm
+        // against the only edge it has to agree with.
+        onLayout={(event) => setStageWidth(event.nativeEvent.layout.width)}
+      >
         {current.movie ? (
           <StageVideo movie={current.movie} />
         ) : (
@@ -903,6 +912,9 @@ export default function GameInfoScreen() {
                 onPress={() => setStageIndex(index)}
                 style={[
                   styles.stageThumb,
+                  stageWidth > 0 && {
+                    width: (stageWidth - SPACING.sm * 5) / 6,
+                  },
                   index === stageIndex && styles.stageThumbOn,
                 ]}
                 accessibilityRole="button"
@@ -1435,7 +1447,17 @@ const styles = StyleSheet.create({
     lineHeight: 50,
     color: COLORS.white,
   },
-  columnMain: { flex: 1, minWidth: 0, gap: SPACING.sm },
+  /**
+   * Proportional, not one fixed track and one leftover.
+   *
+   * The rail was pinned at 400 whatever the window did, so at the cap
+   * it took 39% of the content and at 1024 it took 47% — the main
+   * column shrank to 456 against a rail of 400 and the two read as
+   * equals, which is the one thing a main column and a rail must not
+   * do. 61/39 is the ratio the cap was designed at; the rail keeps its
+   * 400 ceiling so a wide monitor does not stretch a lookup column.
+   */
+  columnMain: { flex: 61, minWidth: 0, gap: SPACING.sm },
 
   /**
    * The lead frame and its strip, sized to the column rather than to
@@ -1465,7 +1487,6 @@ const styles = StyleSheet.create({
    * real gallery.
    */
   stageThumb: {
-    width: (632 - SPACING.sm * 5) / 6,
     aspectRatio: 16 / 9,
     borderRadius: RADIUS.sm,
     overflow: 'hidden',
@@ -1511,8 +1532,8 @@ const styles = StyleSheet.create({
    * that wrap to fill whatever they are given. Put the other way round
    * the band would stand 60pt taller for the same content.
    */
-  recordDetails: { flex: 1, minWidth: 0 },
-  recordTags: { width: RAIL },
+  recordDetails: { flex: 61, minWidth: 0 },
+  recordTags: { flex: 39, maxWidth: RAIL, minWidth: 0 },
   /**
    * Pinned, the same move the Plan's rail makes and for the same
    * reason: the rail is the short column — a decision and two lookup
@@ -1522,7 +1543,9 @@ const styles = StyleSheet.create({
    * which is the point of putting it in a column at all.
    */
   columnRail: {
-    width: RAIL,
+    flex: 39,
+    maxWidth: RAIL,
+    minWidth: 0,
     gap: SPACING.md,
     ...(Platform.OS === 'web'
       ? {
