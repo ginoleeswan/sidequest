@@ -1495,8 +1495,17 @@ const styles = StyleSheet.create({
    * takes. 48 restores the ratio rather than picking a number that
    * looks about right.
    */
-  /** The wide page's step; the colour is the shared rule above. */
-  hoursValueWide: { fontSize: 76, lineHeight: 80 },
+  /**
+   * The wide page's step; the colour is the shared rule above.
+   *
+   * 56, down from 76. At 76 the figure was sized for the masthead of a
+   * page whose whole top band was its own — once the title moved into
+   * a column it became the largest thing on the screen by double,
+   * shouting in a layout that had stopped needing it to. 56 against
+   * the 44 title still leads — size, weight and amber all rank it —
+   * and it no longer dwarfs the artwork it sits beside.
+   */
+  hoursValueWide: { fontSize: 56, lineHeight: 60 },
 
   /**
    * Full width of its track, so the rule is a measure and not a motif.
@@ -1721,7 +1730,15 @@ const styles = StyleSheet.create({
   columnRail: {
     flex: 30,
     maxWidth: RAIL,
-    minWidth: 0,
+    /*
+     * A floor as well as a ceiling. Purely proportional, the rail hit
+     * 257pt at 1024 — which hands each of the status control's three
+     * segments about 80pt when "Want to play" with its icon needs
+     * ninety-odd. The ratio is for the wide end; the floor is what the
+     * controls actually require, and the main column absorbs the
+     * difference at widths where nothing else can.
+     */
+    minWidth: 300,
     gap: SPACING.md,
     ...(Platform.OS === 'web'
       ? {
