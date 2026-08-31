@@ -53,6 +53,7 @@ import { SiteFooter } from '@/components/SiteFooter';
 import { GrainScrim, Textured } from '@/components/Textured';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { formatHours } from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
 import { usePersistedState } from '@/hooks/usePersistedState';
@@ -353,16 +354,6 @@ function StatStrip({
       {wide ? (
         <>
           <View style={styles.bylineRow}>
-            {meta.length > 0 && (
-              <View style={styles.metaLine}>
-                {meta.map((bit, i) => (
-                  <React.Fragment key={i}>
-                    {i > 0 ? <Text style={styles.metaDot}>·</Text> : null}
-                    {bit}
-                  </React.Fragment>
-                ))}
-              </View>
-            )}
             {standing?.kind === 'scheduled' ? (
               <Text
                 style={[styles.statPace, styles.statPlan]}
@@ -507,11 +498,22 @@ function Lightbox({
           <StageVideo movie={movie} style={styles.lightboxImage} />
         ) : uri ? (
           <Image
-            source={{ uri: mediaUri(uri, 640) }}
+            source={{ uri: mediaUri(uri, 1280) }}
             style={styles.lightboxImage}
             contentFit="contain"
           />
         ) : null}
+        {/* Tap-anywhere already closes; the X is for the reader who
+            does not know that. An escape hatch you can see is part of
+            what makes a full-screen takeover feel safe to enter. */}
+        <Pressable
+          onPress={onClose}
+          style={styles.lightboxClose}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+        >
+          <Ionicons name="close" size={22} color={COLORS.white} />
+        </Pressable>
       </Pressable>
     </Modal>
   );
@@ -543,6 +545,9 @@ export default function GameInfoScreen() {
   const hasNote = usePersonalNote(Number(id));
   const insets = useSafeAreaInsets();
   const opacity = useAnimatedValue(0);
+  /** The rail's own fade, a beat behind the main column. */
+  const railOpacity = useAnimatedValue(0);
+  const reducedMotion = useReducedMotion();
 
   // Four endpoints, one unit: the screen gets a single loading/error
   // state, and a hovered tile can prefetch exactly this.
@@ -558,16 +563,37 @@ export default function GameInfoScreen() {
     if (data?.game) rememberGame(data.game);
   }, [data?.game]);
 
+  /**
+   * A staged arrival, not a curtain.
+   *
+   * Everything used to fade in as one sheet, which reads as a page
+   * loading. Staggered — the argument first, the rail a beat behind —
+   * it reads as a page being set down, and the beat tells the eye
+   * where to start. One stagger only: a page that choreographs every
+   * block is a page that makes you wait. Reduced motion collapses both
+   * to an immediate appearance, which is that setting kept honestly.
+   */
   useEffect(() => {
-    if (data) {
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: DURATION.base,
-        easing: EASING.standard,
-        useNativeDriver: true,
-      }).start();
+    if (!data) return;
+    if (reducedMotion) {
+      opacity.setValue(1);
+      railOpacity.setValue(1);
+      return;
     }
-  }, [data, opacity]);
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: DURATION.base,
+      easing: EASING.standard,
+      useNativeDriver: true,
+    }).start();
+    Animated.timing(railOpacity, {
+      toValue: 1,
+      duration: DURATION.base,
+      delay: 140,
+      easing: EASING.standard,
+      useNativeDriver: true,
+    }).start();
+  }, [data, opacity, railOpacity, reducedMotion]);
 
   if (isPending) {
     return (
@@ -1248,6 +1274,26 @@ export default function GameInfoScreen() {
   const fileFacts = isExpanded ? (
     <View style={styles.fileSection}>
       <Text style={styles.fileLabel}>DETAILS</Text>
+      {/* The identity line, moved out of the masthead. Genre, the star
+          rating and the metascore are lookup facts, not the page's
+          argument — in the masthead they were a fourth register in a
+          block that only needs three: name, figure, rule. */}
+      <View style={styles.metaRow}>
+        <Text style={styles.metaLabel}>Genre & rating</Text>
+        <View style={styles.railMetaLine}>
+          {game.genres?.slice(0, 2).map((genre) => (
+            <Text key={genre.id} style={styles.metaValue}>
+              {genre.name}
+            </Text>
+          ))}
+          {game.rating > 0 ? (
+            <Text style={styles.metaValue}>★ {game.rating.toFixed(1)}</Text>
+          ) : null}
+          {game.metacritic != null ? (
+            <ScorePill score={game.metacritic} />
+          ) : null}
+        </View>
+      </View>
       {game.released ? (
         <View style={styles.metaRow}>
           <Text style={styles.metaLabel}>Release date</Text>
@@ -1390,7 +1436,11 @@ export default function GameInfoScreen() {
                       a decision is something you come back to, so it
                       wants a column rather than a line in a masthead
                       you have already scrolled past. */}
-                  <View style={styles.columnRail}>{fileBox}</View>
+                  <Animated.View
+                    style={[styles.columnRail, { opacity: railOpacity }]}
+                  >
+                    {fileBox}
+                  </Animated.View>
                 </Animated.View>
                 <Animated.View style={{ opacity }}>{record}</Animated.View>
                 {/* media escapes the column: full-bleed rails, gutter-aligned */}
@@ -1631,9 +1681,14 @@ const styles = StyleSheet.create({
   },
   bylineRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'baseline',
     gap: SPACING.md,
+  },
+  railMetaLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
   },
   statPace: {
     ...TYPE.caption,
@@ -2003,6 +2058,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   lightboxImage: { width: '100%', height: '80%' },
+  lightboxClose: {
+    position: 'absolute',
+    top: SPACING.xl + SPACING.md,
+    right: SPACING.lg,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
 });
 
 /**
