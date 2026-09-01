@@ -471,10 +471,15 @@ const styles = StyleSheet.create({
    * shadow buys the contrast back without painting over the picture,
    * which is the whole reason the scrim was lifted.
    */
+  /**
+   * Light caps, not amber. The accent was speaking four times in one
+   * block - eyebrow, figure, button, dot - and a colour that says
+   * everything says nothing. It now marks the primary action alone.
+   */
   eyebrow: {
     ...TYPE.tag,
     ...OVER_IMAGE.body,
-    color: COLORS.accent,
+    color: COLORS.lightGrey,
     marginBottom: 2,
   },
   title: {
@@ -511,11 +516,9 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     paddingHorizontal: SPACING.md,
     borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.strokeOnImage,
-    // A plate, for the same reason the header chips have one: an outline
-    // with no fill was legible only because the scrim behind it was
-    // solid, and it is not solid any more.
+    // The plate alone. A border on a secondary action gives it the same
+    // visual spend as the primary beside it; the quiet fill keeps the
+    // hit target visible without competing.
     backgroundColor: COLORS.plate,
   },
   ghostLabel: {
@@ -534,5 +537,5 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: 'rgba(255,255,255,0.32)',
   },
-  dotOn: { width: 16, backgroundColor: COLORS.accent },
+  dotOn: { width: 16, backgroundColor: COLORS.white },
 });

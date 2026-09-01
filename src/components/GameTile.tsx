@@ -9,7 +9,6 @@ import { CoverImage } from './CoverImage';
 import { PlatformIcons } from './PlatformIcons';
 import { ScaleButton } from './ScaleButton';
 import { ScorePill } from './ScorePill';
-import { Textured } from './Textured';
 import { gameDetailQuery } from '@/api/gameDetail';
 import { useToast } from './Toast';
 import type { Game } from '@/api/types';
@@ -157,7 +156,6 @@ export function GameTile({
             fallbackUri={shot === 0 ? game.background_image : null}
             style={styles.image}
           />
-          <Textured fill />
           <LinearGradient
             colors={['#00000000', '#00000059', '#000000a6']}
             locations={[0.55, 0.8, 1]}

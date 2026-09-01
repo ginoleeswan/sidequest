@@ -42,25 +42,32 @@ export const TYPE = StyleSheet.create({
     letterSpacing: -0.4,
     color: COLORS.lightGrey,
   },
+  /**
+   * From h2 down, Bold rather than Black. When one black geometric face
+   * carried the masthead, every shelf title and every badge, nothing on
+   * the page was louder than anything else - the sound of a design with
+   * no hierarchy. Black now belongs to display moments (display, title,
+   * h1, numeral); the section furniture steps back a weight so those
+   * moments actually land.
+   */
   h2: {
-    fontFamily: 'Noah-Black',
+    fontFamily: 'Noah-Bold',
     fontSize: 19,
     lineHeight: 24,
-    letterSpacing: -0.3,
-    color: COLORS.lightGrey,
-  },
-  h3: {
-    fontFamily: 'Noah-Black',
-    fontSize: 16,
-    lineHeight: 21,
     letterSpacing: -0.2,
     color: COLORS.lightGrey,
   },
+  h3: {
+    fontFamily: 'Noah-Bold',
+    fontSize: 16,
+    lineHeight: 21,
+    letterSpacing: -0.1,
+    color: COLORS.lightGrey,
+  },
   h4: {
-    fontFamily: 'Noah-Black',
+    fontFamily: 'Noah-Bold',
     fontSize: 14,
     lineHeight: 18,
-    letterSpacing: -0.1,
     color: COLORS.lightGrey,
   },
 
@@ -153,12 +160,22 @@ export const TYPE = StyleSheet.create({
  * like.
  */
 export const OVER_IMAGE = StyleSheet.create({
+  /**
+   * Contact shadows, not glows. The wide soft halo these used to be
+   * (16px of blurred black around every headline) is the single
+   * cheapest-reading effect a dark UI can wear - it says the gradient
+   * failed. Legibility is the scrim's job now; what remains here is a
+   * tight one-pixel grounding that reads as crisp type, not as an
+   * effect, and only exists for the frame where art loads unscrimmed.
+   */
   heading: {
-    textShadowColor: 'rgba(0,0,0,0.55)',
-    textShadowRadius: 16,
+    textShadowColor: 'rgba(0,0,0,0.30)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   body: {
-    textShadowColor: 'rgba(0,0,0,0.65)',
-    textShadowRadius: 9,
+    textShadowColor: 'rgba(0,0,0,0.40)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 });

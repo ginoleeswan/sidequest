@@ -5,7 +5,6 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { CoverImage } from './CoverImage';
 import { ScaleButton } from './ScaleButton';
-import { Textured } from './Textured';
 import type { Game } from '@/api/types';
 import { COLORS } from '@/styles/colors';
 import { OVER_IMAGE, TYPE } from '@/styles/typography';
@@ -44,7 +43,6 @@ export function GameCard({ game, wide = false }: Props) {
           style={styles.image}
           iconSize={40}
         />
-        <Textured fill />
         <LinearGradient
           // Three gentle stops: enough to hold the text, but the artwork
           // stays visible at the bottom - a hard black slab reads as a

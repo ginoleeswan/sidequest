@@ -132,20 +132,14 @@ export function CoverImage({
         importantForAccessibility={label ? 'yes' : 'no-hide-descendants'}
         alt={label ?? ''}
       />
-      <View style={styles.veil} pointerEvents="none" />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  veil: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: COLORS.grade,
-  },
+  // The navy veil that used to sit here graded every photograph in the
+  // app toward the palette - and greyed every one of them. Vivid art
+  // with quiet chrome is the premium arrangement, not the reverse.
   fallback: {
     backgroundColor: COLORS.navy,
     alignItems: 'center',
