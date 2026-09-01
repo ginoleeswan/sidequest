@@ -83,10 +83,12 @@ export function GameTile({
    */
   const cover = shape === 'wide' ? null : coverOf(game.slug);
   /**
-   * The typographic card states the name and the hours on the plate
-   * itself, so the caption below would say both things twice. One
-   * voice per fact: the card carries identity, the caption only
-   * returns when real box art does.
+   * The card face carries the title only, the way printed box art
+   * does - and like box art, the caption below repeats it. Hours and
+   * meta live in the caption alone, so every tile in a row keeps the
+   * same grammar and the same baselines whether it has a cover or not;
+   * a first cut put them on the face and suppressed the caption, and a
+   * mixed row read as two different components side by side.
    */
   const questCard = shape === 'poster' && !cover;
   const images = [
@@ -166,30 +168,19 @@ export function GameTile({
                hours in the one colour this app reserves for time. The
                gap becomes the most Sidequest-looking object on the
                shelf, and the cover crossfades over it if one arrives. */
-            <View
-              style={[
-                styles.questCard,
-                // The tile's bottom-left strip is spoken for - a rank
-                // numeral or the platform glyphs - and type set into
-                // it collides. The card's text block clears whichever
-                // occupant this tile has.
-                rank != null
-                  ? styles.questAboveRank
-                  : game.parent_platforms?.length
-                    ? styles.questAbovePlatforms
-                    : null,
-              ]}
-            >
+            <View style={styles.questCard}>
               <Textured fill />
-              <Text style={styles.questName} numberOfLines={3}>
+              {/* Hidden from assistive tech: the caption below already
+                  announces the name, and box art is decoration when a
+                  label sits under it. */}
+              <Text
+                style={styles.questName}
+                numberOfLines={3}
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+              >
                 {game.name}
               </Text>
-              {length ? <Text style={styles.questHours}>{length}</Text> : null}
-              {meta ? (
-                <Text style={styles.questMeta} numberOfLines={1}>
-                  {meta}
-                </Text>
-              ) : null}
             </View>
           ) : (
             <>
@@ -263,15 +254,13 @@ export function GameTile({
             )
           )}
         </View>
-        {questCard ? null : (
-          <Text
-            style={[styles.title, hovered && styles.titleHovered]}
-            numberOfLines={1}
-          >
-            {game.name}
-          </Text>
-        )}
-        {!questCard && (length || meta) ? (
+        <Text
+          style={[styles.title, hovered && styles.titleHovered]}
+          numberOfLines={1}
+        >
+          {game.name}
+        </Text>
+        {length || meta ? (
           <Text style={styles.meta} numberOfLines={1}>
             {length ? <Text style={styles.length}>{length}</Text> : null}
             {length && meta ? ' · ' : ''}
@@ -302,8 +291,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.navy,
     padding: SPACING.md,
-    justifyContent: 'flex-end',
-    gap: SPACING.xs,
+    justifyContent: 'center',
   },
   questName: {
     ...TYPE.title,
@@ -312,16 +300,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
     color: COLORS.lightGrey,
   },
-  questHours: {
-    ...TYPE.label,
-    color: COLORS.accent,
-  },
-  questMeta: {
-    ...TYPE.fine,
-    color: COLORS.mediumGrey,
-  },
-  questAboveRank: { paddingBottom: 62 },
-  questAbovePlatforms: { paddingBottom: 38 },
+
   image: { width: '100%', height: '100%' },
   gradient: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   scoreCorner: { position: 'absolute', top: SPACING.sm, right: SPACING.sm },
