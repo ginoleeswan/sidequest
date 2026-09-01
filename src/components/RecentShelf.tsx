@@ -34,16 +34,19 @@ export function RecentShelf({ inset = SPACING.md }: { inset?: number }) {
 
   return (
     <View style={styles.block}>
-      <View style={{ paddingHorizontal: inset }}>
-        <SectionHeader
-          title="Where you left off"
-          actionLabel="Clear"
-          onAction={() => {
-            clearRecent();
-            setGames([]);
-          }}
-        />
-      </View>
+      {/* Bare, exactly as a Shelf sets its own header. The rail below
+          bleeds out by its inset and pays it back as content padding,
+          so its tiles land on the page's edge - a header that padded
+          itself as well sat one whole gutter inside them, which is
+          what put this title and Clear out of line with everything. */}
+      <SectionHeader
+        title="Where you left off"
+        actionLabel="Clear"
+        onAction={() => {
+          clearRecent();
+          setGames([]);
+        }}
+      />
       {/* A rail, not a wrapping grid. Wrapped, a two-line title made
           its own row taller than the others, so the gaps between rows
           stopped matching and the block read as badly spaced - and the

@@ -151,7 +151,19 @@ function Slide({
    * height and tracking following it; large display type set at a body
    * face's proportions looks loose and unresolved.
    */
-  const fontSize = Math.round(Math.min(Math.max(width * 0.115, 34), 68));
+  /**
+   * ...and with the sentence, not only the screen.
+   *
+   * Width alone gave "Continue GreedFall: The Dying World" the same
+   * 45pt as "Continue Hades", so the long one wrapped to three lines
+   * and took the whole stage - the picture it is set over stopped being
+   * visible and the headline read as a wall. A masthead is sized to its
+   * words in print for exactly this reason: the longer the title, the
+   * smaller it is set, so the block it makes stays the same shape.
+   */
+  const length = slide.title.length;
+  const fit = length > 32 ? 0.76 : length > 22 ? 0.88 : 1;
+  const fontSize = Math.round(Math.min(Math.max(width * 0.115 * fit, 30), 68));
   const display = {
     fontSize,
     lineHeight: Math.round(fontSize * 1.02),
