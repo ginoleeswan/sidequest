@@ -81,7 +81,7 @@ export function BackButton({ onImage = false }: { onImage?: boolean }) {
             setting the name in bare label type. */}
         <Mark size={20} />
         <Text style={[styles.brandMark, onImage && OVER_IMAGE.heading]}>
-          SIDEQUEST
+          sidequest
         </Text>
       </ScaleButton>
     );

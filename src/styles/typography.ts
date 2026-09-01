@@ -176,6 +176,9 @@ export const WORDMARK = {
   lineHeight: 27,
   letterSpacing: -0.5,
   color: COLORS.lightGrey,
+  // Enforced here, not trusted to the string: a lockup that receives
+  // "Sidequest" or "SIDEQUEST" from anywhere still renders lowercase.
+  textTransform: 'lowercase',
 } as const;
 
 export const OVER_IMAGE = StyleSheet.create({

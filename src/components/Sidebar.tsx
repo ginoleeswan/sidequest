@@ -189,9 +189,6 @@ export function Sidebar({
           </Pressable>
         ) : null}
       </View>
-      {collapsed ? null : (
-        <Text style={styles.tagline}>Discover your next game</Text>
-      )}
       {search && !collapsed ? (
         <View style={styles.search}>{search}</View>
       ) : null}
@@ -302,10 +299,19 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.navy,
   },
   sidebarCollapsed: { width: LAYOUT.railWidth, paddingHorizontal: SPACING.sm },
+  /**
+   * On the nav's own spine. A rail is a column, and this one had three
+   * left edges in its first two hundred points - the Mark at the rail's
+   * padding, the glyphs ten points in, the wordmark and the labels at
+   * two more. The Mark now stands on the glyph column and the wordmark
+   * on the label column, so the whole rail reads as one alignment.
+   */
   top: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingLeft: SPACING.sm + 4,
+    marginBottom: SPACING.md,
   },
   toggle: { padding: 4, borderRadius: RADIUS.sm },
   navItemCompact: {
@@ -319,14 +325,11 @@ const styles = StyleSheet.create({
     marginVertical: SPACING.md,
     marginHorizontal: SPACING.sm,
   },
+  // Mark 20 + 8 puts the wordmark at exactly the label column's edge,
+  // measured: glyph 18 + gap 10 on the rows below lands on the same x.
   brand: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   wordmark: { ...WORDMARK },
-  tagline: {
-    ...TYPE.fine,
-    color: COLORS.mediumGrey,
-    marginTop: SPACING.xs,
-  },
-  search: { marginTop: SPACING.md, marginBottom: SPACING.md },
+  search: { marginBottom: SPACING.md },
   nav: { flex: 1 },
   navContent: { gap: 2, paddingBottom: SPACING.sm },
   navHeading: {

@@ -301,7 +301,7 @@ export function SiteFooter({
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
         >
-          SIDEQUEST
+          sidequest
         </Text>
         <View style={[styles.inner, { paddingHorizontal: pad }]}>
           <Pins />

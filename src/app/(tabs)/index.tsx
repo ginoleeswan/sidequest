@@ -967,7 +967,14 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   main: { flex: 1, paddingHorizontal: SPACING.xl, paddingTop: SPACING.lg },
-  searchSidebar: { width: '100%' },
+  // The rail's material, not a form control's: the same raised plate
+  // the active item and the clock stand on, and no ring. One rail, one
+  // material.
+  searchSidebar: {
+    width: '100%',
+    backgroundColor: COLORS.raised,
+    borderWidth: 0,
+  },
   homeScroll: { flexGrow: 1 },
 
   // grid
