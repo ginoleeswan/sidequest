@@ -30,6 +30,12 @@ interface Props {
   badge?: string;
   /** Position in a top-ten row, drawn on the art. */
   rank?: number;
+  /**
+   * Poster (box art, 3:4) or wide (screenshot, 16:9). Wide rows exist
+   * to break the rhythm of a page of posters, and they show the
+   * screenshot rather than the cover because that is the shape it is.
+   */
+  shape?: 'poster' | 'wide';
 }
 
 /**
@@ -38,7 +44,13 @@ interface Props {
  * identity. On pointer hover the art cycles through the game's actual
  * screenshots, and a quick-save control appears.
  */
-export function GameTile({ game, width, badge, rank }: Props) {
+export function GameTile({
+  game,
+  width,
+  badge,
+  rank,
+  shape = 'poster',
+}: Props) {
   const router = useRouter();
   const { statusOf, setStatus } = useLibrary();
   const { durationOf, coverOf, learnDurations } = useDurations();
@@ -69,7 +81,7 @@ export function GameTile({ game, width, badge, rank }: Props) {
    * the batch answer lands, so the RAWG art holds the frame first and
    * the cover takes over when it arrives - same crossfade either way.
    */
-  const cover = coverOf(game.slug);
+  const cover = shape === 'wide' ? null : coverOf(game.slug);
   const images = [
     cover ? igdbCoverUri(cover) : game.background_image,
     ...(game.short_screenshots ?? [])
@@ -129,8 +141,22 @@ export function GameTile({ game, width, badge, rank }: Props) {
         activeScale={0.97}
         hoverScale={1.03}
       >
-        <View style={[styles.art, hovered && styles.artHovered]}>
-          <CoverImage uri={images[shot] ?? null} style={styles.image} />
+        <View
+          style={[
+            styles.art,
+            shape === 'wide' && styles.artWide,
+            hovered && styles.artHovered,
+          ]}
+        >
+          <CoverImage
+            uri={images[shot] ?? null}
+            // The screenshot we already have, if the cover will not
+            // load. It cannot rescue a request that hangs rather than
+            // fails, but a cover that genuinely errors leaves the tile
+            // showing art instead of an empty plate.
+            fallbackUri={shot === 0 ? game.background_image : null}
+            style={styles.image}
+          />
           <Textured fill />
           <LinearGradient
             colors={['#00000000', '#00000059', '#000000a6']}
@@ -222,6 +248,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.stroke,
     ...SHADOW.card,
   },
+  artWide: { aspectRatio: LAYOUT.tileAspectWide },
   artHovered: { borderColor: COLORS.strokeStrong },
   image: { width: '100%', height: '100%' },
   gradient: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },

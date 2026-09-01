@@ -77,7 +77,13 @@ export function RecentShelf({ inset = SPACING.md }: { inset?: number }) {
 }
 
 const styles = StyleSheet.create({
-  block: { gap: SPACING.sm },
+  /**
+   * The same rhythm every other row on the page keeps: a shelf owns the
+   * air beneath it. Without the margin this row ended flush against the
+   * next section's eyebrow, which is what made the block read as badly
+   * spaced however tidy the row itself was.
+   */
+  block: { gap: SPACING.sm + 2, marginBottom: SPACING.xl },
   item: { width: 132, gap: 6 },
   art: {
     width: 132,

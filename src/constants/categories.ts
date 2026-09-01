@@ -11,7 +11,7 @@ import type { BrowseFilters } from '@/api/rawg';
 import type { Game, Paged } from '@/api/types';
 import type { IconType } from '@/components/DynamicIcon';
 
-export type ShelfVariant = 'default' | 'ranked' | 'dated' | 'large';
+export type ShelfVariant = 'default' | 'ranked' | 'dated' | 'large' | 'wide';
 
 export interface Section {
   key: string;
@@ -48,7 +48,14 @@ export const DISCOVER: Section[] = [
     fetch: getOutThisWeek,
     iconName: 'today',
     iconType: 'ionicon',
-    variant: 'dated',
+    /**
+     * The page's one wide row, and this is the right one to spend it
+     * on: what came out this week is the most editorial thing here,
+     * and a landscape frame reads as a feature rather than as one more
+     * item on a shelf. It also breaks a run of poster rows that would
+     * otherwise scroll as a single texture.
+     */
+    variant: 'wide',
   },
   {
     key: 'new-releases',

@@ -24,6 +24,15 @@ const SLOT_WIDTH = {
 
 interface Props {
   uri?: string | null;
+  /**
+   * What to show if `uri` will not load.
+   *
+   * Box art comes from IGDB and the screenshot behind it from RAWG, and
+   * a burst of forty cover requests reliably drops a few. Falling back
+   * to the art we already have turns that into a picture nobody
+   * notices, rather than a plate where a game should be.
+   */
+  fallbackUri?: string | null;
   style: StyleProp<ViewStyle>;
   contentFit?: ImageContentFit;
   /** Fallback glyph size, tuned to the container. */
@@ -53,6 +62,7 @@ interface Props {
  */
 export function CoverImage({
   uri,
+  fallbackUri,
   style,
   contentFit = 'cover',
   iconSize = 32,
@@ -60,10 +70,24 @@ export function CoverImage({
   blurRadius,
   label,
 }: Props) {
-  const [failed, setFailed] = useState(false);
-  const src = mediaUri(uri, SLOT_WIDTH[size]);
+  /**
+   * Which URLs have failed, rather than whether one did.
+   *
+   * A boolean could not tell two sources apart, so a tile that failed
+   * once stayed a plate for the rest of its life - including after the
+   * `uri` prop changed to a perfectly good picture, which is exactly
+   * what the hover reel does five times a shelf.
+   */
+  const [failed, setFailed] = useState<ReadonlySet<string>>(
+    () => new Set<string>()
+  );
+  const candidates = [
+    mediaUri(uri, SLOT_WIDTH[size]),
+    mediaUri(fallbackUri, SLOT_WIDTH[size]),
+  ].filter((candidate): candidate is string => Boolean(candidate));
+  const src = candidates.find((candidate) => !failed.has(candidate)) ?? null;
 
-  if (!src || failed) {
+  if (!src) {
     return (
       <View
         style={[styles.fallback, style]}
@@ -86,12 +110,21 @@ export function CoverImage({
     // round — so it stays on the frame, and the picture fills it.
     <View style={style}>
       <Image
+        // Keyed by source so a swap mounts a fresh element rather than
+        // reusing one the platform has already marked broken.
+        key={src}
         source={{ uri: src }}
         style={StyleSheet.absoluteFill}
         contentFit={contentFit}
         blurRadius={blurRadius}
         transition={DURATION.base}
-        onError={() => setFailed(true)}
+        onError={() =>
+          setFailed((prev) => {
+            const next = new Set(prev);
+            next.add(src);
+            return next;
+          })
+        }
         accessible={!!label}
         accessibilityRole={label ? 'image' : undefined}
         accessibilityLabel={label}

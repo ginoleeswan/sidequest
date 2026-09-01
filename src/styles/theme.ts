@@ -70,6 +70,16 @@ export const LAYOUT = {
   shelfTileWidth: 168,
   shelfTileLarge: 220,
   /**
+   * The landscape frame, for rows that break the poster rhythm.
+   *
+   * A page of nothing but box art is as monotonous as a page of nothing
+   * but screenshots was; the streaming apps this borrows from alternate
+   * poster rows with wide ones, and the wide one is where a screenshot
+   * belongs - it is the shape the picture already is.
+   */
+  shelfTileWide: 272,
+  tileAspectWide: 16 / 9,
+  /**
    * Box-art portrait, the shape every storefront shelves games in.
    * Landscape was the honest shape when RAWG screenshots were all the
    * art we had; now IGDB supplies real covers, and a cover cropped to
