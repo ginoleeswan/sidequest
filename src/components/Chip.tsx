@@ -22,6 +22,14 @@ interface Props {
    * it a plate of its own.
    */
   onImage?: boolean;
+  /**
+   * A word on a plate and nothing else - no ring, no glyph. For a row
+   * that lives in the feed rather than in the chrome: the outline chip
+   * is a control's costume, and eight of them in a row over artwork
+   * read as a toolbar. Bare, four fit a phone's width where two and a
+   * half did, and the row reads as a set of doors rather than buttons.
+   */
+  bare?: boolean;
 }
 
 export function Chip({
@@ -32,6 +40,7 @@ export function Chip({
   iconType,
   quiet = false,
   onImage = false,
+  bare = false,
 }: Props) {
   return (
     <Pressable
@@ -43,9 +52,11 @@ export function Chip({
           ? styles.quiet
           : selected
             ? styles.solid
-            : onImage
-              ? styles.onImage
-              : styles.outline,
+            : bare
+              ? styles.bare
+              : onImage
+                ? styles.onImage
+                : styles.outline,
       ]}
     >
       {iconName && iconType ? (
@@ -99,6 +110,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.strokeOnImage,
   },
+  bare: { backgroundColor: COLORS.plate },
   quiet: {
     backgroundColor: 'transparent',
     borderColor: COLORS.stroke,

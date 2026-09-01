@@ -47,6 +47,7 @@ import { Screen } from '@/components/Screen';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { PromptBand } from '@/components/PromptBand';
 import { Billboard } from '@/components/Billboard';
+import { DiscoverRail } from '@/components/DiscoverRail';
 import { MoodShelf } from '@/components/MoodShelf';
 import { RecentShelf } from '@/components/RecentShelf';
 import { SeriesNews } from '@/components/SeriesNews';
@@ -744,6 +745,7 @@ export default function HomeScreen() {
                   inset={GUTTER}
                 />
                 <View style={styles.compactShelves}>
+                  <DiscoverRail onOpen={selectSection} inset={GUTTER} />
                   <SeriesNews inset={GUTTER} />
                   <RecentShelf inset={GUTTER} />
                   <Shelf
@@ -962,7 +964,13 @@ export default function HomeScreen() {
               </View>
             </View>
           )}
-          {!searchOpen && (
+          {/* Off the home page only. On a section page this row is the
+              page's own navigation and the current section is marked;
+              on home the same sections are the feed's first row,
+              below the masthead, so the artwork carries nothing but
+              the wordmark. Bare here as well: a ring and a glyph are a
+              control's costume, and a row of eight reads as a toolbar. */}
+          {!searchOpen && !isHome && (
             <FlatList
               data={CHIP_SECTIONS}
               horizontal
@@ -971,10 +979,8 @@ export default function HomeScreen() {
               renderItem={({ item }) => (
                 <Chip
                   title={item.title}
-                  selected={!searching && !isHome && section.key === item.key}
-                  iconName={item.iconName}
-                  iconType={item.iconType}
-                  onImage={isHome}
+                  selected={!searching && section.key === item.key}
+                  bare
                   onPress={() => selectSection(item)}
                 />
               )}
