@@ -1113,7 +1113,18 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: COLORS.navy,
   },
-  tonightControlWide: { marginLeft: 'auto' },
+  /**
+   * At the row's end, and never squeezed: five chips need their width,
+   * and a row that let the sentence take it first crushed them to
+   * "3… 1h 1½ 2h 3h". The control keeps its measure; the sentence
+   * beside it is what wraps.
+   */
+  tonightControlWide: {
+    marginLeft: 'auto',
+    marginTop: 0,
+    minWidth: 340,
+    flexShrink: 0,
+  },
   /** The verdict's controls, right under the verdict: change one, watch it change. */
   dialsUnderVerdict: { marginBottom: SPACING.xl },
   dialWide: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.xl },
@@ -1215,7 +1226,14 @@ const styles = StyleSheet.create({
     borderColor: COLORS.stroke,
     borderRadius: RADIUS.md,
   },
-  tonightBody: { gap: SPACING.xs + 2, padding: SPACING.lg },
+  // The strip pads itself; the body only spaces its lines, and yields
+  // its width to the control at the row's end rather than the reverse.
+  tonightBody: {
+    gap: SPACING.xs + 2,
+    padding: SPACING.sm,
+    flex: 1,
+    minWidth: 0,
+  },
   tonightControl: { marginTop: SPACING.md },
   tonightHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   tonightEyebrow: {
