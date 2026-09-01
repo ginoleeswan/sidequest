@@ -1,5 +1,4 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, Platform } from 'react-native';
@@ -629,6 +628,114 @@ export default function PlanScreen() {
                   {verdictSentence}
                 </Text>
               )}
+              {!empty && (
+                <View style={styles.dialsUnderVerdict}>
+                  {/* THE TWO NUMBERS, under the sentence they make.
+                        Last, because it is the least-touched thing on
+                        the page and the most consequential: everything
+                        above is what these two numbers decided. Putting
+                        the answer next to the controls is the whole
+                        point — move a dial and watch the sentence
+                        change. */}
+                  <View style={styles.section}>
+                    <View style={[styles.dial, isExpanded && styles.dialWide]}>
+                      {/* Each dial keeps a width its options can be read
+                          at; on a desk the row wraps before they cannot. */}
+                      <View style={isExpanded ? styles.dialItem : undefined}>
+                        <Segmented
+                          label="Hours a week"
+                          options={paceOptions}
+                          value={pace}
+                          onChange={setPace}
+                        />
+                      </View>
+                      <View style={isExpanded ? styles.dialItem : undefined}>
+                        <Segmented
+                          label="Finish them"
+                          options={WINDOW_OPTIONS}
+                          value={windowWeeks}
+                          onChange={setWindowWeeks}
+                        />
+                      </View>
+                      {/* Only when it has something to say: with no pace
+                          news and no pinned games this drew a ruled band
+                          of nothing under the dials. */}
+                      {(paceNews || schedule.costOfPins > 0) && (
+                        <View style={styles.dialResult}>
+                          {/* Between the verdict and the price of
+                              pins, because it is about whether the
+                              verdict can be believed. Never a telling
+                              off: a plan built on an optimistic pace
+                              promises what the week cannot keep, and
+                              missing your own plan every week is a far
+                              worse thing to feel than reading one
+                              honest sentence about it. */}
+                          {paceNews && (
+                            <View style={styles.paceNews}>
+                              <Text style={styles.paceNewsText}>
+                                Your timed evenings come to at least{' '}
+                                {formatHours(paceNews.hoursPerWeek)} a week.
+                                This plan assumes {pace}h, so it is holding back
+                                games you have room for.
+                              </Text>
+                              <Text
+                                style={styles.paceNewsAction}
+                                onPress={() =>
+                                  setPace(
+                                    Math.max(
+                                      1,
+                                      Math.round(paceNews.hoursPerWeek)
+                                    )
+                                  )
+                                }
+                                suppressHighlighting
+                                accessibilityRole="button"
+                                accessibilityLabel={`Use ${Math.round(paceNews.hoursPerWeek)} hours a week`}
+                              >
+                                Use {Math.round(paceNews.hoursPerWeek)}h a week
+                                →
+                              </Text>
+                              <Text style={styles.paceNewsCaveat}>
+                                Counts only the evenings you timed, across{' '}
+                                {paceNews.sessions} of them.
+                              </Text>
+                            </View>
+                          )}
+
+                          {schedule.costOfPins > 0 && (
+                            <Text style={styles.pinCost}>
+                              Keeping what you marked must-play costs you{' '}
+                              {schedule.costOfPins} other{' '}
+                              {schedule.costOfPins === 1 ? 'game' : 'games'} in
+                              this window. Worth it, probably.
+                            </Text>
+                          )}
+                        </View>
+                      )}
+                      <Text
+                        style={styles.steamLink}
+                        onPress={() => setSteamOpen((open) => !open)}
+                        accessibilityRole="button"
+                        suppressHighlighting
+                      >
+                        {steamOpen
+                          ? 'Hide Steam'
+                          : 'Not sure? Measure your real pace with Steam →'}
+                      </Text>
+                    </View>
+
+                    {steamOpen && (
+                      <SteamConnect
+                        onUsePace={(measured) => {
+                          setPace(measured);
+                          setSteamOpen(false);
+                        }}
+                        onImport={() => router.push('/import')}
+                      />
+                    )}
+                  </View>
+                </View>
+              )}
 
               {empty ? (
                 <Message
@@ -639,9 +746,16 @@ export default function PlanScreen() {
                   onAction={() => router.push('/')}
                 />
               ) : (
-                <View style={isExpanded ? styles.columns : styles.stack}>
-                  <View style={isExpanded ? styles.colLeft : styles.stack}>
-                    {/* 1 — TONIGHT.
+                <View style={styles.stack}>
+                  {/* One column, read top to bottom.
+                      The page was a hero card on the left beside a tall
+                      instrument on the right, and under the card a void:
+                      two objects of different heights side by side, and
+                      the eye had nowhere to go after the first. Now it
+                      is a sequence - the verdict and the two numbers
+                      that make it, tonight, then the plan itself - the
+                      order the question is actually asked in. */}
+                  {/* 1 — TONIGHT.
                         The page opens on the question somebody actually
                         has at eight o'clock on a Tuesday. The comment
                         above this card has said so from the start —
@@ -649,97 +763,75 @@ export default function PlanScreen() {
                         so the first thing a reader met was two
                         warnings about games they saved. The answer
                         leads; what needs deciding follows it. */}
-                    {tonightPick && (
-                      <Pressable
-                        style={styles.tonight}
-                        onPress={() => router.push(`/game/${tonightPick.id}`)}
+                  {tonightPick && (
+                    /* A strip, not a hero. Home already stages tonight
+                         at full size with the same picture and the same
+                         control; here it is the plan's next line item -
+                         the picture as a thumb, the sentence beside it,
+                         the session control at the end - the way a
+                         calendar shows the next thing on. */
+                    <Pressable
+                      style={[styles.tonight, isExpanded && styles.tonightWide]}
+                      onPress={() => router.push(`/game/${tonightPick.id}`)}
+                    >
+                      <View
+                        style={[
+                          styles.tonightThumb,
+                          isExpanded && styles.tonightThumbWide,
+                        ]}
                       >
-                        {/* The picture, not a stamp of one. This card is
-                            the answer the page exists to give. */}
                         <CoverImage
                           uri={gamesById.get(tonightPick.id)?.background_image}
                           style={StyleSheet.absoluteFill}
-                          size="hero"
-                          iconSize={32}
+                          size="tile"
+                          iconSize={24}
                         />
-                        <LinearGradient
-                          colors={[
-                            'rgba(39,47,63,0.15)',
-                            'rgba(39,47,63,0.72)',
-                            'rgba(39,47,63,0.95)',
-                          ]}
-                          locations={[0, 0.55, 1]}
-                          style={StyleSheet.absoluteFill}
-                          pointerEvents="none"
-                        />
-                        <View style={styles.tonightBody}>
-                          <View style={styles.tonightHead}>
-                            <Ionicons
-                              name="moon"
-                              size={13}
-                              color={COLORS.violet}
-                            />
-                            <Text style={styles.tonightEyebrow}>TONIGHT</Text>
-                          </View>
-                          <Text style={styles.tonightTitle} numberOfLines={2}>
-                            {tonightVerb} {tonightPick.name}
-                          </Text>
-                          <Text style={styles.tonightWhy}>
-                            {tonight.finishable
-                              ? 'You can see the credits tonight.'
-                              : tonight.continueGame
-                                ? 'Chip away at it — progress counts.'
-                                : 'The shortest thing you’ve saved.'}
-                          </Text>
+                      </View>
+                      <View style={styles.tonightBody}>
+                        <View style={styles.tonightHead}>
+                          <Ionicons
+                            name="moon"
+                            size={13}
+                            color={COLORS.violet}
+                          />
+                          <Text style={styles.tonightEyebrow}>TONIGHT</Text>
+                        </View>
+                        <Text style={styles.tonightTitle} numberOfLines={2}>
+                          {tonightVerb} {tonightPick.name}
+                        </Text>
+                        <Text style={styles.tonightWhy}>
+                          {tonight.finishable
+                            ? 'You can see the credits tonight.'
+                            : tonight.continueGame
+                              ? 'Chip away at it — progress counts.'
+                              : 'The shortest thing you’ve saved.'}
+                        </Text>
 
-                          {/* Inside the card, not under it.
+                        {/* Inside the card, not under it.
                               This is the one control on the page that
                               belongs to tonight rather than to the
                               plan, and floating loose between the card
                               and the week it made three objects out of
                               two. On the artwork it takes a plate of
                               its own — see Segmented's onImage. */}
-                          <View
-                            style={styles.tonightControl}
-                            // The card navigates; the control does not.
-                            onStartShouldSetResponder={() => true}
-                          >
-                            <Segmented
-                              label="I have"
-                              options={SESSION_OPTIONS}
-                              value={sessionMinutes}
-                              onChange={setSession}
-                              onImage
-                            />
-                          </View>
-                        </View>
-                      </Pressable>
-                    )}
-
-                    {/* 2 — WHAT DOESN'T FIT.
-                        One calm section where there used to be two loud
-                        ones: unnamed warning cards floating at the top
-                        of the page, and a "Side quests" list far below
-                        repeating the same games. One fact, one place,
-                        one row per game, each with its ways out. After
-                        Tonight, because the answer leads and the
-                        exceptions follow it. */}
-                    {misfitCount > 0 && (
-                      <View style={styles.section}>
-                        <SectionHeader
-                          title="What doesn’t fit"
-                          eyebrow={`${misfitCount} ${
-                            misfitCount === 1 ? 'game' : 'games'
-                          } — and that’s allowed`}
-                        />
-                        <Alerts
-                          alerts={alerts}
-                          overflow={schedule.dropped}
-                          gamesById={gamesById}
+                      </View>
+                      <View
+                        style={[
+                          styles.tonightControl,
+                          isExpanded && styles.tonightControlWide,
+                        ]}
+                        // The strip navigates; the control does not.
+                        onStartShouldSetResponder={() => true}
+                      >
+                        <Segmented
+                          label="I have"
+                          options={SESSION_OPTIONS}
+                          value={sessionMinutes}
+                          onChange={setSession}
                         />
                       </View>
-                    )}
-                  </View>
+                    </Pressable>
+                  )}
 
                   {/* One instrument, not three plates.
                       The week, the month and the dials were three cards
@@ -750,12 +842,7 @@ export default function PlanScreen() {
                       hairlines, the way a single dashboard is read top
                       to bottom. The headings stay; the chrome between
                       them goes. */}
-                  <View
-                    style={[
-                      isExpanded ? styles.colRight : styles.stack,
-                      styles.instrument,
-                    ]}
-                  >
+                  <View style={styles.instrument}>
                     {/* 3 — THIS WEEK.
                         The plan at the scale a person lives at: one
                         row per evening, with its real date, what it
@@ -845,6 +932,29 @@ export default function PlanScreen() {
                       </View>
                     )}
 
+                    {/* 2 — WHAT DOESN'T FIT.
+                        One calm section where there used to be two loud
+                        ones: unnamed warning cards floating at the top
+                        of the page, and a "Side quests" list far below
+                        repeating the same games. One fact, one place,
+                        one row per game, each with its ways out. After
+                        Tonight, because the answer leads and the
+                        exceptions follow it. */}
+                    {misfitCount > 0 && (
+                      <View style={[styles.section, styles.band]}>
+                        <SectionHeader
+                          title="What doesn’t fit"
+                          eyebrow={`${misfitCount} ${
+                            misfitCount === 1 ? 'game' : 'games'
+                          } — and that’s allowed`}
+                        />
+                        <Alerts
+                          alerts={alerts}
+                          overflow={schedule.dropped}
+                          gamesById={gamesById}
+                        />
+                      </View>
+                    )}
                     {unknown.length > 0 && (
                       <View style={[styles.section, styles.band]}>
                         <SectionHeader
@@ -881,104 +991,6 @@ export default function PlanScreen() {
                         </View>
                       </View>
                     )}
-
-                    {/* 5 — THE DIAL, and the verdict it produces.
-                        Last, because it is the least-touched thing on
-                        the page and the most consequential: everything
-                        above is what these two numbers decided. Putting
-                        the answer next to the controls is the whole
-                        point — move a dial and watch the sentence
-                        change. */}
-                    <View style={[styles.section, styles.band]}>
-                      <SectionHeader
-                        title="Your pace"
-                        eyebrow="Move these and the sentence above moves"
-                      />
-                      <View style={styles.dial}>
-                        <Segmented
-                          label="Hours a week"
-                          options={paceOptions}
-                          value={pace}
-                          onChange={setPace}
-                        />
-                        <Segmented
-                          label="Finish them"
-                          options={WINDOW_OPTIONS}
-                          value={windowWeeks}
-                          onChange={setWindowWeeks}
-                        />
-                        <View style={styles.dialResult}>
-                          {/* Between the verdict and the price of
-                              pins, because it is about whether the
-                              verdict can be believed. Never a telling
-                              off: a plan built on an optimistic pace
-                              promises what the week cannot keep, and
-                              missing your own plan every week is a far
-                              worse thing to feel than reading one
-                              honest sentence about it. */}
-                          {paceNews && (
-                            <View style={styles.paceNews}>
-                              <Text style={styles.paceNewsText}>
-                                Your timed evenings come to at least{' '}
-                                {formatHours(paceNews.hoursPerWeek)} a week.
-                                This plan assumes {pace}h, so it is holding back
-                                games you have room for.
-                              </Text>
-                              <Text
-                                style={styles.paceNewsAction}
-                                onPress={() =>
-                                  setPace(
-                                    Math.max(
-                                      1,
-                                      Math.round(paceNews.hoursPerWeek)
-                                    )
-                                  )
-                                }
-                                suppressHighlighting
-                                accessibilityRole="button"
-                                accessibilityLabel={`Use ${Math.round(paceNews.hoursPerWeek)} hours a week`}
-                              >
-                                Use {Math.round(paceNews.hoursPerWeek)}h a week
-                                →
-                              </Text>
-                              <Text style={styles.paceNewsCaveat}>
-                                Counts only the evenings you timed, across{' '}
-                                {paceNews.sessions} of them.
-                              </Text>
-                            </View>
-                          )}
-
-                          {schedule.costOfPins > 0 && (
-                            <Text style={styles.pinCost}>
-                              Keeping what you marked must-play costs you{' '}
-                              {schedule.costOfPins} other{' '}
-                              {schedule.costOfPins === 1 ? 'game' : 'games'} in
-                              this window. Worth it, probably.
-                            </Text>
-                          )}
-                        </View>
-                        <Text
-                          style={styles.steamLink}
-                          onPress={() => setSteamOpen((open) => !open)}
-                          accessibilityRole="button"
-                          suppressHighlighting
-                        >
-                          {steamOpen
-                            ? 'Hide Steam'
-                            : 'Not sure? Measure your real pace with Steam →'}
-                        </Text>
-                      </View>
-
-                      {steamOpen && (
-                        <SteamConnect
-                          onUsePace={(measured) => {
-                            setPace(measured);
-                            setSteamOpen(false);
-                          }}
-                          onImport={() => router.push('/import')}
-                        />
-                      )}
-                    </View>
                   </View>
                 </View>
               )}
@@ -1091,6 +1103,21 @@ const styles = StyleSheet.create({
       : null),
   },
   colRight: { flex: 61, minWidth: 0, gap: SPACING.xl },
+  tonightWide: { flexDirection: 'row', alignItems: 'center', gap: SPACING.lg },
+  /** A banner across a phone; a thumb beside the sentence on a desk. */
+  tonightThumbWide: { width: 168 },
+  tonightThumb: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: RADIUS.sm,
+    overflow: 'hidden',
+    backgroundColor: COLORS.navy,
+  },
+  tonightControlWide: { marginLeft: 'auto' },
+  /** The verdict's controls, right under the verdict: change one, watch it change. */
+  dialsUnderVerdict: { marginBottom: SPACING.xl },
+  dialWide: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.xl },
+  dialItem: { flexGrow: 1, flexBasis: 360, minWidth: 340 },
   /** The one plate the right column stands on. */
   instrument: {
     backgroundColor: COLORS.raised,
@@ -1180,13 +1207,13 @@ const styles = StyleSheet.create({
   },
 
   tonight: {
-    minHeight: 260,
-    justifyContent: 'flex-end',
+    gap: SPACING.md,
+    padding: SPACING.md,
     overflow: 'hidden',
+    backgroundColor: COLORS.raised,
     borderWidth: 1,
     borderColor: COLORS.stroke,
     borderRadius: RADIUS.md,
-    backgroundColor: COLORS.navy,
   },
   tonightBody: { gap: SPACING.xs + 2, padding: SPACING.lg },
   tonightControl: { marginTop: SPACING.md },
