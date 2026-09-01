@@ -14,6 +14,7 @@ import { gameDetailQuery } from '@/api/gameDetail';
 import { useToast } from './Toast';
 import type { Game } from '@/api/types';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { igdbCoverUri } from '@/api/igdb';
 import { formatHours } from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
 import { useLibrary } from '@/lib/library';
@@ -40,7 +41,13 @@ interface Props {
 export function GameTile({ game, width, badge, rank }: Props) {
   const router = useRouter();
   const { statusOf, setStatus } = useLibrary();
-  const { durationOf } = useDurations();
+  const { durationOf, coverOf, learnDurations } = useDurations();
+  // Each tile asks after its own game; the provider collects a beat and
+  // sends one batch for the whole shelf. Idempotent, so a screen that
+  // already asked costs nothing.
+  useEffect(() => {
+    if (game.slug) learnDurations([game.slug]);
+  }, [game.slug, learnDurations]);
   const { isCompact } = useBreakpoint();
   const toast = useToast();
   const [hovered, setHovered] = useState(false);
@@ -56,8 +63,15 @@ export function GameTile({ game, width, badge, rank }: Props) {
   const [shot, setShot] = useState(0);
 
   const saved = statusOf(game.id) != null;
+  /**
+   * The box art fronts the tile; the screenshots stay behind it as the
+   * hover reel. IGDB knows most games' covers and none of ours until
+   * the batch answer lands, so the RAWG art holds the frame first and
+   * the cover takes over when it arrives - same crossfade either way.
+   */
+  const cover = coverOf(game.slug);
   const images = [
-    game.background_image,
+    cover ? igdbCoverUri(cover) : game.background_image,
     ...(game.short_screenshots ?? [])
       .map((s) => s.image)
       .filter((uri) => uri && uri !== game.background_image)

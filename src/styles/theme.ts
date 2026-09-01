@@ -67,10 +67,17 @@ export const LAYOUT = {
   maxExpandedWidth: 1600,
   sidebarWidth: 232,
   gridGap: 18,
-  shelfTileWidth: 236,
-  shelfTileLarge: 320,
-  /** RAWG artwork is landscape; portrait tiles were force-cropping it. */
-  tileAspect: 16 / 10,
+  shelfTileWidth: 168,
+  shelfTileLarge: 220,
+  /**
+   * Box-art portrait, the shape every storefront shelves games in.
+   * Landscape was the honest shape when RAWG screenshots were all the
+   * art we had; now IGDB supplies real covers, and a cover cropped to
+   * 16:10 was the dishonest version. RAWG art that still appears - the
+   * hover cycle, games IGDB lacks - crops to portrait instead, which
+   * reads as a deliberate frame rather than a squashed box.
+   */
+  tileAspect: 3 / 4,
   cardWidth: 170,
   cardWideWidth: 300,
   cardHeight: 200,

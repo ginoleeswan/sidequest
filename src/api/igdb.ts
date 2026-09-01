@@ -30,31 +30,55 @@ export const SLUG_BATCH = 40;
 export async function fetchTimesToBeat(
   slugs: string[]
 ): Promise<TimeToBeatBySlug> {
+  return (await fetchIgdbBatch(slugs)).times;
+}
+
+/**
+ * Everything one round trip already carries: the times, and the box
+ * art. The server has always sent both maps; reading only the durations
+ * meant every screen that batch-asked about its games was throwing the
+ * covers on the floor, then paying IGDB again one game at a time if it
+ * ever wanted them.
+ */
+export interface IgdbBatch {
+  times: TimeToBeatBySlug;
+  /** IGDB cover image id per slug, for `igdbCoverUri`. */
+  covers: Record<string, string>;
+}
+
+export async function fetchIgdbBatch(slugs: string[]): Promise<IgdbBatch> {
   const wanted = [...new Set(slugs.filter(Boolean))];
-  if (wanted.length === 0) return {};
+  if (wanted.length === 0) return { times: {}, covers: {} };
 
   const batches: string[][] = [];
   for (let i = 0; i < wanted.length; i += SLUG_BATCH)
     batches.push(wanted.slice(i, i + SLUG_BATCH));
 
   const results = await Promise.all(
-    batches.map(async (batch) => {
+    batches.map(async (batch): Promise<IgdbBatch> => {
       try {
         const response = await fetch(
           `/api/igdb?slugs=${encodeURIComponent(batch.join(','))}`
         );
-        if (!response.ok) return {};
+        if (!response.ok) return { times: {}, covers: {} };
         const body = (await response.json()) as {
           durations?: TimeToBeatBySlug;
+          extras?: Record<string, IgdbExtras>;
         };
-        return body.durations ?? {};
+        const covers: Record<string, string> = {};
+        for (const [slug, extras] of Object.entries(body.extras ?? {}))
+          if (extras.cover) covers[slug] = extras.cover;
+        return { times: body.durations ?? {}, covers };
       } catch {
-        return {};
+        return { times: {}, covers: {} };
       }
     })
   );
 
-  return Object.assign({}, ...results) as TimeToBeatBySlug;
+  return {
+    times: Object.assign({}, ...results.map((r) => r.times)),
+    covers: Object.assign({}, ...results.map((r) => r.covers)),
+  };
 }
 
 /**

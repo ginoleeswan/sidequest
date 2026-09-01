@@ -9,7 +9,7 @@ import {
 } from 'react';
 
 import { resolveDuration, type Duration } from './duration';
-import { fetchTimesToBeat, type TimeToBeatBySlug } from '@/api/igdb';
+import { fetchIgdbBatch, type TimeToBeatBySlug } from '@/api/igdb';
 import type { Game } from '@/api/types';
 import { useHydrated } from '@/hooks/useHydrated';
 import { readRescued, writeFailureMessage, writeJson } from '@/lib/storage';
@@ -66,6 +66,12 @@ interface DurationsValue {
    * showing and the answers improve every length in the app at once.
    */
   learnDurations: (slugs: (string | undefined)[]) => void;
+  /**
+   * The IGDB box art learned by those same calls: a cover image id for
+   * `igdbCoverUri`, or null while unknown. Free — it arrives on the
+   * round trip the durations already pay for.
+   */
+  coverOf: (slug?: string | null) => string | null;
   /** Record what a game actually takes. */
   setDuration: (id: number, hours: number) => void;
   /** Go back to RAWG's estimate. */
@@ -113,6 +119,13 @@ export function DurationsProvider({ children }: { children: React.ReactNode }) {
    * around. `asked` stops a screen that re-renders from re-asking.
    */
   const [reported, setReported] = useState<TimeToBeatBySlug>({});
+  /**
+   * Box art, by slug, from the same round trip as the times. This
+   * provider is where the batching already lives — every screen calls
+   * `learnDurations` for whatever it shows — so the covers ride along
+   * rather than earning a second pipeline of their own.
+   */
+  const [covers, setCovers] = useState<Record<string, string>>({});
   const asked = useRef<Set<string>>(new Set());
   const [saveError, setSaveError] = useState<string | null>(null);
   // The pre-rendered HTML had no stored durations, so the hydration
@@ -131,21 +144,38 @@ export function DurationsProvider({ children }: { children: React.ReactNode }) {
     setSaveError(result.ok ? null : writeFailureMessage(result));
   }, [stored]);
 
-  const learnDurations = useCallback((slugs: (string | undefined)[]) => {
-    const wanted = slugs.filter(
-      (slug): slug is string => Boolean(slug) && !asked.current.has(slug!)
-    );
-    if (wanted.length === 0) return;
-    for (const slug of wanted) asked.current.add(slug);
+  /**
+   * Collected for a beat before the request goes out. Screens ask in
+   * one call, but the tiles themselves also ask, one slug each, as a
+   * shelf renders — and forty tiles must not mean forty round trips.
+   * Everything that asks inside the window shares one batch.
+   */
+  const pending = useRef<Set<string>>(new Set());
+  const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    fetchTimesToBeat(wanted)
-      .then((times) => {
-        if (Object.keys(times).length === 0) return;
-        setReported((prev) => ({ ...prev, ...times }));
-      })
-      // A length nobody has is better than a screen that will not draw:
-      // everything here degrades to RAWG's estimate.
-      .catch(() => {});
+  const learnDurations = useCallback((slugs: (string | undefined)[]) => {
+    for (const slug of slugs)
+      if (slug && !asked.current.has(slug)) {
+        asked.current.add(slug);
+        pending.current.add(slug);
+      }
+    if (pending.current.size === 0 || flushTimer.current) return;
+
+    flushTimer.current = setTimeout(() => {
+      flushTimer.current = null;
+      const wanted = [...pending.current];
+      pending.current.clear();
+      fetchIgdbBatch(wanted)
+        .then(({ times, covers: found }) => {
+          if (Object.keys(times).length > 0)
+            setReported((prev) => ({ ...prev, ...times }));
+          if (Object.keys(found).length > 0)
+            setCovers((prev) => ({ ...prev, ...found }));
+        })
+        // A length nobody has is better than a screen that will not
+        // draw: everything here degrades to RAWG's estimate.
+        .catch(() => {});
+    }, 50);
   }, []);
 
   const setDuration = useCallback((id: number, hours: number) => {
@@ -178,6 +208,7 @@ export function DurationsProvider({ children }: { children: React.ReactNode }) {
           game.slug ? reported[game.slug] : undefined
         ),
       learnDurations,
+      coverOf: (slug) => (slug ? (covers[slug] ?? null) : null),
       setDuration,
       clearDuration,
       adoptSynced,
@@ -187,6 +218,7 @@ export function DurationsProvider({ children }: { children: React.ReactNode }) {
       loadError,
     }),
     [
+      covers,
       overrides,
       reported,
       learnDurations,

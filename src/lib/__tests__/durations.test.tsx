@@ -138,6 +138,9 @@ describe('learning what games take', () => {
     await act(async () => {
       result.current.learnDurations(['hades']);
       result.current.learnDurations(['hades']);
+      // Both calls land inside the provider's collect window, which is
+      // the point: everything asked in a beat shares one batch.
+      await new Promise((resolve) => setTimeout(resolve, 80));
     });
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
@@ -163,6 +166,7 @@ describe('learning what games take', () => {
 
     await act(async () => {
       result.current.learnDurations(['pentiment']);
+      await new Promise((resolve) => setTimeout(resolve, 80));
     });
     expect(result.current.durationOf(game).hours).toBe(9.2);
     expect(result.current.durationOf(game).source).toBe('reported');
