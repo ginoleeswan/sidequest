@@ -185,6 +185,37 @@ export default async function handler(
    */
   const pipeSplit = (value: string | string[] | undefined) =>
     (Array.isArray(value) ? value.join('|') : (value ?? '')).split('|');
+  /**
+   * Latin again, where a catalogue went Cyrillic.
+   *
+   * RAWG spells MOUSE with a Cyrillic О - a homoglyph, identical on
+   * screen and unequal in every comparison - so the exact-name match
+   * missed a game both sides plainly have. Only the lookalikes are
+   * folded; genuinely non-Latin titles pass through untouched.
+   */
+  const HOMOGLYPHS: Record<string, string> = {
+    А: 'A',
+    В: 'B',
+    С: 'C',
+    Е: 'E',
+    Н: 'H',
+    І: 'I',
+    К: 'K',
+    М: 'M',
+    О: 'O',
+    Р: 'P',
+    Т: 'T',
+    Х: 'X',
+    а: 'a',
+    с: 'c',
+    е: 'e',
+    і: 'i',
+    о: 'o',
+    р: 'p',
+    х: 'x',
+  };
+  const fold = (value: string) =>
+    value.replace(/[\u0400-\u04ff]/g, (ch) => HOMOGLYPHS[ch] ?? ch);
   const names = pipeSplit(req.query.names);
   const years = pipeSplit(req.query.years);
   const wanted = slugs.map((slug, index) => ({
@@ -192,7 +223,7 @@ export default async function handler(
     // Quotes and backslashes would break out of the apicalypse string;
     // control characters would break the query. Everything else about a
     // game title is fair game, including the punctuation IGDB keeps.
-    name: (names[index] ?? '')
+    name: fold(names[index] ?? '')
       .replace(/["\\\u0000-\u001f]/g, '')
       .trim()
       .slice(0, 120),
