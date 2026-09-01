@@ -67,6 +67,7 @@ export const SUBSET_ICONS = [
   'logo-xbox',
   'map',
   'map-outline',
+  'menu',
   'moon',
   'notifications',
   'open',

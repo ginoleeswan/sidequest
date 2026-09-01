@@ -15,7 +15,7 @@ import { DynamicIcon, type IconType } from './DynamicIcon';
 import { Mark } from './Mark';
 import { DISCOVER, GENRES, type Section } from '@/constants/categories';
 import { COLORS } from '@/styles/colors';
-import { LAYOUT, RADIUS, SPACING } from '@/styles/theme';
+import { LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
 import { TYPE, WORDMARK } from '@/styles/typography';
 
 interface NavItemProps {
@@ -105,6 +105,50 @@ function NavGroup({
   );
 }
 
+/**
+ * The sidebar control, as the products people use all day draw it: a
+ * menu glyph, not a chevron - a chevron says "next", this says "the
+ * panel". Open, it rides the brand row's end; folded, it stands under
+ * the Mark on the glyph column, where a folded rail's controls are.
+ * Cmd+\ (Ctrl+\) does the same from the keyboard, the convention
+ * Notion and Linear share.
+ */
+function Toggle({
+  collapsed,
+  onToggle,
+}: {
+  collapsed: boolean;
+  onToggle: () => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <Pressable
+      onPress={onToggle}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
+      hitSlop={6}
+      style={[
+        styles.toggle,
+        collapsed && styles.toggleFolded,
+        hovered && styles.toggleHovered,
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={
+        collapsed
+          ? 'Expand the sidebar (Cmd+\\)'
+          : 'Collapse the sidebar (Cmd+\\)'
+      }
+    >
+      <DynamicIcon
+        type="ionicon"
+        name="menu"
+        size={18}
+        color={hovered ? COLORS.white : COLORS.mediumGrey}
+      />
+    </Pressable>
+  );
+}
+
 interface Props {
   /**
    * 'home' for the storefront view, a section key, 'library' or 'plan'
@@ -129,6 +173,14 @@ interface Props {
   onToggle?: () => void;
   /** The foot of the rail - tonight's clock lives here. */
   foot?: React.ReactNode;
+  /**
+   * Folded, but peeking: the full rail laid over the page while the
+   * pointer rests on it, the way ChatGPT's does. Nothing underneath
+   * moves; the sheet keeps the folded rail's width.
+   */
+  overlay?: boolean;
+  onHoverIn?: () => void;
+  onHoverOut?: () => void;
 }
 
 /** Persistent left navigation for expanded (desktop) layouts. */
@@ -140,6 +192,9 @@ export function Sidebar({
   collapsed = false,
   onToggle,
   foot,
+  overlay = false,
+  onHoverIn,
+  onHoverOut,
 }: Props) {
   const router = useRouter();
   /**
@@ -155,7 +210,14 @@ export function Sidebar({
       router.push({ pathname: '/', params: { category: section.key } }));
   return (
     <View
-      style={[styles.sidebar, collapsed && styles.sidebarCollapsed, STICKY]}
+      style={[
+        styles.sidebar,
+        collapsed && styles.sidebarCollapsed,
+        STICKY,
+        overlay && styles.sidebarOverlay,
+      ]}
+      onPointerEnter={onHoverIn}
+      onPointerLeave={onHoverOut}
     >
       <View style={styles.top}>
         <Pressable
@@ -170,25 +232,11 @@ export function Sidebar({
           <Mark size={20} />
           {collapsed ? null : <Text style={styles.wordmark}>sidequest</Text>}
         </Pressable>
-        {onToggle ? (
-          <Pressable
-            onPress={onToggle}
-            hitSlop={8}
-            style={styles.toggle}
-            accessibilityRole="button"
-            accessibilityLabel={
-              collapsed ? 'Expand the sidebar' : 'Collapse the sidebar'
-            }
-          >
-            <DynamicIcon
-              type="ionicon"
-              name={collapsed ? 'chevron-forward' : 'chevron-back'}
-              size={16}
-              color={COLORS.mediumGrey}
-            />
-          </Pressable>
+        {onToggle && !collapsed ? (
+          <Toggle collapsed={false} onToggle={onToggle} />
         ) : null}
       </View>
+      {onToggle && collapsed ? <Toggle collapsed onToggle={onToggle} /> : null}
       {search && !collapsed ? (
         <View style={styles.search}>{search}</View>
       ) : null}
@@ -313,7 +361,31 @@ const styles = StyleSheet.create({
     paddingLeft: SPACING.sm + 4,
     marginBottom: SPACING.md,
   },
-  toggle: { padding: 4, borderRadius: RADIUS.sm },
+  toggle: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: RADIUS.sm,
+  },
+  toggleHovered: { backgroundColor: COLORS.raised },
+  // On the glyph column: the rail's padding puts the column at 28, and
+  // a 32-point control centred on an 18-point glyph starts 7 before it.
+  toggleFolded: { marginLeft: SPACING.sm + 4 - 7, marginTop: SPACING.sm },
+  /**
+   * Peeking: laid over the page at full width, lifted with the sheet's
+   * own shadow, while the layout underneath keeps the folded width.
+   */
+  sidebarOverlay: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: LAYOUT.sidebarWidth,
+    paddingHorizontal: SPACING.md,
+    zIndex: 50,
+    ...SHADOW.card,
+  },
   navItemCompact: {
     justifyContent: 'center',
     paddingHorizontal: 0,
