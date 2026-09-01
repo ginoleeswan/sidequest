@@ -1739,6 +1739,14 @@ export default function GameInfoScreen() {
             ) : (
               <>
                 {hero}
+                {/* The imprint under the artwork, before any buttons:
+                    who made it and when belongs to the identity the art
+                    just established, not to the body below the fold —
+                    Steam files it the same way, directly under the
+                    title, ahead of every action. */}
+                {factsLine ? (
+                  <Text style={styles.factsLine}>{factsLine}</Text>
+                ) : null}
                 {controls}
                 <Animated.View style={[styles.compactBody, { opacity }]}>
                   {/* The case, then the reader's own note on it, then
@@ -1747,9 +1755,6 @@ export default function GameInfoScreen() {
                       game you have not played it is an empty box in the
                       most valuable position on the screen. It is a
                       response, so it follows what it responds to. */}
-                  {factsLine ? (
-                    <Text style={styles.factsLine}>{factsLine}</Text>
-                  ) : null}
                   {mediaStage}
                   {about}
                   {/* Tags right after the prose, as Steam files them:
@@ -2127,8 +2132,17 @@ const styles = StyleSheet.create({
   factsLine: {
     ...TYPE.caption,
     color: COLORS.mediumGrey,
+    // Standing outside compactBody it carries its own column: the same
+    // edge and the same width, so the line lands flush with the body it
+    // introduces rather than indented twice.
     paddingHorizontal: SPACING.md,
-    marginTop: -SPACING.xs,
+    width: '100%',
+    maxWidth: LAYOUT.maxContentWidth,
+    alignSelf: 'center',
+    // A colophon binds to the masthead it signs, not to the card below:
+    // the smaller gap goes above.
+    marginTop: -SPACING.sm,
+    marginBottom: SPACING.sm,
   },
   crateCover: {
     width: 108,

@@ -15,10 +15,11 @@ import { OVER_IMAGE, TYPE } from '@/styles/typography';
  * and the edge swipe — so drawing our own chevron duplicates a control
  * the platform already provides, floating over the artwork as clutter.
  * Installed to a home screen there is no browser chrome at all, and the
- * chevron becomes the only way backwards. Checked once: display-mode
- * does not change within a page's life.
+ * chevron becomes the only way backwards. Read at render rather than at
+ * import: the answer never changes within a page's life, but a module
+ * constant is welded shut against tests, and the call costs nothing.
  */
-const STANDALONE =
+const isStandalone = () =>
   Platform.OS === 'web' &&
   typeof window !== 'undefined' &&
   typeof window.matchMedia === 'function' &&
@@ -67,7 +68,7 @@ export function BackButton({ onImage = false }: { onImage?: boolean }) {
    * offers the front door: the wordmark, going Home. The installed app
    * keeps the chevron, where it is the only navigation there is.
    */
-  if (!STANDALONE) {
+  if (!isStandalone()) {
     return (
       <ScaleButton
         onPress={() => router.replace('/')}
