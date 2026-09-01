@@ -204,6 +204,17 @@ export function Sidebar({
    * already reads on arrival.
    */
   const goHome = onHome ?? (() => router.push('/'));
+  /**
+   * Folded, the Mark is the control. Rest the pointer anywhere on the
+   * folded rail and the Mark becomes the expand glyph - the logo
+   * declaring itself as the way to open the panel, the way ChatGPT's
+   * does - and pressing it opens the rail for real. Off the rail it is
+   * the Mark again. A separate button under the logo said the same
+   * thing twice.
+   */
+  const [railHovered, setRailHovered] = useState(false);
+  const folded = collapsed || overlay;
+  const markIsControl = folded && (railHovered || overlay) && Boolean(onToggle);
   const select =
     onSelect ??
     ((section: Section) =>
@@ -216,27 +227,45 @@ export function Sidebar({
         STICKY,
         overlay && styles.sidebarOverlay,
       ]}
-      onPointerEnter={onHoverIn}
-      onPointerLeave={onHoverOut}
+      onPointerEnter={() => {
+        setRailHovered(true);
+        onHoverIn?.();
+      }}
+      onPointerLeave={() => {
+        setRailHovered(false);
+        onHoverOut?.();
+      }}
     >
       <View style={styles.top}>
         <Pressable
-          onPress={goHome}
-          accessibilityRole="link"
-          accessibilityLabel="Sidequest home"
+          onPress={markIsControl ? onToggle : goHome}
+          accessibilityRole={markIsControl ? 'button' : 'link'}
+          accessibilityLabel={
+            markIsControl ? 'Expand the sidebar (Cmd+\\)' : 'Sidequest home'
+          }
           style={styles.brand}
         >
           {/* The phone's exact lockup - Mark at 20, wordmark at h1 in
             lightGrey - not a slightly larger, slightly whiter cousin of
             it. One brand, one size, whichever surface's corner it is in. */}
-          <Mark size={20} />
+          {markIsControl ? (
+            <View style={styles.markSlot}>
+              <DynamicIcon
+                type="ionicon"
+                name="chevron-forward"
+                size={20}
+                color={COLORS.white}
+              />
+            </View>
+          ) : (
+            <Mark size={20} />
+          )}
           {collapsed ? null : <Text style={styles.wordmark}>sidequest</Text>}
         </Pressable>
-        {onToggle && !collapsed ? (
+        {onToggle && !folded ? (
           <Toggle collapsed={false} onToggle={onToggle} />
         ) : null}
       </View>
-      {onToggle && collapsed ? <Toggle collapsed onToggle={onToggle} /> : null}
       {search && !collapsed ? (
         <View style={styles.search}>{search}</View>
       ) : null}
@@ -341,6 +370,15 @@ const styles = StyleSheet.create({
     width: LAYOUT.sidebarWidth,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.lg,
+    // Folding and peeking glide rather than snap: the same element
+    // changes width, so the width is what eases.
+    ...(Platform.OS === 'web'
+      ? ({
+          transitionProperty: 'width',
+          transitionDuration: '160ms',
+          transitionTimingFunction: 'cubic-bezier(0.2, 0, 0, 1)',
+        } as unknown as ViewStyle)
+      : null),
     // The desk's own colour and nothing at its edge: the sheet of the
     // page lifts off it with a corner and a shadow, and a rule beside
     // that would be a second edge.
@@ -369,6 +407,13 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.sm,
   },
   toggleHovered: { backgroundColor: COLORS.raised },
+  /** The Mark's own box, so the glyph that replaces it moves nothing. */
+  markSlot: {
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   // On the glyph column: the rail's padding puts the column at 28, and
   // a 32-point control centred on an 18-point glyph starts 7 before it.
   toggleFolded: { marginLeft: SPACING.sm + 4 - 7, marginTop: SPACING.sm },

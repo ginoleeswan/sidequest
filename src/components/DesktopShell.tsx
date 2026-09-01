@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { useBreakpoint } from '@/hooks/useBreakpoint';
@@ -62,6 +62,27 @@ export function DesktopShell({
    */
   const [peek, setPeek] = useState(false);
   const peeking = collapsed && peek;
+  /**
+   * A beat before the peek opens, none before it closes. A pointer
+   * crossing the rail on its way somewhere else must not flash a
+   * panel open; a pointer that rests there for a moment wants it.
+   */
+  const peekTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const armPeek = () => {
+    if (peekTimer.current) clearTimeout(peekTimer.current);
+    peekTimer.current = setTimeout(() => setPeek(true), 180);
+  };
+  const disarmPeek = () => {
+    if (peekTimer.current) clearTimeout(peekTimer.current);
+    peekTimer.current = null;
+    setPeek(false);
+  };
+  useEffect(
+    () => () => {
+      if (peekTimer.current) clearTimeout(peekTimer.current);
+    },
+    []
+  );
 
   // ⌘\ / Ctrl+\ folds and unfolds from the keyboard.
   useEffect(() => {
@@ -92,11 +113,11 @@ export function DesktopShell({
             collapsed={collapsed && !peek}
             overlay={peeking}
             onToggle={() => {
-              setPeek(false);
+              disarmPeek();
               toggle();
             }}
-            onHoverIn={collapsed ? () => setPeek(true) : undefined}
-            onHoverOut={collapsed ? () => setPeek(false) : undefined}
+            onHoverIn={collapsed ? armPeek : undefined}
+            onHoverOut={collapsed ? disarmPeek : undefined}
             foot={<RailClock collapsed={collapsed && !peek} />}
           />
           <View style={styles.sheet}>
