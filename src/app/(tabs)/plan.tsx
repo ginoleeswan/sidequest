@@ -990,7 +990,10 @@ export default function PlanScreen() {
           duration={editing ? durationOf(editing) : null}
           onClose={() => setEditing(null)}
         />
-        <SiteFooter />
+        {/* Out past the shell column's padding on a desk, so the shore
+            runs the column's full width the way Home's does; on a phone
+            the footer is already the page's width. */}
+        <SiteFooter inset={isExpanded ? SPACING.xl : 0} />
       </Screen>
     </>
   );

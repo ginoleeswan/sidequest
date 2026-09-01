@@ -27,7 +27,7 @@ import { useLibrary } from '@/lib/library';
 import { libraryStats } from '@/lib/libraryStats';
 import { useSync, type SyncStatus } from '@/lib/sync/SyncProvider';
 import { COLORS } from '@/styles/colors';
-import { GUTTER, LAYOUT, RADIUS, SPACING } from '@/styles/theme';
+import { GUTTER, LAYOUT, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 /**
@@ -270,7 +270,7 @@ export default function YouScreen() {
               pointerEvents="none"
             />
 
-            <View style={styles.identity}>
+            <View style={[styles.identity, isExpanded && styles.identityWide]}>
               <View style={[styles.avatar, session && styles.avatarSynced]}>
                 {session ? (
                   <Text style={styles.monogram}>
@@ -280,16 +280,18 @@ export default function YouScreen() {
                   <Mark size={30} />
                 )}
               </View>
-              <Text style={styles.who} numberOfLines={1}>
-                {who}
-              </Text>
-              <Text style={styles.where}>
-                {email ?? 'No account. Nothing has left this device.'}
-              </Text>
+              <View style={styles.identityText}>
+                <Text style={styles.who} numberOfLines={1}>
+                  {who}
+                </Text>
+                <Text style={styles.where}>
+                  {email ?? 'No account. Nothing has left this device.'}
+                </Text>
+              </View>
             </View>
           </View>
 
-          <View style={styles.inner}>
+          <View style={[styles.inner, isExpanded && styles.innerExpanded]}>
             {/* Three doors, not three stats. */}
             <View style={styles.doors}>
               <Door
@@ -395,7 +397,10 @@ export default function YouScreen() {
         </FadeInView>
 
         {/* Web keeps its footer; native does not — see SiteFooter. */}
-        <SiteFooter />
+        {/* Out past the shell column's padding on a desk, so the shore
+            runs the column's full width the way Home's does; on a phone
+            the footer is already the page's width. */}
+        <SiteFooter inset={isExpanded ? SPACING.xl : 0} />
       </Screen>
     </>
   );
@@ -424,12 +429,19 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.md,
     overflow: 'hidden',
   },
+  /**
+   * On a desk the wall runs the column's full width, flush to the
+   * sidebar and the top, the way Home's stage does - not a 720-point
+   * rounded card floated in the middle of a 1200-point column, which
+   * was a phone screen centred on a monitor. The identity sits at the
+   * column's inset, on the same left edge as every heading below it.
+   */
   mastheadExpanded: {
-    width: '100%',
-    maxWidth: LAYOUT.maxContentWidth,
-    alignSelf: 'center',
-    borderRadius: RADIUS.lg,
-    marginTop: SPACING.lg,
+    marginHorizontal: -SPACING.xl,
+    marginTop: -SPACING.lg,
+    minHeight: 320,
+    paddingHorizontal: SPACING.xl * 1.5,
+    paddingBottom: SPACING.xl,
   },
   wall: {
     position: 'absolute',
@@ -449,6 +461,13 @@ const styles = StyleSheet.create({
   },
 
   identity: { gap: SPACING.xs },
+  /** Avatar beside the name, on the baseline, where the width allows. */
+  identityWide: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: SPACING.lg,
+  },
+  identityText: { gap: SPACING.xs, flexShrink: 1 },
   avatar: {
     width: 54,
     height: 54,
@@ -482,6 +501,12 @@ const styles = StyleSheet.create({
    * finishing, coral is letting go — and they go grey at zero, because
    * a bright nought is a reprimand.
    */
+  innerExpanded: {
+    maxWidth: 880,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 0,
+    paddingTop: SPACING.lg,
+  },
   doors: {
     flexDirection: 'row',
     marginTop: SPACING.md,
