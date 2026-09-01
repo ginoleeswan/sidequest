@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
   figureScrim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   figureSlot: { position: 'absolute', top: SPACING.lg, right: SPACING.lg + 2 },
   figure: {
-    fontFamily: 'Noah-Black',
+    fontFamily: 'Geom-Bold',
     fontSize: 68,
     lineHeight: 68,
     letterSpacing: -3,
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(20,25,35,0.6)',
   },
   stampWord: {
-    fontFamily: 'Noah-Black',
+    fontFamily: 'Geom-Bold',
     fontSize: 30,
     letterSpacing: 4,
   },

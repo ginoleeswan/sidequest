@@ -1935,7 +1935,7 @@ const styles = StyleSheet.create({
    * bright frame does not apply where the copy actually lands.
    */
   hoursValue: {
-    fontFamily: 'Noah-Black',
+    fontFamily: 'Geom-Bold',
     fontSize: 34,
     lineHeight: 38,
     letterSpacing: -0.6,
@@ -2385,7 +2385,7 @@ const styles = StyleSheet.create({
     marginTop: SPACING.md,
   },
   finishFigure: {
-    fontFamily: 'Noah-Black',
+    fontFamily: 'Geom-Bold',
     fontSize: 34,
     lineHeight: 38,
     letterSpacing: -0.6,

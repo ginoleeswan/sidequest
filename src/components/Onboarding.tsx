@@ -32,7 +32,7 @@ import { formatHours } from '@/lib/duration';
 import { useLibrary } from '@/lib/library';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { TYPE, WORDMARK } from '@/styles/typography';
 
 /**
  * The covers, as the first screen's other half.
@@ -615,7 +615,7 @@ export function Onboarding() {
                on, by which point the name has been made. */
             <View style={styles.masthead}>
               <Mark size={24} />
-              <Text style={styles.mastheadWord}>SIDEQUEST</Text>
+              <Text style={styles.mastheadWord}>sidequest</Text>
             </View>
           )}
           <Pressable onPress={() => finish(false)}>
@@ -714,9 +714,9 @@ const styles = StyleSheet.create({
   act: { gap: SPACING.md, alignItems: 'flex-start' },
   masthead: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   mastheadWord: {
-    fontFamily: 'Noah-Black',
+    ...WORDMARK,
     fontSize: 15,
-    letterSpacing: 4,
+    lineHeight: 18,
     color: COLORS.white,
   },
 
@@ -815,7 +815,7 @@ const styles = StyleSheet.create({
   },
   paceHoursBox: { width: 62, alignItems: 'flex-start' },
   paceHoursNum: {
-    fontFamily: 'Noah-Black',
+    fontFamily: 'Geom-Bold',
     fontSize: 30,
     lineHeight: 32,
     color: COLORS.accent,

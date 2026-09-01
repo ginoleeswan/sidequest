@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     borderTopColor: COLORS.strokeStrong,
   },
   number: {
-    fontFamily: 'Noah-Black',
+    fontFamily: 'Geom-Bold',
     fontSize: 46,
     lineHeight: 50,
     letterSpacing: -2,

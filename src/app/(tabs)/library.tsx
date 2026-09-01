@@ -42,7 +42,7 @@ import {
 } from '@/lib/libraryStats';
 import { COLORS } from '@/styles/colors';
 import { GUTTER, LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { TYPE, WORDMARK } from '@/styles/typography';
 
 const TABS: LibraryStatus[] = ['wishlist', 'playing', 'finished'];
 
@@ -362,7 +362,7 @@ export default function LibraryScreen() {
         >
           <View style={styles.nativeBrand}>
             <Mark size={20} />
-            <Text style={styles.nativeWordmark}>SIDEQUEST</Text>
+            <Text style={styles.nativeWordmark}>sidequest</Text>
           </View>
           <Pressable
             onPress={() => router.push('/you')}
@@ -729,7 +729,7 @@ const styles = StyleSheet.create({
     height: 40 + SPACING.sm,
   },
   nativeBrand: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  nativeWordmark: { ...TYPE.h1, color: COLORS.lightGrey },
+  nativeWordmark: { ...WORDMARK },
   innerDesk: { paddingHorizontal: 0 },
   youButton: {
     position: 'absolute',
@@ -800,7 +800,7 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   heroValue: {
-    fontFamily: 'Noah-Black',
+    fontFamily: 'Geom-Bold',
     fontSize: 46,
     lineHeight: 50,
     // Amber marks time everywhere else the app states an hour figure -

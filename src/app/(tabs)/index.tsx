@@ -105,7 +105,7 @@ import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useDebounced } from '@/hooks/useDebounced';
 import { COLORS } from '@/styles/colors';
 import { GUTTER, LAYOUT, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { TYPE, WORDMARK } from '@/styles/typography';
 
 const FEATURED_COUNT = 5;
 
@@ -917,7 +917,7 @@ export default function HomeScreen() {
                 accessibilityLabel="Sidequest home"
               >
                 <Mark size={20} />
-                <Text style={styles.wordmark}>SIDEQUEST</Text>
+                <Text style={styles.wordmark}>sidequest</Text>
               </Pressable>
               <View style={styles.headerIcons}>
                 <Ionicons
@@ -1053,11 +1053,7 @@ const styles = StyleSheet.create({
     // Clear of the opaque band, so the chips land on the dissolve.
     marginBottom: SPACING.md + 2,
   },
-  wordmark: {
-    ...TYPE.h1,
-    color: COLORS.lightGrey,
-    flexShrink: 0,
-  },
+  wordmark: { ...WORDMARK, flexShrink: 0 },
   searchFull: { flex: 1, width: 'auto', maxWidth: undefined },
   headerIcons: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   cancel: {

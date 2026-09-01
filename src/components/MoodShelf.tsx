@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   name: {
-    fontFamily: 'Noah-Black',
+    fontFamily: 'Geom-Bold',
     fontSize: 17,
     lineHeight: 21,
     letterSpacing: -0.2,

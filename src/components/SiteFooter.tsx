@@ -21,7 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Mark } from './Mark';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { TYPE, WORDMARK } from '@/styles/typography';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 
 const EXPLORE = [
@@ -309,7 +309,7 @@ export function SiteFooter({
             <View style={styles.brand}>
               <View style={styles.lockup}>
                 <Mark size={26} />
-                <Text style={styles.wordmark}>SIDEQUEST</Text>
+                <Text style={styles.wordmark}>sidequest</Text>
               </View>
               {/* The claim, said once, at claim size — and nothing
                   else. This block used to restate the product three
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
   watermark: {
     position: 'absolute',
     right: -8,
-    fontFamily: 'Noah-Black',
+    fontFamily: 'Geom-Bold',
     letterSpacing: 6,
     color: 'rgba(255,255,255,0.028)',
   },
@@ -385,14 +385,9 @@ const styles = StyleSheet.create({
   },
   brand: { gap: SPACING.sm + 2, maxWidth: 380 },
   lockup: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm + 2 },
-  wordmark: {
-    fontFamily: 'Noah-Black',
-    fontSize: 20,
-    letterSpacing: 0.5,
-    color: COLORS.white,
-  },
+  wordmark: { ...WORDMARK, fontSize: 20, lineHeight: 24, color: COLORS.white },
   tagline: {
-    fontFamily: 'Noah-Black',
+    fontFamily: 'Geom-Bold',
     fontSize: 27,
     lineHeight: 33,
     letterSpacing: -0.4,

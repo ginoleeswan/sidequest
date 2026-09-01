@@ -59,7 +59,7 @@ import {
   type LandingScale,
 } from '@/styles/landing';
 import { SPACING } from '@/styles/theme';
-import { OVER_IMAGE, TYPE } from '@/styles/typography';
+import { OVER_IMAGE, TYPE, WORDMARK } from '@/styles/typography';
 
 /**
  * The page for people who have not used it yet.
@@ -532,7 +532,7 @@ export default function AboutScreen() {
                   the footer have a browser button and the mark below. */}
               <Animated.View style={[styles.lockup, step(0, 0.35)]}>
                 <MarkDraw size={40} />
-                <Text style={styles.word}>SIDEQUEST</Text>
+                <Text style={styles.word}>sidequest</Text>
               </Animated.View>
               {/* Say WHICH games, not "what".
                 "Know what you can actually finish" is a fine line and an
@@ -985,14 +985,9 @@ const styles = StyleSheet.create({
   },
   // The lockup is the page's first object; at nav size it read as
   // chrome that had wandered onto a poster.
-  word: {
-    ...TYPE.h1,
-    fontSize: 26,
-    letterSpacing: 2,
-    color: COLORS.lightGrey,
-  },
+  word: { ...WORDMARK, fontSize: 26, lineHeight: 31 },
   headline: {
-    fontFamily: 'Noah-Black',
+    fontFamily: 'Geom-Bold',
     ...OVER_IMAGE.heading,
     color: COLORS.white,
     maxWidth: 860,

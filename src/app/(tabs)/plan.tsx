@@ -43,7 +43,7 @@ import { hoursLeft, planItems } from '@/lib/planning';
 import { pickTonight, planSchedule, type ScheduledItem } from '@/lib/scheduler';
 import { COLORS } from '@/styles/colors';
 import { GUTTER, LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
-import { OVER_IMAGE, TYPE } from '@/styles/typography';
+import { OVER_IMAGE, TYPE, WORDMARK } from '@/styles/typography';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -561,7 +561,7 @@ export default function PlanScreen() {
         >
           <View style={styles.nativeBrand}>
             <Mark size={20} />
-            <Text style={styles.nativeWordmark}>SIDEQUEST</Text>
+            <Text style={styles.nativeWordmark}>sidequest</Text>
           </View>
           <Pressable
             onPress={() => router.push('/you')}
@@ -1027,7 +1027,7 @@ const styles = StyleSheet.create({
     height: 40 + SPACING.sm,
   },
   nativeBrand: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  nativeWordmark: { ...TYPE.h1, color: COLORS.lightGrey },
+  nativeWordmark: { ...WORDMARK },
   innerDesk: { paddingHorizontal: 0 },
   youButton: {
     position: 'absolute',
@@ -1179,10 +1179,11 @@ const styles = StyleSheet.create({
    * which is why the old verdict box looked recessed. Three per cent of
    * white and a shadow is what lifting looks like on this ground.
    */
-  dial: {
-    gap: SPACING.lg,
-    ...SHADOW.card,
-  },
+  // No plate, no shadow: these are the verdict's controls, set under
+  // the sentence they move. A card shadow left behind with no card
+  // under it painted as a flat lighter rectangle - the artifact that
+  // looked like a rendering fault.
+  dial: { gap: SPACING.lg },
   dialResult: {
     gap: SPACING.xs,
     paddingTop: SPACING.md,

@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
     // TYPE.label carries. This is the one thing on the page a reader is
     // meant to press, sitting under a display face at ninety points; at
     // Bold it was the lightest thing in its own corner of the hero.
-    fontFamily: 'Noah-Black',
+    fontFamily: 'Geom-Bold',
     fontSize: 18,
     // Set in caps, so the tracking has to open up: Noah-Black sets very
     // tight, and capitals at 0.3 close into a solid bar. This is the

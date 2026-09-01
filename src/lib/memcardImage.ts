@@ -21,7 +21,7 @@ import { CARD_HEIGHT, CARD_WIDTH, memcardSvg } from './memcardSvg';
 
 const FACES: { family: string; module: number }[] = [
   {
-    family: 'Noah-Black',
+    family: 'Geom-Bold',
     module: require('../../assets/fonts/Noah-Black.woff2'),
   },
   {

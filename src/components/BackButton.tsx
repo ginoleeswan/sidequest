@@ -6,7 +6,7 @@ import { Mark } from './Mark';
 import { ScaleButton } from './ScaleButton';
 import { COLORS } from '@/styles/colors';
 import { SPACING } from '@/styles/theme';
-import { OVER_IMAGE, TYPE } from '@/styles/typography';
+import { OVER_IMAGE, WORDMARK } from '@/styles/typography';
 
 /**
  * Whether the page is running as an installed app, chrome-less.
@@ -113,10 +113,7 @@ const styles = StyleSheet.create({
    * lightGrey — not a smaller cousin of it. One brand, one size,
    * whichever page's corner it stands in.
    */
-  brandMark: {
-    ...TYPE.h1,
-    color: COLORS.lightGrey,
-  },
+  brandMark: { ...WORDMARK },
   button: {
     width: 40,
     height: 40,

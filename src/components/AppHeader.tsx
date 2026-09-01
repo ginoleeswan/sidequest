@@ -13,7 +13,7 @@ import {
 import { Mark } from './Mark';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { TYPE, WORDMARK } from '@/styles/typography';
 
 const NAV = [
   { label: 'Home', href: '/' },
@@ -88,7 +88,7 @@ export function AppHeader({ immersive = false, band }: Props) {
         >
           <View style={styles.brand}>
             <Mark size={18} />
-            <Text style={styles.wordmark}>SIDEQUEST</Text>
+            <Text style={styles.wordmark}>sidequest</Text>
           </View>
         </Pressable>
         <View style={styles.nav}>
@@ -161,10 +161,7 @@ const styles = StyleSheet.create({
     height: 58,
   },
   brand: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  wordmark: {
-    ...TYPE.h3,
-    color: COLORS.white,
-  },
+  wordmark: { ...WORDMARK, fontSize: 17, lineHeight: 21, color: COLORS.white },
   nav: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xl },
   link: {
     ...TYPE.labelSmall,

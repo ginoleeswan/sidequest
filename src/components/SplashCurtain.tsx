@@ -22,6 +22,7 @@ import {
   type Keyframes,
 } from '@/lib/curves';
 import { COLORS } from '@/styles/colors';
+import { WORDMARK } from '@/styles/typography';
 
 /**
  * The splash, and the way it gets out of the way.
@@ -428,7 +429,7 @@ export function SplashCurtain() {
           },
         ]}
       >
-        <Text style={styles.wordmark}>SIDEQUEST</Text>
+        <Text style={styles.wordmark}>sidequest</Text>
       </Animated.View>
     </Animated.View>
   );
@@ -461,11 +462,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   wordmark: {
-    fontFamily: 'Noah-Black',
-    // 20/7, matching the static splash. At 17 it read as fine print on
-    // a launch screen, which is not what a wordmark is for.
-    fontSize: 20,
-    letterSpacing: 7,
+    ...WORDMARK,
+    // Lowercase and close-set now, like every lockup; the static splash
+    // image still carries the old tracked caps until it is regenerated.
+    fontSize: 22,
+    lineHeight: 27,
     color: COLORS.white,
   },
 });

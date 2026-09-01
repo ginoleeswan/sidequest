@@ -16,7 +16,7 @@ import { Mark } from './Mark';
 import { DISCOVER, GENRES, type Section } from '@/constants/categories';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { TYPE, WORDMARK } from '@/styles/typography';
 
 interface NavItemProps {
   label: string;
@@ -122,7 +122,7 @@ export function Sidebar({ activeKey, onHome, onSelect, search }: Props) {
             lightGrey - not a slightly larger, slightly whiter cousin of
             it. One brand, one size, whichever surface's corner it is in. */}
         <Mark size={20} />
-        <Text style={styles.wordmark}>SIDEQUEST</Text>
+        <Text style={styles.wordmark}>sidequest</Text>
       </Pressable>
       <Text style={styles.tagline}>Discover your next game</Text>
       {search ? <View style={styles.search}>{search}</View> : null}
@@ -210,10 +210,7 @@ const styles = StyleSheet.create({
     borderRightColor: COLORS.stroke,
   },
   brand: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  wordmark: {
-    ...TYPE.h1,
-    color: COLORS.lightGrey,
-  },
+  wordmark: { ...WORDMARK },
   tagline: {
     ...TYPE.fine,
     color: COLORS.mediumGrey,

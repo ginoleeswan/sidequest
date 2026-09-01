@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   avatarSynced: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
-  monogram: { fontFamily: 'Noah-Black', fontSize: 24, color: COLORS.navy },
+  monogram: { fontFamily: 'Geom-Bold', fontSize: 24, color: COLORS.navy },
   who: { ...TYPE.display, color: COLORS.white },
   where: { ...TYPE.caption, color: COLORS.lightGrey },
 
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
     paddingLeft: SPACING.md,
   },
   doorPressed: { opacity: 0.6 },
-  doorValue: { fontFamily: 'Noah-Black', fontSize: 30, letterSpacing: -0.8 },
+  doorValue: { fontFamily: 'Geom-Bold', fontSize: 30, letterSpacing: -0.8 },
   doorLabel: { ...TYPE.micro, color: COLORS.mediumGrey },
 
   groupLabel: {

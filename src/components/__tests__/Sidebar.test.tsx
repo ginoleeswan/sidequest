@@ -27,7 +27,7 @@ describe('the sidebar', () => {
 
   it('goes home from the brand and from Home', async () => {
     await render(<Sidebar {...props} />);
-    await fireEvent.press(screen.getByText('SIDEQUEST'));
+    await fireEvent.press(screen.getByText('sidequest'));
     await fireEvent.press(screen.getByText('Home'));
     expect(props.onHome).toHaveBeenCalledTimes(2);
   });

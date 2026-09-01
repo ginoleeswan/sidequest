@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(20,25,35,0.55)',
   },
   stampWord: {
-    fontFamily: 'Noah-Black',
+    fontFamily: 'Geom-Bold',
     fontSize: 26,
     letterSpacing: 4,
     color: COLORS.mint,

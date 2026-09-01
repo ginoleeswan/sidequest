@@ -20,23 +20,29 @@ import { COLORS } from './colors';
  * adding a new one — a scale only works if it is the only thing in use.
  */
 export const TYPE = StyleSheet.create({
-  // ---- Display and headings: Noah Black ----
+  // ---- Display: Geom Bold. Headings from h2 down: Noah Bold ----
+  //
+  // Two faces, two jobs. Geom carries the wordmark and every display
+  // moment - the masthead, the verdict, the big figure - and Noah Bold
+  // carries the furniture. A rounded black doing both was one voice
+  // at every volume; a geometric with more edge at the top, and Noah
+  // below it, is a hierarchy you can hear.
   display: {
-    fontFamily: 'Noah-Black',
+    fontFamily: 'Geom-Bold',
     fontSize: 32,
     lineHeight: 36,
     letterSpacing: -0.6,
     color: COLORS.white,
   },
   title: {
-    fontFamily: 'Noah-Black',
+    fontFamily: 'Geom-Bold',
     fontSize: 26,
     lineHeight: 30,
     letterSpacing: -0.5,
     color: COLORS.white,
   },
   h1: {
-    fontFamily: 'Noah-Black',
+    fontFamily: 'Geom-Bold',
     fontSize: 22,
     lineHeight: 27,
     letterSpacing: -0.4,
@@ -136,7 +142,7 @@ export const TYPE = StyleSheet.create({
 
   /** Oversized watermark numerals: ranked tiles, the stats hero. */
   numeral: {
-    fontFamily: 'Noah-Black',
+    fontFamily: 'Geom-Bold',
     fontSize: 96,
     lineHeight: 96,
     letterSpacing: -6,
@@ -159,6 +165,19 @@ export const TYPE = StyleSheet.create({
  * which is what eyeballing a number instead of using a scale looks
  * like.
  */
+/**
+ * The wordmark. Lowercase on purpose: "sidequest" is a product's name
+ * said the way people say it, where SIDEQUEST was a badge shouting it.
+ * Every lockup in the app sets it from here, so it cannot drift.
+ */
+export const WORDMARK = {
+  fontFamily: 'Geom-Bold',
+  fontSize: 22,
+  lineHeight: 27,
+  letterSpacing: -0.5,
+  color: COLORS.lightGrey,
+} as const;
+
 export const OVER_IMAGE = StyleSheet.create({
   /**
    * Contact shadows, not glows. The wide soft halo these used to be

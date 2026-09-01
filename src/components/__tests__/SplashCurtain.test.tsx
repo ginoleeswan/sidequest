@@ -27,7 +27,7 @@ describe('the splash curtain', () => {
 
   it('covers the app on launch', async () => {
     await render(<SplashCurtain />);
-    expect(screen.getByText('SIDEQUEST', DEEP)).toBeTruthy();
+    expect(screen.getByText('sidequest', DEEP)).toBeTruthy();
   });
 
   it('gets out of the way, and does not linger', async () => {
@@ -37,14 +37,14 @@ describe('the splash curtain', () => {
       // app is not still behind a curtain two seconds in.
       jest.advanceTimersByTime(4000);
     });
-    expect(screen.queryByText('SIDEQUEST', DEEP)).toBeNull();
+    expect(screen.queryByText('sidequest', DEEP)).toBeNull();
   });
 
   it('is hidden from a screen reader while it covers — it is not content', async () => {
     await render(<SplashCurtain />);
     // Present in the tree, absent from the accessibility one.
-    expect(screen.getByText('SIDEQUEST', DEEP)).toBeTruthy();
-    expect(screen.queryByText('SIDEQUEST')).toBeNull();
+    expect(screen.getByText('sidequest', DEEP)).toBeTruthy();
+    expect(screen.queryByText('sidequest')).toBeNull();
   });
 
   it('stays out of the web build entirely', async () => {
@@ -54,7 +54,7 @@ describe('the splash curtain', () => {
     (Platform as { OS: string }).OS = 'web';
     try {
       await render(<SplashCurtain />);
-      expect(screen.queryByText('SIDEQUEST', DEEP)).toBeNull();
+      expect(screen.queryByText('sidequest', DEEP)).toBeNull();
     } finally {
       (Platform as { OS: string }).OS = was;
     }

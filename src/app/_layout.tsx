@@ -80,10 +80,6 @@ const FACES: Record<string, FontSource> =
           uri: require('../../assets/fonts/ionicons-subset.woff2'),
           display: FontDisplay.SWAP,
         },
-        'Noah-Black': {
-          uri: require('../../assets/fonts/Noah-Black.woff2'),
-          display: FontDisplay.SWAP,
-        },
         'Noah-Bold': {
           uri: require('../../assets/fonts/Noah-Bold.woff2'),
           display: FontDisplay.SWAP,
@@ -92,11 +88,25 @@ const FACES: Record<string, FontSource> =
           uri: require('../../assets/fonts/Noah-Regular.woff2'),
           display: FontDisplay.SWAP,
         },
+        /**
+         * Geom, the display voice: the wordmark and every headline. A
+         * geometric sans with more edge than Noah's rounded black, so
+         * the two faces do two jobs instead of one job twice.
+         */
+        'Geom-Bold': {
+          uri: require('../../assets/fonts/Geom-Bold.woff2'),
+          display: FontDisplay.SWAP,
+        },
+        'Geom-SemiBold': {
+          uri: require('../../assets/fonts/Geom-SemiBold.woff2'),
+          display: FontDisplay.SWAP,
+        },
       }
     : {
-        'Noah-Black': require('../../assets/fonts/Noah-Black.ttf'),
         'Noah-Bold': require('../../assets/fonts/Noah-Bold.ttf'),
         'Noah-Regular': require('../../assets/fonts/Noah-Regular.ttf'),
+        'Geom-Bold': require('../../assets/fonts/Geom-Bold.ttf'),
+        'Geom-SemiBold': require('../../assets/fonts/Geom-SemiBold.ttf'),
       };
 
 export default function RootLayout() {
