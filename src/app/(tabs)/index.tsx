@@ -18,7 +18,6 @@ import {
   TextInput,
   useWindowDimensions,
   View,
-  type ViewStyle,
 } from 'react-native';
 import {
   SafeAreaView,
