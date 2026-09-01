@@ -67,9 +67,9 @@ const styles = StyleSheet.create({
     marginTop: SPACING.md,
     padding: SPACING.md,
     borderRadius: RADIUS.md,
+    // The rail's one plate - the active item's, search's - and no ring:
+    // one rail, one material.
     backgroundColor: COLORS.raised,
-    borderWidth: 1,
-    borderColor: COLORS.stroke,
     gap: SPACING.xs,
   },
   row: {
@@ -88,8 +88,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.sm + 2,
     borderRadius: RADIUS.sm,
     backgroundColor: COLORS.raised,
-    borderWidth: 1,
-    borderColor: COLORS.stroke,
   },
   compactHours: { ...TYPE.labelSmall, color: COLORS.accent },
 });
