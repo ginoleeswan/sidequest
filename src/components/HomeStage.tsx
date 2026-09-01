@@ -8,12 +8,14 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   FlatList,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   useWindowDimensions,
   View,
   type LayoutChangeEvent,
+  type ViewStyle,
 } from 'react-native';
 
 import { CoverImage } from './CoverImage';
@@ -247,36 +249,38 @@ function SlideArt({
           Translating a picture that exactly fills its container just
           uncovers the background; room below it would buy nothing, since
           the artwork only ever moves one way. */}
-      <Animated.View
-        style={[
-          styles.artLayer,
-          {
-            top: -room,
-            height: height + room,
-            transform: [
-              { translateY: parallax },
-              {
-                scale: drift.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [1, 1.08],
-                }),
-              },
-            ],
-          },
-        ]}
-        pointerEvents="none"
-      >
-        <CoverImage
-          uri={slide.game.background_image}
-          style={StyleSheet.absoluteFill}
-          size="hero"
-          iconSize={48}
-        />
-      </Animated.View>
-      {/* Under the scrims, so the copy stays legible over a moving
+      <View style={[StyleSheet.absoluteFill, styles.fadeOut]}>
+        <Animated.View
+          style={[
+            styles.artLayer,
+            {
+              top: -room,
+              height: height + room,
+              transform: [
+                { translateY: parallax },
+                {
+                  scale: drift.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [1, 1.08],
+                  }),
+                },
+              ],
+            },
+          ]}
+          pointerEvents="none"
+        >
+          <CoverImage
+            uri={slide.game.background_image}
+            style={StyleSheet.absoluteFill}
+            size="hero"
+            iconSize={48}
+          />
+        </Animated.View>
+        {/* Under the scrims, so the copy stays legible over a moving
           picture exactly as it was over the still. Keyed so a new
           trailer is a fresh fade rather than a source swap. */}
-      {trailer ? <StageTrailer key={trailer.id} movie={trailer} /> : null}
+        {trailer ? <StageTrailer key={trailer.id} movie={trailer} /> : null}
+      </View>
       {/* On a desk, a third scrim runs left to right. The copy lives in
           the frame's left third there, and a bottom-only gradient left
           it reading across the picture's brightest region; the
@@ -320,13 +324,23 @@ function SlideArt({
         pointerEvents="none"
       />
       <LinearGradient
-        colors={[
-          'rgba(51,61,81,0)',
-          'rgba(51,61,81,0.5)',
-          'rgba(51,61,81,0.9)',
-          COLORS.darkGrey,
-          COLORS.darkGrey,
-        ]}
+        colors={
+          Platform.OS === 'web'
+            ? [
+                'rgba(51,61,81,0)',
+                'rgba(51,61,81,0.5)',
+                'rgba(51,61,81,0.55)',
+                'rgba(51,61,81,0.25)',
+                'rgba(51,61,81,0)',
+              ]
+            : [
+                'rgba(51,61,81,0)',
+                'rgba(51,61,81,0.5)',
+                'rgba(51,61,81,0.9)',
+                COLORS.darkGrey,
+                COLORS.darkGrey,
+              ]
+        }
         /**
          * Solid before the edge, not at it.
          *
@@ -544,13 +558,33 @@ function StageCopy({
 }
 
 const styles = StyleSheet.create({
-  stage: {
-    // The page's own colour, so the bottom of the scrim lands on the
-    // shelves' background instead of ending on a visible band.
-    backgroundColor: COLORS.darkGrey,
-    overflow: 'hidden',
-  },
+  /**
+   * No ground of its own. It used to paint the page colour and then, at
+   * the bottom, a copy of the page's grain - and no two copies of a
+   * textured ground meet without a line, however exactly the numbers
+   * agree; measured at 3x, the line was there with every other layer
+   * removed. The page shows through instead: the artwork fades out on a
+   * mask, and what is left at the stage's last rows IS the page.
+   */
+  stage: { overflow: 'hidden' },
   artLayer: { position: 'absolute', left: 0, right: 0 },
+  /**
+   * The picture fades out of existence, rather than a colour fading in
+   * over it. Masking the art (and the trailer with it) to nothing at the
+   * bottom edge means nothing at that edge but the page ground - the
+   * scrim below is for the copy's legibility, and it too goes to
+   * transparent. Web only: the mask is CSS, and native keeps the scrim
+   * ending opaque.
+   */
+  fadeOut:
+    Platform.OS === 'web'
+      ? ({
+          maskImage:
+            'linear-gradient(to bottom, rgba(0,0,0,1) 52%, rgba(0,0,0,0.55) 78%, rgba(0,0,0,0) 100%)',
+          WebkitMaskImage:
+            'linear-gradient(to bottom, rgba(0,0,0,1) 52%, rgba(0,0,0,0.55) 78%, rgba(0,0,0,0) 100%)',
+        } as unknown as ViewStyle)
+      : {},
   topScrim: { position: 'absolute', top: 0, left: 0, right: 0 },
   scrim: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '72%' },
   copy: {
