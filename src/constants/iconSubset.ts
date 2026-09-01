@@ -72,6 +72,7 @@ export const SUBSET_ICONS = [
   'open-outline',
   'pencil',
   'person',
+  'person-circle',
   'person-circle-outline',
   'phone-portrait',
   'play',

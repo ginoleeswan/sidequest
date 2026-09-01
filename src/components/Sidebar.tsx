@@ -85,10 +85,14 @@ function NavGroup({
 }
 
 interface Props {
-  /** 'home' for the storefront view, a section key, or null while searching. */
+  /**
+   * 'home' for the storefront view, a section key, 'library' or 'plan'
+   * for those pages, or null while searching.
+   */
   activeKey: string | null;
-  onHome: () => void;
-  onSelect: (section: Section) => void;
+  /** Home owns these; every other page takes the defaults, which navigate. */
+  onHome?: () => void;
+  onSelect?: (section: Section) => void;
   /**
    * Search lives here rather than in a bar above the content: desktop
    * users look top-left for it, and the content column gets its full
@@ -100,9 +104,20 @@ interface Props {
 /** Persistent left navigation for expanded (desktop) layouts. */
 export function Sidebar({ activeKey, onHome, onSelect, search }: Props) {
   const router = useRouter();
+  /**
+   * One sidebar, every page. Home drives it with state - a section is a
+   * view of the storefront, not a route - so from any other page the
+   * same click goes to Home carrying the section as the parameter Home
+   * already reads on arrival.
+   */
+  const goHome = onHome ?? (() => router.push('/'));
+  const select =
+    onSelect ??
+    ((section: Section) =>
+      router.push({ pathname: '/', params: { category: section.key } }));
   return (
     <View style={[styles.sidebar, STICKY]}>
-      <Pressable onPress={onHome} accessibilityRole="link" style={styles.brand}>
+      <Pressable onPress={goHome} accessibilityRole="link" style={styles.brand}>
         <Mark size={22} />
         <Text style={styles.wordmark}>SIDEQUEST</Text>
       </Pressable>
@@ -119,33 +134,44 @@ export function Sidebar({ activeKey, onHome, onSelect, search }: Props) {
           iconName="home"
           iconType="ionicon"
           active={activeKey === 'home'}
-          onPress={onHome}
+          onPress={goHome}
         />
         <NavItem
           label="My Library"
           iconName="library"
           iconType="ionicon"
-          active={false}
+          active={activeKey === 'library'}
           onPress={() => router.push('/library')}
         />
         <NavItem
           label="The Plan"
           iconName="map"
           iconType="ionicon"
-          active={false}
+          active={activeKey === 'plan'}
           onPress={() => router.push('/plan')}
+        />
+        {/* You, with the roots: on a desk the sidebar is the app's one
+            chrome, and an account entry that appeared in some pages'
+            section headers and not others was the same control in
+            different places. */}
+        <NavItem
+          label="You"
+          iconName="person-circle"
+          iconType="ionicon"
+          active={activeKey === 'you'}
+          onPress={() => router.push('/you')}
         />
         <NavGroup
           heading="Discover"
           sections={DISCOVER}
           activeKey={activeKey}
-          onSelect={onSelect}
+          onSelect={select}
         />
         <NavGroup
           heading="Genres"
           sections={GENRES}
           activeKey={activeKey}
-          onSelect={onSelect}
+          onSelect={select}
         />
       </ScrollView>
     </View>

@@ -14,9 +14,10 @@ import { RouteError } from '@/components/RouteError';
 import { BackButton } from '@/components/BackButton';
 import { CoverImage } from '@/components/CoverImage';
 import { FadeInView } from '@/components/FadeInView';
-import { AppHeader } from '@/components/AppHeader';
+import { DesktopShell } from '@/components/DesktopShell';
 import { SiteFooter } from '@/components/SiteFooter';
 import { Message } from '@/components/Message';
+import { Mark } from '@/components/Mark';
 import { PageTitle } from '@/components/PageTitle';
 import { Screen } from '@/components/Screen';
 import { SectionHeader } from '@/components/SectionHeader';
@@ -509,8 +510,13 @@ export default function PlanScreen() {
     ? PACE_OPTIONS
     : [...PACE_OPTIONS, { value: pace, label: `${pace}h · Steam` }];
 
-  return (
-    <Textured style={styles.background}>
+  /**
+   * The desk's one shell. Home stands in the sidebar layout and so
+   * does this page now; a top bar of text links over a centred column
+   * made walking from Home to here feel like leaving for another site.
+   */
+  const page = (
+    <>
       <PageTitle>The Plan — Sidequest</PageTitle>
       {/* Wide gets the header; compact WEB gets a back button; compact
           native gets neither, because it has the tab bar.
@@ -522,9 +528,7 @@ export default function PlanScreen() {
           keeps the brand lockup in this corner - the same anchor the
           game page has - now that a phone on the web has the tab bar
           for getting between the three roots. */}
-      {isExpanded ? (
-        <AppHeader />
-      ) : Platform.OS === 'web' ? (
+      {isExpanded ? null : Platform.OS === 'web' ? (
         <>
           <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
             <BackButton />
@@ -548,7 +552,32 @@ export default function PlanScreen() {
             />
           </Pressable>
         </>
-      ) : null}
+      ) : (
+        /* Native, compact: the wordmark row Home has, so the three tab
+           roots open on the same chrome - the brand on the left, You on
+           the right, at one height - instead of You appearing lower in
+           the section header on two of them. */
+        <View
+          style={[styles.nativeChrome, { paddingTop: insets.top + SPACING.sm }]}
+        >
+          <View style={styles.nativeBrand}>
+            <Mark size={20} />
+            <Text style={styles.nativeWordmark}>SIDEQUEST</Text>
+          </View>
+          <Pressable
+            onPress={() => router.push('/you')}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="You"
+          >
+            <Ionicons
+              name="person-circle-outline"
+              size={23}
+              color={COLORS.lightGrey}
+            />
+          </Pressable>
+        </View>
+      )}
 
       <Screen>
         <View style={{ paddingBottom: SPACING.xl * 1.5 }}>
@@ -557,6 +586,7 @@ export default function PlanScreen() {
               style={[
                 styles.inner,
                 isExpanded && styles.innerWide,
+                isExpanded && styles.innerDesk,
                 {
                   paddingTop: topPad,
                 },
@@ -576,11 +606,7 @@ export default function PlanScreen() {
                 // The chrome row carries You on a compact web page; the
                 // eyebrow row keeps it only where there is no chrome row -
                 // native tab roots, and the desk.
-                onAccount={
-                  Platform.OS === 'web' && !isExpanded
-                    ? undefined
-                    : () => router.push('/you')
-                }
+                onAccount={undefined}
                 actionLabel={canShare ? 'Share →' : undefined}
                 actionAccessibilityLabel="Copy a link to this plan"
                 onAction={canShare ? sharePlan : undefined}
@@ -952,13 +978,28 @@ export default function PlanScreen() {
         />
         <SiteFooter />
       </Screen>
-    </Textured>
+    </>
+  );
+  return isExpanded ? (
+    <DesktopShell activeKey="plan">{page}</DesktopShell>
+  ) : (
+    <Textured style={styles.background}>{page}</Textured>
   );
 }
 
 const styles = StyleSheet.create({
   background: { flexGrow: 1, backgroundColor: COLORS.darkGrey },
   backButton: { position: 'absolute', left: SPACING.lg, zIndex: 30 },
+  nativeChrome: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: GUTTER,
+    height: 40 + SPACING.sm,
+  },
+  nativeBrand: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  nativeWordmark: { ...TYPE.h1, color: COLORS.lightGrey },
+  innerDesk: { paddingHorizontal: 0 },
   youButton: {
     position: 'absolute',
     right: SPACING.lg,
