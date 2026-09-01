@@ -2235,7 +2235,9 @@ const styles = StyleSheet.create({
     opacity: 0.65,
   },
   stageThumbHover: { opacity: 0.9 },
-  stageThumbOn: { borderColor: COLORS.accent, opacity: 1 },
+  // White, not amber: selection is an indicator, and amber is reserved
+  // for time and the primary action. Same rule as the stage dots.
+  stageThumbOn: { borderColor: COLORS.white, opacity: 1 },
   stageThumbImage: { width: '100%', height: '100%' },
   stageThumbMovie: { opacity: 0.85, transform: [{ scale: 1.08 }] },
   /** Centred on the poster, in the app's amber, sized for a thumb. */
