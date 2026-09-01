@@ -9,7 +9,11 @@ import {
 } from 'react';
 
 import { resolveDuration, type Duration } from './duration';
-import { fetchIgdbBatch, type TimeToBeatBySlug } from '@/api/igdb';
+import {
+  fetchIgdbBatch,
+  type IgdbLookup,
+  type TimeToBeatBySlug,
+} from '@/api/igdb';
 import type { Game } from '@/api/types';
 import { useHydrated } from '@/hooks/useHydrated';
 import { readRescued, writeFailureMessage, writeJson } from '@/lib/storage';
@@ -65,7 +69,7 @@ interface DurationsValue {
    * asked about, costs nothing. Screens call this for whatever they are
    * showing and the answers improve every length in the app at once.
    */
-  learnDurations: (slugs: (string | undefined)[]) => void;
+  learnDurations: (games: (IgdbLookup | string | undefined)[]) => void;
   /**
    * The IGDB box art learned by those same calls: a cover image id for
    * `igdbCoverUri`, or null while unknown. Free — it arrives on the
@@ -150,33 +154,39 @@ export function DurationsProvider({ children }: { children: React.ReactNode }) {
    * shelf renders — and forty tiles must not mean forty round trips.
    * Everything that asks inside the window shares one batch.
    */
-  const pending = useRef<Set<string>>(new Set());
+  const pending = useRef<Map<string, IgdbLookup>>(new Map());
   const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const learnDurations = useCallback((slugs: (string | undefined)[]) => {
-    for (const slug of slugs)
-      if (slug && !asked.current.has(slug)) {
-        asked.current.add(slug);
-        pending.current.add(slug);
+  const learnDurations = useCallback(
+    (games: (IgdbLookup | string | undefined)[]) => {
+      for (const entry of games) {
+        // A bare slug is still accepted: plenty of callers know nothing
+        // else, and the server falls back to slug matching for them.
+        const lookup = typeof entry === 'string' ? { slug: entry } : entry;
+        if (!lookup?.slug || asked.current.has(lookup.slug)) continue;
+        asked.current.add(lookup.slug);
+        pending.current.set(lookup.slug, lookup);
       }
-    if (pending.current.size === 0 || flushTimer.current) return;
+      if (pending.current.size === 0 || flushTimer.current) return;
 
-    flushTimer.current = setTimeout(() => {
-      flushTimer.current = null;
-      const wanted = [...pending.current];
-      pending.current.clear();
-      fetchIgdbBatch(wanted)
-        .then(({ times, covers: found }) => {
-          if (Object.keys(times).length > 0)
-            setReported((prev) => ({ ...prev, ...times }));
-          if (Object.keys(found).length > 0)
-            setCovers((prev) => ({ ...prev, ...found }));
-        })
-        // A length nobody has is better than a screen that will not
-        // draw: everything here degrades to RAWG's estimate.
-        .catch(() => {});
-    }, 50);
-  }, []);
+      flushTimer.current = setTimeout(() => {
+        flushTimer.current = null;
+        const wanted = [...pending.current.values()];
+        pending.current.clear();
+        fetchIgdbBatch(wanted)
+          .then(({ times, covers: found }) => {
+            if (Object.keys(times).length > 0)
+              setReported((prev) => ({ ...prev, ...times }));
+            if (Object.keys(found).length > 0)
+              setCovers((prev) => ({ ...prev, ...found }));
+          })
+          // A length nobody has is better than a screen that will not
+          // draw: everything here degrades to RAWG's estimate.
+          .catch(() => {});
+      }, 50);
+    },
+    []
+  );
 
   const setDuration = useCallback((id: number, hours: number) => {
     setOverrides((prev) => {

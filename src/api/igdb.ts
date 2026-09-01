@@ -30,7 +30,22 @@ export const SLUG_BATCH = 40;
 export async function fetchTimesToBeat(
   slugs: string[]
 ): Promise<TimeToBeatBySlug> {
-  return (await fetchIgdbBatch(slugs)).times;
+  return (await fetchIgdbBatch(slugs.map((slug) => ({ slug })))).times;
+}
+
+/**
+ * What the server needs to be sure which game is meant.
+ *
+ * The slug alone is not enough: IGDB suffixes a reused title rather
+ * than overwriting it, so a slug can land on a different game of the
+ * same name from thirty years earlier. The title and the year are what
+ * disambiguate, and both are already on every `Game` the app holds.
+ */
+export interface IgdbLookup {
+  slug: string;
+  name?: string;
+  /** RAWG's release date; only the year is used. */
+  released?: string | null;
 }
 
 /**
@@ -46,20 +61,33 @@ export interface IgdbBatch {
   covers: Record<string, string>;
 }
 
-export async function fetchIgdbBatch(slugs: string[]): Promise<IgdbBatch> {
-  const wanted = [...new Set(slugs.filter(Boolean))];
+export async function fetchIgdbBatch(
+  lookups: IgdbLookup[]
+): Promise<IgdbBatch> {
+  const bySlug = new Map<string, IgdbLookup>();
+  for (const lookup of lookups)
+    if (lookup.slug && !bySlug.has(lookup.slug))
+      bySlug.set(lookup.slug, lookup);
+  const wanted = [...bySlug.values()];
   if (wanted.length === 0) return { times: {}, covers: {} };
 
-  const batches: string[][] = [];
+  const batches: IgdbLookup[][] = [];
   for (let i = 0; i < wanted.length; i += SLUG_BATCH)
     batches.push(wanted.slice(i, i + SLUG_BATCH));
 
   const results = await Promise.all(
     batches.map(async (batch): Promise<IgdbBatch> => {
       try {
-        const response = await fetch(
-          `/api/igdb?slugs=${encodeURIComponent(batch.join(','))}`
-        );
+        // Index-aligned, pipe-separated: a title can hold a comma, and
+        // an empty slot simply means the caller knew only the slug.
+        const query = new URLSearchParams({
+          slugs: batch.map((lookup) => lookup.slug).join(','),
+          names: batch.map((lookup) => lookup.name ?? '').join('|'),
+          years: batch
+            .map((lookup) => lookup.released?.slice(0, 4) ?? '')
+            .join('|'),
+        });
+        const response = await fetch(`/api/igdb?${query}`);
         if (!response.ok) return { times: {}, covers: {} };
         const body = (await response.json()) as {
           durations?: TimeToBeatBySlug;
@@ -104,10 +132,18 @@ export function igdbCoverUri(imageId: string, size = 'cover_big'): string {
 }
 
 export async function fetchIgdbExtras(
-  slug: string
+  slug: string,
+  lookup?: { name?: string; released?: string | null }
 ): Promise<(IgdbExtras & { times: TimeToBeat | null }) | null> {
   try {
-    const response = await fetch(`/api/igdb?slugs=${encodeURIComponent(slug)}`);
+    // Same disambiguation the batch does: without the title and year
+    // this page would happily print a 1994 game's critic score.
+    const query = new URLSearchParams({
+      slugs: slug,
+      names: lookup?.name ?? '',
+      years: lookup?.released?.slice(0, 4) ?? '',
+    });
+    const response = await fetch(`/api/igdb?${query}`);
     if (!response.ok) return null;
     const body = (await response.json()) as {
       durations?: TimeToBeatBySlug;

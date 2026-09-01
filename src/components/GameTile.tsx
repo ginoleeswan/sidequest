@@ -46,8 +46,8 @@ export function GameTile({ game, width, badge, rank }: Props) {
   // sends one batch for the whole shelf. Idempotent, so a screen that
   // already asked costs nothing.
   useEffect(() => {
-    if (game.slug) learnDurations([game.slug]);
-  }, [game.slug, learnDurations]);
+    if (game.slug) learnDurations([game]);
+  }, [game, learnDurations]);
   const { isCompact } = useBreakpoint();
   const toast = useToast();
   const [hovered, setHovered] = useState(false);

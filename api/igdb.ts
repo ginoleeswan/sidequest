@@ -172,6 +172,41 @@ export default async function handler(
     return;
   }
 
+  /**
+   * Titles and years, index-aligned with the slugs, and both optional:
+   * an older client sends neither and still gets slug matching.
+   *
+   * They are here because a slug alone is the wrong key. IGDB suffixes
+   * a reused title rather than overwriting it, so RAWG's `marathon`
+   * (2026) collides with IGDB's `marathon` (Bungie, 1994) and the real
+   * entry is `marathon--2`; `hades` is a 1995 game, not Supergiant's.
+   * Matching on the title as well and then settling ties by release
+   * year is what tells those apart.
+   */
+  const pipeSplit = (value: string | string[] | undefined) =>
+    (Array.isArray(value) ? value.join('|') : (value ?? '')).split('|');
+  const names = pipeSplit(req.query.names);
+  const years = pipeSplit(req.query.years);
+  const wanted = slugs.map((slug, index) => ({
+    slug,
+    // Quotes and backslashes would break out of the apicalypse string;
+    // control characters would break the query. Everything else about a
+    // game title is fair game, including the punctuation IGDB keeps.
+    name: (names[index] ?? '')
+      .replace(/["\\\u0000-\u001f]/g, '')
+      .trim()
+      .slice(0, 120),
+    year: /^\d{4}$/.test(years[index] ?? '') ? Number(years[index]) : null,
+  }));
+
+  // Deduplicated: several requested games can share a title only by
+  // coincidence, but a repeated one would pad the query for nothing.
+  const titles = [
+    ...new Set(
+      wanted.map((want) => want.name).filter((name) => name.length > 0)
+    ),
+  ].map((name) => `"${name}"`);
+
   try {
     const accessToken = await token(clientId, clientSecret);
 
@@ -185,6 +220,8 @@ export default async function handler(
     const games = await igdb<{
       id: number;
       slug: string;
+      name?: string;
+      first_release_date?: number;
       cover?: { image_id?: string };
       aggregated_rating?: number;
       aggregated_rating_count?: number;
@@ -198,10 +235,60 @@ export default async function handler(
       clientId,
       accessToken,
       'games',
-      `fields id,slug,cover.image_id,aggregated_rating,aggregated_rating_count,storyline,similar_games.slug,similar_games.name,similar_games.cover.image_id; where slug = (${slugs
+      `fields id,slug,name,first_release_date,cover.image_id,aggregated_rating,aggregated_rating_count,storyline,similar_games.slug,similar_games.name,similar_games.cover.image_id; where slug = (${slugs
         .map((slug) => `"${slug}"`)
-        .join(',')}); limit ${MAX_SLUGS * 2};`
+        .join(
+          ','
+        )})${titles.length > 0 ? ` | name = (${titles.join(',')})` : ''}; limit ${MAX_SLUGS * 4};`
     );
+
+    /**
+     * Which IGDB entry each request actually meant.
+     *
+     * The query asks broadly - every slug OR every title - so a request
+     * for one game can come back with several, and the naive read (the
+     * one whose slug matches) is how a 2026 shooter ends up wearing a
+     * 1994 box. The year decides: RAWG knows when its game came out,
+     * IGDB knows when each candidate did, and the pair that agree are
+     * the same game. Everything is keyed back to the slug the client
+     * asked with, so callers never learn IGDB's naming.
+     */
+    const chosen = new Map<string, (typeof games)[number]>();
+    for (const want of wanted) {
+      const lowerName = want.name.toLowerCase();
+      const candidates = games.filter(
+        (game) =>
+          game.slug === want.slug ||
+          (lowerName.length > 0 && game.name?.toLowerCase() === lowerName)
+      );
+      if (candidates.length === 0) continue;
+
+      const best = candidates
+        .map((game) => {
+          const releaseYear = game.first_release_date
+            ? new Date(game.first_release_date * 1000).getUTCFullYear()
+            : null;
+          let score = 0;
+          if (want.year != null && releaseYear != null) {
+            const drift = Math.abs(releaseYear - want.year);
+            // A year either way is the same release seen through two
+            // catalogues - a December game RAWG dates to the January
+            // port, a staggered platform rollout.
+            if (drift === 0) score += 12;
+            else if (drift <= 1) score += 7;
+            else score -= drift;
+          }
+          if (game.slug === want.slug) score += 3;
+          if (lowerName.length > 0 && game.name?.toLowerCase() === lowerName)
+            score += 2;
+          // A tie broken towards the entry that actually has art: the
+          // whole reason this lookup exists.
+          if (game.cover?.image_id) score += 1;
+          return { game, score };
+        })
+        .sort((a, b) => b.score - a.score)[0];
+      chosen.set(want.slug, best.game);
+    }
 
     const durations: Record<
       string,
@@ -213,7 +300,7 @@ export default async function handler(
       }
     > = {};
 
-    if (games.length > 0) {
+    if (chosen.size > 0) {
       const times = await igdb<{
         game_id: number;
         hastily?: number;
@@ -224,16 +311,16 @@ export default async function handler(
         clientId,
         accessToken,
         'game_time_to_beats',
-        `fields game_id,hastily,normally,completely,count; where game_id = (${games
-          .map((game) => game.id)
-          .join(',')}); limit ${MAX_SLUGS * 2};`
+        `fields game_id,hastily,normally,completely,count; where game_id = (${[
+          ...new Set([...chosen.values()].map((game) => game.id)),
+        ].join(',')}); limit ${MAX_SLUGS * 2};`
       );
 
       const byGameId = new Map(times.map((row) => [row.game_id, row]));
-      for (const game of games) {
+      for (const [slug, game] of chosen) {
         const row = byGameId.get(game.id);
         if (!row) continue;
-        durations[game.slug] = {
+        durations[slug] = {
           hastily: hours(row.hastily),
           normally: hours(row.normally),
           completely: hours(row.completely),
@@ -252,8 +339,8 @@ export default async function handler(
         similar: { slug: string; name: string; cover: string }[];
       }
     > = {};
-    for (const game of games) {
-      extras[game.slug] = {
+    for (const [slug, game] of chosen) {
+      extras[slug] = {
         cover: game.cover?.image_id ?? null,
         critic:
           game.aggregated_rating != null

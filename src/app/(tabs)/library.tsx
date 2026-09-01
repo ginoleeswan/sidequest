@@ -197,7 +197,7 @@ export default function LibraryScreen() {
     [durationOf]
   );
   useEffect(() => {
-    learnDurations(Object.values(entries).map((entry) => entry.game.slug));
+    learnDurations(Object.values(entries).map((entry) => entry.game));
   }, [entries, learnDurations]);
 
   const stats = useMemo(

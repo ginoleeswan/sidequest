@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CoverImage } from './CoverImage';
+import { Rail } from './Rail';
 import { SectionHeader } from './SectionHeader';
 import { useHydrated } from '@/hooks/useHydrated';
 import { clearRecent, readRecent } from '@/lib/recent';
@@ -43,10 +44,17 @@ export function RecentShelf({ inset = SPACING.md }: { inset?: number }) {
           }}
         />
       </View>
-      <View style={[styles.row, { paddingHorizontal: inset }]}>
-        {games.slice(0, 8).map((game) => (
+      {/* A rail, not a wrapping grid. Wrapped, a two-line title made
+          its own row taller than the others, so the gaps between rows
+          stopped matching and the block read as badly spaced - and the
+          eighth game landed on a second row of one. Continue-watching
+          is a rail in every app that has one, for exactly this. */}
+      <Rail
+        data={games.slice(0, 12)}
+        keyExtractor={(game) => String(game.id)}
+        inset={inset}
+        renderItem={(game) => (
           <Pressable
-            key={game.id}
             onPress={() => router.push(`/game/${game.id}`)}
             accessibilityRole="link"
             accessibilityLabel={game.name}
@@ -58,23 +66,22 @@ export function RecentShelf({ inset = SPACING.md }: { inset?: number }) {
               size="thumb"
               iconSize={18}
             />
-            <Text style={styles.name} numberOfLines={2}>
+            <Text style={styles.name} numberOfLines={1}>
               {game.name}
             </Text>
           </Pressable>
-        ))}
-      </View>
+        )}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   block: { gap: SPACING.sm },
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  item: { width: 108, gap: 6 },
+  item: { width: 132, gap: 6 },
   art: {
-    width: 108,
-    height: 62,
+    width: 132,
+    height: 76,
     borderRadius: RADIUS.sm,
     backgroundColor: COLORS.navy,
   },

@@ -270,7 +270,7 @@ export default function PlanScreen() {
   // Ask what people actually reported for these, once per screen. The
   // answers replace RAWG's average everywhere in the app, not just here.
   useEffect(() => {
-    learnDurations(entries.map((entry) => entry.game.slug));
+    learnDurations(entries.map((entry) => entry.game));
   }, [entries, learnDurations]);
 
   const gamesById = useMemo(

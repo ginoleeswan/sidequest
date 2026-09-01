@@ -633,16 +633,26 @@ export default function GameInfoScreen() {
     // v2: the persisted cache outlives shape changes — a 24h staleTime
     // happily serves yesterday's response without `similar`, and the
     // rail silently never appears. The version retires old entries.
-    queryKey: ['igdb-extras', 'v2', data?.game?.slug],
-    queryFn: () => fetchIgdbExtras(data!.game.slug),
+    // v3: matching now settles on title and year, so a slug that used
+    // to resolve to the wrong game of the same name has a different
+    // answer - and the cached wrong one must not outlive the fix.
+    queryKey: ['igdb-extras', 'v3', data?.game?.slug],
+    queryFn: () =>
+      fetchIgdbExtras(data!.game.slug, {
+        name: data!.game.name,
+        released: data!.game.released,
+      }),
     enabled: Boolean(data?.game?.slug),
     staleTime: 24 * 60 * 60 * 1000,
   });
 
   // What people reported finishing this in, if anyone has.
+  // Held in a name of its own so the effect can depend on the whole
+  // game: matching now needs its title and year, not just the slug.
+  const loaded = data?.game;
   useEffect(() => {
-    if (data?.game.slug) learnDurations([data.game.slug]);
-  }, [data?.game.slug, learnDurations]);
+    if (loaded?.slug) learnDurations([loaded]);
+  }, [loaded, learnDurations]);
 
   // Somewhere to come back to. See lib/recent.
   useEffect(() => {
