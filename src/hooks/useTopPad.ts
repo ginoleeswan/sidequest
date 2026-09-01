@@ -25,8 +25,10 @@ export function useTopPad(hasBackButton: boolean): number {
   const insets = useSafeAreaInsets();
   const { isExpanded } = useBreakpoint();
 
-  // Wide layouts put a real header above the content and need none of this.
-  if (isExpanded) return SPACING.xl * 1.5;
+  // A desk page stands in the sidebar shell, whose column already pads
+  // the top; forty-eight more was the clearance for a top bar that no
+  // longer exists, and it read as a page that had forgotten to start.
+  if (isExpanded) return SPACING.md;
 
   const clears = hasBackButton || Platform.OS === 'web';
   return insets.top + (clears ? SPACING.xl * 2 : SPACING.md);

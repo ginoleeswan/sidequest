@@ -94,11 +94,14 @@ export function WeekView({
   now,
   leadId,
   readOnly = false,
+  bare = false,
 }: {
   scheduled: ScheduledItem[];
   now: number;
   /** Tonight's pick, so the first evening agrees with the card above. */
   leadId?: number;
+  /** Inside a plate that is not its own: no card of its own to draw. */
+  bare?: boolean;
   /**
    * Somebody else's week, so the calendar hand-off stays out of it.
    *
@@ -186,7 +189,7 @@ export function WeekView({
   };
 
   return (
-    <View style={styles.week}>
+    <View style={bare ? styles.weekBare : styles.week}>
       <View style={styles.agenda}>
         {rows.map((evening, index) => {
           const capacity = eveningHours(evening.weekday);
@@ -323,6 +326,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.raised,
     ...SHADOW.card,
   },
+  weekBare: { gap: SPACING.md },
   rule: { height: 1, backgroundColor: COLORS.stroke },
 
   // Tighter than it was: seven rows at thirty points with eight between

@@ -741,7 +741,21 @@ export default function PlanScreen() {
                     )}
                   </View>
 
-                  <View style={isExpanded ? styles.colRight : styles.stack}>
+                  {/* One instrument, not three plates.
+                      The week, the month and the dials were three cards
+                      stacked with three eyebrows, three titles and their
+                      own borders - three instruments for one plan, and
+                      the reason the column read as too much. They are
+                      one object now: three bands on one plate, parted by
+                      hairlines, the way a single dashboard is read top
+                      to bottom. The headings stay; the chrome between
+                      them goes. */}
+                  <View
+                    style={[
+                      isExpanded ? styles.colRight : styles.stack,
+                      styles.instrument,
+                    ]}
+                  >
                     {/* 3 — THIS WEEK.
                         The plan at the scale a person lives at: one
                         row per evening, with its real date, what it
@@ -760,6 +774,7 @@ export default function PlanScreen() {
                           scheduled={schedule.scheduled}
                           now={now}
                           leadId={tonightPick?.id}
+                          bare
                         />
                       </View>
                     )}
@@ -773,7 +788,7 @@ export default function PlanScreen() {
                         strip is the picture; the route beneath it is
                         the sentences, one per game, shortest first. */}
                     {schedule.scheduled.length > 0 && (
-                      <View style={styles.section}>
+                      <View style={[styles.section, styles.band]}>
                         {/* One voice. An eyebrow, a title and then a
                             paragraph restating the strategy was three
                             registers for one idea; the strategy is the
@@ -831,7 +846,7 @@ export default function PlanScreen() {
                     )}
 
                     {unknown.length > 0 && (
-                      <View style={styles.section}>
+                      <View style={[styles.section, styles.band]}>
                         <SectionHeader
                           title="Length unknown"
                           eyebrow={`${unknown.length} games`}
@@ -874,10 +889,10 @@ export default function PlanScreen() {
                         the answer next to the controls is the whole
                         point — move a dial and watch the sentence
                         change. */}
-                    <View style={styles.section}>
+                    <View style={[styles.section, styles.band]}>
                       <SectionHeader
                         title="Your pace"
-                        eyebrow="The two numbers behind all of this"
+                        eyebrow="Move these and the sentence above moves"
                       />
                       <View style={styles.dial}>
                         <Segmented
@@ -1073,6 +1088,22 @@ const styles = StyleSheet.create({
       : null),
   },
   colRight: { flex: 61, minWidth: 0, gap: SPACING.xl },
+  /** The one plate the right column stands on. */
+  instrument: {
+    backgroundColor: COLORS.raised,
+    borderWidth: 1,
+    borderColor: COLORS.stroke,
+    borderRadius: RADIUS.md,
+    padding: SPACING.lg,
+    gap: SPACING.lg,
+    ...SHADOW.card,
+  },
+  /** A band after the first: parted from the one above by a hairline. */
+  band: {
+    paddingTop: SPACING.lg,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.stroke,
+  },
   routeNote: {
     ...TYPE.p,
     color: COLORS.mediumGrey,
@@ -1082,15 +1113,7 @@ const styles = StyleSheet.create({
    * The month card: the horizon strip on top, the route beneath it —
    * the picture, then its sentences, on the same plane the week uses.
    */
-  monthCard: {
-    gap: SPACING.md,
-    padding: SPACING.lg,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.stroke,
-    backgroundColor: COLORS.raised,
-    ...SHADOW.card,
-  },
+  monthCard: { gap: SPACING.md },
   monthRule: { height: 1, backgroundColor: COLORS.stroke },
   /** The line that replaces four hundred rows — see ROUTE_SHOWN. */
   routeRest: {
@@ -1116,11 +1139,6 @@ const styles = StyleSheet.create({
    * white and a shadow is what lifting looks like on this ground.
    */
   dial: {
-    backgroundColor: COLORS.raised,
-    borderWidth: 1,
-    borderColor: COLORS.stroke,
-    borderRadius: RADIUS.md,
-    padding: SPACING.lg,
     gap: SPACING.lg,
     ...SHADOW.card,
   },

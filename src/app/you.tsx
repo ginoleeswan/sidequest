@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AppHeader } from '@/components/AppHeader';
+import { DesktopShell } from '@/components/DesktopShell';
 import { BackButton } from '@/components/BackButton';
 import { CoverImage } from '@/components/CoverImage';
 import { FadeInView } from '@/components/FadeInView';
@@ -220,8 +220,13 @@ export default function YouScreen() {
   /** The name a screen can use when there is no name: the local part. */
   const who = email ? (email.split('@')[0] ?? 'You') : 'You';
 
-  return (
-    <Textured style={styles.background}>
+  /**
+   * The desk's one shell, the same one Home, Library and Plan stand in.
+   * You had the old top bar of text links, which made the account
+   * page look like a different site from the three it is reached from.
+   */
+  const page = (
+    <>
       <PageTitle>You — Sidequest</PageTitle>
       {/* A pushed screen, so it keeps its back button on BOTH platforms.
           This used to render one on web only, which left the native
@@ -229,9 +234,7 @@ export default function YouScreen() {
           still reserving the clearance the missing button would have
           needed. A hundred and twenty points of nothing, above a dead
           end. */}
-      {isExpanded ? (
-        <AppHeader />
-      ) : (
+      {isExpanded ? null : (
         <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
           <BackButton onImage={Boolean(cover)} />
         </View>
@@ -394,7 +397,12 @@ export default function YouScreen() {
         {/* Web keeps its footer; native does not — see SiteFooter. */}
         <SiteFooter />
       </Screen>
-    </Textured>
+    </>
+  );
+  return isExpanded ? (
+    <DesktopShell activeKey="you">{page}</DesktopShell>
+  ) : (
+    <Textured style={styles.background}>{page}</Textured>
   );
 }
 
