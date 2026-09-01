@@ -253,4 +253,18 @@ const css = `
     outline-offset: 2px;
     border-radius: 4px;
   }
+
+  /*
+   * The stage trailer fills its frame. expo-video's web view lays the
+   * <video> out at the file's own pixel size - 1920x1080 inside a
+   * 1208x468 stage, measured - so object-fit had nothing to fit and
+   * the stage showed an arbitrary top-left crop. Sized to the layer,
+   * cover crops from the centre, which is the framing a trailer's
+   * own editor composed for.
+   */
+  [data-testid="stage-trailer"] video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover;
+  }
 `;

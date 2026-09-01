@@ -1,15 +1,19 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { CoverImage } from './CoverImage';
 import { Rail } from './Rail';
+import { ScaleButton } from './ScaleButton';
 import { SectionHeader } from './SectionHeader';
 import { useHydrated } from '@/hooks/useHydrated';
 import { clearRecent, readRecent } from '@/lib/recent';
 import { COLORS } from '@/styles/colors';
-import { RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { RADIUS, SHADOW, SPACING } from '@/styles/theme';
+import { OVER_IMAGE, TYPE } from '@/styles/typography';
 
 /**
  * Where you left off.
@@ -40,6 +44,7 @@ export function RecentShelf({ inset = SPACING.md }: { inset?: number }) {
           itself as well sat one whole gutter inside them, which is
           what put this title and Clear out of line with everything. */}
       <SectionHeader
+        eyebrow="Pick up the thread"
         title="Where you left off"
         actionLabel="Clear"
         onAction={() => {
@@ -57,22 +62,38 @@ export function RecentShelf({ inset = SPACING.md }: { inset?: number }) {
         keyExtractor={(game) => String(game.id)}
         inset={inset}
         renderItem={(game) => (
-          <Pressable
+          /* A card, in the billboard's grammar: the picture is the
+             object, the name is set on it over a scrim, and a small
+             resume glyph says what tapping does. The thumbnail-with-a-
+             grey-caption it replaces was a list row lying on its side;
+             every continue-watching row in the reference apps is a
+             frame you could press play on. */
+          <ScaleButton
             onPress={() => router.push(`/game/${game.id}`)}
-            accessibilityRole="link"
-            accessibilityLabel={game.name}
-            style={styles.item}
+            style={styles.card}
+            activeScale={0.97}
+            hoverScale={1.03}
+            accessibilityLabel={`Back to ${game.name}`}
           >
             <CoverImage
               uri={game.background_image}
-              style={styles.art}
-              size="thumb"
-              iconSize={18}
+              style={StyleSheet.absoluteFill}
+              size="tile"
+              iconSize={22}
             />
-            <Text style={styles.name} numberOfLines={1}>
+            <LinearGradient
+              colors={['#00000000', '#00000066', '#000000b8']}
+              locations={[0.4, 0.75, 1]}
+              style={StyleSheet.absoluteFill}
+              pointerEvents="none"
+            />
+            <View style={styles.resume} pointerEvents="none">
+              <Ionicons name="play" size={11} color={COLORS.white} />
+            </View>
+            <Text style={[styles.name, OVER_IMAGE.heading]} numberOfLines={2}>
               {game.name}
             </Text>
-          </Pressable>
+          </ScaleButton>
         )}
       />
     </View>
@@ -87,15 +108,33 @@ const styles = StyleSheet.create({
    * spaced however tidy the row itself was.
    */
   block: { gap: SPACING.sm + 2, marginBottom: SPACING.xl },
-  item: { width: 132, gap: 6 },
-  art: {
-    width: 132,
-    height: 76,
-    borderRadius: RADIUS.sm,
+  card: {
+    width: 216,
+    height: 122,
+    borderRadius: RADIUS.md,
+    overflow: 'hidden',
     backgroundColor: COLORS.navy,
+    borderWidth: 1,
+    borderColor: COLORS.stroke,
+    justifyContent: 'flex-end',
+    padding: SPACING.sm + 4,
+    ...SHADOW.card,
+  },
+  resume: {
+    position: 'absolute',
+    top: SPACING.sm,
+    left: SPACING.sm,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    // The plate, at the strength every other on-art control keeps.
+    backgroundColor: 'rgba(0,0,0,0.38)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingLeft: 2,
   },
   name: {
-    ...TYPE.fine,
-    color: COLORS.mediumGrey,
+    ...TYPE.labelSmall,
+    color: COLORS.white,
   },
 });

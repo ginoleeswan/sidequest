@@ -588,7 +588,10 @@ export default function HomeScreen() {
                           games={games}
                           headerHeight={0}
                           height={stageHeight}
-                          inset={SPACING.xl}
+                          // A masthead's margin, not a shelf's: the copy
+                          // sits a step further into the picture than
+                          // the rails below sit into the page.
+                          inset={SPACING.xl * 1.5}
                         />
                       </View>
                     </FadeInView>

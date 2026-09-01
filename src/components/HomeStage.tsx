@@ -204,6 +204,7 @@ function SlideArt({
   trailer: Movie | null;
 }) {
   const reduced = useReducedMotion();
+  const { isExpanded } = useBreakpoint();
   const drift = useAnimatedValue(0);
   const parallax = useStageParallax(height);
   const room = Math.round(height * PARALLAX_RATE);
@@ -276,6 +277,26 @@ function SlideArt({
           picture exactly as it was over the still. Keyed so a new
           trailer is a fresh fade rather than a source swap. */}
       {trailer ? <StageTrailer key={trailer.id} movie={trailer} /> : null}
+      {/* On a desk, a third scrim runs left to right. The copy lives in
+          the frame's left third there, and a bottom-only gradient left
+          it reading across the picture's brightest region; the
+          streaming mastheads all dim the copy's side and let the art
+          stay loud on the other. It fades out by the midline so the
+          right half is the untouched picture. */}
+      {isExpanded ? (
+        <LinearGradient
+          colors={[
+            'rgba(39,47,63,0.82)',
+            'rgba(39,47,63,0.45)',
+            'rgba(39,47,63,0)',
+          ]}
+          locations={[0, 0.34, 0.62]}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+      ) : null}
       {/* Two scrims, not one. The bottom one buys legibility for the copy;
           the top one lets the header's own gradient land on something
           rather than on whatever the artwork happened to be. */}
@@ -300,17 +321,29 @@ function SlideArt({
       />
       <LinearGradient
         colors={[
-          'rgba(39,47,63,0)',
-          'rgba(39,47,63,0.5)',
-          'rgba(39,47,63,0.88)',
+          'rgba(51,61,81,0)',
+          'rgba(51,61,81,0.5)',
+          'rgba(51,61,81,0.9)',
+          COLORS.darkGrey,
           COLORS.darkGrey,
         ]}
-        // Reaching full opacity a fifth of the way from the bottom left
-        // the lowest hundred pixels as a flat grey shelf with the buttons
-        // sitting on it, and the picture appeared to stop rather than to
-        // continue underneath. It only goes solid at the very last, where
-        // it has to meet the page.
-        locations={[0, 0.5, 0.88, 1]}
+        /**
+         * Solid before the edge, not at it.
+         *
+         * Going opaque only at the last pixel was fine over a still,
+         * where the residual twelve percent of picture is invisible.
+         * Over a bright, moving trailer it is a lighter band that ends
+         * in one hard line where the page ground begins - measured at
+         * 3x, plainly there. The gradient now reaches the page's own
+         * colour seven percent above the stage's bottom and holds it,
+         * so the stage meets the page darkGrey on darkGrey and the join
+         * cannot be seen. The picture still fades, not stops: the
+         * solid strip is the last forty pixels of a 400-pixel dissolve.
+         * The stops are the page ground's own RGB, not the navy the
+         * old stops carried - a navy scrim ending in grey was itself a
+         * colour step at the join.
+         */
+        locations={[0, 0.45, 0.8, 0.93, 1]}
         style={styles.scrim}
         pointerEvents="none"
       />
@@ -345,6 +378,7 @@ function StageCopy({
   onSurprise: () => void;
 }) {
   const reduced = useReducedMotion();
+  const { isExpanded } = useBreakpoint();
   const enter = useAnimatedValue(reduced ? 1 : 0);
 
   /**
@@ -369,7 +403,15 @@ function StageCopy({
    */
   const length = slide.title.length;
   const fit = length > 32 ? 0.76 : length > 22 ? 0.88 : 1;
-  const fontSize = Math.round(Math.min(Math.max(width * 0.094 * fit, 26), 56));
+  /**
+   * Capped lower on a desk than the width alone would allow. At 56 in
+   * a 640 column "Continue Grand Theft Auto V" broke to leave "V" on a
+   * line of its own - the orphan is the tell of a headline set to fill
+   * a frame rather than to fit its sentence. 48 across the wider desk
+   * column holds a 27-character title on one line.
+   */
+  const cap = isExpanded ? 48 : 56;
+  const fontSize = Math.round(Math.min(Math.max(width * 0.094 * fit, 26), cap));
   const display = {
     fontSize,
     lineHeight: Math.round(fontSize * 1.02),
@@ -426,7 +468,13 @@ function StageCopy({
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-      <View style={[styles.copy, { left: inset, right: inset }]}>
+      <View
+        style={[
+          styles.copy,
+          isExpanded && styles.copyWide,
+          { left: inset, right: inset },
+        ]}
+      >
         <Animated.Text style={[styles.eyebrow, step(0, 0.4)]} numberOfLines={1}>
           {slide.eyebrow.toUpperCase()}
         </Animated.Text>
@@ -466,7 +514,7 @@ function StageCopy({
               listener and nothing to keep in sync. On a wide stage they
               ride the end of the action row instead of stranding
               themselves against the far edge. */}
-          {count > 1 && (
+          {count > 1 && !isExpanded && (
             <View style={styles.dots} pointerEvents="none">
               {Array.from({ length: count }, (_, i) => (
                 <View
@@ -478,6 +526,19 @@ function StageCopy({
           )}
         </Animated.View>
       </View>
+      {/* On a desk the dots take the frame's own corner, the way a
+          billboard's page indicator does, rather than riding the end of
+          the action row a screen's width from the frame's edge. */}
+      {count > 1 && isExpanded && (
+        <View
+          style={[styles.dotsCorner, { right: inset }]}
+          pointerEvents="none"
+        >
+          {Array.from({ length: count }, (_, i) => (
+            <View key={i} style={[styles.dot, i === index && styles.dotOn]} />
+          ))}
+        </View>
+      )}
     </View>
   );
 }
@@ -503,6 +564,22 @@ const styles = StyleSheet.create({
      * a screen away from the buttons it belongs to.
      */
     maxWidth: 640,
+  },
+  /**
+   * Inside the frame, not on its rim. On a desk the copy sits up off
+   * the bottom edge by the same inset it keeps from the left, so the
+   * block reads as placed in the picture rather than resting on the
+   * shelf below it; and the column widens to hold a full title.
+   */
+  copyWide: { bottom: SPACING.xl * 1.5, maxWidth: 720 },
+  dotsCorner: {
+    position: 'absolute',
+    // The action row's centre line: copy bottom (48) plus half a 40pt
+    // button, less half a dot. Measured, not eyeballed.
+    bottom: SPACING.xl * 1.5 + 20 - 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   /**
    * The copy carries its own legibility.

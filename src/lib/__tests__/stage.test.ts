@@ -142,7 +142,9 @@ describe('stageHeight', () => {
    * phone's proportion left no room for the first shelf.
    */
   it('leaves a desktop room to see the first shelf', () => {
-    expect(stageHeight(900, true)).toBe(468);
+    // 0.62 of a 900px window: a masthead near the 16:7 the streaming
+    // apps use, and the first shelf's header still above the fold.
+    expect(stageHeight(900, true)).toBe(558);
     expect(stageHeight(900, true)).toBeLessThan(stageHeight(900, false));
   });
 

@@ -77,8 +77,15 @@ export const STAGE_BOUNDS = {
   min: 380,
   max: 620,
   ratio: 0.66,
-  expandedRatio: 0.52,
-  expandedMin: 340,
+  /**
+   * Taller on a desk than it was. At 0.52 of a 900px window the stage
+   * was a 2.6:1 letterbox - the art's subject cropped out top and
+   * bottom, the copy jammed against the lower edge. 0.62 lands near
+   * the 16:7 the streaming mastheads use: room for the picture to be
+   * a picture and for the copy to sit inside it rather than on its rim.
+   */
+  expandedRatio: 0.62,
+  expandedMin: 460,
 } as const;
 
 export function stageHeight(windowHeight: number, isExpanded: boolean): number {
