@@ -211,7 +211,7 @@ export default function PlanScreen() {
   const topPad = useTopPad(false);
 
   const { byStatus, entries: libraryEntries } = useLibrary();
-  const { durationOf, learnDurations, count: correctionCount } = useDurations();
+  const { durationOf, learnDurations } = useDurations();
   const [editing, setEditing] = useState<Game | null>(null);
 
   const [pace, setPace] = usePersistedState('sidequest.plan.pace', 6);
@@ -616,11 +616,18 @@ export default function PlanScreen() {
                   nothing until you have already understood the page,
                   and the sentence that explains it sat at the very
                   bottom inside the pace card. The page's one thesis
-                  was its last line. It is the first now; the copy by
-                  the dials stays, because there it is live feedback —
-                  the same verdict in two registers, on purpose. */}
+                  was its last line. It is the first now, and the only
+                  one: the dials below move this sentence rather than
+                  a second copy of it. */}
               {!empty && (
-                <Text style={styles.standfirst}>{verdictSentence}</Text>
+                <Text
+                  style={[
+                    styles.standfirst,
+                    isExpanded && styles.standfirstWide,
+                  ]}
+                >
+                  {verdictSentence}
+                </Text>
               )}
 
               {empty ? (
@@ -767,24 +774,19 @@ export default function PlanScreen() {
                         the sentences, one per game, shortest first. */}
                     {schedule.scheduled.length > 0 && (
                       <View style={styles.section}>
+                        {/* One voice. An eyebrow, a title and then a
+                            paragraph restating the strategy was three
+                            registers for one idea; the strategy is the
+                            eyebrow now, and correcting a length is
+                            what tapping one does - the rows say so. */}
                         <SectionHeader
                           title="This month"
                           eyebrow={
                             landed.length > 0
-                              ? 'Where the credits land — and where they landed'
-                              : 'Where the credits land'
+                              ? 'Quick wins first — where the credits land, and landed'
+                              : 'Quick wins first — where the credits land'
                           }
                         />
-                        <Text style={styles.routeNote}>
-                          Quick wins first — momentum is the strategy.
-                          {correctionCount > 0
-                            ? `  ${correctionCount} ${
-                                correctionCount === 1
-                                  ? 'length is'
-                                  : 'lengths are'
-                              } yours, and the plan trusts those over the estimates.`
-                            : '  Tap any length to correct it.'}
-                        </Text>
                         <View style={styles.monthCard}>
                           <HorizonStrip
                             scheduled={schedule.scheduled}
@@ -891,9 +893,6 @@ export default function PlanScreen() {
                           onChange={setWindowWeeks}
                         />
                         <View style={styles.dialResult}>
-                          <Text style={styles.dialVerdict}>
-                            {verdictSentence}
-                          </Text>
                           {/* Between the verdict and the price of
                               pins, because it is about whether the
                               verdict can be believed. Never a telling
@@ -1196,14 +1195,28 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
 
+  /**
+   * The page's thesis, set as one.
+   *
+   * "You can finish it by Nov 16" was fourteen points of grey under a
+   * nineteen-point title - the page's one sentence, dressed as a
+   * caption, and then said again at the bottom beside the dials. It is
+   * the masthead now: display type, white, said once, and the dials
+   * below change it live because it is the same sentence.
+   */
   standfirst: {
-    ...TYPE.body,
-    color: COLORS.mediumGrey,
-    // Pulled up under the header it belongs to, and held to a measure
-    // a sentence is comfortable at.
-    marginTop: -SPACING.sm,
+    ...TYPE.title,
+    color: COLORS.white,
+    marginTop: -SPACING.xs,
     marginBottom: SPACING.md,
-    maxWidth: 520,
+    maxWidth: 640,
+  },
+  standfirstWide: {
+    fontSize: 34,
+    lineHeight: 39,
+    letterSpacing: -0.6,
+    marginBottom: SPACING.lg,
+    maxWidth: 760,
   },
   section: { gap: SPACING.sm + 2 },
   /**

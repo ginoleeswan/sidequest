@@ -325,7 +325,10 @@ const styles = StyleSheet.create({
   },
   rule: { height: 1, backgroundColor: COLORS.stroke },
 
-  agenda: { gap: SPACING.sm },
+  // Tighter than it was: seven rows at thirty points with eight between
+  // them was a chart the height of a screenshot for a week that mostly
+  // says "an hour and a half". The rows keep their meaning at twenty-four.
+  agenda: { gap: 6 },
   eveningRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -348,11 +351,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    height: 30,
+    height: 24,
   },
   block: {
     height: '100%',
-    borderRadius: 7,
+    borderRadius: 6,
     justifyContent: 'center',
     paddingHorizontal: SPACING.sm,
     overflow: 'hidden',
@@ -361,7 +364,7 @@ const styles = StyleSheet.create({
   blockText: { ...TYPE.labelTiny, color: COLORS.navy },
   freeBlock: {
     height: '100%',
-    borderRadius: 7,
+    borderRadius: 6,
     borderWidth: 1,
     borderStyle: 'dashed',
     borderColor: COLORS.strokeStrong,

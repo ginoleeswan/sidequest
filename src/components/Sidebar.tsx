@@ -118,7 +118,10 @@ export function Sidebar({ activeKey, onHome, onSelect, search }: Props) {
   return (
     <View style={[styles.sidebar, STICKY]}>
       <Pressable onPress={goHome} accessibilityRole="link" style={styles.brand}>
-        <Mark size={22} />
+        {/* The phone's exact lockup - Mark at 20, wordmark at h1 in
+            lightGrey - not a slightly larger, slightly whiter cousin of
+            it. One brand, one size, whichever surface's corner it is in. */}
+        <Mark size={20} />
         <Text style={styles.wordmark}>SIDEQUEST</Text>
       </Pressable>
       <Text style={styles.tagline}>Discover your next game</Text>
@@ -209,7 +212,7 @@ const styles = StyleSheet.create({
   brand: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   wordmark: {
     ...TYPE.h1,
-    color: COLORS.white,
+    color: COLORS.lightGrey,
   },
   tagline: {
     ...TYPE.fine,
