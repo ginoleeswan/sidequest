@@ -163,7 +163,7 @@ function Slide({
    */
   const length = slide.title.length;
   const fit = length > 32 ? 0.76 : length > 22 ? 0.88 : 1;
-  const fontSize = Math.round(Math.min(Math.max(width * 0.115 * fit, 30), 68));
+  const fontSize = Math.round(Math.min(Math.max(width * 0.094 * fit, 26), 56));
   const display = {
     fontSize,
     lineHeight: Math.round(fontSize * 1.02),
