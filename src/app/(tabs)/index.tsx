@@ -19,10 +19,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Ionicons from '@expo/vector-icons/Ionicons';
 
@@ -55,7 +52,7 @@ import { SearchInput } from '@/components/SearchInput';
 import { SectionHeader } from '@/components/SectionHeader';
 import { Shelf } from '@/components/Shelf';
 import { WhenNear } from '@/components/WhenNear';
-import { Sidebar } from '@/components/Sidebar';
+import { DesktopShell } from '@/components/DesktopShell';
 import {
   SkeletonCategory,
   SkeletonCompactHome,
@@ -550,146 +547,136 @@ export default function HomeScreen() {
   // ------------------------------------------------------------- expanded
   if (isExpanded) {
     return (
-      <Textured style={styles.background}>
+      <DesktopShell
+        activeKey={searching ? null : isHome ? 'home' : selection}
+        onHome={goHome}
+        onSelect={selectSection}
+        search={
+          <SearchInput
+            value={query}
+            onChangeText={setQuery}
+            inputRef={searchRef}
+            style={styles.searchSidebar}
+          />
+        }
+      >
         <PageTitle>Sidequest — Discover your next game</PageTitle>
-        <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-          <View style={[styles.expandedShell, { minHeight: windowHeight }]}>
-            <Sidebar
-              activeKey={searching ? null : isHome ? 'home' : selection}
-              onHome={goHome}
-              onSelect={selectSection}
-              search={
-                <SearchInput
-                  value={query}
-                  onChangeText={setQuery}
-                  inputRef={searchRef}
-                  style={styles.searchSidebar}
-                />
-              }
-            />
-
-            <View style={styles.main}>
-              {status ??
-                (list.isPending ? (
-                  isHome ? (
-                    <View style={styles.homeScroll}>
-                      <SkeletonHero />
-                      <SkeletonShelf inset={SPACING.xl} />
-                      <SkeletonShelf inset={SPACING.xl} />
-                    </View>
-                  ) : (
-                    <SkeletonGrid columns={columns} />
-                  )
-                ) : isHome ? (
-                  <Screen style={styles.homeScroll}>
-                    <FadeInView>
-                      <View style={styles.stageBleedWide}>
-                        <HomeStage
-                          slides={stage}
-                          games={games}
-                          headerHeight={0}
-                          height={stageHeight}
-                          // A masthead's margin, not a shelf's: the copy
-                          // sits a step further into the picture than
-                          // the rails below sit into the page.
-                          inset={SPACING.xl * 1.5}
-                        />
-                      </View>
-                    </FadeInView>
-                    <SeriesNews inset={SPACING.xl} />
-                    <RecentShelf inset={SPACING.xl} />
-                    <Shelf
-                      section={{
-                        ...QUICK_WINS,
-                        title: session.title,
-                        eyebrow: session.eyebrow,
-                      }}
-                      games={quickWins}
-                      inset={SPACING.xl}
+        <>
+          {status ??
+            (list.isPending ? (
+              isHome ? (
+                <View style={styles.homeScroll}>
+                  <SkeletonHero />
+                  <SkeletonShelf inset={SPACING.xl} />
+                  <SkeletonShelf inset={SPACING.xl} />
+                </View>
+              ) : (
+                <SkeletonGrid columns={columns} />
+              )
+            ) : isHome ? (
+              <Screen style={styles.homeScroll}>
+                <FadeInView>
+                  <View style={styles.stageBleedWide}>
+                    <HomeStage
+                      slides={stage}
+                      games={games}
+                      headerHeight={0}
+                      height={stageHeight}
+                      // A masthead's margin, not a shelf's: the copy
+                      // sits a step further into the picture than
+                      // the rails below sit into the page.
+                      inset={SPACING.xl * 1.5}
                     />
+                  </View>
+                </FadeInView>
+                <SeriesNews inset={SPACING.xl} />
+                <RecentShelf inset={SPACING.xl} />
+                <Shelf
+                  section={{
+                    ...QUICK_WINS,
+                    title: session.title,
+                    eyebrow: session.eyebrow,
+                  }}
+                  games={quickWins}
+                  inset={SPACING.xl}
+                />
+                <Shelf
+                  section={DISCOVER[0]}
+                  games={trendingShelf}
+                  onViewAll={selectSection}
+                  inset={SPACING.xl}
+                />
+                {billboard ? (
+                  <View style={styles.billboardSlotWide}>
+                    <Billboard game={billboard} />
+                  </View>
+                ) : null}
+                <MoodShelf onOpen={selectSection} inset={SPACING.xl} />
+                <PromptBand inset={SPACING.xl} />
+                {personal.mood && (moodShelf.data?.length ?? 0) > 0 && (
+                  <Shelf
+                    section={{
+                      ...DISCOVER[0],
+                      key: personal.mood.key,
+                      title: personal.mood.title,
+                      eyebrow: personal.mood.eyebrow,
+                    }}
+                    games={withoutOwned(moodShelf.data ?? [], library)}
+                    inset={SPACING.xl}
+                  />
+                )}
+                {personal.finished && (finishedShelf.data?.length ?? 0) > 0 && (
+                  <Shelf
+                    section={{
+                      ...DISCOVER[0],
+                      key: personal.finished.key,
+                      title: personal.finished.title,
+                      eyebrow: personal.finished.eyebrow,
+                    }}
+                    games={withoutOwned(finishedShelf.data ?? [], library)}
+                    inset={SPACING.xl}
+                  />
+                )}
+                {personal.length && lengthShelf.length > 0 && (
+                  <Shelf
+                    section={{
+                      ...QUICK_WINS,
+                      key: personal.length.key,
+                      title: personal.length.title,
+                      eyebrow: personal.length.eyebrow,
+                    }}
+                    games={lengthShelf}
+                    inset={SPACING.xl}
+                  />
+                )}
+                {homeShelves.map((shelf, index) => (
+                  <WhenNear
+                    key={shelf.key}
+                    placeholder={
+                      <SkeletonShelf
+                        inset={SPACING.xl}
+                        eyebrow={shelf.variant === 'ranked'}
+                      />
+                    }
+                  >
                     <Shelf
-                      section={DISCOVER[0]}
-                      games={trendingShelf}
+                      section={shelf}
+                      games={shelfGames[index] ?? []}
                       onViewAll={selectSection}
                       inset={SPACING.xl}
                     />
-                    {billboard ? (
-                      <View style={styles.billboardSlotWide}>
-                        <Billboard game={billboard} />
-                      </View>
-                    ) : null}
-                    <MoodShelf onOpen={selectSection} inset={SPACING.xl} />
-                    <PromptBand inset={SPACING.xl} />
-                    {personal.mood && (moodShelf.data?.length ?? 0) > 0 && (
-                      <Shelf
-                        section={{
-                          ...DISCOVER[0],
-                          key: personal.mood.key,
-                          title: personal.mood.title,
-                          eyebrow: personal.mood.eyebrow,
-                        }}
-                        games={withoutOwned(moodShelf.data ?? [], library)}
-                        inset={SPACING.xl}
-                      />
-                    )}
-                    {personal.finished &&
-                      (finishedShelf.data?.length ?? 0) > 0 && (
-                        <Shelf
-                          section={{
-                            ...DISCOVER[0],
-                            key: personal.finished.key,
-                            title: personal.finished.title,
-                            eyebrow: personal.finished.eyebrow,
-                          }}
-                          games={withoutOwned(
-                            finishedShelf.data ?? [],
-                            library
-                          )}
-                          inset={SPACING.xl}
-                        />
-                      )}
-                    {personal.length && lengthShelf.length > 0 && (
-                      <Shelf
-                        section={{
-                          ...QUICK_WINS,
-                          key: personal.length.key,
-                          title: personal.length.title,
-                          eyebrow: personal.length.eyebrow,
-                        }}
-                        games={lengthShelf}
-                        inset={SPACING.xl}
-                      />
-                    )}
-                    {homeShelves.map((shelf, index) => (
-                      <WhenNear
-                        key={shelf.key}
-                        placeholder={
-                          <SkeletonShelf
-                            inset={SPACING.xl}
-                            eyebrow={shelf.variant === 'ranked'}
-                          />
-                        }
-                      >
-                        <Shelf
-                          section={shelf}
-                          games={shelfGames[index] ?? []}
-                          onViewAll={selectSection}
-                          inset={SPACING.xl}
-                        />
-                      </WhenNear>
-                    ))}
-                    <View style={styles.installSlotWide}>
-                      <InstallPrompt />
-                    </View>
-                    <SiteFooter inset={SPACING.xl} />
-                  </Screen>
-                ) : (
-                  grid
+                  </WhenNear>
                 ))}
-            </View>
-          </View>
-        </SafeAreaView>
-      </Textured>
+                <View style={styles.installSlotWide}>
+                  <InstallPrompt />
+                </View>
+                <SiteFooter inset={SPACING.xl} />
+              </Screen>
+            ) : (
+              grid
+            ))}
+        </>
+      </DesktopShell>
     );
   }
 

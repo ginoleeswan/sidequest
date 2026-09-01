@@ -24,9 +24,18 @@ interface NavItemProps {
   iconType: IconType;
   active: boolean;
   onPress: () => void;
+  /** The rail at its narrow width: the glyph alone, the label spoken. */
+  compact?: boolean;
 }
 
-function NavItem({ label, iconName, iconType, active, onPress }: NavItemProps) {
+function NavItem({
+  label,
+  iconName,
+  iconType,
+  active,
+  onPress,
+  compact = false,
+}: NavItemProps) {
   const [hovered, setHovered] = useState(false);
   const color = active
     ? COLORS.white
@@ -41,9 +50,12 @@ function NavItem({ label, iconName, iconType, active, onPress }: NavItemProps) {
       onHoverOut={() => setHovered(false)}
       style={[
         styles.navItem,
+        compact && styles.navItemCompact,
         active && styles.navItemActive,
         !active && hovered && styles.navItemHovered,
       ]}
+      accessibilityRole="link"
+      accessibilityLabel={label}
     >
       <DynamicIcon
         type={iconType}
@@ -51,7 +63,9 @@ function NavItem({ label, iconName, iconType, active, onPress }: NavItemProps) {
         size={18}
         color={active ? COLORS.accent : color}
       />
-      <Text style={[styles.navLabel, { color }]}>{label}</Text>
+      {compact ? null : (
+        <Text style={[styles.navLabel, { color }]}>{label}</Text>
+      )}
     </Pressable>
   );
 }
@@ -61,15 +75,21 @@ function NavGroup({
   sections,
   activeKey,
   onSelect,
+  compact,
 }: {
   heading: string;
   sections: Section[];
   activeKey: string | null;
   onSelect: (section: Section) => void;
+  compact: boolean;
 }) {
   return (
     <>
-      <Text style={styles.navHeading}>{heading}</Text>
+      {compact ? (
+        <View style={styles.navRule} />
+      ) : (
+        <Text style={styles.navHeading}>{heading}</Text>
+      )}
       {sections.map((section) => (
         <NavItem
           key={section.key}
@@ -78,6 +98,7 @@ function NavGroup({
           iconType={section.iconType}
           active={section.key === activeKey}
           onPress={() => onSelect(section)}
+          compact={compact}
         />
       ))}
     </>
@@ -99,10 +120,27 @@ interface Props {
    * height back for the thing they came to see.
    */
   search?: React.ReactNode;
+  /**
+   * The rail at 72 points: the Mark, the glyphs, the hour. Collapses
+   * itself where the column is tight and on request anywhere; a rail
+   * you can fold is what lets a desk page have the whole desk.
+   */
+  collapsed?: boolean;
+  onToggle?: () => void;
+  /** The foot of the rail - tonight's clock lives here. */
+  foot?: React.ReactNode;
 }
 
 /** Persistent left navigation for expanded (desktop) layouts. */
-export function Sidebar({ activeKey, onHome, onSelect, search }: Props) {
+export function Sidebar({
+  activeKey,
+  onHome,
+  onSelect,
+  search,
+  collapsed = false,
+  onToggle,
+  foot,
+}: Props) {
   const router = useRouter();
   /**
    * One sidebar, every page. Home drives it with state - a section is a
@@ -116,16 +154,62 @@ export function Sidebar({ activeKey, onHome, onSelect, search }: Props) {
     ((section: Section) =>
       router.push({ pathname: '/', params: { category: section.key } }));
   return (
-    <View style={[styles.sidebar, STICKY]}>
-      <Pressable onPress={goHome} accessibilityRole="link" style={styles.brand}>
-        {/* The phone's exact lockup - Mark at 20, wordmark at h1 in
+    <View
+      style={[styles.sidebar, collapsed && styles.sidebarCollapsed, STICKY]}
+    >
+      <View style={styles.top}>
+        <Pressable
+          onPress={goHome}
+          accessibilityRole="link"
+          accessibilityLabel="Sidequest home"
+          style={styles.brand}
+        >
+          {/* The phone's exact lockup - Mark at 20, wordmark at h1 in
             lightGrey - not a slightly larger, slightly whiter cousin of
             it. One brand, one size, whichever surface's corner it is in. */}
-        <Mark size={20} />
-        <Text style={styles.wordmark}>sidequest</Text>
-      </Pressable>
-      <Text style={styles.tagline}>Discover your next game</Text>
-      {search ? <View style={styles.search}>{search}</View> : null}
+          <Mark size={20} />
+          {collapsed ? null : <Text style={styles.wordmark}>sidequest</Text>}
+        </Pressable>
+        {onToggle ? (
+          <Pressable
+            onPress={onToggle}
+            hitSlop={8}
+            style={styles.toggle}
+            accessibilityRole="button"
+            accessibilityLabel={
+              collapsed ? 'Expand the sidebar' : 'Collapse the sidebar'
+            }
+          >
+            <DynamicIcon
+              type="ionicon"
+              name={collapsed ? 'chevron-forward' : 'chevron-back'}
+              size={16}
+              color={COLORS.mediumGrey}
+            />
+          </Pressable>
+        ) : null}
+      </View>
+      {collapsed ? null : (
+        <Text style={styles.tagline}>Discover your next game</Text>
+      )}
+      {search && !collapsed ? (
+        <View style={styles.search}>{search}</View>
+      ) : null}
+      {search && collapsed && onToggle ? (
+        <Pressable
+          onPress={onToggle}
+          style={[styles.navItem, styles.navItemCompact]}
+          accessibilityRole="button"
+          accessibilityLabel="Search games"
+        >
+          <DynamicIcon
+            type="ionicon"
+            name="search"
+            size={18}
+            color={COLORS.mediumGrey}
+          />
+        </Pressable>
+      ) : null}
 
       <ScrollView
         style={styles.nav}
@@ -134,6 +218,7 @@ export function Sidebar({ activeKey, onHome, onSelect, search }: Props) {
       >
         <NavItem
           label="Home"
+          compact={collapsed}
           iconName="home"
           iconType="ionicon"
           active={activeKey === 'home'}
@@ -141,6 +226,7 @@ export function Sidebar({ activeKey, onHome, onSelect, search }: Props) {
         />
         <NavItem
           label="My Library"
+          compact={collapsed}
           iconName="library"
           iconType="ionicon"
           active={activeKey === 'library'}
@@ -148,6 +234,7 @@ export function Sidebar({ activeKey, onHome, onSelect, search }: Props) {
         />
         <NavItem
           label="The Plan"
+          compact={collapsed}
           iconName="map"
           iconType="ionicon"
           active={activeKey === 'plan'}
@@ -159,6 +246,7 @@ export function Sidebar({ activeKey, onHome, onSelect, search }: Props) {
             different places. */}
         <NavItem
           label="You"
+          compact={collapsed}
           iconName="person-circle"
           iconType="ionicon"
           active={activeKey === 'you'}
@@ -169,14 +257,17 @@ export function Sidebar({ activeKey, onHome, onSelect, search }: Props) {
           sections={DISCOVER}
           activeKey={activeKey}
           onSelect={select}
+          compact={collapsed}
         />
         <NavGroup
           heading="Genres"
           sections={GENRES}
           activeKey={activeKey}
           onSelect={select}
+          compact={collapsed}
         />
       </ScrollView>
+      {foot}
     </View>
   );
 }
@@ -205,9 +296,28 @@ const styles = StyleSheet.create({
     width: LAYOUT.sidebarWidth,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.lg,
+    // The desk's own colour and nothing at its edge: the sheet of the
+    // page lifts off it with a corner and a shadow, and a rule beside
+    // that would be a second edge.
     backgroundColor: COLORS.navy,
-    borderRightWidth: 1,
-    borderRightColor: COLORS.stroke,
+  },
+  sidebarCollapsed: { width: LAYOUT.railWidth, paddingHorizontal: SPACING.sm },
+  top: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  toggle: { padding: 4, borderRadius: RADIUS.sm },
+  navItemCompact: {
+    justifyContent: 'center',
+    paddingHorizontal: 0,
+    borderLeftWidth: 0,
+  },
+  navRule: {
+    height: 1,
+    backgroundColor: COLORS.stroke,
+    marginVertical: SPACING.md,
+    marginHorizontal: SPACING.sm,
   },
   brand: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   wordmark: { ...WORDMARK },

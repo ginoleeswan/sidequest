@@ -69,6 +69,7 @@ export const SUBSET_ICONS = [
   'map-outline',
   'moon',
   'notifications',
+  'open',
   'open-outline',
   'pencil',
   'person',

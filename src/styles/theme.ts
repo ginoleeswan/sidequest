@@ -66,6 +66,8 @@ export const LAYOUT = {
   /** Caps the expanded layout so a 4K monitor doesn't get a billboard. */
   maxExpandedWidth: 1600,
   sidebarWidth: 232,
+  /** The rail folded: the Mark, the glyphs, the hour. */
+  railWidth: 72,
   gridGap: 18,
   shelfTileWidth: 168,
   shelfTileLarge: 220,
