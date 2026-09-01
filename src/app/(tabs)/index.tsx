@@ -670,6 +670,10 @@ export default function HomeScreen() {
                   games={games}
                   headerHeight={headerHeight}
                   height={stageHeight}
+                  // The page's gutter, not the component's own default:
+                  // left unsaid, the headline stood at 16 while every
+                  // shelf beneath it stood at 20.
+                  inset={GUTTER}
                 />
                 <View style={styles.compactShelves}>
                   <SeriesNews inset={GUTTER} />

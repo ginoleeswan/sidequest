@@ -4,6 +4,8 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   Animated,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   FlatList,
   Pressable,
   StyleSheet,
@@ -69,8 +71,10 @@ export function HomeStage({
    * corrects it.
    */
   const width = measured || windowWidth;
+  const [index, setIndex] = useState(0);
 
   if (slides.length === 0) return null;
+  const current = slides[Math.min(index, slides.length - 1)];
 
   const onLayout = (event: LayoutChangeEvent) =>
     setMeasured(Math.round(event.nativeEvent.layout.width));
@@ -79,6 +83,21 @@ export function HomeStage({
     const pool = games.length > 0 ? games : slides.map((s) => s.game);
     const pick = pool[Math.floor(Math.random() * pool.length)];
     if (pick) router.push(`/game/${pick.id}`);
+  };
+
+  /**
+   * Which slide the overlay is describing.
+   *
+   * Rounded from the offset rather than taken from a momentum callback:
+   * a web browser's inertial scroll and a trackpad flick do not both
+   * end in one, and the copy must never disagree with the picture it is
+   * written over. Guarded so the state only moves when the page does.
+   */
+  const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (width <= 0) return;
+    const next = Math.round(event.nativeEvent.contentOffset.x / width);
+    const clamped = Math.min(Math.max(next, 0), slides.length - 1);
+    if (clamped !== index) setIndex(clamped);
   };
 
   return (
@@ -96,101 +115,59 @@ export function HomeStage({
           offset: width * i,
           index: i,
         })}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         renderItem={({ item, index }) => (
-          <Slide
+          <SlideArt
             slide={item}
             index={index}
-            count={slides.length}
-            inset={inset}
             width={width}
             height={height}
             headerHeight={headerHeight}
-            onOpen={() => router.push(`/game/${item.game.id}`)}
-            onSurprise={surprise}
           />
         )}
+      />
+      {/* The copy and its controls, held still while the pictures move.
+
+          They used to travel inside each slide, which meant the button
+          under your thumb slid away as you swiped and the page dots -
+          which stand for the whole set - moved when one member of it
+          changed. Buttons and an indicator are controls FOR the
+          carousel, not contents of it, so they sit above the list and
+          swap what they say. box-none so the swipe still reaches the
+          artwork everywhere except on the controls themselves. */}
+      <StageCopy
+        key={current.key}
+        slide={current}
+        index={index}
+        count={slides.length}
+        inset={inset}
+        width={width}
+        onOpen={() => router.push(`/game/${current.game.id}`)}
+        onSurprise={surprise}
       />
     </View>
   );
 }
 
-function Slide({
+/** One slide's artwork and its scrims. The words live above the list. */
+function SlideArt({
   slide,
   index,
-  count,
-  inset,
   width,
   height,
   headerHeight,
-  onOpen,
-  onSurprise,
 }: {
   slide: StageSlide;
   index: number;
-  count: number;
-  inset: number;
   width: number;
   height: number;
   headerHeight: number;
-  onOpen: () => void;
-  onSurprise: () => void;
 }) {
   const reduced = useReducedMotion();
-  const enter = useAnimatedValue(reduced ? 1 : 0);
   const drift = useAnimatedValue(0);
   const parallax = useStageParallax(height);
   const room = Math.round(height * PARALLAX_RATE);
-
-  /**
-   * The headline scales with the stage.
-   *
-   * 32px is an app heading — correct in a list, timid across a picture
-   * that fills the screen. It reads as a caption someone left on the
-   * artwork rather than as the page speaking. Tied to the width so a
-   * phone gets a headline and a monitor gets a masthead, with the line
-   * height and tracking following it; large display type set at a body
-   * face's proportions looks loose and unresolved.
-   */
-  /**
-   * ...and with the sentence, not only the screen.
-   *
-   * Width alone gave "Continue GreedFall: The Dying World" the same
-   * 45pt as "Continue Hades", so the long one wrapped to three lines
-   * and took the whole stage - the picture it is set over stopped being
-   * visible and the headline read as a wall. A masthead is sized to its
-   * words in print for exactly this reason: the longer the title, the
-   * smaller it is set, so the block it makes stays the same shape.
-   */
-  const length = slide.title.length;
-  const fit = length > 32 ? 0.76 : length > 22 ? 0.88 : 1;
-  const fontSize = Math.round(Math.min(Math.max(width * 0.094 * fit, 26), 56));
-  const display = {
-    fontSize,
-    lineHeight: Math.round(fontSize * 1.02),
-    letterSpacing: fontSize > 46 ? -1.6 : -0.9,
-    /**
-     * Room for the last line's descenders.
-     *
-     * The leading is deliberately tighter than the em box — display
-     * type set at a body face's line height looks loose — but a 1.02
-     * line box ends above the face's own descender, so the tail of a
-     * "g" in the last line was sliced flat: measured, the text block
-     * clipped 8px of itself at 68pt. Padding under the block gives the
-     * final line its descender back without loosening the leading
-     * between lines, which is the whole point of setting it tight.
-     */
-    paddingBottom: Math.ceil(fontSize * 0.16),
-  };
-
-  useEffect(() => {
-    if (reduced) return;
-    Animated.timing(enter, {
-      toValue: 1,
-      duration: DURATION.entrance,
-      easing: EASING.standard,
-      useNativeDriver: true,
-    }).start();
-  }, [enter, reduced]);
 
   useEffect(() => {
     if (reduced) return;
@@ -214,31 +191,6 @@ function Slide({
     loop.start();
     return () => loop.stop();
   }, [drift, reduced]);
-
-  /**
-   * One value, four arrivals.
-   *
-   * Each line reads a different window of the same timeline, so the
-   * eyebrow is settling while the headline is still on its way and the
-   * buttons have not started. Four separate animations would say the
-   * same thing and cost four times as much to keep in step.
-   */
-  const step = (from: number, to: number) => ({
-    opacity: enter.interpolate({
-      inputRange: [from, to],
-      outputRange: [0, 1],
-      extrapolate: 'clamp',
-    }),
-    transform: [
-      {
-        translateY: enter.interpolate({
-          inputRange: [from, to],
-          outputRange: [14, 0],
-          extrapolate: 'clamp',
-        }),
-      },
-    ],
-  });
 
   return (
     // Clips its own artwork. The drift scales the art layer up to 1.08,
@@ -319,6 +271,118 @@ function Slide({
         style={styles.scrim}
         pointerEvents="none"
       />
+    </View>
+  );
+}
+
+/**
+ * The words over the stage, and the controls that drive it.
+ *
+ * Mounted once and re-keyed on the slide, so changing page replays the
+ * staggered entrance as a swap in place rather than sliding the whole
+ * block off the screen. It spans the stage so the headline keeps its
+ * left margin, and passes touches through everywhere it is not a
+ * control - the artwork underneath is still what you swipe.
+ */
+function StageCopy({
+  slide,
+  index,
+  count,
+  inset,
+  width,
+  onOpen,
+  onSurprise,
+}: {
+  slide: StageSlide;
+  index: number;
+  count: number;
+  inset: number;
+  width: number;
+  onOpen: () => void;
+  onSurprise: () => void;
+}) {
+  const reduced = useReducedMotion();
+  const enter = useAnimatedValue(reduced ? 1 : 0);
+
+  /**
+   * The headline scales with the stage.
+   *
+   * 32px is an app heading — correct in a list, timid across a picture
+   * that fills the screen. It reads as a caption someone left on the
+   * artwork rather than as the page speaking. Tied to the width so a
+   * phone gets a headline and a monitor gets a masthead, with the line
+   * height and tracking following it; large display type set at a body
+   * face's proportions looks loose and unresolved.
+   */
+  /**
+   * ...and with the sentence, not only the screen.
+   *
+   * Width alone gave "Continue GreedFall: The Dying World" the same
+   * 45pt as "Continue Hades", so the long one wrapped to three lines
+   * and took the whole stage - the picture it is set over stopped being
+   * visible and the headline read as a wall. A masthead is sized to its
+   * words in print for exactly this reason: the longer the title, the
+   * smaller it is set, so the block it makes stays the same shape.
+   */
+  const length = slide.title.length;
+  const fit = length > 32 ? 0.76 : length > 22 ? 0.88 : 1;
+  const fontSize = Math.round(Math.min(Math.max(width * 0.094 * fit, 26), 56));
+  const display = {
+    fontSize,
+    lineHeight: Math.round(fontSize * 1.02),
+    letterSpacing: fontSize > 46 ? -1.6 : -0.9,
+    /**
+     * Room for the last line's descenders.
+     *
+     * The leading is deliberately tighter than the em box — display
+     * type set at a body face's line height looks loose — but a 1.02
+     * line box ends above the face's own descender, so the tail of a
+     * "g" in the last line was sliced flat: measured, the text block
+     * clipped 8px of itself at 68pt. Padding under the block gives the
+     * final line its descender back without loosening the leading
+     * between lines, which is the whole point of setting it tight.
+     */
+    paddingBottom: Math.ceil(fontSize * 0.16),
+  };
+
+  useEffect(() => {
+    if (reduced) return;
+    enter.setValue(0);
+    Animated.timing(enter, {
+      toValue: 1,
+      duration: DURATION.entrance,
+      easing: EASING.standard,
+      useNativeDriver: true,
+    }).start();
+  }, [enter, reduced]);
+
+  /**
+   * One value, four arrivals.
+   *
+   * Each line reads a different window of the same timeline, so the
+   * eyebrow is settling while the headline is still on its way and the
+   * buttons have not started. Four separate animations would say the
+   * same thing and cost four times as much to keep in step.
+   */
+  const step = (from: number, to: number) => ({
+    opacity: enter.interpolate({
+      inputRange: [from, to],
+      outputRange: [0, 1],
+      extrapolate: 'clamp',
+    }),
+    transform: [
+      {
+        translateY: enter.interpolate({
+          inputRange: [from, to],
+          outputRange: [14, 0],
+          extrapolate: 'clamp',
+        }),
+      },
+    ],
+  });
+
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
       <View style={[styles.copy, { left: inset, right: inset }]}>
         <Animated.Text style={[styles.eyebrow, step(0, 0.4)]} numberOfLines={1}>
           {slide.eyebrow.toUpperCase()}
