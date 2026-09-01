@@ -174,7 +174,7 @@ export function memcardSvg(
   <rect width="${CARD_WIDTH}" height="${CARD_HEIGHT}" fill="${CARD}"/>
   <rect width="${CARD_WIDTH}" height="4" fill="${AMBER}"/>
 
-  <text x="80" y="96" font-family="Geom-Bold, Helvetica, Arial, sans-serif" font-size="26" letter-spacing="-0.5" fill="${INK}">sidequest</text>
+  <text x="80" y="96" font-family="Geom-ExtraBold, Helvetica, Arial, sans-serif" font-size="26" letter-spacing="-0.5" fill="${INK}">sidequest</text>
   <text x="80" y="128" font-family="Noah-Regular, Helvetica, Arial, sans-serif" font-size="17" fill="${DIM}">Your backlog, minus the guilt</text>
 
   <text x="80" y="236" font-family="Noah-Black, Helvetica, Arial, sans-serif" font-size="72" fill="${INK}">${card.year}</text>

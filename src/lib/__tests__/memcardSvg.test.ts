@@ -87,7 +87,7 @@ describe('memcardSvg', () => {
     const onScreen = memcardSvg(card());
     expect(onScreen).not.toContain('@font-face');
     const exported = memcardSvg(card(), {
-      fontCss: "@font-face{font-family:'Geom-Bold';}",
+      fontCss: "@font-face{font-family:'Geom-ExtraBold';}",
     });
     expect(exported).toContain('@font-face');
     expect(exported).toContain('<defs>');

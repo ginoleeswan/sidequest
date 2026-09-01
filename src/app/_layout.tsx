@@ -89,24 +89,25 @@ const FACES: Record<string, FontSource> =
           display: FontDisplay.SWAP,
         },
         /**
-         * Geom, the display voice: the wordmark and every headline. A
-         * geometric sans with more edge than Noah's rounded black, so
-         * the two faces do two jobs instead of one job twice.
+         * Geom, the display voice, at the weights a display voice needs:
+         * ExtraBold for every headline and figure, Black for the
+         * wordmark beside the Mark. Its 700 read as a gentle bold next
+         * to a mark drawn with real presence.
          */
-        'Geom-Bold': {
-          uri: require('../../assets/fonts/Geom-Bold.woff2'),
+        'Geom-ExtraBold': {
+          uri: require('../../assets/fonts/Geom-ExtraBold.woff2'),
           display: FontDisplay.SWAP,
         },
-        'Geom-SemiBold': {
-          uri: require('../../assets/fonts/Geom-SemiBold.woff2'),
+        'Geom-Black': {
+          uri: require('../../assets/fonts/Geom-Black.woff2'),
           display: FontDisplay.SWAP,
         },
       }
     : {
         'Noah-Bold': require('../../assets/fonts/Noah-Bold.ttf'),
         'Noah-Regular': require('../../assets/fonts/Noah-Regular.ttf'),
-        'Geom-Bold': require('../../assets/fonts/Geom-Bold.ttf'),
-        'Geom-SemiBold': require('../../assets/fonts/Geom-SemiBold.ttf'),
+        'Geom-ExtraBold': require('../../assets/fonts/Geom-ExtraBold.ttf'),
+        'Geom-Black': require('../../assets/fonts/Geom-Black.ttf'),
       };
 
 export default function RootLayout() {

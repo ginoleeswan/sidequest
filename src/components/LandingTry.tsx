@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
     boxShadow: '0 4px 0 #B87A16',
   },
   paceLife: {
-    fontFamily: 'Geom-Bold',
+    fontFamily: 'Geom-ExtraBold',
     fontSize: 17,
     letterSpacing: -0.2,
     color: COLORS.lightGrey,
@@ -459,7 +459,7 @@ const styles = StyleSheet.create({
     marginTop: SPACING.md,
   },
   verdict: { marginTop: SPACING.lg, maxWidth: 620, color: COLORS.lightGrey },
-  count: { color: COLORS.accent, fontFamily: 'Geom-Bold' },
+  count: { color: COLORS.accent, fontFamily: 'Geom-ExtraBold' },
   /**
    * Four across, or two.
    *

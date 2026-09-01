@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
   container: { gap: SPACING.sm },
   lead: { flexDirection: 'row', alignItems: 'baseline', gap: SPACING.sm },
   share: {
-    fontFamily: 'Geom-Bold',
+    fontFamily: 'Geom-ExtraBold',
     fontSize: 34,
     lineHeight: 38,
     letterSpacing: -0.6,

@@ -143,14 +143,14 @@ export function landingScale(width: number): LandingScale {
       letterSpacing: display > 60 ? -3 : -1.2,
     },
     lead: {
-      fontFamily: 'Geom-Bold',
+      fontFamily: 'Geom-ExtraBold',
       fontSize: lead,
       lineHeight: Math.round(lead * 1.08),
       letterSpacing: lead > 40 ? -1.6 : -0.8,
       color: COLORS.white,
     },
     leadColumn: {
-      fontFamily: 'Geom-Bold',
+      fontFamily: 'Geom-ExtraBold',
       fontSize: column,
       lineHeight: Math.round(column * 1.12),
       letterSpacing: column > 34 ? -1.1 : -0.6,

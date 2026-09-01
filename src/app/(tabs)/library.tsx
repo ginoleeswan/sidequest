@@ -800,7 +800,7 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   heroValue: {
-    fontFamily: 'Geom-Bold',
+    fontFamily: 'Geom-ExtraBold',
     fontSize: 46,
     lineHeight: 50,
     // Amber marks time everywhere else the app states an hour figure -

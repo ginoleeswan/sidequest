@@ -554,7 +554,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
   },
   chipWord: {
-    fontFamily: 'Geom-Bold',
+    fontFamily: 'Geom-ExtraBold',
     fontSize: 13,
     letterSpacing: 1.5,
     color: COLORS.navy,

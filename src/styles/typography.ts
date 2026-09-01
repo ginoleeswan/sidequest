@@ -20,7 +20,7 @@ import { COLORS } from './colors';
  * adding a new one — a scale only works if it is the only thing in use.
  */
 export const TYPE = StyleSheet.create({
-  // ---- Display: Geom Bold. Headings from h2 down: Noah Bold ----
+  // ---- Display: Geom ExtraBold (the wordmark: Geom Black). h2 down: Noah Bold ----
   //
   // Two faces, two jobs. Geom carries the wordmark and every display
   // moment - the masthead, the verdict, the big figure - and Noah Bold
@@ -28,21 +28,21 @@ export const TYPE = StyleSheet.create({
   // at every volume; a geometric with more edge at the top, and Noah
   // below it, is a hierarchy you can hear.
   display: {
-    fontFamily: 'Geom-Bold',
+    fontFamily: 'Geom-ExtraBold',
     fontSize: 32,
     lineHeight: 36,
     letterSpacing: -0.6,
     color: COLORS.white,
   },
   title: {
-    fontFamily: 'Geom-Bold',
+    fontFamily: 'Geom-ExtraBold',
     fontSize: 26,
     lineHeight: 30,
     letterSpacing: -0.5,
     color: COLORS.white,
   },
   h1: {
-    fontFamily: 'Geom-Bold',
+    fontFamily: 'Geom-ExtraBold',
     fontSize: 22,
     lineHeight: 27,
     letterSpacing: -0.4,
@@ -142,7 +142,7 @@ export const TYPE = StyleSheet.create({
 
   /** Oversized watermark numerals: ranked tiles, the stats hero. */
   numeral: {
-    fontFamily: 'Geom-Bold',
+    fontFamily: 'Geom-ExtraBold',
     fontSize: 96,
     lineHeight: 96,
     letterSpacing: -6,
@@ -171,7 +171,7 @@ export const TYPE = StyleSheet.create({
  * Every lockup in the app sets it from here, so it cannot drift.
  */
 export const WORDMARK = {
-  fontFamily: 'Geom-Bold',
+  fontFamily: 'Geom-Black',
   fontSize: 22,
   lineHeight: 27,
   letterSpacing: -0.5,

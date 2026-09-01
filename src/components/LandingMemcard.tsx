@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
     color: COLORS.accent,
   },
   year: {
-    fontFamily: 'Geom-Bold',
+    fontFamily: 'Geom-ExtraBold',
     fontSize: 34,
     letterSpacing: -1,
     lineHeight: 36,
@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(29,36,49,0.85)',
   },
   stampWord: {
-    fontFamily: 'Geom-Bold',
+    fontFamily: 'Geom-ExtraBold',
     fontSize: 19,
     letterSpacing: 2.5,
     color: COLORS.accent,

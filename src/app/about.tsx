@@ -987,7 +987,7 @@ const styles = StyleSheet.create({
   // chrome that had wandered onto a poster.
   word: { ...WORDMARK, fontSize: 26, lineHeight: 31 },
   headline: {
-    fontFamily: 'Geom-Bold',
+    fontFamily: 'Geom-ExtraBold',
     ...OVER_IMAGE.heading,
     color: COLORS.white,
     maxWidth: 860,

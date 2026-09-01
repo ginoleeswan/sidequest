@@ -815,7 +815,7 @@ const styles = StyleSheet.create({
   },
   paceHoursBox: { width: 62, alignItems: 'flex-start' },
   paceHoursNum: {
-    fontFamily: 'Geom-Bold',
+    fontFamily: 'Geom-ExtraBold',
     fontSize: 30,
     lineHeight: 32,
     color: COLORS.accent,

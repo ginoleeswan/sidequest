@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: { ...TYPE.tag, color: COLORS.lightGrey },
   name: {
-    fontFamily: 'Geom-Bold',
+    fontFamily: 'Geom-ExtraBold',
     fontSize: 30,
     lineHeight: 34,
     letterSpacing: -0.5,

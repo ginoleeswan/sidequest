@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
   watermark: {
     position: 'absolute',
     right: -8,
-    fontFamily: 'Geom-Bold',
+    fontFamily: 'Geom-ExtraBold',
     letterSpacing: 6,
     color: 'rgba(255,255,255,0.028)',
   },
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
   lockup: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm + 2 },
   wordmark: { ...WORDMARK, fontSize: 20, lineHeight: 24, color: COLORS.white },
   tagline: {
-    fontFamily: 'Geom-Bold',
+    fontFamily: 'Geom-ExtraBold',
     fontSize: 27,
     lineHeight: 33,
     letterSpacing: -0.4,

@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     boxShadow: '0 3px 10px rgba(9,12,19,0.35)',
   },
   title: {
-    fontFamily: 'Geom-Bold',
+    fontFamily: 'Geom-ExtraBold',
     fontSize: 18,
     lineHeight: 22,
     letterSpacing: -0.2,

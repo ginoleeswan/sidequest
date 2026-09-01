@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   name: {
-    fontFamily: 'Geom-Bold',
+    fontFamily: 'Geom-ExtraBold',
     fontSize: 15,
     lineHeight: 19,
     letterSpacing: -0.2,
