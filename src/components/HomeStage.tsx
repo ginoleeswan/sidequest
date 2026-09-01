@@ -27,7 +27,7 @@ import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { PARALLAX_RATE, useStageParallax } from '@/hooks/useStageParallax';
-import type { StageSlide } from '@/lib/stage';
+import { pickTrailer, type StageSlide } from '@/lib/stage';
 import { COLORS } from '@/styles/colors';
 import { DURATION, EASING } from '@/styles/motion';
 import { RADIUS, SPACING } from '@/styles/theme';
@@ -105,7 +105,7 @@ export function HomeStage({
   const { data: trailer } = useQuery({
     queryKey: ['stage-trailer', currentGame?.id],
     queryFn: () => getMovies(currentGame!.id),
-    select: (r) => r.results[0] ?? null,
+    select: (r) => pickTrailer(r.results, currentGame?.name ?? ''),
     enabled: wantsTrailer && currentGame != null,
     staleTime: 24 * 60 * 60 * 1000,
   });

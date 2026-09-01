@@ -18,6 +18,7 @@ import {
   TextInput,
   useWindowDimensions,
   View,
+  type ViewStyle,
 } from 'react-native';
 import {
   SafeAreaView,
@@ -102,6 +103,7 @@ import {
   withoutOwned,
 } from '@/lib/homeFeed';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { useScrollHides } from '@/hooks/useScrollHides';
 import { useDebounced } from '@/hooks/useDebounced';
 import { COLORS } from '@/styles/colors';
 import { GUTTER, LAYOUT, SPACING } from '@/styles/theme';
@@ -154,6 +156,10 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const searchRef = useRef<TextInput | null>(null);
   const [headerHeight, setHeaderHeight] = useState(132);
+  // The section row tucks away while you read down a list and comes
+  // back on the first scroll up; the band it sat in keeps its height, so
+  // nothing below it moves.
+  const chipsHidden = useScrollHides();
 
   // "/" focuses search, Escape clears it — desktop table stakes.
   useEffect(() => {
@@ -947,21 +953,26 @@ export default function HomeScreen() {
               the wordmark. Bare here as well: a ring and a glyph are a
               control's costume, and a row of eight reads as a toolbar. */}
           {!searchOpen && !isHome && (
-            <FlatList
-              data={CHIP_SECTIONS}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(item) => item.key}
-              renderItem={({ item }) => (
-                <Chip
-                  title={item.title}
-                  selected={!searching && section.key === item.key}
-                  bare
-                  onPress={() => selectSection(item)}
-                />
-              )}
-              contentContainerStyle={styles.chips}
-            />
+            <View
+              style={[styles.chipsRow, chipsHidden && styles.chipsRowHidden]}
+              pointerEvents={chipsHidden ? 'none' : 'auto'}
+            >
+              <FlatList
+                data={CHIP_SECTIONS}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(item) => item.key}
+                renderItem={({ item }) => (
+                  <Chip
+                    title={item.title}
+                    selected={!searching && section.key === item.key}
+                    bare
+                    onPress={() => selectSection(item)}
+                  />
+                )}
+                contentContainerStyle={styles.chips}
+              />
+            </View>
           )}
         </View>
       </View>
@@ -1066,6 +1077,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xs,
   },
   libraryButton: { padding: 4 },
+  chipsRow: {
+    opacity: 1,
+    ...(Platform.OS === 'web'
+      ? ({
+          transitionProperty: 'opacity, transform',
+          transitionDuration: '180ms',
+        } as unknown as ViewStyle)
+      : {}),
+  },
+  chipsRowHidden: { opacity: 0, transform: [{ translateY: -6 }] },
   chips: {
     alignItems: 'center',
     paddingHorizontal: GUTTER,

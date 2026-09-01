@@ -4,6 +4,7 @@ import {
   STAGE_BOUNDS,
   stageHeight,
   type StageInput,
+  pickTrailer,
 } from '../stage';
 import type { Game } from '@/api/types';
 
@@ -159,5 +160,43 @@ describe('stageHeight', () => {
   it('keeps the bounds the CSS clamp is written from', () => {
     const { min, max, ratio } = STAGE_BOUNDS;
     expect({ min, max, ratio }).toEqual({ min: 380, max: 620, ratio: 0.66 });
+  });
+});
+
+/**
+ * The stage's trailer is the game's, not its first expansion's.
+ */
+describe('pickTrailer', () => {
+  const movie = (name: string) => ({ id: name, name });
+
+  it('prefers the trailer that carries the game’s own name', () => {
+    const picked = pickTrailer(
+      [
+        movie('GTA Online: Heists Trailer'),
+        movie('Grand Theft Auto V Trailer'),
+      ],
+      'Grand Theft Auto V'
+    );
+    expect(picked?.name).toBe('Grand Theft Auto V Trailer');
+  });
+
+  it('skips expansions and updates when nothing is named for the game', () => {
+    const picked = pickTrailer(
+      [movie('Season 4 Update'), movie('Launch Trailer'), movie('DLC Pack 2')],
+      'Some Game'
+    );
+    expect(picked?.name).toBe('Launch Trailer');
+  });
+
+  it('falls back to the first when every trailer is an expansion', () => {
+    const picked = pickTrailer(
+      [movie('GTA Online: Smuggler’s Run'), movie('GTA Online: Gunrunning')],
+      'Grand Theft Auto V'
+    );
+    expect(picked?.name).toBe('GTA Online: Smuggler’s Run');
+  });
+
+  it('has nothing to pick from an empty list', () => {
+    expect(pickTrailer([], 'Anything')).toBeNull();
   });
 });

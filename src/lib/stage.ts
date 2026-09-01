@@ -201,3 +201,28 @@ export function buildStage(input: StageInput): StageSlide[] {
 
   return stage;
 }
+
+/**
+ * Which trailer the stage plays, out of what RAWG has.
+ *
+ * RAWG's list is unordered by purpose: for Grand Theft Auto V it opens
+ * with eight GTA Online expansion trailers, and the first of them is a
+ * French-subtitled DLC promo. A masthead wants the game's own trailer.
+ * The game's name in the movie's title is the strongest sign; failing
+ * that, anything that is not visibly an expansion, an update or a
+ * season; failing that, the first, which is what it was.
+ */
+const EXPANSION_WORDS =
+  /\b(dlc|update|expansion|season|online|pack|patch|bundle|edition)\b/i;
+
+export function pickTrailer<T extends { name: string }>(
+  movies: readonly T[],
+  gameName: string
+): T | null {
+  if (movies.length === 0) return null;
+  const game = gameName.toLowerCase();
+  const named = movies.find((movie) => movie.name.toLowerCase().includes(game));
+  if (named) return named;
+  const plain = movies.find((movie) => !EXPANSION_WORDS.test(movie.name));
+  return plain ?? movies[0];
+}
