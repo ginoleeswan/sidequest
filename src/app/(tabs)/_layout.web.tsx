@@ -25,11 +25,13 @@ export default function TabLayoutWeb() {
   if (!isCompact) return <Slot />;
   return (
     <View style={styles.fill}>
-      <View
-        style={[styles.fill, { paddingBottom: TAB_BAR_HEIGHT + insets.bottom }]}
-      >
-        <Slot />
-      </View>
+      <Slot />
+      {/* A spacer in flow, not padding on a wrapper: a page that sizes
+          itself to the viewport ignores its parent's padding, and the
+          footer's last two lines ended thirty-six pixels under the bar
+          - measured. A sibling after the page adds to the document's
+          height whatever the page does with its own. */}
+      <View style={{ height: TAB_BAR_HEIGHT + insets.bottom }} />
       <MobileTabBar />
     </View>
   );
