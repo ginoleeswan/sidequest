@@ -148,3 +148,78 @@ describe('api/igdb', () => {
     ]);
   });
 });
+
+/**
+ * The rescue pass: what exact matching misses, IGDB's own search finds.
+ *
+ * Pinned to the case that exposed it - RAWG's "Slay the Spire 2" is
+ * IGDB's "Slay the Spire II", unreachable by slug or exact name - and
+ * to the guard that keeps fuzzy results honest: a hit is adopted only
+ * when the release year agrees.
+ */
+describe('the search rescue', () => {
+  const YEAR_2026 = Math.floor(Date.UTC(2026, 5, 1) / 1000);
+
+  it('rescues a numeral-style mismatch through search, keyed to the asked slug', async () => {
+    fetchMock.mockImplementation((url: string, init?: { body?: string }) => {
+      if (url.includes('oauth2/token'))
+        return ok({ access_token: 'tok', expires_in: 3600 });
+      const body = init?.body ?? '';
+      bodies.push(body);
+      if (body.includes('search "Slay the Spire 2"'))
+        return ok([
+          {
+            id: 296831,
+            slug: 'slay-the-spire-ii',
+            name: 'Slay the Spire II',
+            first_release_date: YEAR_2026,
+            cover: { image_id: 'co-sts2' },
+          },
+        ]);
+      return ok([]);
+    });
+
+    const sent = await call({
+      query: {
+        slugs: 'slay-the-spire-2',
+        names: 'Slay the Spire 2',
+        years: '2026',
+      },
+    });
+    expect(sent.code).toBe(200);
+    const extras = (
+      sent.body as { extras: Record<string, { cover: string | null }> }
+    ).extras;
+    // Keyed to the slug the client asked with, not IGDB's own.
+    expect(extras['slay-the-spire-2'].cover).toBe('co-sts2');
+  });
+
+  it('refuses a search hit whose year disagrees', async () => {
+    fetchMock.mockImplementation((url: string, init?: { body?: string }) => {
+      if (url.includes('oauth2/token'))
+        return ok({ access_token: 'tok', expires_in: 3600 });
+      const body = init?.body ?? '';
+      bodies.push(body);
+      if (body.includes('search'))
+        return ok([
+          {
+            id: 1,
+            slug: 'marathon',
+            name: 'Marathon',
+            first_release_date: Math.floor(Date.UTC(1994, 5, 1) / 1000),
+            cover: { image_id: 'co-1994' },
+          },
+        ]);
+      return ok([]);
+    });
+
+    const sent = await call({
+      query: { slugs: 'marathon-x', names: 'Marathon', years: '2026' },
+    });
+    expect(sent.code).toBe(200);
+    // A wrong cover is worse than no cover.
+    expect(
+      (sent.body as { extras: Record<string, unknown> }).extras['marathon-x']
+    ).toBeUndefined();
+  });
+});

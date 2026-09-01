@@ -110,6 +110,69 @@ async function igdb<T>(
   return (await res.json()) as T[];
 }
 
+/** Every field the page enriches with, shared by both lookup passes. */
+const GAME_FIELDS =
+  'id,slug,name,first_release_date,cover.image_id,aggregated_rating,aggregated_rating_count,storyline,similar_games.slug,similar_games.name,similar_games.cover.image_id';
+
+interface IgdbGame {
+  id: number;
+  slug: string;
+  name?: string;
+  first_release_date?: number;
+  cover?: { image_id?: string };
+  aggregated_rating?: number;
+  aggregated_rating_count?: number;
+  storyline?: string;
+  similar_games?: {
+    slug?: string;
+    name?: string;
+    cover?: { image_id?: string };
+  }[];
+}
+
+interface Want {
+  slug: string;
+  name: string;
+  year: number | null;
+}
+
+/**
+ * Which candidate a request actually meant, and how sure we are.
+ *
+ * The year is the strongest evidence: RAWG knows when its game came
+ * out, IGDB knows when each candidate did, and the pair that agree are
+ * the same game. A year either way is the same release seen through
+ * two catalogues - a December game dated to the January port.
+ */
+function pickBest(
+  want: Want,
+  candidates: IgdbGame[]
+): { game: IgdbGame; score: number } | null {
+  if (candidates.length === 0) return null;
+  const lowerName = want.name.toLowerCase();
+  return candidates
+    .map((game) => {
+      const releaseYear = game.first_release_date
+        ? new Date(game.first_release_date * 1000).getUTCFullYear()
+        : null;
+      let score = 0;
+      if (want.year != null && releaseYear != null) {
+        const drift = Math.abs(releaseYear - want.year);
+        if (drift === 0) score += 12;
+        else if (drift <= 1) score += 7;
+        else score -= drift;
+      }
+      if (game.slug === want.slug) score += 3;
+      if (lowerName.length > 0 && game.name?.toLowerCase() === lowerName)
+        score += 2;
+      // A tie broken towards the entry that actually has art: the
+      // whole reason this lookup exists.
+      if (game.cover?.image_id) score += 1;
+      return { game, score };
+    })
+    .sort((a, b) => b.score - a.score)[0];
+}
+
 /** Seconds to hours, one decimal — the precision anyone can feel. */
 const hours = (seconds: number | undefined) =>
   seconds && seconds > 0 ? Math.round((seconds / 3600) * 10) / 10 : null;
@@ -248,25 +311,11 @@ export default async function handler(
      * spoiler-safe synopsis that is often better prose than the
      * marketing description. Same request, same rate-limit spend.
      */
-    const games = await igdb<{
-      id: number;
-      slug: string;
-      name?: string;
-      first_release_date?: number;
-      cover?: { image_id?: string };
-      aggregated_rating?: number;
-      aggregated_rating_count?: number;
-      storyline?: string;
-      similar_games?: {
-        slug?: string;
-        name?: string;
-        cover?: { image_id?: string };
-      }[];
-    }>(
+    const games = await igdb<IgdbGame>(
       clientId,
       accessToken,
       'games',
-      `fields id,slug,name,first_release_date,cover.image_id,aggregated_rating,aggregated_rating_count,storyline,similar_games.slug,similar_games.name,similar_games.cover.image_id; where slug = (${slugs
+      `fields ${GAME_FIELDS}; where slug = (${slugs
         .map((slug) => `"${slug}"`)
         .join(
           ','
@@ -284,41 +333,53 @@ export default async function handler(
      * the same game. Everything is keyed back to the slug the client
      * asked with, so callers never learn IGDB's naming.
      */
-    const chosen = new Map<string, (typeof games)[number]>();
+    const chosen = new Map<string, IgdbGame>();
     for (const want of wanted) {
       const lowerName = want.name.toLowerCase();
-      const candidates = games.filter(
-        (game) =>
-          game.slug === want.slug ||
-          (lowerName.length > 0 && game.name?.toLowerCase() === lowerName)
+      const best = pickBest(
+        want,
+        games.filter(
+          (game) =>
+            game.slug === want.slug ||
+            (lowerName.length > 0 && game.name?.toLowerCase() === lowerName)
+        )
       );
-      if (candidates.length === 0) continue;
+      if (best) chosen.set(want.slug, best.game);
+    }
 
-      const best = candidates
-        .map((game) => {
-          const releaseYear = game.first_release_date
-            ? new Date(game.first_release_date * 1000).getUTCFullYear()
-            : null;
-          let score = 0;
-          if (want.year != null && releaseYear != null) {
-            const drift = Math.abs(releaseYear - want.year);
-            // A year either way is the same release seen through two
-            // catalogues - a December game RAWG dates to the January
-            // port, a staggered platform rollout.
-            if (drift === 0) score += 12;
-            else if (drift <= 1) score += 7;
-            else score -= drift;
-          }
-          if (game.slug === want.slug) score += 3;
-          if (lowerName.length > 0 && game.name?.toLowerCase() === lowerName)
-            score += 2;
-          // A tie broken towards the entry that actually has art: the
-          // whole reason this lookup exists.
-          if (game.cover?.image_id) score += 1;
-          return { game, score };
-        })
-        .sort((a, b) => b.score - a.score)[0];
-      chosen.set(want.slug, best.game);
+    /**
+     * Second pass: IGDB's own search, for what exact matching missed.
+     *
+     * Titles diverge in ways no fold anticipates - RAWG's "Slay the
+     * Spire 2" is IGDB's "Slay the Spire II" - and fuzzy matching is
+     * IGDB's job, not this handler's; their search endpoint exists for
+     * exactly this. One search per miss, run in sequence: measured
+     * against the live API, a search inside multiquery silently
+     * returns nothing, and IGDB allows four requests a second - so the
+     * cap is small, the requests are serial, and the day-long edge
+     * cache means a given miss is searched once, not per visitor.
+     *
+     * A search hit is adopted only when the year agrees (or the name
+     * turns out exact after all): fuzzy results are suggestions, and a
+     * wrong cover is worse than no cover.
+     */
+    const missed = wanted
+      .filter((want) => !chosen.has(want.slug) && want.name.length > 0)
+      .slice(0, 4);
+    for (const want of missed) {
+      try {
+        const found = await igdb<IgdbGame>(
+          clientId,
+          accessToken,
+          'games',
+          `fields ${GAME_FIELDS}; search "${want.name}"; limit 3;`
+        );
+        const best = pickBest(want, found);
+        if (best && best.score >= 7) chosen.set(want.slug, best.game);
+      } catch {
+        // The first pass already answered for most of the batch; a
+        // failed rescue must not take those answers with it.
+      }
     }
 
     const durations: Record<
