@@ -123,7 +123,11 @@ describe('GameTile', () => {
       } as Game;
       const clear = jest.spyOn(globalThis, 'clearInterval');
       await renderApp(<GameTile game={withShots} />);
-      const tile = screen.getByText('Hades II');
+      // The hover surface itself: the name now lives on the quest
+      // card when a game has no box art, and pointer events fired on a
+      // nested text are not what the interaction is - the pointer
+      // crosses the tile.
+      const tile = screen.getByTestId('game-tile-42');
       await fireEvent(tile, 'pointerEnter');
       await act(async () => {
         jest.advanceTimersByTime(1200);

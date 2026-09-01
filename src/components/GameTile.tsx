@@ -9,6 +9,7 @@ import { CoverImage } from './CoverImage';
 import { PlatformIcons } from './PlatformIcons';
 import { ScaleButton } from './ScaleButton';
 import { ScorePill } from './ScorePill';
+import { Textured } from './Textured';
 import { gameDetailQuery } from '@/api/gameDetail';
 import { useToast } from './Toast';
 import type { Game } from '@/api/types';
@@ -81,6 +82,13 @@ export function GameTile({
    * the cover takes over when it arrives - same crossfade either way.
    */
   const cover = shape === 'wide' ? null : coverOf(game.slug);
+  /**
+   * The typographic card states the name and the hours on the plate
+   * itself, so the caption below would say both things twice. One
+   * voice per fact: the card carries identity, the caption only
+   * returns when real box art does.
+   */
+  const questCard = shape === 'poster' && !cover;
   const images = [
     cover ? igdbCoverUri(cover) : game.background_image,
     ...(game.short_screenshots ?? [])
@@ -124,6 +132,7 @@ export function GameTile({
   return (
     <View
       style={width != null ? { width } : styles.flexCell}
+      testID={`game-tile-${game.id}`}
       onPointerEnter={() => {
         setHovered(true);
         prefetch();
@@ -147,21 +156,60 @@ export function GameTile({
             hovered && styles.artHovered,
           ]}
         >
-          <CoverImage
-            uri={images[shot] ?? null}
-            // The screenshot we already have, if the cover will not
-            // load. It cannot rescue a request that hangs rather than
-            // fails, but a cover that genuinely errors leaves the tile
-            // showing art instead of an empty plate.
-            fallbackUri={shot === 0 ? game.background_image : null}
-            style={styles.image}
-          />
-          <LinearGradient
-            colors={['#00000000', '#00000059', '#000000a6']}
-            locations={[0.55, 0.8, 1]}
-            style={styles.gradient}
-            pointerEvents="none"
-          />
+          {questCard && shot === 0 ? (
+            /* The quest card: what a game with no box art gets.
+
+               A screenshot cropped to portrait is a poster pretending -
+               HUD text, a gameplay frame, the tell of a gap in the
+               data. The brand's own material does better: the plate,
+               its texture, the title set in the display face, and the
+               hours in the one colour this app reserves for time. The
+               gap becomes the most Sidequest-looking object on the
+               shelf, and the cover crossfades over it if one arrives. */
+            <View
+              style={[
+                styles.questCard,
+                // The tile's bottom-left strip is spoken for - a rank
+                // numeral or the platform glyphs - and type set into
+                // it collides. The card's text block clears whichever
+                // occupant this tile has.
+                rank != null
+                  ? styles.questAboveRank
+                  : game.parent_platforms?.length
+                    ? styles.questAbovePlatforms
+                    : null,
+              ]}
+            >
+              <Textured fill />
+              <Text style={styles.questName} numberOfLines={3}>
+                {game.name}
+              </Text>
+              {length ? <Text style={styles.questHours}>{length}</Text> : null}
+              {meta ? (
+                <Text style={styles.questMeta} numberOfLines={1}>
+                  {meta}
+                </Text>
+              ) : null}
+            </View>
+          ) : (
+            <>
+              <CoverImage
+                uri={images[shot] ?? null}
+                // The screenshot we already have, if the cover will not
+                // load. It cannot rescue a request that hangs rather
+                // than fails, but a cover that genuinely errors leaves
+                // the tile showing art instead of an empty plate.
+                fallbackUri={shot === 0 ? game.background_image : null}
+                style={styles.image}
+              />
+              <LinearGradient
+                colors={['#00000000', '#00000059', '#000000a6']}
+                locations={[0.55, 0.8, 1]}
+                style={styles.gradient}
+                pointerEvents="none"
+              />
+            </>
+          )}
           {badge ? (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{badge}</Text>
@@ -215,13 +263,15 @@ export function GameTile({
             )
           )}
         </View>
-        <Text
-          style={[styles.title, hovered && styles.titleHovered]}
-          numberOfLines={1}
-        >
-          {game.name}
-        </Text>
-        {length || meta ? (
+        {questCard ? null : (
+          <Text
+            style={[styles.title, hovered && styles.titleHovered]}
+            numberOfLines={1}
+          >
+            {game.name}
+          </Text>
+        )}
+        {!questCard && (length || meta) ? (
           <Text style={styles.meta} numberOfLines={1}>
             {length ? <Text style={styles.length}>{length}</Text> : null}
             {length && meta ? ' · ' : ''}
@@ -248,6 +298,30 @@ const styles = StyleSheet.create({
   },
   artWide: { aspectRatio: LAYOUT.tileAspectWide },
   artHovered: { borderColor: COLORS.strokeStrong },
+  questCard: {
+    flex: 1,
+    backgroundColor: COLORS.navy,
+    padding: SPACING.md,
+    justifyContent: 'flex-end',
+    gap: SPACING.xs,
+  },
+  questName: {
+    ...TYPE.title,
+    fontSize: 19,
+    lineHeight: 23,
+    letterSpacing: -0.3,
+    color: COLORS.lightGrey,
+  },
+  questHours: {
+    ...TYPE.label,
+    color: COLORS.accent,
+  },
+  questMeta: {
+    ...TYPE.fine,
+    color: COLORS.mediumGrey,
+  },
+  questAboveRank: { paddingBottom: 62 },
+  questAbovePlatforms: { paddingBottom: 38 },
   image: { width: '100%', height: '100%' },
   gradient: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   scoreCorner: { position: 'absolute', top: SPACING.sm, right: SPACING.sm },
