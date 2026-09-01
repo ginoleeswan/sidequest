@@ -724,7 +724,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Noah-Black',
     fontSize: 46,
     lineHeight: 50,
-    color: COLORS.white,
+    // Amber marks time everywhere else the app states an hour figure -
+    // the game page's masthead, every tile caption. The shelf total is
+    // the biggest time statement in the app and was the one in white.
+    color: COLORS.accent,
   },
   heroLabel: { ...TYPE.body, color: COLORS.mediumGrey },
   heroSub: { ...TYPE.caption, color: COLORS.mediumGrey },
