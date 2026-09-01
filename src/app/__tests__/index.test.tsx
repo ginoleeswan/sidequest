@@ -1,6 +1,7 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import HomeScreen from '../(tabs)/index';
+import { tonightsShape } from '@/lib/homeFeed';
 import type { Game } from '@/api/types';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { renderApp, useFakeStorage } from '@/test-utils';
@@ -94,10 +95,10 @@ describe('the home screen', () => {
   it('offers a quick-wins shelf built from what it already has', async () => {
     await renderApp(<HomeScreen />);
     await waitFor(() =>
-      expect(screen.getByText('Finish it this weekend')).toBeTruthy()
+      expect(screen.getByText(tonightsShape(Date.now()).title)).toBeTruthy()
     );
     // Only the 3-hour game is short enough to qualify.
-    expect(screen.getByText('Under 8 hours')).toBeTruthy();
+    expect(screen.getByText(tonightsShape(Date.now()).eyebrow)).toBeTruthy();
   });
 
   it('says so plainly when RAWG cannot be reached', async () => {
@@ -159,11 +160,11 @@ describe('the home screen', () => {
   it('leaves the storefront behind when you open a category', async () => {
     await renderApp(<HomeScreen />);
     await waitFor(() =>
-      expect(screen.getByText('Finish it this weekend')).toBeTruthy()
+      expect(screen.getByText(tonightsShape(Date.now()).title)).toBeTruthy()
     );
     await fireEvent.press(screen.getAllByText('Critically acclaimed')[0]);
     await waitFor(() =>
-      expect(screen.queryByText('Finish it this weekend')).toBeNull()
+      expect(screen.queryByText(tonightsShape(Date.now()).title)).toBeNull()
     );
   });
 
@@ -171,7 +172,7 @@ describe('the home screen', () => {
     compact();
     await renderApp(<HomeScreen />);
     await waitFor(() =>
-      expect(screen.getByText('Finish it this weekend')).toBeTruthy()
+      expect(screen.getByText(tonightsShape(Date.now()).title)).toBeTruthy()
     );
     // The rail's tagline is the one string only the sidebar renders.
     expect(screen.queryByText('Discover your next game')).toBeNull();

@@ -46,6 +46,8 @@ import { PageTitle } from '@/components/PageTitle';
 import { Screen } from '@/components/Screen';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { PromptBand } from '@/components/PromptBand';
+import { Billboard } from '@/components/Billboard';
+import { MoodShelf } from '@/components/MoodShelf';
 import { RecentShelf } from '@/components/RecentShelf';
 import { SeriesNews } from '@/components/SeriesNews';
 import { SearchInput } from '@/components/SearchInput';
@@ -77,7 +79,6 @@ import {
   findSection,
   GENRES,
   HOME_SHELVES,
-  QUICK_WIN_HOURS,
   QUICK_WINS,
   SHELF_POOL,
   type Section,
@@ -88,10 +89,13 @@ import { stageHeight as stageHeightFor } from '@/lib/stage';
 import { useDurations } from '@/lib/durations';
 import { useLibrary } from '@/lib/library';
 import {
+  becauseYouFinished,
   becauseYouSaved,
   dedupeGames,
   feedSeed,
   likeYouFinish,
+  seededRandom,
+  tonightsShape,
   pickShelves,
   withinLength,
   withoutOwned,
@@ -250,9 +254,10 @@ export default function HomeScreen() {
 
   /** Two rows nothing else can build: your mood, and your length. */
   const personal = useMemo(() => {
-    if (!hydrated) return { mood: null, length: null };
+    if (!hydrated) return { mood: null, finished: null, length: null };
     return {
       mood: becauseYouSaved(library),
+      finished: becauseYouFinished(library),
       length: likeYouFinish(library, (entry) => durationOf(entry.game).hours),
     };
   }, [hydrated, library, durationOf]);
@@ -262,6 +267,19 @@ export default function HomeScreen() {
     queryFn: () => getGames(personal.mood?.genre, 1),
     select: (r: Paged<Game>) => r.results,
     enabled: isHome && personal.mood != null,
+    staleTime: 30 * 60 * 1000,
+  });
+
+  // "Because you finished X" - fetched the same way the saved-mood row
+  // is, and shown only when it would not repeat that row's genre.
+  const finishedShelf = useQuery({
+    queryKey: ['personal', personal.finished?.key],
+    queryFn: () => getGames(personal.finished?.genre, 1),
+    select: (r: Paged<Game>) => r.results,
+    enabled:
+      isHome &&
+      personal.finished != null &&
+      personal.finished.genre !== personal.mood?.genre,
     staleTime: 30 * 60 * 1000,
   });
 
@@ -278,16 +296,37 @@ export default function HomeScreen() {
   const totalCount = list.data?.pages[0]?.count ?? 0;
   const featured = isHome ? games.slice(0, FEATURED_COUNT) : [];
   // No extra request: the short games out of everything already fetched.
+  /**
+   * The shortlist knows what day it is. A weekend has room for a
+   * weekend-sized game; a Tuesday evening has two or three hours, and
+   * offering it an eight-hour game is how a backlog grows.
+   */
+  const session = tonightsShape(today);
   const quickWins = useMemo(
     () =>
       isHome
         ? games
-            .filter((g) => g.playtime > 0 && g.playtime <= QUICK_WIN_HOURS)
+            .filter((g) => g.playtime > 0 && g.playtime <= session.maxHours)
             .slice(0, 12)
         : [],
-    [games, isHome]
+    [games, isHome, session.maxHours]
   );
   const trendingShelf = isHome ? games.slice(FEATURED_COUNT) : [];
+  /**
+   * The mid-feed break: one game with the whole frame. Seeded like the
+   * shelves so it holds all day, and drawn from past the tiles the
+   * rows above will show, so the billboard is a discovery rather than
+   * a repeat at a larger size.
+   */
+  const billboard = useMemo(() => {
+    if (!isHome || !hydrated) return null;
+    const pool = trendingShelf.slice(12, 30);
+    if (pool.length === 0) return null;
+    return pool[
+      Math.floor(seededRandom(feedSeed(today, library) + 7)() * pool.length)
+    ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- trendingShelf derives from games
+  }, [isHome, hydrated, games, today, library]);
 
   /**
    * The opening argument, and how much room to give it.
@@ -556,7 +595,11 @@ export default function HomeScreen() {
                     <SeriesNews inset={SPACING.xl} />
                     <RecentShelf inset={SPACING.xl} />
                     <Shelf
-                      section={QUICK_WINS}
+                      section={{
+                        ...QUICK_WINS,
+                        title: session.title,
+                        eyebrow: session.eyebrow,
+                      }}
                       games={quickWins}
                       inset={SPACING.xl}
                     />
@@ -566,6 +609,12 @@ export default function HomeScreen() {
                       onViewAll={selectSection}
                       inset={SPACING.xl}
                     />
+                    {billboard ? (
+                      <View style={styles.billboardSlotWide}>
+                        <Billboard game={billboard} />
+                      </View>
+                    ) : null}
+                    <MoodShelf onOpen={selectSection} inset={SPACING.xl} />
                     <PromptBand inset={SPACING.xl} />
                     {personal.mood && (moodShelf.data?.length ?? 0) > 0 && (
                       <Shelf
@@ -579,6 +628,22 @@ export default function HomeScreen() {
                         inset={SPACING.xl}
                       />
                     )}
+                    {personal.finished &&
+                      (finishedShelf.data?.length ?? 0) > 0 && (
+                        <Shelf
+                          section={{
+                            ...DISCOVER[0],
+                            key: personal.finished.key,
+                            title: personal.finished.title,
+                            eyebrow: personal.finished.eyebrow,
+                          }}
+                          games={withoutOwned(
+                            finishedShelf.data ?? [],
+                            library
+                          )}
+                          inset={SPACING.xl}
+                        />
+                      )}
                     {personal.length && lengthShelf.length > 0 && (
                       <Shelf
                         section={{
@@ -679,7 +744,11 @@ export default function HomeScreen() {
                   <SeriesNews inset={GUTTER} />
                   <RecentShelf inset={GUTTER} />
                   <Shelf
-                    section={QUICK_WINS}
+                    section={{
+                      ...QUICK_WINS,
+                      title: session.title,
+                      eyebrow: session.eyebrow,
+                    }}
                     games={quickWins}
                     inset={GUTTER}
                   />
@@ -689,6 +758,12 @@ export default function HomeScreen() {
                     onViewAll={selectSection}
                     inset={GUTTER}
                   />
+                  {billboard ? (
+                    <View style={styles.billboardSlot}>
+                      <Billboard game={billboard} />
+                    </View>
+                  ) : null}
+                  <MoodShelf onOpen={selectSection} inset={GUTTER} />
                   {/* Deep enough in to be a break in the rhythm rather
                       than a second header, and above the rows that are
                       about you rather than about the shop. */}
@@ -708,6 +783,22 @@ export default function HomeScreen() {
                       inset={GUTTER}
                     />
                   )}
+                  {personal.finished &&
+                    (finishedShelf.data?.length ?? 0) > 0 && (
+                      <Shelf
+                        section={{
+                          ...DISCOVER[0],
+                          key: personal.finished.key,
+                          title: personal.finished.title,
+                          eyebrow: personal.finished.eyebrow,
+                        }}
+                        games={withoutOwned(
+                          finishedShelf.data ?? [],
+                          library
+                        ).slice(0, 12)}
+                        inset={GUTTER}
+                      />
+                    )}
                   {personal.length && lengthShelf.length > 0 && (
                     <Shelf
                       section={{
@@ -947,6 +1038,12 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.xl * 1.5,
   },
   /** An offer, not an interruption: last thing before the footer. */
+  /** A shelf-sized break: the shelf margin below, the page gutter at the sides. */
+  billboardSlot: { paddingHorizontal: GUTTER, marginBottom: SPACING.xl },
+  billboardSlotWide: {
+    paddingHorizontal: SPACING.xl,
+    marginBottom: SPACING.xl,
+  },
   installSlot: { paddingTop: SPACING.lg },
   installSlotWide: {
     paddingHorizontal: SPACING.xl,

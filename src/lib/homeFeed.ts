@@ -160,6 +160,57 @@ export function becauseYouSaved(entries: LibraryEntry[]): PersonalShelf | null {
 }
 
 /**
+ * "Because you finished Celeste" - the taste the credits confirmed.
+ *
+ * Saving a game is a guess about who you might be; finishing one is
+ * evidence. The most recent finish speaks: its genre becomes a row, and
+ * the row says why it is here, because a recommendation with a reason
+ * reads as a friend's and one without reads as an algorithm's.
+ */
+export function becauseYouFinished(
+  entries: LibraryEntry[]
+): PersonalShelf | null {
+  const done = entries
+    .filter((entry) => entry.status === 'finished')
+    .sort((a, b) => b.addedAt - a.addedAt);
+  for (const entry of done) {
+    const genre = entry.game.genres?.[0];
+    if (genre?.slug)
+      return {
+        key: `finished-${genre.slug}`,
+        title: `Because you finished ${entry.game.name}`,
+        eyebrow: 'YOU SAW THE CREDITS',
+        genre: genre.slug,
+      };
+  }
+  return null;
+}
+
+/**
+ * What tonight actually has room for.
+ *
+ * The one fact this storefront holds that no reference app does is how
+ * long things take - so the shortlist row should know what day it is.
+ * A weekend has room for a weekend-sized game; a Tuesday evening has
+ * two or three hours, and offering it an eight-hour game is how a
+ * backlog grows. Computed from the date so the row changes on Friday
+ * morning, not per refresh.
+ */
+export interface SessionShape {
+  title: string;
+  eyebrow: string;
+  maxHours: number;
+}
+
+export function tonightsShape(now: number): SessionShape {
+  const day = new Date(now).getDay();
+  const weekend = day === 5 || day === 6 || day === 0;
+  return weekend
+    ? { title: 'Finish it this weekend', eyebrow: 'Under 8 hours', maxHours: 8 }
+    : { title: 'One evening each', eyebrow: 'Under 3 hours', maxHours: 3 };
+}
+
+/**
  * "Short, like the ones you actually finish."
  *
  * The median of what someone has finished is the most honest number this
