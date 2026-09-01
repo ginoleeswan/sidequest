@@ -519,14 +519,35 @@ export default function PlanScreen() {
           replacing the route with home when there is no history, so
           tapping it would silently throw you onto Home from a tab you
           had deliberately opened. iOS tab roots never carry one. Web
-          still does, because web has no tab bar and this would
-          otherwise be a screen with no way out on a phone. */}
+          keeps the brand lockup in this corner - the same anchor the
+          game page has - now that a phone on the web has the tab bar
+          for getting between the three roots. */}
       {isExpanded ? (
         <AppHeader />
       ) : Platform.OS === 'web' ? (
-        <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
-          <BackButton />
-        </View>
+        <>
+          <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
+            <BackButton />
+          </View>
+          {/* You, in the chrome row where every page keeps it - the same
+              height as the lockup on the left and as the icon on Home.
+              It used to sit a hundred points lower, in the section
+              header's eyebrow row, which is where the page's title
+              lives, not the app's identity. */}
+          <Pressable
+            onPress={() => router.push('/you')}
+            style={[styles.youButton, { top: insets.top + SPACING.sm }]}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="You"
+          >
+            <Ionicons
+              name="person-circle-outline"
+              size={23}
+              color={COLORS.lightGrey}
+            />
+          </Pressable>
+        </>
       ) : null}
 
       <Screen>
@@ -552,7 +573,14 @@ export default function PlanScreen() {
                   measure exactly that. */}
               <SectionHeader
                 title="The Plan"
-                onAccount={() => router.push('/you')}
+                // The chrome row carries You on a compact web page; the
+                // eyebrow row keeps it only where there is no chrome row -
+                // native tab roots, and the desk.
+                onAccount={
+                  Platform.OS === 'web' && !isExpanded
+                    ? undefined
+                    : () => router.push('/you')
+                }
                 actionLabel={canShare ? 'Share →' : undefined}
                 actionAccessibilityLabel="Copy a link to this plan"
                 onAction={canShare ? sharePlan : undefined}
@@ -931,6 +959,13 @@ export default function PlanScreen() {
 const styles = StyleSheet.create({
   background: { flexGrow: 1, backgroundColor: COLORS.darkGrey },
   backButton: { position: 'absolute', left: SPACING.lg, zIndex: 30 },
+  youButton: {
+    position: 'absolute',
+    right: SPACING.lg,
+    zIndex: 30,
+    height: 40,
+    justifyContent: 'center',
+  },
   inner: {
     width: '100%',
     maxWidth: LAYOUT.maxContentWidth,

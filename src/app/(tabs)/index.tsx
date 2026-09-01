@@ -928,30 +928,6 @@ export default function HomeScreen() {
                   accessibilityLabel="Search games"
                   style={styles.libraryButton}
                 />
-                {/* Web only: on native these two are the tab bar,
-                    offered a second time three points from the top of
-                    the same screen. Web has no tab bar on a phone, so
-                    they stay the only way through. */}
-                {Platform.OS === 'web' && (
-                  <>
-                    <Ionicons
-                      name="map-outline"
-                      size={21}
-                      color={COLORS.lightGrey}
-                      onPress={() => router.push('/plan')}
-                      accessibilityLabel="The Plan"
-                      style={styles.libraryButton}
-                    />
-                    <Ionicons
-                      name="library-outline"
-                      size={22}
-                      color={COLORS.lightGrey}
-                      onPress={() => router.push('/library')}
-                      accessibilityLabel="My Library"
-                      style={styles.libraryButton}
-                    />
-                  </>
-                )}
                 {/* The one destination the tab bar does not carry. */}
                 <Ionicons
                   name="person-circle-outline"

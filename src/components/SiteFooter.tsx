@@ -22,6 +22,7 @@ import { Mark } from './Mark';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
+import { useBreakpoint } from '@/hooks/useBreakpoint';
 
 const EXPLORE = [
   { label: 'Home', href: '/' },
@@ -29,6 +30,15 @@ const EXPLORE = [
   { label: 'The Plan', href: '/plan' },
   { label: 'About', href: '/about' },
 ] as const;
+
+/**
+ * On a phone the web now has the tab bar native has, and the three
+ * roots in this column would be that bar offered a second time at the
+ * end of a scroll - the exact reason native drops the footer. The
+ * footer stays, because the sign-off is the point of it; only the
+ * duplicate goes.
+ */
+const EXPLORE_COMPACT = EXPLORE.filter((link) => link.href === '/about');
 
 const LEGAL = [
   { label: 'Terms', href: '/terms' },
@@ -249,6 +259,7 @@ export function SiteFooter({
    */
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const { isCompact } = useBreakpoint();
   /**
    * The ghost wordmark, sized to its stage. Fixed at 128 it overflowed
    * a phone and the visible tail read as a different product name; the
@@ -262,7 +273,13 @@ export function SiteFooter({
     <View style={inset > 0 ? { marginHorizontal: -inset } : undefined}>
       {shore && <Shore mascot={mascot} />}
       <View
-        style={[styles.band, { paddingBottom: insets.bottom + SPACING.lg }]}
+        style={[
+          styles.band,
+          // The safe area is the tab bar's to pay on a phone; paying it
+          // here too left a band of nothing between the sign-off and
+          // the bar.
+          { paddingBottom: (isCompact ? 0 : insets.bottom) + SPACING.lg },
+        ]}
       >
         <Text
           style={[
@@ -305,7 +322,10 @@ export function SiteFooter({
               </Text>
             </View>
             <View style={styles.cols}>
-              <LinkColumn heading="Explore" links={EXPLORE} />
+              <LinkColumn
+                heading="Explore"
+                links={isCompact ? EXPLORE_COMPACT : EXPLORE}
+              />
               <LinkColumn heading="Legal" links={LEGAL} />
             </View>
           </View>
