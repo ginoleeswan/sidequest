@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import {
   Animated,
@@ -17,7 +18,10 @@ import {
 
 import { CoverImage } from './CoverImage';
 import { ScaleButton } from './ScaleButton';
-import type { Game } from '@/api/types';
+import { StageTrailer } from './StageTrailer';
+import { getMovies } from '@/api/rawg';
+import type { Game, Movie } from '@/api/types';
+import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { PARALLAX_RATE, useStageParallax } from '@/hooks/useStageParallax';
@@ -73,6 +77,37 @@ export function HomeStage({
   const width = measured || windowWidth;
   const [index, setIndex] = useState(0);
 
+  /**
+   * The dwell: linger on a slide and its still comes to life.
+   *
+   * Three seconds, so a flick past a slide never starts a download
+   * for it, and reset on every page change so only the slide being
+   * looked at ever plays. Desktop only: a phone's stage is a data
+   * budget, and its stills are the design. Reduced motion means the
+   * artwork stays a picture.
+   */
+  const { isCompact } = useBreakpoint();
+  const reduced = useReducedMotion();
+  // Which slide has been dwelt on, rather than a flag that has to be
+  // reset: a new page simply is not the dwelt one until its own timer
+  // fires, so nothing is written synchronously on the way in.
+  const [dweltFor, setDweltFor] = useState<number | null>(null);
+  const wantsTrailer = !isCompact && !reduced && slides.length > 0;
+  const currentGame = slides[Math.min(index, slides.length - 1)]?.game;
+  useEffect(() => {
+    if (!wantsTrailer) return;
+    const timer = setTimeout(() => setDweltFor(index), 3000);
+    return () => clearTimeout(timer);
+  }, [wantsTrailer, index]);
+  const dwelt = dweltFor === index;
+  const { data: trailer } = useQuery({
+    queryKey: ['stage-trailer', currentGame?.id],
+    queryFn: () => getMovies(currentGame!.id),
+    select: (r) => r.results[0] ?? null,
+    enabled: wantsTrailer && currentGame != null,
+    staleTime: 24 * 60 * 60 * 1000,
+  });
+
   if (slides.length === 0) return null;
   const current = slides[Math.min(index, slides.length - 1)];
 
@@ -117,13 +152,14 @@ export function HomeStage({
         })}
         onScroll={onScroll}
         scrollEventThrottle={16}
-        renderItem={({ item, index }) => (
+        renderItem={({ item, index: slideIndex }) => (
           <SlideArt
             slide={item}
-            index={index}
+            index={slideIndex}
             width={width}
             height={height}
             headerHeight={headerHeight}
+            trailer={slideIndex === index && dwelt ? (trailer ?? null) : null}
           />
         )}
       />
@@ -157,12 +193,15 @@ function SlideArt({
   width,
   height,
   headerHeight,
+  trailer,
 }: {
   slide: StageSlide;
   index: number;
   width: number;
   height: number;
   headerHeight: number;
+  /** Set once the dwell has elapsed on this slide; null unmounts it. */
+  trailer: Movie | null;
 }) {
   const reduced = useReducedMotion();
   const drift = useAnimatedValue(0);
@@ -233,6 +272,10 @@ function SlideArt({
           iconSize={48}
         />
       </Animated.View>
+      {/* Under the scrims, so the copy stays legible over a moving
+          picture exactly as it was over the still. Keyed so a new
+          trailer is a fresh fade rather than a source swap. */}
+      {trailer ? <StageTrailer key={trailer.id} movie={trailer} /> : null}
       {/* Two scrims, not one. The bottom one buys legibility for the copy;
           the top one lets the header's own gradient land on something
           rather than on whatever the artwork happened to be. */}
