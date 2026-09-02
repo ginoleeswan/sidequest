@@ -112,6 +112,19 @@ export async function publishArt(manifest: ArtManifest) {
   } else {
     bridge.store.remove('art');
   }
+  /*
+   * The base64 covers the previous build's widgets drew from.
+   *
+   * An update reaches a phone before a build does — the runtime
+   * fingerprint does not move for a change to Swift, so the JavaScript
+   * here can be a version ahead of the widget binary reading it. That
+   * binary looks for `covers`, which nothing writes any more, and
+   * UserDefaults keeps whatever was last written there: last week's
+   * game's key art, standing behind tonight's title, until the reader
+   * installs a build. Removing it leaves the old widget with no picture,
+   * which is a card that still tells the truth.
+   */
+  bridge.store.remove('covers');
   for (const kind of Object.values(KINDS)) bridge.reload(kind);
 }
 

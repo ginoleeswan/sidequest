@@ -167,6 +167,18 @@ describe('the artwork, which travels separately from the plan', () => {
   });
 
   /**
+   * An update lands before a build does — a change to Swift does not
+   * move the runtime fingerprint — so this JavaScript runs against the
+   * previous widget binary, which draws from the base64 `covers` key
+   * nothing writes any more. Left behind, UserDefaults would keep
+   * serving it last week's key art behind tonight's title.
+   */
+  it('clears the base64 covers the previous build drew from', async () => {
+    await publishArt(manifest);
+    expect(mockRemove).toHaveBeenCalledWith('covers');
+  });
+
+  /**
    * Art outliving its plan is the widget contradicting itself: key art
    * behind the words "no plan yet".
    */
