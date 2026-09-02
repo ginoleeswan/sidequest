@@ -25,7 +25,7 @@ import { fetchIgdbExtras, igdbCoverUri } from '@/api/igdb';
 import { friendlyError, mediaUri } from '@/api/rawg';
 import type { Game, GameDetail, Movie, Named } from '@/api/types';
 import { RouteError } from '@/components/RouteError';
-import { AppHeader } from '@/components/AppHeader';
+import { DesktopShell } from '@/components/DesktopShell';
 import { BackButton } from '@/components/BackButton';
 import { Chip } from '@/components/Chip';
 import { CommunityStats } from '@/components/CommunityStats';
@@ -89,20 +89,6 @@ const PAGE_MAX = 1200;
  * them and leaves the picture the 70% both give it.
  */
 const RAIL = 340;
-
-/**
- * The band the site header has to use to land on the page's left edge.
- *
- * The bar insets its contents by SPACING.xl and this page insets its
- * bands by twice that, so handing the header the same cap would leave
- * the wordmark 32pt outside the title — two left edges, which is what
- * the composition had and what a reader reads as no spine at all.
- * Narrowing the header's band by the difference puts the wordmark, the
- * title, About and Player verdict on one line, and the nav on the same
- * right edge as the rail. The artwork is then the only thing that
- * crosses either, which is what makes it read as a decision.
- */
-const HEADER_BAND = PAGE_MAX - SPACING.xl * 2;
 
 /** How far the chrome join reaches below the safe area. */
 const WELD_HEIGHT = 190;
@@ -692,24 +678,37 @@ export default function GameInfoScreen() {
   }, [data, opacity, railOpacity, reducedMotion]);
 
   if (isPending) {
-    return (
-      <Textured style={styles.background}>
+    return isExpanded ? (
+      <DesktopShell activeKey={null} foldByDefault>
         {/* The name is not known yet, but a blank tab is never right. */}
         <PageTitle>Sidequest</PageTitle>
         <View
-          style={[
-            isExpanded ? styles.skeletonShellWide : styles.skeletonShell,
-            isExpanded && { paddingTop: 58 },
-          ]}
+          style={[isExpanded ? styles.skeletonShellWide : styles.skeletonShell]}
         >
           {isExpanded ? <SkeletonDetailExpanded /> : <SkeletonDetail />}
         </View>
         {/* Same join as the loaded hero: the bones run to the top of the
             document too, so they need it just as much. */}
         {!isExpanded && <ChromeWeld height={insets.top + WELD_HEIGHT} />}
-        {isExpanded ? (
-          <AppHeader immersive band={HEADER_BAND} />
-        ) : (
+        {isExpanded ? null : (
+          <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
+            <BackButton onImage />
+          </View>
+        )}
+      </DesktopShell>
+    ) : (
+      <Textured style={styles.background}>
+        {/* The name is not known yet, but a blank tab is never right. */}
+        <PageTitle>Sidequest</PageTitle>
+        <View
+          style={[isExpanded ? styles.skeletonShellWide : styles.skeletonShell]}
+        >
+          {isExpanded ? <SkeletonDetailExpanded /> : <SkeletonDetail />}
+        </View>
+        {/* Same join as the loaded hero: the bones run to the top of the
+            document too, so they need it just as much. */}
+        {!isExpanded && <ChromeWeld height={insets.top + WELD_HEIGHT} />}
+        {isExpanded ? null : (
           <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
             <BackButton onImage />
           </View>
@@ -738,9 +737,9 @@ export default function GameInfoScreen() {
   const summary = decodeEntities(
     game.description.replace(HTML_TAGS, '')
   ).trim();
-  const gutter = isExpanded
-    ? Math.max(SPACING.xl * 2, (width - PAGE_MAX) / 2 + SPACING.xl * 2)
-    : SPACING.md;
+  // On the desk the page stands in the shell's column and centres
+  // itself; the gutter is the column's own, not a sum against the window.
+  const gutter = isExpanded ? SPACING.xl : SPACING.md;
   const railInset = gutter;
 
   /**
@@ -1704,13 +1703,11 @@ export default function GameInfoScreen() {
 
   /* -------------------------------------------------------------- layout */
 
-  return (
-    <Textured style={styles.background}>
+  const page = (
+    <>
       <PageTitle>{`${game.name} — Sidequest`}</PageTitle>
       <View style={styles.container}>
-        {isExpanded ? (
-          <AppHeader immersive band={HEADER_BAND} />
-        ) : (
+        {isExpanded ? null : (
           <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
             <BackButton onImage />
           </View>
@@ -1799,7 +1796,14 @@ export default function GameInfoScreen() {
           }}
         />
       </View>
-    </Textured>
+    </>
+  );
+  return isExpanded ? (
+    <DesktopShell activeKey={null} foldByDefault>
+      {page}
+    </DesktopShell>
+  ) : (
+    <Textured style={styles.background}>{page}</Textured>
   );
 }
 
@@ -2035,7 +2039,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xl * 2,
     // Clears the fixed immersive header: the job the masthead band was
     // doing before it dissolved into the columns.
-    paddingTop: 58 + SPACING.xl,
+    paddingTop: SPACING.lg,
   },
 
   // desktop hero

@@ -17,7 +17,7 @@ import { DynamicIcon, type IconType } from './DynamicIcon';
 import { Mark } from './Mark';
 import { DISCOVER, GENRES, type Section } from '@/constants/categories';
 import { COLORS } from '@/styles/colors';
-import { LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
+import { LAYOUT, RADIUS, SPACING } from '@/styles/theme';
 import { TYPE, WORDMARK } from '@/styles/typography';
 
 interface NavItemProps {
@@ -200,14 +200,6 @@ interface Props {
   onToggle?: () => void;
   /** The foot of the rail - tonight's clock lives here. */
   foot?: React.ReactNode;
-  /**
-   * Folded, but peeking: the full rail laid over the page while the
-   * pointer rests on it, the way ChatGPT's does. Nothing underneath
-   * moves; the sheet keeps the folded rail's width.
-   */
-  overlay?: boolean;
-  onHoverIn?: () => void;
-  onHoverOut?: () => void;
 }
 
 /** Persistent left navigation for expanded (desktop) layouts. */
@@ -219,9 +211,6 @@ export function Sidebar({
   collapsed = false,
   onToggle,
   foot,
-  overlay = false,
-  onHoverIn,
-  onHoverOut,
 }: Props) {
   const router = useRouter();
   /**
@@ -240,28 +229,16 @@ export function Sidebar({
    * thing twice.
    */
   const [railHovered, setRailHovered] = useState(false);
-  const markIsControl =
-    collapsed && !overlay && railHovered && Boolean(onToggle);
+  const markIsControl = collapsed && railHovered && Boolean(onToggle);
   const select =
     onSelect ??
     ((section: Section) =>
       router.push({ pathname: '/', params: { category: section.key } }));
   return (
     <View
-      style={[
-        styles.sidebar,
-        collapsed && styles.sidebarCollapsed,
-        STICKY,
-        overlay && styles.sidebarOverlay,
-      ]}
-      onPointerEnter={() => {
-        setRailHovered(true);
-        onHoverIn?.();
-      }}
-      onPointerLeave={() => {
-        setRailHovered(false);
-        onHoverOut?.();
-      }}
+      style={[styles.sidebar, collapsed && styles.sidebarCollapsed, STICKY]}
+      onPointerEnter={() => setRailHovered(true)}
+      onPointerLeave={() => setRailHovered(false)}
     >
       <View style={[styles.top, collapsed && styles.topFolded]}>
         <Pressable
@@ -284,10 +261,9 @@ export function Sidebar({
           )}
           {collapsed ? null : <Text style={styles.wordmark}>sidequest</Text>}
         </Pressable>
-        {/* Open, the control rides the row's end and folds the rail;
-            peeking, it rides the same place and keeps the rail open. */}
+        {/* Open, the control rides the row's end and folds the rail. */}
         {onToggle && !collapsed ? (
-          <Toggle collapsed={overlay} onToggle={onToggle} />
+          <Toggle collapsed={false} onToggle={onToggle} />
         ) : null}
       </View>
       {search && !collapsed ? (
@@ -443,20 +419,6 @@ const styles = StyleSheet.create({
   // On the glyph column: the rail's padding puts the column at 28, and
   // a 32-point control centred on an 18-point glyph starts 7 before it.
   toggleFolded: { marginLeft: SPACING.sm + 4 - 7, marginTop: SPACING.sm },
-  /**
-   * Peeking: laid over the page at full width, lifted with the sheet's
-   * own shadow, while the layout underneath keeps the folded width.
-   */
-  sidebarOverlay: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: LAYOUT.sidebarWidth,
-    paddingHorizontal: SPACING.md,
-    zIndex: 50,
-    ...SHADOW.card,
-  },
   navItemCompact: {
     justifyContent: 'center',
     paddingHorizontal: 0,

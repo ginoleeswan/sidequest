@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect } from 'react';
 import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { useBreakpoint } from '@/hooks/useBreakpoint';
@@ -10,7 +10,7 @@ import { Textured } from './Textured';
 import type { Section } from '@/constants/categories';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { COLORS } from '@/styles/colors';
-import { LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
+import { RADIUS, SHADOW, SPACING } from '@/styles/theme';
 
 /**
  * The desk's one shell: the rail on the left, the page as a sheet on it.
@@ -24,8 +24,12 @@ import { LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
  * rule. Home, Library, Plan and You all stand on the same desk.
  *
  * The rail folds. Below 1200 points it folds itself - a 232-point rail
- * is a fifth of the column there - and anywhere it folds on request,
- * remembered. Folded, it is the Mark, the glyphs and tonight's hour.
+ * is a fifth of the column there - on the media pages it starts folded,
+ * and anywhere it folds on request, remembered. Folded, it is the Mark,
+ * the glyphs and tonight's hour. It does not spring open under the
+ * pointer: a fold is a choice, and a rail that undoes it whenever the
+ * pointer crosses it cannot be trusted to stay folded. The Mark under
+ * the pointer becomes the way in; so does Cmd+backslash.
  */
 const FOLD_BELOW = 1200;
 const RAIL_KEY = 'sidequest.rail.v1';
@@ -35,12 +39,18 @@ export function DesktopShell({
   onHome,
   onSelect,
   search,
+  foldByDefault = false,
   children,
 }: {
   activeKey: string | null;
   onHome?: () => void;
   onSelect?: (section: Section) => void;
   search?: React.ReactNode;
+  /**
+   * Start folded unless the reader has chosen otherwise: the media
+   * pages, where the picture is the point and the rail is a bystander.
+   */
+  foldByDefault?: boolean;
   children: React.ReactNode;
 }) {
   const { height: windowHeight } = useWindowDimensions();
@@ -51,38 +61,10 @@ export function DesktopShell({
     RAIL_KEY,
     null
   );
-  const collapsed = choice ? choice === 'closed' : width < FOLD_BELOW;
+  const collapsed = choice
+    ? choice === 'closed'
+    : foldByDefault || width < FOLD_BELOW;
   const toggle = () => setChoice(collapsed ? 'open' : 'closed');
-
-  /**
-   * Peek: a folded rail opens over the page while the pointer rests on
-   * it and closes when it leaves - no click, no layout shift, the
-   * behaviour ChatGPT's rail taught everyone to expect. Cleared the
-   * moment the rail is opened for real.
-   */
-  const [peek, setPeek] = useState(false);
-  const peeking = collapsed && peek;
-  /**
-   * A beat before the peek opens, none before it closes. A pointer
-   * crossing the rail on its way somewhere else must not flash a
-   * panel open; a pointer that rests there for a moment wants it.
-   */
-  const peekTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const armPeek = () => {
-    if (peekTimer.current) clearTimeout(peekTimer.current);
-    peekTimer.current = setTimeout(() => setPeek(true), 180);
-  };
-  const disarmPeek = () => {
-    if (peekTimer.current) clearTimeout(peekTimer.current);
-    peekTimer.current = null;
-    setPeek(false);
-  };
-  useEffect(
-    () => () => {
-      if (peekTimer.current) clearTimeout(peekTimer.current);
-    },
-    []
-  );
 
   // ⌘\ / Ctrl+\ folds and unfolds from the keyboard.
   useEffect(() => {
@@ -91,7 +73,6 @@ export function DesktopShell({
       if ((event.metaKey || event.ctrlKey) && event.key === '\\') {
         event.preventDefault();
         setChoice(collapsed ? 'open' : 'closed');
-        setPeek(false);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -102,23 +83,14 @@ export function DesktopShell({
     <Textured style={styles.desk}>
       <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
         <View style={[styles.shell, { minHeight: windowHeight }]}>
-          {/* The folded rail's width stays in the layout while a peek
-              lays the full rail over the sheet. */}
-          {peeking ? <View style={styles.railSlot} /> : null}
           <Sidebar
             activeKey={activeKey}
             onHome={onHome}
             onSelect={onSelect}
             search={search}
-            collapsed={collapsed && !peek}
-            overlay={peeking}
-            onToggle={() => {
-              disarmPeek();
-              toggle();
-            }}
-            onHoverIn={collapsed ? armPeek : undefined}
-            onHoverOut={collapsed ? disarmPeek : undefined}
-            foot={<RailClock collapsed={collapsed && !peek} />}
+            collapsed={collapsed}
+            onToggle={toggle}
+            foot={<RailClock collapsed={collapsed} />}
           />
           <View style={styles.sheet}>
             <Textured fill />
@@ -133,7 +105,6 @@ export function DesktopShell({
 const styles = StyleSheet.create({
   desk: { flexGrow: 1, backgroundColor: COLORS.navy },
   container: { flex: 1 },
-  railSlot: { width: LAYOUT.railWidth },
   shell: { flex: 1, flexDirection: 'row', width: '100%' },
   /**
    * The sheet: the page's ground, lifted. A corner only where it meets
