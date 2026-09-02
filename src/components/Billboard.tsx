@@ -11,7 +11,7 @@ import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { formatHours } from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
 import { COLORS } from '@/styles/colors';
-import { RADIUS, SHADOW, SPACING } from '@/styles/theme';
+import { GUTTER, RADIUS, SHADOW, SPACING } from '@/styles/theme';
 import { OVER_IMAGE, TYPE } from '@/styles/typography';
 
 /**
@@ -63,7 +63,7 @@ export function Billboard({
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
-      <View style={styles.copy}>
+      <View style={[styles.copy, isCompact && styles.copyCompact]}>
         <Text style={[styles.eyebrow, OVER_IMAGE.body]} numberOfLines={1}>
           {eyebrow.toUpperCase()}
         </Text>
@@ -97,7 +97,23 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     ...SHADOW.card,
   },
-  frameCompact: { height: 220, borderRadius: RADIUS.md },
+  /**
+   * A band on the phone, not a card.
+   *
+   * Inside the feed's gutter this was the one element on the page
+   * narrower than the shelves above it - a card stopping two gutters
+   * short of both edges while every rail beside it ran off them. It
+   * takes the full width now, and a thing that touches both edges of
+   * a phone does not wear a rounded frame: the radius and the side
+   * borders go, the copy keeps the page's gutter.
+   */
+  frameCompact: {
+    height: 240,
+    borderRadius: 0,
+    borderLeftWidth: 0,
+    borderRightWidth: 0,
+  },
+  copyCompact: { padding: GUTTER },
   copy: {
     padding: SPACING.lg,
     gap: SPACING.xs,

@@ -20,3 +20,4 @@ android
 # catalogue is exempt.
 targets/**/Assets.xcassets
 .vercel
+.playwright-mcp/

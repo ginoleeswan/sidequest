@@ -136,6 +136,44 @@ export function SkeletonShelf({
 }
 
 /** Desktop hero silhouette: lead block plus a rail of three. */
+/**
+ * The desk's home page, in the shape it actually opens with: the stage
+ * running to the sheet's edges at the height it will be, the row of
+ * doors under it, then shelves. It used to be `SkeletonHero` - a hero
+ * split two-thirds/one-third with a rail of three cards beside it -
+ * which the page has not looked like since the stage became one
+ * picture, so the bones rearranged themselves the moment data landed.
+ */
+export function SkeletonDeskHome({
+  windowHeight,
+  inset,
+}: {
+  windowHeight: number;
+  inset: number;
+}) {
+  return (
+    <View>
+      <Skeleton
+        style={[
+          styles.homeStage,
+          {
+            marginHorizontal: -inset,
+            marginTop: -SPACING.lg,
+            height: stageHeight(windowHeight, true),
+          },
+        ]}
+      />
+      <View style={[styles.row, styles.deskDoors]}>
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <Skeleton key={i} style={styles.deskDoor} />
+        ))}
+      </View>
+      <SkeletonShelf tiles={5} inset={inset} eyebrow />
+      <SkeletonShelf tiles={5} inset={inset} />
+    </View>
+  );
+}
+
 export function SkeletonHero() {
   return (
     <View style={styles.hero}>
@@ -443,6 +481,9 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
     marginBottom: SPACING.xl,
   },
+  homeStage: { borderRadius: 0, marginBottom: SPACING.xl },
+  deskDoors: { marginBottom: SPACING.xl },
+  deskDoor: { width: 148, height: 84, borderRadius: RADIUS.md },
   heroLead: { flex: 2, height: 320, borderRadius: RADIUS.lg },
   heroRail: { flex: 1, gap: SPACING.md },
   heroRailItem: { flex: 1, borderRadius: RADIUS.md },

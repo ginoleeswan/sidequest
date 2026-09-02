@@ -749,7 +749,7 @@ const styles = StyleSheet.create({
     gap: SPACING.lg,
     // The sentence keeps the left third to itself: no cover stands under
     // the words, the wall begins where the copy column ends.
-    paddingLeft: 640,
+    paddingLeft: 680,
     paddingRight: SPACING.xl,
     justifyContent: 'flex-end',
     alignItems: 'center',

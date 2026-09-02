@@ -59,7 +59,7 @@ import { DesktopShell } from '@/components/DesktopShell';
 import {
   SkeletonCategory,
   SkeletonCompactHome,
-  SkeletonHero,
+  SkeletonDeskHome,
   SkeletonRow,
   SkeletonShelf,
 } from '@/components/Skeleton';
@@ -694,9 +694,10 @@ export default function HomeScreen({
             (list.isPending ? (
               isHome ? (
                 <View style={styles.homeScroll}>
-                  <SkeletonHero />
-                  <SkeletonShelf inset={SPACING.xl} />
-                  <SkeletonShelf inset={SPACING.xl} />
+                  <SkeletonDeskHome
+                    windowHeight={windowHeight}
+                    inset={SPACING.xl}
+                  />
                 </View>
               ) : (
                 <View style={styles.gridContentDesk}>
@@ -1198,7 +1199,16 @@ const styles = StyleSheet.create({
   /** A shelf-sized break: the shelf margin below, the page gutter at the sides. */
   // No inset of its own: the compact column already pays the gutter,
   // and a second one left the billboard narrower than the shelf above.
-  billboardSlot: { marginBottom: SPACING.xl },
+  /**
+   * The break runs the screen's width on the phone, as the rails
+   * beside it do. Inside the feed's gutter it was a card two gutters
+   * narrower than every shelf above it - the one element on the page
+   * that stopped short of both edges.
+   */
+  billboardSlot: {
+    marginHorizontal: -GUTTER,
+    marginBottom: SPACING.xl,
+  },
   billboardSlotWide: {
     paddingHorizontal: SPACING.xl,
     marginBottom: SPACING.xl,

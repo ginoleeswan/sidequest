@@ -2813,7 +2813,20 @@ const styles = StyleSheet.create({
    * off a plane it is already sitting on.
    */
   stage: { gap: SPACING.sm },
-  stageFrame: { borderRadius: RADIUS.lg, overflow: 'hidden' },
+  stageFrame: {
+    borderRadius: RADIUS.lg,
+    overflow: 'hidden',
+    // The frame holds composited children - the art carries a filter,
+    // the dwelt trailer is a video - and browsers do not clip those to
+    // a rounded corner on overflow alone: the box's square corners
+    // showed through at the foot. The mask makes the clip a real one.
+    ...(Platform.OS === 'web'
+      ? ({
+          WebkitMaskImage: '-webkit-radial-gradient(white, black)',
+          isolation: 'isolate',
+        } as unknown as ViewStyle)
+      : {}),
+  },
   stageLead: {
     width: '100%',
     aspectRatio: 16 / 9,
