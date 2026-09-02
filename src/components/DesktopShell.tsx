@@ -40,6 +40,7 @@ export function DesktopShell({
   onSelect,
   search,
   foldByDefault = false,
+  flush = false,
   children,
 }: {
   activeKey: string | null;
@@ -51,6 +52,14 @@ export function DesktopShell({
    * pages, where the picture is the point and the rail is a bystander.
    */
   foldByDefault?: boolean;
+  /**
+   * No padding of the shell's own: the page pads itself, inside its
+   * scroller. A page whose picture runs to the sheet's edges needs
+   * this - a scroll view clips at its own box, so a hero pulled into
+   * the shell's padding with negative margins was cut off exactly
+   * there, twenty points from the top and thirty-two from the sides.
+   */
+  flush?: boolean;
   children: React.ReactNode;
 }) {
   const { height: windowHeight } = useWindowDimensions();
@@ -94,7 +103,9 @@ export function DesktopShell({
           />
           <View style={styles.sheet}>
             <Textured fill />
-            <View style={styles.main}>{children}</View>
+            <View style={flush ? styles.mainFlush : styles.main}>
+              {children}
+            </View>
           </View>
         </View>
       </SafeAreaView>
@@ -121,4 +132,5 @@ const styles = StyleSheet.create({
     ...SHADOW.card,
   },
   main: { flex: 1, paddingHorizontal: SPACING.xl, paddingTop: SPACING.lg },
+  mainFlush: { flex: 1 },
 });

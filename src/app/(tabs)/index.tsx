@@ -57,7 +57,6 @@ import { DesktopShell } from '@/components/DesktopShell';
 import {
   SkeletonCategory,
   SkeletonCompactHome,
-  SkeletonGrid,
   SkeletonHero,
   SkeletonRow,
   SkeletonShelf,
@@ -478,7 +477,7 @@ export default function HomeScreen({
           <ActivityIndicator color={COLORS.mediumGrey} />
         </View>
       )}
-      <SiteFooter inset={isExpanded ? SPACING.xl : GUTTER} />
+      <SiteFooter inset={isExpanded ? SPACING.xl + GUTTER : GUTTER} />
     </>
   );
 
@@ -595,6 +594,7 @@ export default function HomeScreen({
         // the way the home page does.
         contentContainerStyle={[
           styles.gridContent,
+          isExpanded && styles.gridContentDesk,
           !isExpanded && { paddingTop: headerHeight },
           Platform.OS !== 'web' && {
             paddingBottom: insets.bottom,
@@ -609,6 +609,7 @@ export default function HomeScreen({
     return (
       <DesktopShell
         activeKey={searching ? null : isHome ? 'home' : selection}
+        flush={!isHome && !status}
         onHome={goHome}
         onSelect={selectSection}
         search={
@@ -631,7 +632,12 @@ export default function HomeScreen({
                   <SkeletonShelf inset={SPACING.xl} />
                 </View>
               ) : (
-                <SkeletonGrid columns={columns} />
+                <View style={styles.gridContentDesk}>
+                  <SkeletonCategory
+                    columns={columns}
+                    bleed={{ top: SPACING.lg, sides: SPACING.xl + GUTTER }}
+                  />
+                </View>
               )
             ) : isHome ? (
               <Screen style={styles.homeScroll} onRefresh={refreshHome}>
@@ -770,7 +776,7 @@ export default function HomeScreen({
                       columns={columns}
                       bleed={
                         isExpanded
-                          ? { top: SPACING.lg, sides: SPACING.xl }
+                          ? { top: SPACING.lg, sides: SPACING.xl + GUTTER }
                           : { top: headerHeight, sides: GUTTER }
                       }
                     />
@@ -1039,6 +1045,12 @@ const styles = StyleSheet.create({
   gridContent: {
     gap: LAYOUT.gridGap,
     paddingHorizontal: GUTTER,
+  },
+  /** The shell's padding, carried inside the scroller so the hero can
+      run to the sheet's edges without being clipped at the scroll box. */
+  gridContentDesk: {
+    paddingHorizontal: SPACING.xl + GUTTER,
+    paddingTop: SPACING.lg,
   },
   gridSpacer: { flex: 1 },
   gridCell: { flex: 1 },

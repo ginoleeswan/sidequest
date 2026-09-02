@@ -744,7 +744,7 @@ export default function GameInfoScreen() {
 
   if (isPending && fetchStatus !== 'paused') {
     return isExpanded ? (
-      <DesktopShell activeKey={null} foldByDefault>
+      <DesktopShell activeKey={null} foldByDefault flush>
         {/* The name is not known yet, but a blank tab is never right. */}
         <PageTitle>Sidequest</PageTitle>
         <View
@@ -1914,7 +1914,12 @@ export default function GameInfoScreen() {
         )}
 
         <Screen onRefresh={refresh}>
-          <View style={{ paddingBottom: SPACING.xl * 1.5 }}>
+          <View
+            style={[
+              { paddingBottom: SPACING.xl * 1.5 },
+              isExpanded && styles.deskPad,
+            ]}
+          >
             {isExpanded ? (
               <View style={styles.expandedInner}>
                 {deskHero}
@@ -2011,7 +2016,7 @@ export default function GameInfoScreen() {
     </>
   );
   return isExpanded ? (
-    <DesktopShell activeKey={null} foldByDefault>
+    <DesktopShell activeKey={null} foldByDefault flush>
       {page}
     </DesktopShell>
   ) : (
@@ -2023,6 +2028,10 @@ const styles = StyleSheet.create({
   // flexGrow + auto basis: wraps tall content, still fills 100dvh when short.
   background: { flexGrow: 1, backgroundColor: COLORS.darkGrey },
   container: { flexGrow: 1 },
+  /** The shell's padding, inside the scroller: the atmosphere behind
+      the head of the page reaches the sheet's edges instead of being
+      cut at the scroll box. */
+  deskPad: { paddingHorizontal: SPACING.xl, paddingTop: SPACING.lg },
   /**
    * A plate, because this one floats over a page that scrolls under it.
    *
@@ -2695,7 +2704,11 @@ const styles = StyleSheet.create({
     maxWidth: LAYOUT.maxContentWidth,
     alignSelf: 'center',
   },
-  skeletonShellWide: { width: '100%' },
+  skeletonShellWide: {
+    width: '100%',
+    paddingHorizontal: SPACING.xl,
+    paddingTop: SPACING.lg,
+  },
   lightbox: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.95)',
