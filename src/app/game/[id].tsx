@@ -15,7 +15,6 @@ import {
   StyleSheet,
   Text,
   View,
-  useWindowDimensions,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
@@ -40,6 +39,7 @@ import { Chip } from '@/components/Chip';
 import { CommunityStats } from '@/components/CommunityStats';
 import { ChromeWeld } from '@/components/ChromeWeld';
 import { CoverImage } from '@/components/CoverImage';
+import { Decision } from '@/components/Decision';
 import { pickTrailer } from '@/lib/stage';
 import { StageTrailer } from '@/components/StageTrailer';
 import { GameCard } from '@/components/GameCard';
@@ -72,7 +72,7 @@ import { GrainScrim, Textured } from '@/components/Textured';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { detailHeroHeight } from '@/lib/detailHero';
+import { MASTHEAD_TOP, POSTER, TITLE_SLOT } from '@/lib/detailHero';
 import { formatHours } from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
 import { usePersistedState } from '@/hooks/usePersistedState';
@@ -691,7 +691,6 @@ export default function GameInfoScreen() {
   const { durationOf, learnDurations } = useDurations();
 
   const { isExpanded, width } = useBreakpoint();
-  const { height: windowHeight } = useWindowDimensions();
   const hasNote = usePersonalNote(Number(id));
   const insets = useSafeAreaInsets();
   const opacity = useAnimatedValue(0);
@@ -993,78 +992,120 @@ export default function GameInfoScreen() {
     }),
   ];
 
-  const hero = (
-    <View
-      style={[
-        styles.hero,
-        { height: detailHeroHeight(windowHeight) } as ViewStyle,
-      ]}
-    >
-      {/*
-        Artwork, and enough of it to be worth looking at.
+  /**
+   * The ambient ground behind the box: the game's own colours, out of
+   * focus. The hero banner where SteamGridDB has one, else RAWG's
+   * screenshot - at the small cut, since it is about to be blurred
+   * past recognition anyway.
+   */
+  const ambient =
+    art?.hero?.thumb ?? mediaUri(game.background_image, 210) ?? null;
+  const column = Math.min(width, LAYOUT.maxContentWidth);
 
-        The masthead was briefly the gallery itself, which worked and
-        cost the page its one beautiful thing: key art is composed to be
-        looked at whole, and a frame you swipe past is a frame nobody
-        looks at. The screens and the trailers went back to a carousel
-        of their own, which is also what they are — evidence, not
-        identity — and the masthead went back to being a picture.
+  const hero = (
+    <View style={styles.hero}>
+      {/*
+        The box, standing on its own weather.
+
+        The masthead was a banner: a landscape screenshot cropped to a
+        portrait screen, which lost whatever the frame was composed
+        around, with the name typed over its foot. Every storefront
+        shelves a game by its box, and this app's own tiles are boxes -
+        so the page a tile opens onto now opens on the same object, at
+        the size the shelf could not give it. The screenshot is not
+        gone: it is the atmosphere behind the box, blurred until it is
+        colour, so the page takes the game's palette without the art
+        having to survive a crop.
       */}
-      <CoverImage
-        uri={game.background_image}
-        style={styles.heroImage}
-        iconSize={72}
-        size="hero"
-        // The one picture the page opens on goes to the front of the
-        // queue, ahead of the thumbnails and covers below it.
-        priority="high"
-        label={`${game.name} cover art`}
-      />
-      {/* Art dissolves into the page colour — the hero belongs to the page,
-          not to a box sitting on it. */}
-      {/* The ramp starts where the copy does, not a third of the way
-          down. At the old stops the title and the stat strip sat on
-          roughly a quarter of a scrim, which is legible over dark art
-          and invisible over light — and RAWG returns both. */}
-      <LinearGradient
-        /* Held back so the picture survives. The ramp used to reach a
-           third of its weight by the halfway mark, veiling the part of
-           the art that is actually composed — a portrait crop of key
-           art puts the faces high, and they were sitting under a
-           scrim. It stays clear to two thirds and then closes fast,
-           which is all the copy at the foot needs. */
-        colors={['#333D5100', '#333D5126', '#333D51D9', COLORS.darkGrey]}
-        locations={[0.4, 0.66, 0.9, 1]}
-        style={StyleSheet.absoluteFill}
-        pointerEvents="none"
-      />
-      <GrainScrim style={styles.heroGrain} />
-      <ChromeWeld height={insets.top + WELD_HEIGHT} />
-      <View style={styles.heroCopy}>
-        {/* No platform glyphs here any more: eight of them opened the
-            masthead with a row of noise, and every one is spelled out
-            in the file box under PLATFORMS. */}
-        {/* The mark where the name was typed, sized to the column: as
-            wide as the copy, no taller than two lines of the display
-            face it replaces. See TitleLogo for why the name is never
-            actually gone. */}
-        <TitleLogo
-          logo={logo}
-          name={game.name}
-          maxWidth={
-            Math.min(width, LAYOUT.maxContentWidth) - SPACING.md * 2 - 40
-          }
-          maxHeight={84}
-        >
-          <Text style={styles.heroTitle}>{game.name}</Text>
-        </TitleLogo>
-        {/* Identity, and only identity, on the art: who made it, when,
-            and what kind of thing it is. The figures went to the strip
-            under the picture, where they stand on the page's own colour
-            rather than on whatever RAWG returned. The genres are the
-            live parts — each one is a door into its section. */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        {ambient ? (
+          <Image
+            source={{ uri: ambient }}
+            style={styles.ambient}
+            contentFit="cover"
+            blurRadius={36}
+            transition={DURATION.slow}
+            priority="high"
+            accessible={false}
+            importantForAccessibility="no-hide-descendants"
+          />
+        ) : (
+          <Textured fill />
+        )}
+        <LinearGradient
+          colors={[
+            'rgba(51,61,81,0.30)',
+            'rgba(51,61,81,0.62)',
+            'rgba(51,61,81,0.92)',
+            COLORS.darkGrey,
+          ]}
+          locations={[0, 0.5, 0.86, 1]}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+        <GrainScrim style={styles.heroGrain} />
+        <ChromeWeld height={insets.top + WELD_HEIGHT} />
+      </View>
+      <View
+        style={[
+          styles.masthead,
+          { paddingTop: insets.top + MASTHEAD_TOP, width: column },
+        ]}
+      >
+        <View style={styles.posterFrame}>
+          {boxArt ? (
+            <Image
+              source={{ uri: boxArt }}
+              style={styles.poster}
+              contentFit="cover"
+              transition={DURATION.base}
+              // The one picture the page opens on goes to the front of
+              // the queue, ahead of the thumbnails below it.
+              priority="high"
+              accessibilityLabel={`${game.name} box art`}
+              alt={`${game.name} box art`}
+            />
+          ) : (
+            /* The quest card, as the tiles draw it: the brand's own
+               plate while the box is asked for, and the name set on it
+               if there turns out to be no box anywhere. Hidden from
+               assistive tech - the title under it already speaks. */
+            <View style={[styles.poster, styles.posterPlate]}>
+              <Textured fill />
+              {boxArt === null ? (
+                <Text
+                  style={styles.posterName}
+                  numberOfLines={4}
+                  accessibilityElementsHidden
+                  importantForAccessibility="no-hide-descendants"
+                >
+                  {game.name}
+                </Text>
+              ) : null}
+            </View>
+          )}
+        </View>
+        {/* A fixed slot: the typed name arrives first and the
+            publisher's mark replaces it, and the page must not move
+            under the reader when the taller one lands. */}
+        <View style={styles.titleSlot}>
+          <TitleLogo
+            logo={logo}
+            name={game.name}
+            maxWidth={column - SPACING.xl * 2}
+            maxHeight={TITLE_SLOT}
+          >
+            <Text style={styles.heroTitle} numberOfLines={2}>
+              {game.name}
+            </Text>
+          </TitleLogo>
+        </View>
+        {/* Identity, and only identity: who made it, when, and what
+            kind of thing it is. The figures stand in the strip under
+            the masthead, on the page's own colour. The genres are the
+            live parts - each is a door into its section. */}
         {identity.length > 0 ? (
-          <Text style={[styles.heroIdentity, OVER_IMAGE.body]}>
+          <Text style={styles.heroIdentity}>
             {identity.map((bit, index) => (
               <React.Fragment key={bit.key}>
                 {index > 0 ? ' · ' : null}
@@ -1181,19 +1222,10 @@ export default function GameInfoScreen() {
     </View>
   ) : (
     <View style={styles.controls}>
-      {/* Flush on the page, as the desktop rail already is. The card
-          this stood in — a bordered, shadowed plate holding a bordered
-          control, a rule, and a row of outlined pills — was the page's
-          box-in-a-box: three nested rounded rectangles for one
-          decision. The segmented group is already an object with its
-          own plate and stroke, and its amber selection is what marks it
-          as the thing you act on. What follows from it sits under it on
-          one quiet line. */}
-      <StatusActions game={game} />
-      <View style={styles.decisionActions}>
-        <SessionTimer game={game} />
-        <Commitment gameId={game.id} />
-      </View>
+      {/* Flush on the page, as the desktop rail already is; see
+          Decision for why a game that is not yours yet gets one button
+          rather than a three-way control with nothing chosen. */}
+      <Decision game={game} />
     </View>
   );
 
@@ -2240,7 +2272,48 @@ const styles = StyleSheet.create({
   },
 
   // hero
-  hero: { justifyContent: 'flex-end' },
+  hero: { alignItems: 'center', overflow: 'hidden' },
+  /** Past the edges, so the blur has no hard border to reveal. */
+  ambient: {
+    position: 'absolute',
+    top: -SPACING.xl,
+    left: -SPACING.xl,
+    right: -SPACING.xl,
+    bottom: -SPACING.xl,
+    opacity: 0.9,
+  },
+  masthead: {
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.md,
+    gap: SPACING.md,
+  },
+  /** The shadow on the frame, the clip on the box inside it. */
+  posterFrame: {
+    borderRadius: RADIUS.sm,
+    ...SHADOW.hero,
+  },
+  poster: {
+    ...POSTER,
+    borderRadius: RADIUS.sm,
+    overflow: 'hidden',
+    backgroundColor: COLORS.navy,
+  },
+  posterPlate: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: SPACING.md,
+  },
+  posterName: {
+    ...TYPE.h1,
+    color: COLORS.white,
+    textAlign: 'center',
+  },
+  titleSlot: {
+    minHeight: TITLE_SLOT,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   heroGrain: {
     position: 'absolute',
     left: 0,
@@ -2254,13 +2327,6 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     height: '70%',
-  },
-  heroImage: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
   },
   controls: {
     paddingHorizontal: SPACING.md,
@@ -2320,23 +2386,16 @@ const styles = StyleSheet.create({
   },
   /** The plan's line and the split, under the strip, at the gutter. */
   figureNotes: { gap: SPACING.xs, paddingHorizontal: SPACING.xs },
-  heroCopy: {
-    paddingHorizontal: SPACING.md,
-    paddingBottom: SPACING.md,
-    gap: SPACING.sm,
-    alignItems: 'flex-start',
-    width: '100%',
-    maxWidth: LAYOUT.maxContentWidth,
-    alignSelf: 'center',
-  },
   heroTitle: {
     ...TYPE.display,
-    ...OVER_IMAGE.heading,
     color: COLORS.white,
+    textAlign: 'center',
   },
   heroIdentity: {
     ...TYPE.labelSmall,
-    color: COLORS.lightGrey,
+    color: COLORS.mediumGrey,
+    textAlign: 'center',
+    paddingHorizontal: SPACING.md,
   },
   heroIdentityLink: { color: COLORS.white },
 

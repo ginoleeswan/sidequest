@@ -28,7 +28,7 @@ const ORDER: LibraryStatus[] = ['wishlist', 'playing', 'finished'];
  * Grouped, with the chosen state filled in the accent, it matches the
  * Plan's dials: one selection language for the whole app.
  */
-const CONFIRM: Record<LibraryStatus, string> = {
+export const CONFIRM: Record<LibraryStatus, string> = {
   wishlist: 'Saved — Want to play',
   playing: 'Marked as Playing',
   finished: 'Finished — credits rolled',

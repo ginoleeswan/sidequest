@@ -8,9 +8,11 @@ import {
   type ViewStyle,
 } from 'react-native';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { detailHeroHeight } from '@/lib/detailHero';
+import { MASTHEAD_TOP, POSTER, TITLE_SLOT } from '@/lib/detailHero';
 import { STAGE_BOUNDS, stageHeight } from '@/lib/stage';
 import { HOME_SHELVES } from '@/constants/categories';
 import { DURATION, EASING } from '@/styles/motion';
@@ -367,23 +369,20 @@ export function SkeletonDetailExpanded() {
  * About heading at 649 and its prose at 683.
  */
 export function SkeletonDetail() {
-  const { height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   return (
     <View>
+      {/* The masthead's bones: the box standing where the box will, the
+          title slot under it, the identity line under that - the same
+          constants the loaded masthead is built from. */}
       <View
-        style={[
-          styles.detailHero,
-          // The same share of the window the masthead takes — see
-          // lib/detailHero — so the art lands where the bone stood.
-          { height: detailHeroHeight(height) } as ViewStyle,
-        ]}
+        style={[styles.detailHero, { paddingTop: insets.top + MASTHEAD_TOP }]}
       >
-        <Skeleton style={styles.detailHeroFill} />
-        <View style={styles.detailMasthead}>
-          {/* Identity only: the name, and the one line under it. */}
+        <Skeleton style={styles.detailPoster} />
+        <View style={styles.detailTitleSlot}>
           <Skeleton style={styles.detailTitle} />
-          <Skeleton style={styles.detailIdentity} />
         </View>
+        <Skeleton style={styles.detailIdentity} />
       </View>
       <View style={styles.detailBody}>
         {/* The strip of figures, its note, then the status segments and
@@ -491,22 +490,21 @@ const styles = StyleSheet.create({
    * Every number here is the loaded page measured at 390 points, so the
    * bones stand where the words will. See `SkeletonDetail`.
    */
-  detailHero: { justifyContent: 'flex-end' },
-  /** The artwork's stand-in, behind the masthead rather than above it. */
-  detailHeroFill: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 0,
-  },
-  detailMasthead: {
+  detailHero: {
+    alignItems: 'center',
     paddingHorizontal: SPACING.md,
     paddingBottom: SPACING.md,
+    gap: SPACING.md,
+  },
+  detailPoster: { ...POSTER, borderRadius: RADIUS.sm },
+  detailTitleSlot: {
+    minHeight: TITLE_SLOT,
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'stretch',
   },
   detailTitle: { height: 36, width: '55%' },
-  detailIdentity: { height: 17, width: '62%', marginTop: SPACING.sm },
+  detailIdentity: { height: 17, width: '62%' },
   detailFigures: { gap: SPACING.sm + 2, paddingTop: SPACING.xs },
   detailStrip: { flexDirection: 'row', gap: SPACING.sm },
   detailStripCell: { flex: 1, height: 56 },
