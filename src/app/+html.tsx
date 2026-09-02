@@ -15,12 +15,13 @@ export default function Root({ children }: PropsWithChildren) {
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta
           name="viewport"
-          /* maximum-scale=1 exists for one reason: iOS Safari zooms the whole
-   page when focus lands in an input set under 16px, and never zooms
-   back. Since iOS 10 Safari ignores this cap for pinch — people who
-   zoom on purpose still can — so it disables only the accidental
-   zoom, not the deliberate one. */
-          content="width=device-width, initial-scale=1, maximum-scale=1, shrink-to-fit=no, viewport-fit=cover"
+          /* No maximum-scale. It was here to stop iOS Safari zooming the
+   page when focus landed in an input set under 16px — but a scale cap
+   is also the one thing axe flags on every route, and WCAG 1.4.4 is
+   right that a reader must be able to zoom. The cause is fixed at the
+   source instead: on a phone-width page every input is 16px (see the
+   CSS below), which is the threshold Safari stops zooming at. */
+          content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover"
         />
         {/* Must equal the html/body canvas below: iOS Safari paints the
             status bar and toolbar with it, and any disagreement shows up
@@ -186,6 +187,20 @@ const css = `
     border-radius: 5px;
   }
   *::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+
+  /*
+   * Inputs at the size Safari stops zooming for.
+   *
+   * iOS Safari zooms the whole page when focus lands in a field set
+   * under 16px and does not zoom back out. The viewport used to carry
+   * a scale cap to prevent that, at the cost of everybody's right to
+   * zoom; sizing the fields instead keeps the zoom and loses the jump.
+   * Phone widths only — the desk's fields are sized for a pointer and
+   * a laptop never auto-zooms.
+   */
+  @media (max-width: 899px) {
+    input, textarea { font-size: 16px !important; }
+  }
 
   /* Cards and nav are controls: dragging across them shouldn't select text. */
   [role="button"], [role="link"] { user-select: none; }

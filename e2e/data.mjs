@@ -113,7 +113,11 @@ const SCENARIOS = [
     name: 'the home shelves, for somebody mid-backlog',
     route: '/',
     seed: SEED,
-    expect: ['Tonight', 'Hades', 'Take a look'],
+    // The stage opens on Tonight for a reader with a game under way, and
+    // its action is the verb — "Continue it" for nine hours into Hades —
+    // rather than the storefront's "Take a look", which belongs to the
+    // slides behind it.
+    expect: ['Tonight', 'Hades', 'Continue it'],
     absent: ['Nothing here yet', 'Couldn’t reach RAWG'],
   },
   {
