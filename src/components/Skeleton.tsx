@@ -372,15 +372,26 @@ export function SkeletonDetail() {
       >
         <Skeleton style={styles.detailHeroFill} />
         <View style={styles.detailMasthead}>
+          {/* Identity only: the name, and the one line under it. */}
           <Skeleton style={styles.detailTitle} />
-          <Skeleton style={styles.detailHours} />
-          <Skeleton style={styles.detailPace} />
-          <Skeleton style={styles.detailGenres} />
+          <Skeleton style={styles.detailIdentity} />
         </View>
       </View>
       <View style={styles.detailBody}>
-        {/* The three status segments and the session row under them. */}
-        <Skeleton style={styles.detailControl} />
+        {/* The strip of figures, its note, then the status segments and
+            the session line under them. */}
+        <View style={styles.detailFigures}>
+          <View style={styles.detailStrip}>
+            <Skeleton style={styles.detailStripCell} />
+            <Skeleton style={styles.detailStripCell} />
+            <Skeleton style={styles.detailStripCell} />
+          </View>
+          <Skeleton style={styles.detailPace} />
+        </View>
+        <View style={styles.detailControls}>
+          <Skeleton style={styles.detailControl} />
+          <Skeleton style={styles.detailSession} />
+        </View>
         <View style={styles.detailSection}>
           <Skeleton style={styles.detailHeading} />
           {/* Prose sets solid, the way text does: three lines and the
@@ -487,16 +498,20 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.md,
   },
   detailTitle: { height: 36, width: '55%' },
-  detailHours: { height: 38, width: '54%', marginTop: 12 },
-  detailPace: { height: 17, width: '54%', marginTop: 4 },
-  detailGenres: { height: 24, width: '54%', marginTop: 8 },
+  detailIdentity: { height: 17, width: '62%', marginTop: SPACING.sm },
+  detailFigures: { gap: SPACING.sm + 2, paddingTop: SPACING.xs },
+  detailStrip: { flexDirection: 'row', gap: SPACING.sm },
+  detailStripCell: { flex: 1, height: 56 },
+  detailPace: { height: 17, width: '54%', marginHorizontal: SPACING.xs },
+  detailControls: { gap: SPACING.sm + 2, paddingTop: SPACING.xs },
+  detailSession: { height: 20, width: 132, marginHorizontal: SPACING.xs },
   detailBody: {
     paddingHorizontal: SPACING.md,
     paddingTop: SPACING.md,
     gap: 18,
   },
   /** The status segments and the session row, as one card. */
-  detailControl: { height: 135, borderRadius: RADIUS.md },
+  detailControl: { height: 46, borderRadius: RADIUS.sm },
   detailSection: { gap: 10 },
   /** The extra air the page leaves before Player verdict. */
   detailSectionApart: { marginTop: 22 },

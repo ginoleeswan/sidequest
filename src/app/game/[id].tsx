@@ -51,7 +51,6 @@ import { PersonalNote, usePersonalNote } from '@/components/PersonalNote';
 import { SessionTimer } from '@/components/SessionTimer';
 import { rememberGame } from '@/lib/recent';
 import { calendarDate } from '@/lib/format';
-import { DynamicIcon } from '@/components/DynamicIcon';
 import { Rail } from '@/components/Rail';
 import { LiveStreams } from '@/components/LiveStreams';
 import { RatingsBreakdown } from '@/components/RatingsBreakdown';
@@ -296,101 +295,53 @@ function Shelf<T>({
   );
 }
 
-function StatStrip({
+/**
+ * The finishing rate — the verdict this app can give and no store can.
+ *
+ * "92% recommended" is RAWG's opinion of the game. It says nothing
+ * about the thing this whole app is built on, which is whether a game
+ * is a good use of the hours it asks for. Beaten against owned is
+ * exactly that, out of the same payload that was already sitting in
+ * the rail as trivia: of the people who have it, this many reached the
+ * credits.
+ *
+ * Coloured on the app's own semantics rather than a curve — mint is
+ * time well spent, amber is a maybe, coral is a shelf. And it is only
+ * claimed where the sample can carry it: under a few hundred owners
+ * the ratio is noise wearing a percentage.
+ */
+function finishRateOf(game: GameDetail): { pct: number; tint: string } | null {
+  const st = game.added_by_status;
+  if (!st) return null;
+  const owned = st.owned ?? 0;
+  const beaten = st.beaten ?? 0;
+  if (owned < 300) return null;
+  const pct = Math.round((beaten / owned) * 100);
+  const tint =
+    pct >= 45 ? COLORS.mint : pct >= 20 ? COLORS.accent : COLORS.coral;
+  return { pct, tint };
+}
+
+/**
+ * The plan's answer, or the arithmetic that would produce one.
+ *
+ * Written once. It was two identical trees, one per width, and the
+ * copy had already started to drift between them.
+ */
+function PlanLine({
   game,
-  onEditLength,
-  onOpenGenre,
   onOpenPlan,
-  wide = false,
 }: {
   game: GameDetail;
-  onEditLength: () => void;
-  onOpenGenre: (genre: Named) => void;
   onOpenPlan: () => void;
-  /** The desktop masthead, where the type scale is a size larger. */
-  wide?: boolean;
 }) {
   const { durationOf } = useDurations();
   const duration = durationOf(game);
   const [pace] = usePersistedState('sidequest.plan.pace', 6);
   const standing = usePlanStanding(game.id);
 
-  /**
-   * One figure, one sentence, one quiet line.
-   *
-   * This was five statistics in equal columns — length, rating,
-   * Metacritic, year, ESRB — which wrapped three-and-two on a phone and
-   * gave a certification the same weight as the number the whole app is
-   * built on. Equal weight is not neutrality; it is a refusal to say
-   * what matters.
-   *
-   * So the hours are set at display size, the way the Library sets the
-   * hours ahead of you, and everything else falls to a byline: the
-   * things you glance at to place a game, in one run, none of them
-   * pretending to be the headline.
-   */
-  /**
-   * One byline: what kind of game, then how it landed.
-   *
-   * The masthead had grown to five stacked rows — eight platform
-   * glyphs, the title, the hours, the sentence, and a run of four
-   * statistics — with the genres in a sixth row further down, wedged
-   * between the session clock and the page's first heading. Every one
-   * of those is a fact somebody might want and none of them is the
-   * point, which is what "heavy" means: no line yielding to another.
-   *
-   * The platform glyphs, the release year and the age rating are all in
-   * the file box at the foot, which is where you look a thing up. What
-   * stays is identity and reception, on one line.
-   */
-  const meta: React.ReactNode[] = [];
-  for (const genre of game.genres?.slice(0, 3) ?? []) {
-    const section = genre.slug ? findSection(genre.slug) : undefined;
-    meta.push(
-      <Pressable
-        key={`genre-${genre.id}`}
-        onPress={section ? () => onOpenGenre(genre) : undefined}
-        disabled={!section}
-        accessibilityRole={section ? 'link' : undefined}
-        accessibilityLabel={section ? `Browse ${genre.name} games` : undefined}
-        style={styles.metaItem}
-      >
-        {/* The app's own icons. Every genre it browses already carries
-            one in `constants/categories` — a compass for Adventure, a
-            shield for RPG — and they were going unused on the one
-            screen that names a game's genres. Nothing is invented for a
-            genre this app has no section for. */}
-        {section ? (
-          <DynamicIcon
-            type={section.iconType}
-            name={section.iconName}
-            size={13}
-            color={COLORS.lightGrey}
-          />
-        ) : null}
-        <Text style={styles.metaBit}>{genre.name}</Text>
-      </Pressable>
-    );
-  }
-  if (game.rating > 0) {
-    meta.push(
-      <Text key="rating" style={styles.metaBit}>
-        ★ {game.rating.toFixed(1)}
-      </Text>
-    );
-  }
-  if (game.metacritic != null) {
-    meta.push(<ScorePill key="mc" score={game.metacritic} />);
-  }
-
-  /**
-   * The plan's answer, or the arithmetic that would produce one.
-   *
-   * Written once. It was two identical trees, one per width, and the
-   * copy had already started to drift between them.
-   */
-  const planLine =
-    standing?.kind === 'scheduled' ? (
+  if (standing?.kind === 'scheduled') {
+    return (
       <Text
         style={[styles.statPace, styles.statPlan]}
         onPress={onOpenPlan}
@@ -407,11 +358,14 @@ function StatStrip({
         })}
         <Text style={styles.statArrow}> →</Text>
       </Text>
-    ) : standing?.kind === 'dropped' ? (
-      /* The relief stance, on a page about one game: the window has no
-         room for it and that is a fact about the window, not a failing
-         of the reader. §2.1 — no line in this app tells somebody they
-         are behind. */
+    );
+  }
+  if (standing?.kind === 'dropped') {
+    /* The relief stance, on a page about one game: the window has no
+       room for it and that is a fact about the window, not a failing
+       of the reader. §2.1 — no line in this app tells somebody they
+       are behind. */
+    return (
       <Text
         style={styles.statPace}
         onPress={onOpenPlan}
@@ -422,32 +376,64 @@ function StatStrip({
         More than your window holds. It’ll still be here.
         <Text style={styles.statArrow}> →</Text>
       </Text>
-    ) : duration.hours > 0 ? (
+    );
+  }
+  if (duration.hours > 0) {
+    return (
       <Text style={styles.statPace}>
         {duration.hours <= pace
           ? `Under a week at ${pace}h a week.`
           : `About ${Math.round(duration.hours / pace)} weeks at ${pace}h a week.`}
       </Text>
-    ) : null;
+    );
+  }
+  return null;
+}
+
+/** What the figure is: whose number, and how sure. */
+function hoursLabelFor(
+  duration: ReturnType<ReturnType<typeof useDurations>['durationOf']>
+): string {
+  return duration.source === 'yours'
+    ? 'your length'
+    : duration.source === 'reported'
+      ? 'players report'
+      : 'to finish';
+}
+
+/**
+ * The desktop masthead's figure: the hours at display size, the plan's
+ * arithmetic beside them.
+ *
+ * This was five statistics in equal columns — length, rating,
+ * Metacritic, year, ESRB — which gave a certification the same weight
+ * as the number the whole app is built on. Equal weight is not
+ * neutrality; it is a refusal to say what matters.
+ */
+function StatStrip({
+  game,
+  onEditLength,
+  onOpenPlan,
+}: {
+  game: GameDetail;
+  onEditLength: () => void;
+  onOpenPlan: () => void;
+}) {
+  const { durationOf } = useDurations();
+  const duration = durationOf(game);
 
   return (
-    <View style={[styles.statBlock, wide && styles.statBlockWide]}>
+    <View style={[styles.statBlock, styles.statBlockWide]}>
       <Pressable
         onPress={onEditLength}
         accessibilityRole="button"
         accessibilityLabel={`Change how long ${game.name} takes`}
       >
         <View style={styles.hoursLine}>
-          <Text style={[styles.hoursValue, wide && styles.hoursValueWide]}>
+          <Text style={[styles.hoursValue, styles.hoursValueWide]}>
             {duration.hours > 0 ? formatHours(duration.hours) : 'Set'}
           </Text>
-          <Text style={styles.hoursLabel}>
-            {duration.source === 'yours'
-              ? 'your length'
-              : duration.source === 'reported'
-                ? 'players report'
-                : 'to finish'}
-          </Text>
+          <Text style={styles.hoursLabel}>{hoursLabelFor(duration)}</Text>
           {/* Said, rather than punctuated. A bare "?" after the figure
               read as text that had failed to render — and it was doing
               a different job from the "~", which says the number is not
@@ -462,37 +448,128 @@ function StatStrip({
               rendering as a smudge beside a 76pt number. */}
           <Ionicons
             name="pencil"
-            size={wide ? 15 : 12}
+            size={15}
             color={COLORS.mediumGrey}
             style={styles.statPencil}
           />
         </View>
       </Pressable>
-
       {/* On the wide page the byline and the pace share one line —
           identity on the left, the plan's arithmetic on the right —
           because the pace sentence alone was an orphan: a tiny grey
           line hanging under the rule with a column of empty space
-          beside it. Paired, the line balances and the rule closes the
-          block under both. The phone keeps them stacked; at 358 the
-          two would fight for the width. */}
-      {wide ? (
-        <View style={styles.bylineRow}>{planLine}</View>
-      ) : (
-        <>
-          {meta.length > 0 && (
-            <View style={styles.metaLine}>
-              {meta.map((bit, i) => (
-                <React.Fragment key={i}>
-                  {i > 0 ? <Text style={styles.metaDot}>·</Text> : null}
-                  {bit}
-                </React.Fragment>
-              ))}
-            </View>
-          )}
-          {planLine}
-        </>
-      )}
+          beside it. */}
+      <View style={styles.bylineRow}>
+        <PlanLine game={game} onOpenPlan={onOpenPlan} />
+      </View>
+    </View>
+  );
+}
+
+/**
+ * The phone's figures, on solid ground under the artwork.
+ *
+ * The masthead used to carry all of them on the picture: the hours in
+ * amber display type, a body-size label and a pencil, then a line of
+ * genre glyphs, a star figure and a Metacritic pill in three different
+ * shapes, then the pace sentence, then — under the picture — the
+ * studio and the year in grey. Five registers in eighty points, each
+ * with its own colour and its own alignment, and none of it on a grid.
+ * That is what "messy" looks like when the individual parts are fine.
+ *
+ * The store pages this app borrows from solve it the same way: the art
+ * carries identity and nothing else, and the numbers sit in one strip
+ * beneath it — equal cells, a figure over a small label, hairlines
+ * between. The strip is the page's second line; the hours lead it in
+ * amber, and the rest fall in behind at the same size in the app's
+ * greys, so the eye ranks them by colour and not by hunting.
+ */
+function InfoStrip({
+  game,
+  onEditLength,
+}: {
+  game: GameDetail;
+  onEditLength: () => void;
+}) {
+  const { durationOf } = useDurations();
+  const duration = durationOf(game);
+  const finish = finishRateOf(game);
+
+  const cells: {
+    key: string;
+    value: string;
+    label: string;
+    tint?: string;
+    onPress?: () => void;
+    accessibilityLabel?: string;
+    edit?: boolean;
+  }[] = [
+    {
+      key: 'hours',
+      value: duration.hours > 0 ? formatHours(duration.hours) : 'Set',
+      label:
+        duration.rough && duration.hours > 0
+          ? `${hoursLabelFor(duration)} · est.`
+          : hoursLabelFor(duration),
+      tint: COLORS.accent,
+      onPress: onEditLength,
+      accessibilityLabel: `Change how long ${game.name} takes`,
+      edit: true,
+    },
+  ];
+  if (game.rating > 0)
+    cells.push({
+      key: 'rating',
+      value: `★ ${game.rating.toFixed(1)}`,
+      label: 'players',
+    });
+  if (game.metacritic != null)
+    cells.push({
+      key: 'metacritic',
+      value: String(game.metacritic),
+      label: 'Metacritic',
+      tint:
+        game.metacritic >= 75
+          ? COLORS.mint
+          : game.metacritic >= 50
+            ? COLORS.accent
+            : COLORS.coral,
+    });
+  if (finish)
+    cells.push({
+      key: 'finish',
+      value: `${finish.pct}%`,
+      label: 'finished it',
+      tint: finish.tint,
+    });
+
+  return (
+    <View style={styles.strip}>
+      {cells.map((cell, index) => (
+        <Pressable
+          key={cell.key}
+          onPress={cell.onPress}
+          disabled={!cell.onPress}
+          accessibilityRole={cell.onPress ? 'button' : undefined}
+          accessibilityLabel={cell.accessibilityLabel}
+          style={[styles.stripCell, index > 0 && styles.stripCellRule]}
+        >
+          <Text
+            style={[styles.stripValue, cell.tint ? { color: cell.tint } : null]}
+            numberOfLines={1}
+          >
+            {cell.value}
+          </Text>
+          <View style={styles.stripLabelRow}>
+            <Text style={styles.stripLabel} numberOfLines={1}>
+              {cell.label}
+            </Text>
+            {cell.edit ? (
+              <Ionicons name="pencil" size={10} color={COLORS.mediumGrey} />
+            ) : null}
+          </View>
+        </Pressable>
+      ))}
     </View>
   );
 }
@@ -898,6 +975,24 @@ export default function GameInfoScreen() {
   ];
   const current = frames[stageIndex] ?? frames[0];
 
+  /** Who made it, when, and what kind of thing it is — the art's one line. */
+  const identity: { key: string; text: string; onPress?: () => void }[] = [
+    ...(game.developers?.[0]?.name
+      ? [{ key: 'dev', text: game.developers[0].name }]
+      : []),
+    ...(game.released
+      ? [{ key: 'year', text: game.released.slice(0, 4) }]
+      : []),
+    ...(game.genres?.slice(0, 2) ?? []).map((genre) => {
+      const section = genre.slug ? findSection(genre.slug) : undefined;
+      return {
+        key: `genre-${genre.id}`,
+        text: genre.name,
+        onPress: section ? () => openGenre(genre) : undefined,
+      };
+    }),
+  ];
+
   const hero = (
     <View
       style={[
@@ -963,21 +1058,53 @@ export default function GameInfoScreen() {
         >
           <Text style={styles.heroTitle}>{game.name}</Text>
         </TitleLogo>
-        <StatStrip
-          game={game}
-          onEditLength={() => setEditingLength(true)}
-          onOpenGenre={openGenre}
-          onOpenPlan={() => router.push('/plan')}
-        />
-        {/* The same split the desktop reads under its figure. It was
-            desktop-only by accident of living in that layout's title
-            block — but the phone reader is the one deciding on a
-            sofa, and "100% takes four times the story" changes that
-            decision the most. */}
+        {/* Identity, and only identity, on the art: who made it, when,
+            and what kind of thing it is. The figures went to the strip
+            under the picture, where they stand on the page's own colour
+            rather than on whatever RAWG returned. The genres are the
+            live parts — each one is a door into its section. */}
+        {identity.length > 0 ? (
+          <Text style={[styles.heroIdentity, OVER_IMAGE.body]}>
+            {identity.map((bit, index) => (
+              <React.Fragment key={bit.key}>
+                {index > 0 ? ' · ' : null}
+                {bit.onPress ? (
+                  <Text
+                    onPress={bit.onPress}
+                    suppressHighlighting
+                    accessibilityRole="link"
+                    accessibilityLabel={`Browse ${bit.text} games`}
+                    style={styles.heroIdentityLink}
+                  >
+                    {bit.text}
+                  </Text>
+                ) : (
+                  bit.text
+                )}
+              </React.Fragment>
+            ))}
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  );
+
+  /**
+   * The phone's second line: the figures, then what the plan makes of
+   * them, then the split HowLongToBeat built a site on — the same 74
+   * hours is a different promise to someone who mainlines than to a
+   * completionist. Submitted times, so it only speaks when enough
+   * people have.
+   */
+  const figures = (
+    <View style={styles.figures}>
+      <InfoStrip game={game} onEditLength={() => setEditingLength(true)} />
+      <View style={styles.figureNotes}>
+        <PlanLine game={game} onOpenPlan={() => router.push('/plan')} />
         {igdb?.times &&
         igdb.times.submissions >= 5 &&
         (igdb.times.hastily || igdb.times.completely) ? (
-          <Text style={[styles.splitLegend, OVER_IMAGE.body]}>
+          <Text style={styles.splitLegend}>
             {[
               igdb.times.hastily
                 ? `Rushing it ${Math.round(igdb.times.hastily)}h`
@@ -1043,19 +1170,18 @@ export default function GameInfoScreen() {
     </View>
   ) : (
     <View style={styles.controls}>
-      {/* One object: the decision, then what follows from it.
-          The status control, the clock and the two commitment toggles
-          were four separate things loose on the page — a filled group
-          with three outlined pills drifting beneath it and nothing
-          holding any of them together. They are one question: what are
-          you doing about this game. */}
-      <View style={styles.decision}>
-        <StatusActions game={game} />
-        <View style={styles.decisionRule} />
-        <View style={styles.decisionActions}>
-          <SessionTimer game={game} />
-          <Commitment gameId={game.id} />
-        </View>
+      {/* Flush on the page, as the desktop rail already is. The card
+          this stood in — a bordered, shadowed plate holding a bordered
+          control, a rule, and a row of outlined pills — was the page's
+          box-in-a-box: three nested rounded rectangles for one
+          decision. The segmented group is already an object with its
+          own plate and stroke, and its amber selection is what marks it
+          as the thing you act on. What follows from it sits under it on
+          one quiet line. */}
+      <StatusActions game={game} />
+      <View style={styles.decisionActions}>
+        <SessionTimer game={game} />
+        <Commitment gameId={game.id} />
       </View>
     </View>
   );
@@ -1132,9 +1258,7 @@ export default function GameInfoScreen() {
         <StatStrip
           game={game}
           onEditLength={() => setEditingLength(true)}
-          onOpenGenre={openGenre}
           onOpenPlan={() => router.push('/plan')}
-          wide
         />
         {/* The split HowLongToBeat built a site on, under the rule it
           annotates: the same 74 hours is a different promise to
@@ -1452,17 +1576,7 @@ export default function GameInfoScreen() {
    * only claimed where the sample can carry it: under a few hundred
    * owners the ratio is noise wearing a percentage.
    */
-  const finishRate = (() => {
-    const st = game.added_by_status;
-    if (!st) return null;
-    const owned = st.owned ?? 0;
-    const beaten = st.beaten ?? 0;
-    if (owned < 300) return null;
-    const pct = Math.round((beaten / owned) * 100);
-    const tint =
-      pct >= 45 ? COLORS.mint : pct >= 20 ? COLORS.accent : COLORS.coral;
-    return { pct, tint };
-  })();
+  const finishRate = finishRateOf(game);
 
   const hasRatings = (game.ratings?.length ?? 0) > 0;
 
@@ -1686,25 +1800,6 @@ export default function GameInfoScreen() {
         ) : null}
       </View>
     ) : null;
-
-  /**
-   * Who made it and when, in one quiet line near the title — Steam's
-   * move on mobile, and the right one: developer, publisher and year
-   * are identity, and identity was living at the bottom of the crate,
-   * three screens from the name it belongs to. The crate keeps the
-   * full record; this is the reading copy.
-   */
-  const factsLine = !isExpanded
-    ? [
-        game.developers?.[0]?.name,
-        game.publishers?.[0]?.name !== game.developers?.[0]?.name
-          ? game.publishers?.[0]?.name
-          : null,
-        game.released?.slice(0, 4),
-      ]
-        .filter(Boolean)
-        .join(' · ')
-    : '';
 
   const fileGetIt = hasLinks ? (
     <View style={styles.fileSection}>
@@ -2029,14 +2124,7 @@ export default function GameInfoScreen() {
             ) : (
               <>
                 {hero}
-                {/* The imprint under the artwork, before any buttons:
-                    who made it and when belongs to the identity the art
-                    just established, not to the body below the fold —
-                    Steam files it the same way, directly under the
-                    title, ahead of every action. */}
-                {factsLine ? (
-                  <Text style={styles.factsLine}>{factsLine}</Text>
-                ) : null}
+                {figures}
                 {controls}
                 <Animated.View style={[styles.compactBody, { opacity }]}>
                   {/* The case, then the reader's own note on it, then
@@ -2150,28 +2238,62 @@ const styles = StyleSheet.create({
   },
   controls: {
     paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.md,
-    gap: SPACING.md,
+    paddingTop: SPACING.lg,
+    gap: SPACING.sm + 2,
     width: '100%',
     maxWidth: LAYOUT.maxContentWidth,
     alignSelf: 'center',
   },
-  decision: {
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.stroke,
-    backgroundColor: COLORS.raised,
-    padding: SPACING.md,
-    gap: SPACING.md,
-    ...SHADOW.card,
-  },
-  decisionRule: { height: 1, backgroundColor: COLORS.stroke },
   decisionActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
     gap: SPACING.lg,
+    paddingHorizontal: SPACING.xs,
   },
+
+  /**
+   * The strip: equal cells, a figure over a label, hairlines between.
+   * It is the phone's second line, standing on the page's own colour
+   * rather than on the artwork.
+   */
+  figures: {
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.xs,
+    gap: SPACING.sm + 2,
+    width: '100%',
+    maxWidth: LAYOUT.maxContentWidth,
+    alignSelf: 'center',
+  },
+  strip: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+  },
+  stripCell: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.xs,
+  },
+  stripCellRule: { borderLeftWidth: 1, borderLeftColor: COLORS.strokeStrong },
+  stripValue: {
+    fontFamily: 'Geom-ExtraBold',
+    fontSize: 24,
+    lineHeight: 28,
+    letterSpacing: -0.4,
+    color: COLORS.lightGrey,
+  },
+  stripLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  stripLabel: {
+    ...TYPE.tag,
+    fontSize: 10,
+    letterSpacing: 0.8,
+    color: COLORS.mediumGrey,
+  },
+  /** The plan's line and the split, under the strip, at the gutter. */
+  figureNotes: { gap: SPACING.xs, paddingHorizontal: SPACING.xs },
   heroCopy: {
     paddingHorizontal: SPACING.md,
     paddingBottom: SPACING.md,
@@ -2186,13 +2308,18 @@ const styles = StyleSheet.create({
     ...OVER_IMAGE.heading,
     color: COLORS.white,
   },
+  heroIdentity: {
+    ...TYPE.labelSmall,
+    color: COLORS.lightGrey,
+  },
+  heroIdentityLink: { color: COLORS.white },
 
   /**
    * Stats sit on the artwork, so they carry their own contrast the way
    * the title does. "74h TO FINISH" in medium grey over a cream frame
    * was the least readable text in the app.
    */
-  statBlock: { gap: SPACING.xs, marginTop: SPACING.xs },
+  statBlock: { marginTop: SPACING.xs },
   /**
    * The copy column top-aligns its children so pills keep their natural
    * width, which leaves this block as wide as its widest line — about
@@ -2304,22 +2431,6 @@ const styles = StyleSheet.create({
     color: COLORS.mediumGrey,
     letterSpacing: 1.2,
   },
-  /** The byline: what you glance at to place a game, in one run. */
-  metaLine: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: SPACING.sm,
-    marginTop: SPACING.xs,
-  },
-  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  metaBit: {
-    ...TYPE.labelSmall,
-    ...OVER_IMAGE.body,
-    color: COLORS.lightGrey,
-  },
-  metaDot: { ...TYPE.labelSmall, color: COLORS.mediumGrey },
-
   // body
   expandedInner: { width: '100%' },
   twoColumn: {
@@ -2366,7 +2477,6 @@ const styles = StyleSheet.create({
   splitLegend: {
     ...TYPE.caption,
     color: COLORS.mediumGrey,
-    marginTop: -SPACING.xs,
   },
   titleLockup: {
     flexDirection: 'row',
@@ -2438,21 +2548,6 @@ const styles = StyleSheet.create({
   },
   similarName: { ...TYPE.caption, color: COLORS.lightGrey },
 
-  factsLine: {
-    ...TYPE.caption,
-    color: COLORS.mediumGrey,
-    // Standing outside compactBody it carries its own column: the same
-    // edge and the same width, so the line lands flush with the body it
-    // introduces rather than indented twice.
-    paddingHorizontal: SPACING.md,
-    width: '100%',
-    maxWidth: LAYOUT.maxContentWidth,
-    alignSelf: 'center',
-    // A colophon binds to the masthead it signs, not to the card below:
-    // the smaller gap goes above.
-    marginTop: -SPACING.sm,
-    marginBottom: SPACING.sm,
-  },
   crateCover: {
     width: 108,
     aspectRatio: 3 / 4,
