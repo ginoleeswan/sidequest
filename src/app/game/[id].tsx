@@ -42,7 +42,7 @@ import { CoverImage } from '@/components/CoverImage';
 import { Decision } from '@/components/Decision';
 import { pickTrailer } from '@/lib/stage';
 import { StageTrailer } from '@/components/StageTrailer';
-import { GameCard } from '@/components/GameCard';
+import { GameTile } from '@/components/GameTile';
 import { Message } from '@/components/Message';
 import { Commitment } from '@/components/Commitment';
 import { PageTitle } from '@/components/PageTitle';
@@ -50,12 +50,13 @@ import { Screen } from '@/components/Screen';
 import { PersonalNote, usePersonalNote } from '@/components/PersonalNote';
 import { SessionTimer } from '@/components/SessionTimer';
 import { rememberGame } from '@/lib/recent';
-import { calendarDate } from '@/lib/format';
+import { calendarDate, compact } from '@/lib/format';
 import { Rail } from '@/components/Rail';
 import { LiveStreams } from '@/components/LiveStreams';
 import { RatingsBreakdown } from '@/components/RatingsBreakdown';
 import { ReadMoreText } from '@/components/ReadMoreText';
 import { ScorePill } from '@/components/ScorePill';
+import { Seam } from '@/components/Seam';
 import { SectionHeader } from '@/components/SectionHeader';
 import {
   Skeleton,
@@ -575,28 +576,38 @@ function InfoStrip({
 }
 
 /**
- * The phone's record, as a spec sheet.
+ * The phone's record, as a grid.
  *
- * Label over value, a hairline between rows, nothing absent drawn. It
- * was a run of label/value pairs with no rules and uneven gaps, which
- * read as a list somebody stopped formatting.
+ * Label over value, two to a row, the way a store's Information block
+ * files a game: half the height of the ruled list it replaces, and no
+ * rules at all - the columns are the structure. Platforms takes a
+ * whole row because it is the one value that runs long.
  */
-function FactList({
+function FactGrid({
   facts,
 }: {
-  facts: { label: string; value?: string | null; node?: React.ReactNode }[];
+  facts: {
+    label: string;
+    value?: string | null;
+    node?: React.ReactNode;
+    wide?: boolean;
+  }[];
 }) {
   const present = facts.filter((fact) => fact.value || fact.node);
   if (present.length === 0) return null;
   return (
-    <View>
-      {present.map((fact, index) => (
+    <View style={styles.factGrid}>
+      {present.map((fact) => (
         <View
           key={fact.label}
-          style={[styles.fact, index > 0 && styles.factRule]}
+          style={[styles.factCell, fact.wide && styles.factCellWide]}
         >
           <Text style={styles.metaLabel}>{fact.label}</Text>
-          {fact.node ?? <Text style={styles.metaValue}>{fact.value}</Text>}
+          {fact.node ?? (
+            <Text style={styles.metaValue} numberOfLines={2}>
+              {fact.value}
+            </Text>
+          )}
         </View>
       ))}
     </View>
@@ -1578,11 +1589,15 @@ export default function GameInfoScreen() {
                 title="More in this series"
                 eyebrow={`${series.length} more ${series.length === 1 ? 'game' : 'games'}`}
               />
+              {/* Posters, like the rail above it: two shelves of other
+                  games on one band should be shelved the same way, and
+                  the wide card with the forty-point corners was a third
+                  grammar for one idea. */}
               <Rail<Game>
                 data={series}
                 keyExtractor={(item) => String(item.id)}
                 inset={railInset}
-                renderItem={(item) => <GameCard game={item} />}
+                renderItem={(item) => <GameTile game={item} width={132} />}
               />
             </>
           )}
@@ -1663,6 +1678,75 @@ export default function GameInfoScreen() {
   );
 
   const ratingCount = (game.ratings ?? []).reduce((sum, r) => sum + r.count, 0);
+  /**
+   * The phone's verdict: two figures, the shape, one line of counts.
+   *
+   * The share who recommend it and the share who finished it are the
+   * two numbers this section exists for - what people thought, and
+   * whether they stayed - so they stand side by side at the same size,
+   * each in its own colour. The bars under them are the shape of the
+   * first figure. The community counts, which were a two-by-two grid of
+   * icons taking a third of a screen, are one sentence: they are
+   * context for the figures, not figures of their own.
+   */
+  const liked = (game.ratings ?? [])
+    .filter((r) => r.title === 'exceptional' || r.title === 'recommended')
+    .reduce((sum, r) => sum + r.count, 0);
+  const likedShare =
+    ratingCount > 0 ? Math.round((liked / ratingCount) * 100) : 0;
+  const likedTint =
+    likedShare >= 70
+      ? COLORS.mint
+      : likedShare >= 45
+        ? COLORS.accent
+        : COLORS.coral;
+  const community = game.added_by_status
+    ? (
+        [
+          ['playing', 'playing now'],
+          ['beaten', 'beaten it'],
+          ['dropped', 'put it down'],
+          ['toplay', 'want to play'],
+          ['owned', 'own it'],
+        ] as const
+      )
+        .filter(([key]) => (game.added_by_status?.[key] ?? 0) > 0)
+        .map(
+          ([key, word]) =>
+            `${compact(game.added_by_status?.[key] ?? 0)} ${word}`
+        )
+        .join(' · ')
+    : '';
+  const verdictCompact = (
+    <>
+      {hasRatings || finishRate ? (
+        <View style={styles.verdictFigures}>
+          {hasRatings ? (
+            <View style={styles.verdictCell}>
+              <Text style={[styles.verdictFigure, { color: likedTint }]}>
+                {likedShare}%
+              </Text>
+              <Text style={styles.verdictLabel}>recommend it</Text>
+            </View>
+          ) : null}
+          {finishRate ? (
+            <View
+              style={[styles.verdictCell, hasRatings && styles.verdictCellRule]}
+            >
+              <Text style={[styles.verdictFigure, { color: finishRate.tint }]}>
+                {finishRate.pct}%
+              </Text>
+              <Text style={styles.verdictLabel}>reached the credits</Text>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+      {hasRatings ? (
+        <RatingsBreakdown ratings={game.ratings!} lead={false} />
+      ) : null}
+      {community ? <Text style={styles.community}>{community}</Text> : null}
+    </>
+  );
   const ratingsBreakdown =
     hasRatings || whoElse ? (
       <View style={styles.block}>
@@ -1682,7 +1766,7 @@ export default function GameInfoScreen() {
               : 'Who else has it'
           }
         />
-        {verdict}
+        {isExpanded ? verdict : verdictCompact}
       </View>
     ) : null;
 
@@ -1878,10 +1962,11 @@ export default function GameInfoScreen() {
     <View style={fileSection}>
       {/* No label of its own: "Details" above already names this, and
           FACTS over PLATFORMS was a label under a label. */}
-      <FactList
+      <FactGrid
         facts={[
           {
             label: 'Platforms',
+            wide: true,
             node: platformNames ? (
               <View style={styles.platformFact}>
                 {/* The glyphs the tiles already speak, then the full
@@ -2062,23 +2147,6 @@ export default function GameInfoScreen() {
       {!isExpanded && (
         <SectionHeader title="Details" eyebrow="Where to get it, who made it" />
       )}
-      {/* The cover, at the crate's head on the phone too — parity is
-          the rule, and the box was desktop-only by omission. A stamp
-          here rather than the rail's crown: the phone masthead already
-          owns the big picture. */}
-      {!isExpanded && boxArt ? (
-        <Image
-          source={{ uri: boxArt }}
-          style={styles.crateCover}
-          contentFit="cover"
-          transition={DURATION.base}
-        />
-      ) : null}
-      {!isExpanded && boxArt === undefined ? (
-        <View style={[styles.crateCover, styles.coverPlate]}>
-          <Textured fill />
-        </View>
-      ) : null}
       {framed(
         isExpanded ? [controls, fileGetIt, fileFacts] : [fileGetIt, fileDetails]
       )}
@@ -2206,8 +2274,22 @@ export default function GameInfoScreen() {
                       ) : null}
                       {ratingsBreakdown}
                       {yourTake}
-                      {fileBox}
-                      {mediaTail}
+                      {/* The file, on a band of its own. The page has
+                          two halves - the case for the game, then the
+                          record of it - and they met on nothing: the
+                          reader's note, then GET IT, then a cover
+                          rail, one colour throughout. The record now
+                          stands on the step below the page, entered
+                          over the same shoreline the footer uses to
+                          leave it, so the page reads as story, then
+                          file, then shore. */}
+                      <View style={styles.bandBleed}>
+                        <Seam variant="wave" color={COLORS.surface} index={1} />
+                        <View style={styles.band}>
+                          {fileBox}
+                          {mediaTail}
+                        </View>
+                      </View>
                     </>
                   )}
                 </Animated.View>
@@ -2633,15 +2715,6 @@ const styles = StyleSheet.create({
   },
   similarName: { ...TYPE.caption, color: COLORS.lightGrey },
 
-  crateCover: {
-    width: 108,
-    aspectRatio: 3 / 4,
-    borderRadius: RADIUS.sm,
-    borderWidth: 1,
-    borderColor: COLORS.strokeStrong,
-    backgroundColor: COLORS.navy,
-    marginBottom: SPACING.sm,
-  },
   /** The rail's crown: full width, the cover's own 3:4, one hairline. */
   coverPlate: { backgroundColor: COLORS.navy, overflow: 'hidden' },
   railCover: {
@@ -2834,6 +2907,48 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   fileSectionCompact: { paddingVertical: SPACING.sm + 2 },
+  factGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  factCell: {
+    width: '50%',
+    paddingVertical: SPACING.sm + 2,
+    gap: 3,
+    paddingRight: SPACING.md,
+  },
+  factCellWide: { width: '100%' },
+
+  // the phone's verdict
+  verdictFigures: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    marginBottom: SPACING.sm,
+  },
+  verdictCell: { flex: 1, gap: 2, paddingVertical: SPACING.xs },
+  verdictCellRule: {
+    borderLeftWidth: 1,
+    borderLeftColor: COLORS.strokeStrong,
+    paddingLeft: SPACING.md,
+  },
+  verdictFigure: {
+    fontFamily: 'Geom-ExtraBold',
+    fontSize: 34,
+    lineHeight: 38,
+    letterSpacing: -0.6,
+  },
+  verdictLabel: { ...TYPE.caption, color: COLORS.mediumGrey },
+  community: {
+    ...TYPE.caption,
+    color: COLORS.mediumGrey,
+    marginTop: SPACING.sm,
+  },
+
+  // the file's band
+  bandBleed: { marginHorizontal: -SPACING.md, marginTop: SPACING.sm },
+  band: {
+    backgroundColor: COLORS.surface,
+    marginTop: -1,
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.lg,
+  },
   fileJoin: { borderBottomWidth: 1, borderBottomColor: COLORS.stroke },
   /**
    * The second figure, at the first one's size and on its baseline.
@@ -2865,9 +2980,6 @@ const styles = StyleSheet.create({
   fileSectionLast: { borderBottomWidth: 0 },
   /** Leading the panel, the counts need no rule above them. */
   whoElseFirst: { marginTop: 0 },
-  /** A row of the spec sheet: label over value, a hairline between. */
-  fact: { paddingVertical: SPACING.sm + 2, gap: 3 },
-  factRule: { borderTopWidth: 1, borderTopColor: COLORS.stroke },
   /** The glyphs and the names on one line, not a glyph over a word. */
   platformFact: {
     flexDirection: 'row',
@@ -2930,8 +3042,6 @@ const styles = StyleSheet.create({
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.xs + 2 },
   screenshot: {
     borderRadius: RADIUS.sm,
-    borderWidth: 1,
-    borderColor: COLORS.stroke,
     backgroundColor: COLORS.navy,
     ...SHADOW.card,
   },

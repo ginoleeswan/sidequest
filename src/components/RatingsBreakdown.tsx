@@ -52,7 +52,14 @@ const BAR_COLORS: Record<string, string> = {
  * Phrased as what the buckets literally are. "Worth finishing" would be
  * a nicer sentence and a claim RAWG's data does not make.
  */
-export function RatingsBreakdown({ ratings }: { ratings: RatingBucket[] }) {
+export function RatingsBreakdown({
+  ratings,
+  lead = true,
+}: {
+  ratings: RatingBucket[];
+  /** Whether to open on the share figure, or leave that to the caller. */
+  lead?: boolean;
+}) {
   const total = ratings.reduce((sum, r) => sum + r.count, 0);
   if (total === 0) return null;
 
@@ -71,11 +78,17 @@ export function RatingsBreakdown({ ratings }: { ratings: RatingBucket[] }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.lead}>
-        <Text style={[styles.share, { color: shareColor }]}>{share}%</Text>
-        <Text style={styles.shareLabel}>rated it recommended or better</Text>
-      </View>
-      <View style={styles.rule} />
+      {lead ? (
+        <>
+          <View style={styles.lead}>
+            <Text style={[styles.share, { color: shareColor }]}>{share}%</Text>
+            <Text style={styles.shareLabel}>
+              rated it recommended or better
+            </Text>
+          </View>
+          <View style={styles.rule} />
+        </>
+      ) : null}
       {ordered.map((bucket) => (
         <View key={bucket.id} style={styles.row}>
           <Text style={styles.label}>
