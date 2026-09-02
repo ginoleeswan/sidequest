@@ -122,26 +122,43 @@ const dedupeById = (items: Game[]): Game[] => {
   return items.filter((g) => (seen.has(g.id) ? false : (seen.add(g.id), true)));
 };
 
-export default function HomeScreen() {
+/**
+ * `section`: the door this instance stands in when mounted from
+ * /browse/[section]; `routed`: that it was, so leaving a section is a
+ * navigation rather than a state change. Home itself passes neither.
+ */
+export default function HomeScreen({
+  section: routedSection,
+  routed = false,
+}: {
+  section?: string;
+  routed?: boolean;
+} = {}) {
   const router = useRouter();
   const params = useLocalSearchParams<{ category?: string }>();
   const [query, setQuery] = useState('');
   // 'home' = storefront; otherwise a section key.
-  const [selection, setSelection] = useState<'home' | string>('home');
+  const [selection, setSelection] = useState<'home' | string>(() =>
+    routedSection && findSection(routedSection) ? routedSection : 'home'
+  );
 
   // Deep link from a genre chip on the detail screen.
   useEffect(() => {
-    if (params.category && findSection(params.category)) {
+    const wanted = routedSection ?? params.category;
+    if (wanted && findSection(wanted)) {
       // Deliberate: adopting a navigation param into state.
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSelection(params.category);
+      setSelection(wanted);
     }
-  }, [params.category]);
+  }, [params.category, routedSection]);
 
   const debouncedQuery = useDebounced(query);
   const searching = debouncedQuery.trim() !== '';
   const isHome = selection === 'home' && !searching;
   const section: Section = findSection(selection) ?? DISCOVER[0];
+  const pageTitle = isHome
+    ? 'Sidequest — Discover your next game'
+    : `${section.title} — Sidequest`;
 
   const { isExpanded, columns } = useBreakpoint();
   const { height: windowHeight } = useWindowDimensions();
@@ -369,12 +386,23 @@ export default function HomeScreen() {
     );
   })();
 
+  // On the web a section is a page of its own, so choosing one is a
+  // navigation - the address bar, the back button and a shared link all
+  // agree on where you are. Native keeps the door inside the tab.
   const selectSection = (s: Section) => {
+    if (Platform.OS === 'web') {
+      router.push(`/browse/${s.key}`);
+      return;
+    }
     setQuery('');
     setSelection(s.key);
     setRefine(DEFAULT_REFINEMENTS);
   };
   const goHome = () => {
+    if (routed) {
+      router.push('/');
+      return;
+    }
     setQuery('');
     setSelection('home');
     setRefine(DEFAULT_REFINEMENTS);
@@ -562,7 +590,7 @@ export default function HomeScreen() {
           />
         }
       >
-        <PageTitle>Sidequest — Discover your next game</PageTitle>
+        <PageTitle>{pageTitle}</PageTitle>
         <>
           {status ??
             (list.isPending ? (
@@ -685,7 +713,7 @@ export default function HomeScreen() {
   // -------------------------------------------------------------- compact
   return (
     <Textured style={styles.background}>
-      <PageTitle>Sidequest — Discover your next game</PageTitle>
+      <PageTitle>{pageTitle}</PageTitle>
       <View style={styles.compactShell}>
         <Reveal
           pending={list.isPending}

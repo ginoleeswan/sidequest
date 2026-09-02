@@ -14,6 +14,7 @@
  * rate limit or an outage degrades this to the static pages rather than
  * breaking the build.
  */
+import { readFileSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -30,6 +31,19 @@ const OUT = join(
 const STATIC = [
   { path: '/', changefreq: 'daily', priority: '1.0' },
   { path: '/about', changefreq: 'monthly', priority: '0.5' },
+  // Every section page, read off the constants so the two never drift.
+  ...[
+    ...readFileSync('src/constants/categories.ts', 'utf8').matchAll(
+      /key: '([a-z0-9-]+)'/g
+    ),
+  ]
+    .map((match) => match[1])
+    .filter((key, index, keys) => keys.indexOf(key) === index)
+    .map((key) => ({
+      path: `/browse/${key}`,
+      changefreq: 'daily',
+      priority: '0.8',
+    })),
   { path: '/terms', changefreq: 'yearly', priority: '0.3' },
   { path: '/privacy', changefreq: 'yearly', priority: '0.3' },
 ];

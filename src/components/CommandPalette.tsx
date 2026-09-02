@@ -89,7 +89,7 @@ export function CommandPalette() {
         key: `section-${section.key}`,
         title: section.title,
         hint: 'Browse',
-        run: go(`/?category=${section.key}`),
+        run: go(`/browse/${section.key}`),
       })),
       ...Object.values(entries).map((entry) => ({
         key: `game-${entry.game.id}`,

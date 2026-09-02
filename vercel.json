@@ -26,6 +26,10 @@
       "destination": "/by/[kind]"
     },
     {
+      "source": "/browse/:section",
+      "destination": "/browse/[section]"
+    },
+    {
       "source": "/rawg/:path*",
       "destination": "/api/rawg-proxy?path=:path*"
     },

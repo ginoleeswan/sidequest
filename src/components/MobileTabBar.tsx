@@ -104,8 +104,11 @@ export function MobileTabBar() {
       <Crest width={width} />
       <View style={[styles.body, { paddingBottom: insets.bottom }]}>
         {TABS.map((tab) => {
+          // A section page is Home's territory: /browse/rpg lights Home.
           const active =
-            tab.href === '/' ? pathname === '/' : pathname.startsWith(tab.href);
+            tab.href === '/'
+              ? pathname === '/' || pathname.startsWith('/browse')
+              : pathname.startsWith(tab.href);
           return (
             <Pressable
               key={tab.href}

@@ -231,9 +231,7 @@ export function Sidebar({
   const [railHovered, setRailHovered] = useState(false);
   const markIsControl = collapsed && railHovered && Boolean(onToggle);
   const select =
-    onSelect ??
-    ((section: Section) =>
-      router.push({ pathname: '/', params: { category: section.key } }));
+    onSelect ?? ((section: Section) => router.push(`/browse/${section.key}`));
   return (
     <View
       style={[styles.sidebar, collapsed && styles.sidebarCollapsed, STICKY]}
