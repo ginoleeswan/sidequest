@@ -11,6 +11,8 @@ import {
 
 import { useRouter } from 'expo-router';
 
+import Svg, { Line, Rect } from 'react-native-svg';
+
 import { DynamicIcon, type IconType } from './DynamicIcon';
 import { Mark } from './Mark';
 import { DISCOVER, GENRES, type Section } from '@/constants/categories';
@@ -106,8 +108,38 @@ function NavGroup({
 }
 
 /**
+ * The sidebar glyph the products people use all day share: a panel
+ * with its left column marked. Ionicons has no such glyph, so it is
+ * drawn - eighteen points, a rounded frame, one rule a third of the
+ * way in.
+ */
+function PanelGlyph({ color }: { color: string }) {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 18 18" fill="none">
+      <Rect
+        x={1.5}
+        y={2.5}
+        width={15}
+        height={13}
+        rx={3}
+        stroke={color}
+        strokeWidth={1.6}
+      />
+      <Line
+        x1={6.5}
+        y1={2.5}
+        x2={6.5}
+        y2={15.5}
+        stroke={color}
+        strokeWidth={1.6}
+      />
+    </Svg>
+  );
+}
+
+/**
  * The sidebar control, as the products people use all day draw it: a
- * menu glyph, not a chevron - a chevron says "next", this says "the
+ * panel glyph, not a chevron - a chevron says "next", this says "the
  * panel". Open, it rides the brand row's end; folded, it stands under
  * the Mark on the glyph column, where a folded rail's controls are.
  * Cmd+\ (Ctrl+\) does the same from the keyboard, the convention
@@ -139,12 +171,7 @@ function Toggle({
           : 'Collapse the sidebar (Cmd+\\)'
       }
     >
-      <DynamicIcon
-        type="ionicon"
-        name="menu"
-        size={18}
-        color={hovered ? COLORS.white : COLORS.mediumGrey}
-      />
+      <PanelGlyph color={hovered ? COLORS.white : COLORS.mediumGrey} />
     </Pressable>
   );
 }
@@ -213,8 +240,8 @@ export function Sidebar({
    * thing twice.
    */
   const [railHovered, setRailHovered] = useState(false);
-  const folded = collapsed || overlay;
-  const markIsControl = folded && (railHovered || overlay) && Boolean(onToggle);
+  const markIsControl =
+    collapsed && !overlay && railHovered && Boolean(onToggle);
   const select =
     onSelect ??
     ((section: Section) =>
@@ -236,7 +263,7 @@ export function Sidebar({
         onHoverOut?.();
       }}
     >
-      <View style={styles.top}>
+      <View style={[styles.top, collapsed && styles.topFolded]}>
         <Pressable
           onPress={markIsControl ? onToggle : goHome}
           accessibilityRole={markIsControl ? 'button' : 'link'}
@@ -250,20 +277,17 @@ export function Sidebar({
             it. One brand, one size, whichever surface's corner it is in. */}
           {markIsControl ? (
             <View style={styles.markSlot}>
-              <DynamicIcon
-                type="ionicon"
-                name="chevron-forward"
-                size={20}
-                color={COLORS.white}
-              />
+              <PanelGlyph color={COLORS.white} />
             </View>
           ) : (
             <Mark size={20} />
           )}
           {collapsed ? null : <Text style={styles.wordmark}>sidequest</Text>}
         </Pressable>
-        {onToggle && !folded ? (
-          <Toggle collapsed={false} onToggle={onToggle} />
+        {/* Open, the control rides the row's end and folds the rail;
+            peeking, it rides the same place and keeps the rail open. */}
+        {onToggle && !collapsed ? (
+          <Toggle collapsed={overlay} onToggle={onToggle} />
         ) : null}
       </View>
       {search && !collapsed ? (
@@ -399,6 +423,8 @@ const styles = StyleSheet.create({
     paddingLeft: SPACING.sm + 4,
     marginBottom: SPACING.md,
   },
+  /** Folded, the Mark centres on the rail like every glyph beneath it. */
+  topFolded: { justifyContent: 'center', paddingLeft: 0 },
   toggle: {
     width: 32,
     height: 32,
