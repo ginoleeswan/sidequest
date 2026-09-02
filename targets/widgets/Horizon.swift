@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import WidgetKit
 
 /**
@@ -32,6 +33,8 @@ struct HorizonEntry: TimelineEntry {
   let date: Date
   let horizon: Horizon?
   var pressure: Pressure = .calm
+  /// Each mark's icon, decoded once for the strip.
+  var icons: [Int: UIImage] = [:]
 }
 
 struct HorizonProvider: TimelineProvider {
@@ -43,13 +46,13 @@ struct HorizonProvider: TimelineProvider {
       to: now + 46 * day,
       now: now,
       marks: [
-        HorizonMark(name: "Celeste", at: now - 11 * day, label: "Aug 6",
+        HorizonMark(name: "Celeste", game: nil, at: now - 11 * day, label: "Aug 6",
                     colour: -1, done: true),
-        HorizonMark(name: "Hades", at: now + 9 * day, label: "Aug 26",
+        HorizonMark(name: "Hades", game: nil, at: now + 9 * day, label: "Aug 26",
                     colour: 0, done: false),
-        HorizonMark(name: "Tunic", at: now + 25 * day, label: "Sep 11",
+        HorizonMark(name: "Tunic", game: nil, at: now + 25 * day, label: "Sep 11",
                     colour: 1, done: false),
-        HorizonMark(name: "Outer Wilds", at: now + 42 * day, label: "Sep 28",
+        HorizonMark(name: "Outer Wilds", game: nil, at: now + 42 * day, label: "Sep 28",
                     colour: 2, done: false),
       ],
       troubleAt: nil,
@@ -75,7 +78,8 @@ struct HorizonProvider: TimelineProvider {
       HorizonEntry(
         date: Date(),
         horizon: today?.horizon,
-        pressure: today?.pressure ?? .calm
+        pressure: today?.pressure ?? .calm,
+        icons: iconsFor(today?.horizon?.marks.map(\.game) ?? [], in: Store.art())
       )
     )
   }
@@ -91,11 +95,13 @@ struct HorizonProvider: TimelineProvider {
     in context: Context,
     completion: @escaping (Timeline<HorizonEntry>) -> Void
   ) {
+    let art = Store.art()
     let entries = planEntries(Store.plan()) { date, day in
       HorizonEntry(
         date: date,
         horizon: day?.horizon,
-        pressure: day?.pressure ?? .calm
+        pressure: day?.pressure ?? .calm,
+        icons: iconsFor(day?.horizon?.marks.map(\.game) ?? [], in: art)
       )
     }
     completion(Timeline(entries: entries, policy: .atEnd))
@@ -156,15 +162,25 @@ private func lanes(_ marks: [HorizonMark], axis: Axis) -> [Int] {
 /** How far the second row of labels sits below the first. */
 private let laneDrop: CGFloat = 30
 
-/** The save slot: a memcard chip, stamped when the credits rolled. */
+/**
+ * The save slot: the game's own icon where there is one, a memcard chip
+ * in the route's colour where there is not, and a mint stamp once the
+ * credits rolled — a landing is a picture of a game; a finish is a fact
+ * about it, and keeps the stamp.
+ */
 struct SaveSlot: View {
   let mark: HorizonMark
+  var icon: UIImage? = nil
 
   var body: some View {
     ZStack {
-      RoundedRectangle(cornerRadius: 3)
-        .fill(mark.done ? Color("$mint") : planColour(mark.colour))
-        .frame(width: 13, height: 13)
+      if !mark.done, let icon {
+        ArtMark(image: icon, size: 15)
+      } else {
+        RoundedRectangle(cornerRadius: 3)
+          .fill(mark.done ? Color("$mint") : planColour(mark.colour))
+          .frame(width: 13, height: 13)
+      }
       if mark.done {
         Image(systemName: "checkmark")
           .font(.system(size: 8, weight: .bold))
@@ -179,6 +195,7 @@ struct SaveSlot: View {
         }
         .fill(Color("$ground"))
         .frame(width: 13, height: 13)
+        .opacity(icon == nil ? 1 : 0)
       }
     }
   }
@@ -325,7 +342,10 @@ struct HorizonView: View {
           let lane = rows[pair.offset]
           let labelled = lane == 0 || (lane == 1 && tall)
           VStack(spacing: 2) {
-            SaveSlot(mark: pair.element)
+            SaveSlot(
+              mark: pair.element,
+              icon: pair.element.game.flatMap { entry.icons[$0] }
+            )
             if labelled {
               Rectangle()
                 .fill(Color.white.opacity(0.16))

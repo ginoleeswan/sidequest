@@ -1,4 +1,6 @@
 import type { Memcard } from './memcard';
+import type { ArtManifest } from './widgetArt';
+import { widgetArtIO } from './widgetArtIO';
 import { yearShape, type PlanDay } from './widgetData';
 import { widgetStore } from './widgetStore';
 
@@ -70,7 +72,8 @@ export async function publishPlan(days: readonly PlanDay[]) {
     // asked for it, and the card it decorates now says "no plan yet" —
     // a game's key art behind those words is the widget contradicting
     // itself on somebody's home screen.
-    bridge.store.remove('covers');
+    bridge.store.remove('art');
+    widgetArtIO()?.prune(new Set());
   }
 
   // Every widget drawn from `plan`, which is now three of the four.
@@ -86,30 +89,30 @@ export async function publishPlan(days: readonly PlanDay[]) {
  * Publish the artwork, after the plan and separately from it.
  *
  * Two writes rather than one, deliberately. The plan is local and
- * instant; the covers are a download, and holding the week's text
+ * instant; the pictures are downloads, and holding the week's text
  * hostage to a CDN would mean a widget showing last Tuesday's game
  * because a picture was slow. The card gets its words immediately and
  * its art when the art arrives, which is the order a reader would
  * choose if asked.
  *
- * Only Tonight is reloaded. It is the one widget that draws a cover —
- * the week is seven names and a month is a timeline, and neither gets
- * better for having photographs in it — so nudging the others would be
- * three wake-ups to redraw something that has not changed.
+ * What goes through the string store is the manifest - which file in
+ * the shared container is which game's hero, logo, icon or box. The
+ * files themselves were written by `widgetArt` before this is called.
+ * Every widget draws something from it now, so every widget is knocked.
  */
-export async function publishCovers(covers: Record<string, string>) {
+export async function publishArt(manifest: ArtManifest) {
   const bridge = widgetStore();
   if (!bridge) return;
 
   // Removed rather than written empty, the same as the plan: an empty
   // object is a thing Swift has to decode before finding out it holds
   // nothing.
-  if (Object.keys(covers).length > 0) {
-    bridge.store.set('covers', JSON.stringify(covers));
+  if (Object.keys(manifest).length > 0) {
+    bridge.store.set('art', JSON.stringify(manifest));
   } else {
-    bridge.store.remove('covers');
+    bridge.store.remove('art');
   }
-  bridge.reload(KINDS.tonight);
+  for (const kind of Object.values(KINDS)) bridge.reload(kind);
 }
 
 /** Publish the year's card — the twelve slots and what fills them. */
@@ -134,9 +137,11 @@ export async function clearWidgets() {
   // 'tonight' and 'week' are what builds before the timeline wrote;
   // cleared too, so an upgrade does not leave a copy of somebody's plan
   // in the container with nothing left that reads it.
-  for (const key of ['plan', 'tonight', 'week', 'year', 'covers']) {
+  // 'covers' is the base64 store the first build kept its pictures in.
+  for (const key of ['plan', 'tonight', 'week', 'year', 'covers', 'art']) {
     bridge.store.remove(key);
   }
+  widgetArtIO()?.prune(new Set());
   // Removing the data is only half of forgetting. A widget holds a
   // rendered timeline of its own, so one that is never told to reload
   // goes on displaying a plan whose source has been deleted — which is

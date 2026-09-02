@@ -1,12 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-import {
-  publishCovers,
-  publishPlan,
-  clearWidgets,
-  KINDS,
-} from '../widgetBridge';
+import { publishArt, publishPlan, clearWidgets, KINDS } from '../widgetBridge';
 import type { PlanDay } from '../widgetData';
 
 /**
@@ -95,6 +90,7 @@ describe('the widget bridge', () => {
   it('clearWidgets forgets every key and wakes every widget', async () => {
     await clearWidgets();
     expect(mockRemove.mock.calls.map(([k]) => k).sort()).toEqual([
+      'art',
       'covers',
       'plan',
       'tonight',
@@ -144,35 +140,38 @@ describe('the widget kinds, against the Swift that declares them', () => {
 });
 
 describe('the artwork, which travels separately from the plan', () => {
-  it('writes the covers under their own key', async () => {
-    await publishCovers({ '12': 'QUJD' });
-    expect(mockSet).toHaveBeenCalledWith('covers', '{"12":"QUJD"}');
+  const manifest = {
+    '12': { hero: 'hero-12-abc.jpg', logo: 'logo-12-def.png' },
+  };
+
+  it('writes the manifest under its own key, as one string', async () => {
+    await publishArt(manifest);
+    expect(mockSet).toHaveBeenCalledWith('art', JSON.stringify(manifest));
   });
 
-  it('removes them rather than writing an empty object', async () => {
-    await publishCovers({});
-    expect(mockRemove).toHaveBeenCalledWith('covers');
-    expect(mockSet).not.toHaveBeenCalledWith('covers', expect.anything());
+  it('removes it rather than writing an empty object', async () => {
+    await publishArt({});
+    expect(mockRemove).toHaveBeenCalledWith('art');
+    expect(mockSet).not.toHaveBeenCalledWith('art', expect.anything());
   });
 
   /**
-   * Tonight is the only widget that draws a cover. The week is seven
-   * names and the month is a timeline; waking either to redraw
-   * something that cannot have changed is three wake-ups spent on
-   * nothing, inside a budget iOS meters.
+   * Every widget draws something from the manifest now — the hero and
+   * the logo on Tonight, the icons on the week and the month, the boxes
+   * on the year — so every one is told when the pictures land.
    */
-  it('wakes only the widget that draws one', async () => {
-    await publishCovers({ '12': 'QUJD' });
-    expect(mockReload).toHaveBeenCalledTimes(1);
-    expect(mockReload).toHaveBeenCalledWith('Tonight');
+  it('wakes every widget, since every one draws from it', async () => {
+    await publishArt(manifest);
+    const woken = mockReload.mock.calls.map(([k]) => k).sort();
+    expect(woken).toEqual([...Object.values(KINDS)].sort());
   });
 
   /**
-   * A cover outliving its plan is the widget contradicting itself: key
-   * art behind the words "no plan yet".
+   * Art outliving its plan is the widget contradicting itself: key art
+   * behind the words "no plan yet".
    */
   it('drops the art when the plan empties', async () => {
     await publishPlan([]);
-    expect(mockRemove).toHaveBeenCalledWith('covers');
+    expect(mockRemove).toHaveBeenCalledWith('art');
   });
 });

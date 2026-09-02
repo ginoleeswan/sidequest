@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import WidgetKit
 
 /**
@@ -29,24 +30,26 @@ struct WeekEntry: TimelineEntry {
   let date: Date
   let nights: [WeekNight]?
   var pressure: Pressure = .calm
+  /// Each named game's icon, decoded once for the strip.
+  var icons: [Int: UIImage] = [:]
 }
 
 struct WeekProvider: TimelineProvider {
   private static let sample: [WeekNight] = [
     WeekNight(day: "MON", date: 17, title: "", hours: 0, finishes: false,
-              colour: -1, named: false),
+              game: nil, colour: -1, named: false),
     WeekNight(day: "TUE", date: 18, title: "Hades", hours: 2, finishes: false,
-              colour: 0, named: true),
+              game: nil, colour: 0, named: true),
     WeekNight(day: "WED", date: 19, title: "Hades", hours: 2, finishes: false,
-              colour: 0, named: false),
+              game: nil, colour: 0, named: false),
     WeekNight(day: "THU", date: 20, title: "", hours: 0, finishes: false,
-              colour: -1, named: false),
+              game: nil, colour: -1, named: false),
     WeekNight(day: "FRI", date: 21, title: "Hades", hours: 3, finishes: true,
-              colour: 0, named: false),
+              game: nil, colour: 0, named: false),
     WeekNight(day: "SAT", date: 22, title: "Pragmata", hours: 4,
-              finishes: false, colour: 1, named: true),
+              finishes: false, game: nil, colour: 1, named: true),
     WeekNight(day: "SUN", date: 23, title: "", hours: 0, finishes: false,
-              colour: -1, named: false),
+              game: nil, colour: -1, named: false),
   ]
 
   func placeholder(in context: Context) -> WeekEntry {
@@ -66,7 +69,8 @@ struct WeekProvider: TimelineProvider {
       WeekEntry(
         date: Date(),
         nights: today?.nights,
-        pressure: today?.pressure ?? .calm
+        pressure: today?.pressure ?? .calm,
+        icons: iconsFor(today?.nights.map(\.game) ?? [], in: Store.art())
       )
     )
   }
@@ -82,11 +86,13 @@ struct WeekProvider: TimelineProvider {
     in context: Context,
     completion: @escaping (Timeline<WeekEntry>) -> Void
   ) {
+    let art = Store.art()
     let entries = planEntries(Store.plan()) { date, day in
       WeekEntry(
         date: date,
         nights: day?.nights,
-        pressure: day?.pressure ?? .calm
+        pressure: day?.pressure ?? .calm,
+        icons: iconsFor(day?.nights.map(\.game) ?? [], in: art)
       )
     }
     completion(Timeline(entries: entries, policy: .atEnd))
@@ -107,6 +113,8 @@ struct NightRow: View {
   /// The longest evening in the week, so the widths compare.
   let tallest: Int
   let compact: Bool
+  /// The game's icon, on the evening that names it.
+  var icon: UIImage? = nil
 
   private var fraction: CGFloat {
     guard tallest > 0, night.hours > 0 else { return 0 }
@@ -143,26 +151,35 @@ struct NightRow: View {
           // A floor under the width, so a half-hour is still a mark
           // rather than a hairline nobody can see.
           let width = max(geo.size.width * fraction, 30)
+          // The game's icon leads the run that names it: a picture is
+          // recognised across a room in a way nine-point type is not.
+          let marked = night.named && icon != nil
+          let markRoom: CGFloat = marked ? 17 : 0
           // Whether the words fit inside the block. About five and a
           // half points a character at this size: a short evening's
           // block used to swallow half of "Pragmata · 2h", and a name
           // cut to "Prag" is worse than no name. When the block is too
           // narrow the label steps out beside it, in the row's own ink.
-          let fits = width >= CGFloat(label.count) * 5.6 + 14
+          let fits = width >= CGFloat(label.count) * 5.6 + 14 + markRoom
           HStack(spacing: 6) {
             RoundedRectangle(cornerRadius: 6)
               .fill(planColour(night.colour))
               .frame(width: width)
               .overlay(alignment: .leading) {
-                if fits {
-                  Text(label)
-                    .font(Brand.bold(compact ? 9 : 10))
-                    // Dark on amber, violet and mint alike — the one
-                    // ink all three of the plan's colours take.
-                    .foregroundStyle(Color("$ground"))
-                    .lineLimit(1)
-                    .padding(.horizontal, 7)
+                HStack(spacing: 5) {
+                  if marked, let icon {
+                    ArtMark(image: icon, size: compact ? 11 : 13)
+                  }
+                  if fits {
+                    Text(label)
+                      .font(Brand.bold(compact ? 9 : 10))
+                      // Dark on amber, violet and mint alike — the one
+                      // ink all three of the plan's colours take.
+                      .foregroundStyle(Color("$ground"))
+                      .lineLimit(1)
+                  }
                 }
+                .padding(.horizontal, marked ? 4 : 7)
               }
             if !fits {
               Text(label)
@@ -222,7 +239,12 @@ struct WeekView: View {
 
         VStack(spacing: tall ? 5 : 3) {
           ForEach(shown) { night in
-            NightRow(night: night, tallest: tallest, compact: !tall)
+            NightRow(
+              night: night,
+              tallest: tallest,
+              compact: !tall,
+              icon: night.game.flatMap { entry.icons[$0] }
+            )
           }
         }
 

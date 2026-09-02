@@ -4,10 +4,30 @@ import { usePersistedState } from '@/hooks/usePersistedState';
 import { useDurations } from '@/lib/durations';
 import { useLibrary } from '@/lib/library';
 import { buildMemcard } from '@/lib/memcard';
-import { publishCovers, publishPlan, publishYear } from '@/lib/widgetBridge';
-import { collectCovers } from '@/lib/widgetCovers';
-import { coverTargets } from '@/lib/widgetData';
+import { fetchArt, type GameArt } from '@/api/art';
+import { publishArt, publishPlan, publishYear } from '@/lib/widgetBridge';
+import { artTargets, collectArt } from '@/lib/widgetArt';
 import { widgetPlan } from '@/lib/widgetPlan';
+
+/**
+ * What the art API answered per game, kept for the life of the app.
+ *
+ * The publisher runs on every meaningful change to the library, and a
+ * plan usually changes without its games changing. Keyed by slug, like
+ * the API's own cache.
+ */
+const answered = new Map<string, Promise<GameArt | null>>();
+const artOf = (game: {
+  slug: string;
+  name: string;
+  released: string | null;
+}) => {
+  const held = answered.get(game.slug);
+  if (held) return held;
+  const asked = fetchArt(game, null).catch(() => null);
+  answered.set(game.slug, asked);
+  return asked;
+};
 
 /**
  * Keeps the widgets current, from the root, on change.
@@ -47,7 +67,7 @@ const SETTLE_MS = 1_500;
 
 export function WidgetPublisher() {
   const { entries } = useLibrary();
-  const { durationOf, overrides } = useDurations();
+  const { durationOf, overrides, coverOf } = useDurations();
   const [pace] = usePersistedState('sidequest.plan.pace', 6);
   const [windowWeeks] = usePersistedState<number | null>(
     'sidequest.plan.window',
@@ -102,27 +122,31 @@ export function WidgetPublisher() {
       /*
        * The artwork, chased after the words are already through.
        *
-       * `publishPlan` has written and reloaded by now, so the card is
-       * correct before this starts and merely plainer than it will be.
-       * The library is the only place a cover URL exists — the plan
-       * shapes carry ids and names, never assets — so the lookup
+       * `publishPlan` has written and reloaded by now, so the cards are
+       * correct before this starts and merely plainer than they will
+       * be. The library is the only place a game's record exists — the
+       * plan shapes carry ids and names, never assets — so the lookup
        * happens here rather than inside the bridge.
        *
        * Unawaited on purpose. Nothing on screen is waiting for a
        * picture, and an effect that resolves a network call is an
        * effect that can still be running when the next edit lands.
        */
-      const art = new Map(
-        all.map((entry) => [entry.game.id, entry.game.background_image])
-      );
-      void collectCovers(coverTargets(days), (id) => art.get(id)).then(
-        publishCovers
-      );
+      const byId = new Map(all.map((entry) => [entry.game.id, entry.game]));
+      void collectArt(artTargets(days, card), async (id) => {
+        const game = byId.get(id);
+        if (!game) return null;
+        return {
+          game,
+          cover: coverOf(game.slug),
+          art: game.slug ? await artOf(game) : null,
+        };
+      }).then(publishArt);
     }, SETTLE_MS);
     return () => clearTimeout(timer);
     // `overrides` is here because a corrected length changes every
     // number the widgets show while leaving the library untouched.
-  }, [entries, overrides, durationOf, pace, windowWeeks]);
+  }, [entries, overrides, durationOf, coverOf, pace, windowWeeks]);
 
   return null;
 }

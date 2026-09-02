@@ -70,11 +70,19 @@ export interface WeekNightShape {
    * here for the same reason the colour is.
    */
   named: boolean;
+  /**
+   * The lead game's id, for its artwork. Absent on a free evening.
+   * The widget draws nothing from it but a picture; every decision
+   * about the evening is in the fields above.
+   */
+  game?: number;
 }
 
 /** One mark on the month strip: a landing ahead, or a stamp behind. */
 export interface HorizonMarkShape {
   name: string;
+  /** The game's id, for its artwork on the slot. */
+  game?: number;
   /**
    * Epoch ms the mark stands on — for WHERE it goes, which depends on
    * how wide the widget is and so can only be decided over there.
@@ -124,6 +132,12 @@ export interface YearShape {
   hours: number;
   /** Twelve entries, January first: how many finished that month. */
   months: number[];
+  /**
+   * The latest credits, newest first, for the card's shelf of boxes.
+   * Ids only: the widget has the pictures, the app has the names, and
+   * a shelf of six boxes needs neither said out loud.
+   */
+  recent: number[];
 }
 
 /**
@@ -285,6 +299,7 @@ export function weekShape(
       finishes: night.games.some((g) => g.finishes),
       colour: lead ? (position.get(lead.id) ?? 0) : -1,
       named,
+      ...(lead ? { game: lead.id } : {}),
     };
   });
 }
@@ -302,11 +317,18 @@ export function yearShape(card: Memcard): YearShape {
   for (const block of card.blocks) {
     if (block.month >= 0 && block.month < 12) months[block.month] += 1;
   }
+  // Latest month first, then the order the card lists them in.
+  const recent = card.blocks
+    .map((block, index) => ({ block, index }))
+    .sort((a, b) => b.block.month - a.block.month || b.index - a.index)
+    .slice(0, 6)
+    .map(({ block }) => block.id);
   return {
     year: card.year,
     count: card.count,
     hours: Math.round(card.hours),
     months,
+    recent,
   };
 }
 
@@ -387,6 +409,7 @@ export function horizonShape(
     marks: [
       ...recent.map((item) => ({
         name: item.name,
+        game: item.id,
         at: midnightOf(item.finishedAt),
         label: markLabel(item.finishedAt),
         colour: -1,
@@ -394,6 +417,7 @@ export function horizonShape(
       })),
       ...near.map((item, index) => ({
         name: item.name,
+        game: item.id,
         at: midnightOf(item.finishAt),
         label: markLabel(item.finishAt),
         colour: index,

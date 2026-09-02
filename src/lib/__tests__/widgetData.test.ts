@@ -121,6 +121,7 @@ describe('weekShape', () => {
         finishes: false,
         colour: 0,
         named: true,
+        game: expect.any(Number),
       },
     ]);
   });

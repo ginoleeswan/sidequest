@@ -283,7 +283,7 @@ describe('the keys the two binaries share', () => {
   );
 
   it('finds the writes it is about to make claims about', () => {
-    expect(written.sort()).toEqual(['covers', 'plan', 'year']);
+    expect(written.sort()).toEqual(['art', 'plan', 'year']);
   });
 
   it.each(written)('the widgets read the “%s” the app writes', (key) => {

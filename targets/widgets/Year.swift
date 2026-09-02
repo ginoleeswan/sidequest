@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import WidgetKit
 
 /**
@@ -21,6 +22,15 @@ import WidgetKit
 struct YearEntry: TimelineEntry {
   let date: Date
   let year: Year?
+  /// The boxes of the latest games finished, newest first.
+  var shelf: [UIImage] = []
+}
+
+/// The boxes for a year's shelf, in the order the app listed them.
+func shelfFor(_ year: Year?) -> [UIImage] {
+  guard let recent = year?.recent, !recent.isEmpty else { return [] }
+  let art = Store.art()
+  return recent.compactMap { artImage($0, .grid, in: art) }
 }
 
 struct YearProvider: TimelineProvider {
@@ -28,7 +38,8 @@ struct YearProvider: TimelineProvider {
     year: 2026,
     count: 8,
     hours: 208,
-    months: [1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1]
+    months: [1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1],
+    recent: nil
   )
 
   func placeholder(in context: Context) -> YearEntry {
@@ -39,12 +50,8 @@ struct YearProvider: TimelineProvider {
     in context: Context,
     completion: @escaping (YearEntry) -> Void
   ) {
-    completion(
-      YearEntry(
-        date: Date(),
-        year: context.isPreview ? Self.sample : Store.year()
-      )
-    )
+    let year = context.isPreview ? Self.sample : Store.year()
+    completion(YearEntry(date: Date(), year: year, shelf: shelfFor(year)))
   }
 
   func getTimeline(
@@ -55,9 +62,10 @@ struct YearProvider: TimelineProvider {
     // change with the date — only with finishing something, which the
     // app tells this widget about directly. One entry, refreshed at
     // midnight so the "this year" it claims stays true on 1 January.
+    let year = Store.year()
     completion(
       Timeline(
-        entries: [YearEntry(date: Date(), year: Store.year())],
+        entries: [YearEntry(date: Date(), year: year, shelf: shelfFor(year))],
         policy: .after(nextMidnight())
       )
     )
@@ -124,39 +132,70 @@ struct YearView: View {
   private let columns = Array(repeating: GridItem(.flexible(), spacing: 3), count: 4)
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 6) {
-      if let year = entry.year {
-        HStack(alignment: .firstTextBaseline) {
-          Text(String(year.year))
-            .font(Brand.black(wide ? 22 : 18))
-            .foregroundStyle(.white)
-          Spacer(minLength: 4)
-          Text("\(year.count) · \(year.hours)h")
-            .font(Brand.bold(11))
-            .foregroundStyle(Color("$accent"))
-        }
-
-        LazyVGrid(columns: columns, spacing: 3) {
-          ForEach(0..<12, id: \.self) { month in
-            let finished = month < year.months.count ? year.months[month] : 0
-            RoundedRectangle(cornerRadius: 2)
-              .fill(monthFill(finished))
-              .aspectRatio(1.35, contentMode: .fit)
+    /*
+     * The medium card gets a shelf.
+     *
+     * Twelve lit slots say how much of a year happened; they cannot
+     * say what. Beside the card, the boxes of the latest games to roll
+     * their credits — three of them, at the size a thumbnail is
+     * recognised — say exactly what, the way the app's own shelves do.
+     * Only where the app had boxes to give: a shelf with nothing on it
+     * is not drawn, and the card is the card it always was.
+     */
+    HStack(alignment: .top, spacing: 12) {
+      VStack(alignment: .leading, spacing: 6) {
+        if let year = entry.year {
+          HStack(alignment: .firstTextBaseline) {
+            Text(String(year.year))
+              .font(Brand.black(wide ? 22 : 18))
+              .foregroundStyle(.white)
+            Spacer(minLength: 4)
+            Text("\(year.count) · \(year.hours)h")
+              .font(Brand.bold(11))
+              .foregroundStyle(Color("$accent"))
           }
-        }
 
-        if wide {
-          Text(year.count == 1 ? "one game finished" : "\(year.count) games finished")
-            .font(Brand.regular(12))
-            .foregroundStyle(Color("$muted"))
+          LazyVGrid(columns: columns, spacing: 3) {
+            ForEach(0..<12, id: \.self) { month in
+              let finished = month < year.months.count ? year.months[month] : 0
+              RoundedRectangle(cornerRadius: 2)
+                .fill(monthFill(finished))
+                .aspectRatio(1.35, contentMode: .fit)
+            }
+          }
+
+          if wide {
+            Text(year.count == 1 ? "one game finished" : "\(year.count) games finished")
+              .font(Brand.regular(12))
+              .foregroundStyle(Color("$muted"))
+          }
+        } else {
+          Waiting(
+            line: "Nothing yet",
+            hint: "Finish something and it lands here"
+          )
         }
-      } else {
-        Waiting(
-          line: "Nothing yet",
-          hint: "Finish something and it lands here"
-        )
+        Spacer(minLength: 0)
       }
-      Spacer(minLength: 0)
+      .frame(maxWidth: .infinity, alignment: .leading)
+
+      if wide, !entry.shelf.isEmpty {
+        VStack(alignment: .leading, spacing: 5) {
+          Nameplate(text: "CREDITS", tint: Color("$muted"))
+          HStack(spacing: 5) {
+            ForEach(Array(entry.shelf.prefix(3).enumerated()), id: \.offset) { pair in
+              Image(uiImage: pair.element)
+                .resizable()
+                .scaledToFill()
+                .frame(width: 36, height: 48)
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+                .accessibilityHidden(true)
+            }
+          }
+          Spacer(minLength: 0)
+        }
+        .frame(width: 118, alignment: .leading)
+      }
     }
     .padding(wide ? 12 : 10)
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

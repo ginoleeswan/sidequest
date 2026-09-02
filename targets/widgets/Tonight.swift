@@ -24,6 +24,8 @@ struct TonightEntry: TimelineEntry {
   var pressure: Pressure = .calm
   /// Decoded once when the timeline is built, not once per draw.
   var cover: UIImage? = nil
+  /// The publisher's own title treatment, drawn where the name is typed.
+  var logo: UIImage? = nil
   /// The booked evenings after this one, for the medium card's column.
   var next: [WeekNight] = []
   /**
@@ -56,12 +58,14 @@ struct TonightProvider: TimelineProvider {
       return
     }
     let today = Store.plan().first
+    let art = Store.art()
     completion(
       TonightEntry(
         date: Date(),
         tonight: today?.tonight,
         pressure: today?.pressure ?? .calm,
-        cover: coverImage(today?.tonight?.id, in: Store.covers())
+        cover: artImage(today?.tonight?.id, .hero, in: art),
+        logo: artImage(today?.tonight?.id, .logo, in: art)
       )
     )
   }
@@ -82,7 +86,7 @@ struct TonightProvider: TimelineProvider {
     // Read once, outside the loop. Seven mornings usually name two or
     // three games between them, and re-reading the container per entry
     // is work done inside a window the system is timing.
-    let covers = Store.covers()
+    let art = Store.art()
     let days = Store.plan()
     if days.isEmpty {
       completion(
@@ -97,7 +101,8 @@ struct TonightProvider: TimelineProvider {
         date: day.date,
         tonight: day.tonight,
         pressure: day.pressure,
-        cover: coverImage(day.tonight?.id, in: covers),
+        cover: artImage(day.tonight?.id, .hero, in: art),
+        logo: artImage(day.tonight?.id, .logo, in: art),
         next: upNext(day.nights),
         relevance: TimelineEntryRelevance(score: 0.4)
       )
@@ -137,11 +142,34 @@ struct TonightHome: View {
         }
 
         if let tonight = entry.tonight {
-          Text(tonight.title)
-            .font(Brand.bold(wide ? 24 : 19))
-            .foregroundStyle(.white)
-            .lineLimit(2)
-            .minimumScaleFactor(0.75)
+          /*
+           * The publisher's mark where the name would be typed.
+           *
+           * Every streaming shelf sets the title's own logo over the
+           * artwork instead of the name in the app's face, and the
+           * difference is the difference between a catalogue and a
+           * spreadsheet. Fitted, never filled: a logo is a shape, and
+           * a shape stretched to a box is a smear. The typed name
+           * stands whenever there is no mark, so the card is never
+           * blank where its title should be.
+           */
+          if let logo = entry.logo {
+            Image(uiImage: logo)
+              .resizable()
+              .scaledToFit()
+              .frame(
+                maxWidth: wide ? 190 : 128,
+                maxHeight: wide ? 54 : 42,
+                alignment: .leading
+              )
+              .accessibilityHidden(true)
+          } else {
+            Text(tonight.title)
+              .font(Brand.bold(wide ? 24 : 19))
+              .foregroundStyle(.white)
+              .lineLimit(2)
+              .minimumScaleFactor(0.75)
+          }
           Text(spanLabel(tonight.hours))
             .font(Brand.regular(wide ? 15 : 13))
             .foregroundStyle(Color("$muted"))
@@ -330,7 +358,11 @@ struct TonightAccessory: View {
 /**
  * The ground under Tonight: the game's own art, or the app's navy.
  *
- * Artwork earns its place on this widget and on no other. Tonight names
+ * The art is the hero banner where SteamGridDB has one — the shape a
+ * medium card is, composed by the publisher to be looked at whole —
+ * and RAWG's screenshot where it does not.
+ *
+ * Artwork earns its place as a ground on this widget and on no other. Tonight names
  * exactly one game, and a cover is recognised across a room in a way a
  * word set at 19pt is not — which is the whole use of a widget somebody
  * glances at from the sofa. The week is seven names and the month is a

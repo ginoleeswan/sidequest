@@ -97,6 +97,9 @@ struct WeekNight: Codable, Identifiable {
   let title: String
   let hours: Int
   let finishes: Bool
+  /// The lead game's id, for its artwork. Absent on a free evening and
+  /// in payloads written before the app knew to send it.
+  let game: Int?
   /// The game's place in the route, which is what decides its colour.
   /// -1 when the evening is free. Sent by the app rather than worked
   /// out here: two copies of a palette is how a Lock Screen ends up
@@ -124,6 +127,9 @@ func planColour(_ index: Int) -> Color {
 /** One mark on the month strip: a landing ahead, or a stamp behind. */
 struct HorizonMark: Codable, Identifiable {
   let name: String
+  /// The game's id, for the picture on its slot. Optional for the same
+  /// reason `Tonight.id` is: an older payload must still decode.
+  let game: Int?
   /// Epoch milliseconds the mark stands on — for WHERE it goes, which
   /// is the one thing only this side can work out.
   let at: Double
@@ -249,6 +255,28 @@ struct Year: Codable {
   let hours: Int
   /// Twelve entries, January first: how many games finished that month.
   let months: [Int]
+  /// The latest credits, newest first, for the shelf of boxes. Absent in
+  /// payloads written before the shelf existed.
+  let recent: [Int]?
+}
+
+/**
+ * One game's pictures: file names inside the container's art folder.
+ *
+ * Each is optional because each is found separately — a game the
+ * publisher has a logo for may have no icon, and the widget draws what
+ * it has and types the rest. See `lib/widgetArt`.
+ */
+struct GameArt: Codable {
+  let hero: String?
+  let logo: String?
+  let icon: String?
+  let grid: String?
+}
+
+/** Which of a game's pictures is wanted. */
+enum ArtKind {
+  case hero, logo, icon, grid
 }
 
 // MARK: - Reading it
@@ -278,40 +306,85 @@ enum Store {
   static func year() -> Year? { decode(Year.self, "year") }
 
   /**
-   * The week's artwork, by game id, as the app encoded it.
+   * The artwork manifest, by game id: which file in the container's
+   * art folder is which game's hero, logo, icon or box.
    *
-   * Base64 rather than files because the shared container the two
-   * binaries have is `UserDefaults` and nothing else — see
-   * `lib/widgetCovers`, which spends a fixed budget on the covers the
-   * week actually needs and drops the furthest-away one first.
+   * The pictures themselves are files, written by the app with
+   * `expo-file-system` into the same app group this reads — see
+   * `lib/widgetArt`. The first build carried them as base64 through
+   * this string store under a two-hundred-kilobyte budget, which held
+   * three screenshots; as files there is room for every game the week
+   * names, in four kinds.
    *
    * Read once per timeline rather than once per entry: seven mornings
-   * usually name two or three games between them, and decoding the same
-   * picture five times is work done inside a window the system is
-   * timing.
+   * usually name two or three games between them.
    */
-  static func covers() -> [String: String] {
-    decode([String: String].self, "covers") ?? [:]
+  static func art() -> [String: GameArt] {
+    decode([String: GameArt].self, "art") ?? [:]
   }
 }
 
+/** The folder inside the shared container; `lib/widgetArtIO` spells it too. */
+let artFolder = "widget-art"
+
 /**
- * One game's cover, if there is one, decoded.
+ * One game's picture of one kind, if it is there, decoded.
  *
  * Every step is allowed to come back empty and none of them is an
- * error: a plan written before this build existed has no covers key, a
- * game the budget could not fit has no entry, and a string that is not
- * an image is a string that is not an image. Each of those is a card
- * that looks the way the card looked before it had artwork, which is a
+ * error: a plan written before this build existed has no manifest, a
+ * game the download failed for has no entry, and a file that is not an
+ * image is a file that is not an image. Each of those is a card that
+ * looks the way the card looked before it had artwork, which is a
  * design that still works — the type was never sitting on the picture
  * for legibility.
  */
-func coverImage(_ id: Int?, in covers: [String: String]) -> UIImage? {
-  guard let id,
-    let encoded = covers["\(id)"],
-    let data = Data(base64Encoded: encoded)
+func artImage(_ id: Int?, _ kind: ArtKind, in art: [String: GameArt]) -> UIImage? {
+  guard let id, let entry = art["\(id)"] else { return nil }
+  let name: String?
+  switch kind {
+  case .hero: name = entry.hero
+  case .logo: name = entry.logo
+  case .icon: name = entry.icon
+  case .grid: name = entry.grid
+  }
+  guard let name,
+    let container = FileManager.default.containerURL(
+      forSecurityApplicationGroupIdentifier: appGroup)
   else { return nil }
-  return UIImage(data: data)
+  let url = container.appendingPathComponent(artFolder).appendingPathComponent(name)
+  return UIImage(contentsOfFile: url.path)
+}
+
+/**
+ * The icons a strip of evenings or marks will draw, decoded once.
+ *
+ * Keyed by game id, so a game across five nights is one decode, not
+ * five — and a game without an icon is simply not in the map.
+ */
+func iconsFor(_ ids: [Int?], in art: [String: GameArt]) -> [Int: UIImage] {
+  var icons: [Int: UIImage] = [:]
+  for case let id? in ids where icons[id] == nil {
+    if let image = artImage(id, .icon, in: art) { icons[id] = image }
+  }
+  return icons
+}
+
+/**
+ * A small square of artwork, clipped the way the app clips its tiles.
+ * The one shape the icons on the week and the month share.
+ */
+struct ArtMark: View {
+  let image: UIImage
+  var size: CGFloat = 13
+
+  var body: some View {
+    Image(uiImage: image)
+      .resizable()
+      .scaledToFill()
+      .frame(width: size, height: size)
+      .clipShape(RoundedRectangle(cornerRadius: size * 0.24))
+      .accessibilityHidden(true)
+  }
 }
 
 /**
