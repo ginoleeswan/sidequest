@@ -1,6 +1,14 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Linking,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 
 import { CoverImage } from './CoverImage';
 import { SectionHeader } from './SectionHeader';
@@ -25,7 +33,19 @@ import { TYPE } from '@/styles/typography';
  * mention streams — and this must never be the reason a game page looks
  * broken, because it is the least important thing on it.
  */
-export function LiveStreams({ game }: { game: string }) {
+export function LiveStreams({
+  game,
+  style,
+}: {
+  game: string;
+  /**
+   * The block's own spacing, applied only when there is something to
+   * show. Wrapped from outside, an empty section still left its margin
+   * on the page - a void above the series rail for a game nobody was
+   * streaming.
+   */
+  style?: StyleProp<ViewStyle>;
+}) {
   const { data } = useQuery({
     queryKey: ['twitch', 'streams', game],
     queryFn: () => fetchLiveStreams(game),
@@ -38,7 +58,7 @@ export function LiveStreams({ game }: { game: string }) {
   if (!data || data.length === 0) return null;
 
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, style]}>
       <SectionHeader title="Playing it now" />
       <View style={styles.row}>
         {data.map((stream) => (

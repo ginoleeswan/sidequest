@@ -31,10 +31,12 @@ describe('the ratings breakdown', () => {
     expect(screen.queryByText('exceptional')).toBeNull();
   });
 
-  it('abbreviates the counts and totals them', async () => {
+  it('abbreviates the counts, and leaves the total to the section head', async () => {
     await render(<RatingsBreakdown ratings={buckets} />);
     expect(screen.getByText('12.9k')).toBeTruthy();
-    expect(screen.getByText(/18\.6k player ratings/)).toBeTruthy();
+    // The page's eyebrow says "18,626 ratings on RAWG" above this; a
+    // footnote saying it again under the bars was the same fact twice.
+    expect(screen.queryByText(/player ratings/)).toBeNull();
   });
 
   /**

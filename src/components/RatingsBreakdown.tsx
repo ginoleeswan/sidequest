@@ -96,9 +96,6 @@ export function RatingsBreakdown({ ratings }: { ratings: RatingBucket[] }) {
           <Text style={styles.count}>{compact(bucket.count)}</Text>
         </View>
       ))}
-      <Text style={styles.total}>
-        {compact(total)} player ratings, from RAWG
-      </Text>
     </View>
   );
 }
@@ -137,10 +134,5 @@ const styles = StyleSheet.create({
     color: COLORS.mediumGrey,
     width: 44,
     textAlign: 'right',
-  },
-  total: {
-    ...TYPE.fine,
-    color: COLORS.mediumGrey,
-    marginTop: SPACING.xs,
   },
 });

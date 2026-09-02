@@ -1155,8 +1155,19 @@ export default function GameInfoScreen() {
    * own amber selection is what marks it as the thing you act on. The
    * frame was never what made it primary.
    */
+  /**
+   * A section of the file. The rail's twenty points of padding framed
+   * each group against its hairline; flush on the phone, with no
+   * hairlines, the same twenty read as a hole between GET IT and the
+   * facts under it.
+   */
+  const fileSection = [
+    styles.fileSection,
+    !isExpanded && styles.fileSectionCompact,
+  ];
+
   const controls = isExpanded ? (
-    <View style={styles.fileSection}>
+    <View style={fileSection}>
       <Text style={styles.fileLabel}>ON YOUR SHELF</Text>
       <StatusActions game={game} />
       {/* Stacked, not a wrapping row: at 400 the button and the two
@@ -1430,9 +1441,7 @@ export default function GameInfoScreen() {
           like. Renders nothing when nobody is live, when Twitch has no
           such category, or when the deployment has no Twitch keys — so
           it can never be the reason this page looks unfinished. */}
-      <View style={mediaBlock}>
-        <LiveStreams game={game.name} />
-      </View>
+      <LiveStreams game={game.name} style={mediaBlock} />
 
       {/* IGDB's graph, beside RAWG's series: the series answers "what
           else is THIS", similar answers "what else is LIKE this" —
@@ -1467,7 +1476,10 @@ export default function GameInfoScreen() {
           </View>
         ) : (
           <View style={mediaBlock}>
-            <SectionHeader title="More like this" />
+            <SectionHeader
+              title="More like this"
+              eyebrow="Similar games, via IGDB"
+            />
             <Rail<{ slug: string; name: string; cover: string }>
               data={igdb!.similar}
               keyExtractor={(item) => item.slug}
@@ -1530,7 +1542,10 @@ export default function GameInfoScreen() {
             />
           ) : (
             <>
-              <SectionHeader title="More in this series" />
+              <SectionHeader
+                title="More in this series"
+                eyebrow={`${series.length} more ${series.length === 1 ? 'game' : 'games'}`}
+              />
               <Rail<Game>
                 data={series}
                 keyExtractor={(item) => String(item.id)}
@@ -1615,17 +1630,27 @@ export default function GameInfoScreen() {
     </>
   );
 
+  const ratingCount = (game.ratings ?? []).reduce((sum, r) => sum + r.count, 0);
   const ratingsBreakdown =
     hasRatings || whoElse ? (
       <View style={styles.block}>
-        <SectionHeader wide={isExpanded} title="Player verdict" />
-        {/* On the phone this sits on a plane — one card holding the
-            share, the shape, the finishing rate and the counts, so the
-            verdict reads as one finding. On the wide page the plane
-            made it the main column's last surviving box after
-            everything else went flush — and a 34pt "92%" needs no crate
-            to read as a finding. */}
-        {isExpanded ? verdict : <View style={styles.panel}>{verdict}</View>}
+        {/* Flush on both widths. The phone kept this in a card, which
+            made it one of three framed things on the page - the verdict
+            in a raised plate, the reader's note in a navy one, the file
+            in a third - three container languages on one scroll. A 34pt
+            "92%" needs no crate to read as a finding; the eyebrow says
+            where the numbers came from, and the one frame left on the
+            page is the reader's own note. */}
+        <SectionHeader
+          wide={isExpanded}
+          title="Player verdict"
+          eyebrow={
+            hasRatings
+              ? `${ratingCount.toLocaleString()} ratings on RAWG`
+              : 'Who else has it'
+          }
+        />
+        {verdict}
       </View>
     ) : null;
 
@@ -1802,7 +1827,7 @@ export default function GameInfoScreen() {
     ) : null;
 
   const fileGetIt = hasLinks ? (
-    <View style={styles.fileSection}>
+    <View style={fileSection}>
       <Text style={styles.fileLabel}>GET IT</Text>
       <StoreLinks
         stores={game.stores}
@@ -1818,8 +1843,9 @@ export default function GameInfoScreen() {
     .join(', ');
 
   const fileDetails = (
-    <View style={styles.fileSection}>
-      <Text style={styles.fileLabel}>FACTS</Text>
+    <View style={fileSection}>
+      {/* No label of its own: "Details" above already names this, and
+          FACTS over PLATFORMS was a label under a label. */}
       <FactList
         facts={[
           {
@@ -1858,14 +1884,8 @@ export default function GameInfoScreen() {
             value: game.publishers?.map((d) => d.name).join(', '),
           },
           { label: 'Rated', value: game.esrb_rating?.name },
-          game.website
-            ? {
-                label: 'Official site',
-                value: game.website
-                  .replace(/^https?:\/\//, '')
-                  .replace(/\/$/, ''),
-              }
-            : { label: 'Official site' },
+          // The official site is a link under GET IT; printed again
+          // here as text it was the same address twice, once dead.
         ]}
       />
     </View>
@@ -1882,7 +1902,7 @@ export default function GameInfoScreen() {
    * stays in the record band where it gets the wide track.
    */
   const fileFacts = isExpanded ? (
-    <View style={styles.fileSection}>
+    <View style={fileSection}>
       <Text style={styles.fileLabel}>DETAILS</Text>
       {/* The identity line, moved out of the masthead. Genre, the star
           rating and the metascore are lookup facts, not the page's
@@ -1927,7 +1947,7 @@ export default function GameInfoScreen() {
 
   const fileTags =
     game.tags && game.tags.length > 0 ? (
-      <View style={styles.fileSection}>
+      <View style={fileSection}>
         <Text style={styles.fileLabel}>TAGS</Text>
         <View style={styles.tags}>
           {game.tags.slice(0, isExpanded ? 24 : 10).map((tag) => (
@@ -1958,16 +1978,19 @@ export default function GameInfoScreen() {
   const framed = (sections: React.ReactNode[]) => {
     const present = sections.filter(Boolean);
     return (
-      <View style={isExpanded ? styles.fileFlat : styles.fileBox}>
+      <View style={styles.fileFlat}>
         {/* The rule lives on this wrapper, not on the section inside
             it: an override on a parent never reaches a child's border,
             which is how the last section kept a stray hairline under
-            it — the one line on the page that ruled off nothing. */}
+            it — the one line on the page that ruled off nothing. The
+            phone draws no joins at all: flush, a hairline between GET
+            IT and the facts is a divider between sections, and the
+            spec sheet's own row rules already carry the table. */}
         {present.map((section, index) => (
           <View
             key={index}
             style={[
-              styles.fileJoin,
+              isExpanded && styles.fileJoin,
               index === present.length - 1 && styles.fileSectionLast,
             ]}
           >
@@ -2035,7 +2058,7 @@ export default function GameInfoScreen() {
     <View style={[styles.block, styles.recordBand]}>
       <View style={styles.recordDetails}>
         {framed([
-          <View key="platforms" style={styles.fileSection}>
+          <View key="platforms" style={fileSection}>
             <Text style={styles.fileLabel}>PLATFORMS</Text>
             <MetaRow
               label=""
@@ -2083,7 +2106,10 @@ export default function GameInfoScreen() {
         <Screen onRefresh={refresh}>
           <View
             style={[
-              { paddingBottom: SPACING.xl * 1.5 },
+              // The last block already leaves its own margin; on the
+              // phone another forty-eight under it was a void before
+              // the footer's shore.
+              { paddingBottom: isExpanded ? SPACING.xl * 1.5 : SPACING.xs },
               isExpanded && styles.deskPad,
             ]}
           >
@@ -2743,32 +2769,12 @@ const styles = StyleSheet.create({
    * meets one rhythm rather than three.
    */
   block: { gap: SPACING.sm + 2, marginBottom: SPACING.xl },
-  panel: {
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.stroke,
-    backgroundColor: COLORS.raised,
-    padding: SPACING.lg,
-    ...SHADOW.card,
-  },
 
-  /**
-   * The fact box, on the plane the rest of the app puts panels on.
-   * `raised`, not `surface`: surface is a step DOWN from the page's navy
-   * and reads as a recess.
-   */
-  fileBox: {
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.stroke,
-    backgroundColor: COLORS.raised,
-    paddingHorizontal: SPACING.lg,
-    ...SHADOW.card,
-  },
   fileSection: {
     paddingVertical: SPACING.lg,
     gap: SPACING.sm,
   },
+  fileSectionCompact: { paddingVertical: SPACING.sm + 2 },
   fileJoin: { borderBottomWidth: 1, borderBottomColor: COLORS.stroke },
   /**
    * The second figure, at the first one's size and on its baseline.
@@ -2792,20 +2798,24 @@ const styles = StyleSheet.create({
   finishLabel: { ...TYPE.body, color: COLORS.lightGrey, flexShrink: 1 },
 
   /** Ruled off from the bars above it: same finding, second witness. */
+  /** Set apart by its label and its air, not by a rule across the page. */
   whoElseRow: {
-    marginTop: SPACING.md,
-    paddingTop: SPACING.md,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.stroke,
+    marginTop: SPACING.lg,
     gap: SPACING.sm,
   },
   fileSectionLast: { borderBottomWidth: 0 },
   /** Leading the panel, the counts need no rule above them. */
-  whoElseFirst: { marginTop: 0, paddingTop: 0, borderTopWidth: 0 },
+  whoElseFirst: { marginTop: 0 },
   /** A row of the spec sheet: label over value, a hairline between. */
   fact: { paddingVertical: SPACING.sm + 2, gap: 3 },
   factRule: { borderTopWidth: 1, borderTopColor: COLORS.stroke },
-  platformFact: { gap: SPACING.xs + 2, alignItems: 'flex-start' },
+  /** The glyphs and the names on one line, not a glyph over a word. */
+  platformFact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+  },
   mediaBones: { flexDirection: 'row', gap: SPACING.sm },
   bonesProse: { gap: 0 },
   bonesLine: { height: 23, width: '100%' },
