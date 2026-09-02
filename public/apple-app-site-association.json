@@ -1,0 +1,49 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "A85929B4HV.com.glstudio.sidequest",
+          "A85929B4HV.com.glstudio.sidequest.dev",
+          "A85929B4HV.com.glstudio.sidequest.preview"
+        ],
+        "components": [
+          {
+            "/": "/game/*",
+            "comment": "A game's page opens in the app"
+          },
+          {
+            "/": "/shared",
+            "comment": "A shared plan, with its ?p= payload"
+          },
+          {
+            "/": "/by/*",
+            "comment": "A studio or publisher's catalogue"
+          },
+          {
+            "/": "/browse/*",
+            "comment": "A browse section"
+          },
+          {
+            "/": "/plan"
+          },
+          {
+            "/": "/library"
+          },
+          {
+            "/": "/you"
+          },
+          {
+            "/": "/import"
+          },
+          {
+            "/": "/memcard"
+          },
+          {
+            "/": "/tidy"
+          }
+        ]
+      }
+    ]
+  }
+}

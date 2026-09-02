@@ -133,6 +133,12 @@ The web build is a static export — `vercel.json` is already configured.
      RAWG's average, which is the behaviour before they are set.
 3. Deploy. Dynamic game pages (`/game/123`) are served via the rewrite in
    `vercel.json`.
+4. Universal links come with it: `public/apple-app-site-association.json`
+   is served at `/.well-known/apple-app-site-association`, so a game or
+   plan link opens the installed iOS app. The file names every build
+   variant's bundle id under the team in `app.json`; a new variant needs
+   a line there, and `src/lib/__tests__/universalLinks.test.ts` checks
+   the two agree.
 
 Or from the CLI: `npx vercel --prod` (after `npx vercel env add RAWG_API_KEY`).
 

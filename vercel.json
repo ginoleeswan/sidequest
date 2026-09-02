@@ -7,6 +7,10 @@
   "trailingSlash": false,
   "rewrites": [
     {
+      "source": "/.well-known/apple-app-site-association",
+      "destination": "/apple-app-site-association.json"
+    },
+    {
       "source": "/game/:id",
       "has": [
         {
@@ -91,6 +95,19 @@
         {
           "key": "Cache-Control",
           "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/(.well-known/)?apple-app-site-association(.json)?",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
         }
       ]
     }

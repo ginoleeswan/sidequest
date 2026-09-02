@@ -23,7 +23,8 @@
       },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "associatedDomains": ["applinks:gosidequest.vercel.app"]
     },
     "android": {
       "package": "com.glstudio.sidequest",
