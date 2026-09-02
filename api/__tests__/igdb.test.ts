@@ -229,6 +229,88 @@ describe('the search rescue', () => {
  * ever agree with it; an exact name is enough for those. A dated entry
  * whose year disagrees is still refused.
  */
+describe('the search rescue for misspelt names', () => {
+  const YEAR_2026 = Math.floor(Date.UTC(2026, 6, 9) / 1000);
+  const loose = `search "assassin's creed resynced"`;
+
+  it('finds the game from its distinctive words when the full name misses', async () => {
+    fetchMock.mockImplementation((url: string, init?: { body?: string }) => {
+      if (url.includes('oauth2/token'))
+        return ok({ access_token: 'tok', expires_in: 3600 });
+      const body = init?.body ?? '';
+      bodies.push(body);
+      if (body.includes(loose))
+        return ok([
+          {
+            id: 337738,
+            slug: 'assassins-creed-black-flag-resynced',
+            name: "Assassin's Creed Black Flag Resynced",
+            first_release_date: YEAR_2026,
+            cover: { image_id: 'co-acbf' },
+          },
+          {
+            id: 1,
+            slug: 'assassins-creed-shadows',
+            name: "Assassin's Creed Shadows",
+            first_release_date: YEAR_2026,
+            cover: { image_id: 'co-wrong' },
+          },
+        ]);
+      return ok([]);
+    });
+
+    const sent = await call({
+      query: {
+        slugs: 'assassins-creed-back-flag-resynced',
+        names: "Assassin's Creed Back Flag Resynced",
+        years: '2026',
+      },
+    });
+    expect(sent.code).toBe(200);
+    const extras = (
+      sent.body as { extras: Record<string, { cover: string | null }> }
+    ).extras;
+    expect(extras['assassins-creed-back-flag-resynced'].cover).toBe('co-acbf');
+    // The full name was tried first; the loose query only after it missed.
+    expect(
+      bodies.some((b) =>
+        b.includes(`search "Assassin's Creed Back Flag Resynced"`)
+      )
+    ).toBe(true);
+  });
+
+  it('refuses a same-year hit that lacks one of the distinctive words', async () => {
+    fetchMock.mockImplementation((url: string, init?: { body?: string }) => {
+      if (url.includes('oauth2/token'))
+        return ok({ access_token: 'tok', expires_in: 3600 });
+      const body = init?.body ?? '';
+      if (body.includes(loose))
+        return ok([
+          {
+            id: 1,
+            slug: 'assassins-creed-shadows',
+            name: "Assassin's Creed Shadows",
+            first_release_date: YEAR_2026,
+            cover: { image_id: 'co-wrong' },
+          },
+        ]);
+      return ok([]);
+    });
+
+    const sent = await call({
+      query: {
+        slugs: 'assassins-creed-back-flag-resynced',
+        names: "Assassin's Creed Back Flag Resynced",
+        years: '2026',
+      },
+    });
+    const extras = (
+      sent.body as { extras: Record<string, { cover: string | null }> }
+    ).extras;
+    expect(extras['assassins-creed-back-flag-resynced']).toBeUndefined();
+  });
+});
+
 describe('the search rescue for undated games', () => {
   it('adopts an exact-name match that has no release date yet', async () => {
     fetchMock.mockImplementation((url: string, init?: { body?: string }) => {

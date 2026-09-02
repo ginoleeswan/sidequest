@@ -1004,7 +1004,9 @@ const styles = StyleSheet.create({
   },
   /** An offer, not an interruption: last thing before the footer. */
   /** A shelf-sized break: the shelf margin below, the page gutter at the sides. */
-  billboardSlot: { paddingHorizontal: GUTTER, marginBottom: SPACING.xl },
+  // No inset of its own: the compact column already pays the gutter,
+  // and a second one left the billboard narrower than the shelf above.
+  billboardSlot: { marginBottom: SPACING.xl },
   billboardSlotWide: {
     paddingHorizontal: SPACING.xl,
     marginBottom: SPACING.xl,

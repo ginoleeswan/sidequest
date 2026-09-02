@@ -176,6 +176,19 @@ function pickBest(
 }
 
 /** Seconds to hours, one decimal — the precision anyone can feel. */
+/**
+ * The words a name is recognisable by: five letters and up, lowercased.
+ * "Assassin's Creed Back Flag Resynced" - RAWG's typo, "Back" for
+ * "Black" - keeps assassin's, creed and resynced; IGDB's search, which
+ * finds nothing for the typo, finds the game from those three alone.
+ */
+export function distinctiveWords(name: string): string[] {
+  return name
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}']+/u)
+    .filter((word) => word.length >= 5);
+}
+
 const hours = (seconds: number | undefined) =>
   seconds && seconds > 0 ? Math.round((seconds / 3600) * 10) / 10 : null;
 
@@ -386,8 +399,29 @@ export default async function handler(
          * refused: that is the 1994 Marathon rule, and it stands.
          */
         const undated = best && best.game.first_release_date == null;
-        if (best && (best.score >= 7 || (best.exact && undated)))
+        if (best && (best.score >= 7 || (best.exact && undated))) {
           chosen.set(want.slug, best.game);
+          continue;
+        }
+        // Third pass, for a name the catalogue has misspelt: search on
+        // the distinctive words alone, and adopt only a hit that both
+        // dates right and carries every one of those words - the year
+        // alone would hand a franchise's other entry the cover.
+        const words = distinctiveWords(want.name);
+        const loose = words.join(' ');
+        if (words.length < 2 || loose === want.name.toLowerCase()) continue;
+        const looser = await igdb<IgdbGame>(
+          clientId,
+          accessToken,
+          'games',
+          `fields ${GAME_FIELDS}; search "${loose}"; limit 3;`
+        );
+        const carrying = looser.filter((game) => {
+          const has = new Set(distinctiveWords(game.name ?? ''));
+          return words.every((word) => has.has(word));
+        });
+        const rescued = pickBest(want, carrying);
+        if (rescued && rescued.score >= 7) chosen.set(want.slug, rescued.game);
       } catch {
         // The first pass already answered for most of the batch; a
         // failed rescue must not take those answers with it.
