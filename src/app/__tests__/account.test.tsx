@@ -1,6 +1,6 @@
 import { fireEvent, screen } from '@testing-library/react-native';
 
-import AccountScreen from '../account';
+import AccountScreen from '../(pages)/account';
 import { useAuth } from '@/lib/auth';
 import { useSync } from '@/lib/sync/SyncProvider';
 import { renderApp, useFakeStorage } from '@/test-utils';

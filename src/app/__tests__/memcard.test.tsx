@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 
-import MemcardScreen from '../memcard';
+import MemcardScreen from '../(pages)/memcard';
 import { shareMemcard } from '@/lib/memcardImage';
 import { renderApp, useFakeStorage } from '@/test-utils';
 

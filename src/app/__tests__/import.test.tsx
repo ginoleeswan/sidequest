@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
-import ImportScreen from '../import';
+import ImportScreen from '../(pages)/import';
 import { renderApp, useFakeStorage } from '@/test-utils';
 
 const ORIGINAL_KEY = process.env.EXPO_PUBLIC_RAWG_API_KEY;

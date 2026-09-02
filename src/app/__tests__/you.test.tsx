@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { Share } from 'react-native';
 import { router } from 'expo-router';
 
-import YouScreen from '../you';
+import YouScreen from '../(pages)/you';
 import type { Game } from '@/api/types';
 import type { LibraryStatus } from '@/lib/library';
 import { renderApp, useFakeStorage } from '@/test-utils';

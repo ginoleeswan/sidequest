@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
-import TidyScreen from '../tidy';
+import TidyScreen from '../(pages)/tidy';
 import { renderApp, useFakeStorage } from '@/test-utils';
 
 let store: Record<string, string>;

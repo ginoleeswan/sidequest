@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 
-import AboutScreen from '../about';
+import AboutScreen from '../(pages)/about';
 import { webScrollContainerStyle } from '@/lib/webScrollContainer';
 import { renderApp } from '@/test-utils';
 

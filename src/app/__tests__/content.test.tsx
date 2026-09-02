@@ -1,9 +1,9 @@
 import { screen } from '@testing-library/react-native';
 
-import AboutScreen from '../about';
+import AboutScreen from '../(pages)/about';
 import NotFoundScreen from '../+not-found';
-import PrivacyScreen from '../privacy';
-import TermsScreen from '../terms';
+import PrivacyScreen from '../(pages)/privacy';
+import TermsScreen from '../(pages)/terms';
 import { renderApp } from '@/test-utils';
 
 /**

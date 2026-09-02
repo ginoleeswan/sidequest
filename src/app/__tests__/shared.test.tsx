@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
 
-import SharedPlanScreen, { sharedSchedule } from '../shared';
+import SharedPlanScreen, { sharedSchedule } from '../(pages)/shared';
 import { encodePlan } from '@/lib/planLink';
 import { renderApp, useFakeStorage } from '@/test-utils';
 
