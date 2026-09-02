@@ -125,6 +125,12 @@ The web build is a static export — `vercel.json` is already configured.
      powers Steam connect on The Plan. Server-side only (used by
      `api/steam.ts`), never shipped to the browser. Optional: without it,
      Steam connect shows a friendly "not configured" message.
+   - `STEAMGRIDDB_API_KEY` = a SteamGridDB key
+     ([steamgriddb.com/profile/preferences/api](https://www.steamgriddb.com/profile/preferences/api)) —
+     the publishers' own title logos, set over the artwork on the game
+     page and the home stage. Server-side only (used by `api/logo.ts`).
+     Optional: without it, logos come from Steam's CDN for games with a
+     Steam release, and every other title stays typed.
    - `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` = a Twitch application
      ([dev.twitch.tv/console/apps](https://dev.twitch.tv/console/apps)) —
      IGDB authenticates through Twitch, and these power the reported

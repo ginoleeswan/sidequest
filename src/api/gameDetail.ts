@@ -7,6 +7,7 @@ import {
   getScreenshots,
   getStoreLinks,
 } from './rawg';
+import { logoQuery } from './logo';
 import { queryKeys } from './queryClient';
 import type { Game, GameDetail, Movie, Screenshot, StoreLink } from './types';
 
@@ -157,6 +158,9 @@ export function prefetchGame(queryClient: QueryClient, game: Game): void {
   seedGame(game);
   void queryClient.prefetchQuery(gameQuery(game.id));
   void queryClient.prefetchQuery(gameMediaQuery(game.id));
+  // The title treatment too: it is edge-cached JSON, and it is the first
+  // thing the masthead wants to draw.
+  if (game.slug) void queryClient.prefetchQuery(logoQuery(game));
 }
 
 /**

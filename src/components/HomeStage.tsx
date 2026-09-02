@@ -22,6 +22,8 @@ import { CoverImage } from './CoverImage';
 import { ScaleButton } from './ScaleButton';
 import { StageTrailer } from './StageTrailer';
 import { gameQuery, seedGame } from '@/api/gameDetail';
+import { logoQuery } from '@/api/logo';
+import { TitleLogo } from './TitleLogo';
 import { getMovies } from '@/api/rawg';
 import type { Game, Movie } from '@/api/types';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
@@ -412,6 +414,23 @@ function StageCopy({
   const enter = useAnimatedValue(reduced ? 1 : 0);
 
   /**
+   * The publisher's mark instead of the typed name — the billboard's
+   * grammar. A Tonight slide's title is a sentence ("Continue Hades"),
+   * so with a mark on show the verb moves up into the eyebrow and the
+   * mark carries the name; the other slides' titles are the name and
+   * simply give way.
+   */
+  const { data: logo } = useQuery({
+    ...logoQuery(slide.game),
+    enabled: Boolean(slide.game.slug),
+  });
+  const verb =
+    slide.kind === 'tonight'
+      ? slide.title.replace(slide.game.name, '').trim()
+      : '';
+  const eyebrow = logo && verb ? `${slide.eyebrow} · ${verb}` : slide.eyebrow;
+
+  /**
    * The headline scales with the stage.
    *
    * 32px is an app heading — correct in a list, timid across a picture
@@ -506,14 +525,27 @@ function StageCopy({
         ]}
       >
         <Animated.Text style={[styles.eyebrow, step(0, 0.4)]} numberOfLines={1}>
-          {slide.eyebrow.toUpperCase()}
+          {eyebrow.toUpperCase()}
         </Animated.Text>
-        <Animated.Text
-          style={[styles.title, display, step(0.1, 0.6)]}
-          numberOfLines={3}
-        >
-          {slide.title}
-        </Animated.Text>
+        <Animated.View style={step(0.1, 0.6)}>
+          <TitleLogo
+            logo={logo}
+            name={slide.game.name}
+            // The copy column's own width, and no taller than the two
+            // lines of headline the mark stands in for.
+            maxWidth={Math.max(
+              (isExpanded ? Math.min(width * 0.5, 560) : width - inset * 2) -
+                24,
+              0
+            )}
+            maxHeight={Math.round(fontSize * 2.1)}
+            style={styles.logo}
+          >
+            <Text style={[styles.title, display]} numberOfLines={3}>
+              {slide.title}
+            </Text>
+          </TitleLogo>
+        </Animated.View>
         <Animated.Text
           style={[styles.detail, step(0.22, 0.75)]}
           numberOfLines={2}
@@ -652,6 +684,8 @@ const styles = StyleSheet.create({
     color: COLORS.lightGrey,
     marginBottom: 2,
   },
+  /** The mark's own breathing room, where the headline's leading was. */
+  logo: { marginVertical: 6 },
   title: {
     ...TYPE.display,
     ...OVER_IMAGE.heading,

@@ -126,6 +126,8 @@ export interface IgdbExtras {
   storyline: string | null;
   /** IGDB's "games like this", slug-routable and covered. */
   similar: { slug: string; name: string; cover: string }[];
+  /** The Steam app id, for the title-treatment lookup; null when none. */
+  steam?: string | null;
 }
 
 /** t_cover_big is 264x352 — the box-art rung; t_720p for a lead. */

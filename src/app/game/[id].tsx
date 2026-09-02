@@ -28,6 +28,7 @@ import {
   gameQuery,
   placeholderDetail,
 } from '@/api/gameDetail';
+import { logoQuery, steamIdFrom } from '@/api/logo';
 import { queryKeys } from '@/api/queryClient';
 import { fetchIgdbExtras, igdbCoverUri } from '@/api/igdb';
 import { friendlyError, mediaUri } from '@/api/rawg';
@@ -65,6 +66,7 @@ import {
 import { PlatformIcons } from '@/components/PlatformIcons';
 import { StatusActions } from '@/components/StatusActions';
 import { StoreLinks } from '@/components/StoreLinks';
+import { TitleLogo } from '@/components/TitleLogo';
 import { DurationSheet } from '@/components/DurationSheet';
 import { SiteFooter } from '@/components/SiteFooter';
 import { GrainScrim, Textured } from '@/components/Textured';
@@ -700,6 +702,20 @@ export default function GameInfoScreen() {
   // What people reported finishing this in, if anyone has.
   // Held in a name of its own so the effect can depend on the whole
   // game: matching now needs its title and year, not just the slug.
+  /**
+   * The publisher's own title treatment, for the masthead.
+   *
+   * Asked by slug from the first frame — the seeded row carries the
+   * name and the year — with the Steam id as a hint where anything on
+   * the page already knows it. The typed name stands until it answers
+   * and stays if it answers nothing.
+   */
+  const steamId = igdb?.steam ?? steamIdFrom(storeLinks) ?? null;
+  const { data: logo } = useQuery({
+    ...logoQuery(game ?? { name: '', released: null, slug: '' }, steamId),
+    enabled: Boolean(game?.slug),
+  });
+
   useEffect(() => {
     if (game?.slug) learnDurations([game]);
   }, [game, learnDurations]);
@@ -918,7 +934,20 @@ export default function GameInfoScreen() {
         {/* No platform glyphs here any more: eight of them opened the
             masthead with a row of noise, and every one is spelled out
             in the file box under PLATFORMS. */}
-        <Text style={styles.heroTitle}>{game.name}</Text>
+        {/* The mark where the name was typed, sized to the column: as
+            wide as the copy, no taller than two lines of the display
+            face it replaces. See TitleLogo for why the name is never
+            actually gone. */}
+        <TitleLogo
+          logo={logo}
+          name={game.name}
+          maxWidth={
+            Math.min(width, LAYOUT.maxContentWidth) - SPACING.md * 2 - 40
+          }
+          maxHeight={84}
+        >
+          <Text style={styles.heroTitle}>{game.name}</Text>
+        </TitleLogo>
         <StatStrip
           game={game}
           onEditLength={() => setEditingLength(true)}
@@ -1060,17 +1089,24 @@ export default function GameInfoScreen() {
   const titleBlock = (
     <View style={styles.titleLockup}>
       <View style={styles.deskHeroCopy}>
-        <Text
-          style={[
-            styles.deskTitle,
-            // A long name in a narrow stage climbed out of the top of
-            // the picture at 44pt; the size follows the frame.
-            stageWidth > 0 && stageWidth < 720 && styles.deskTitleTight,
-          ]}
-          numberOfLines={2}
+        <TitleLogo
+          logo={logo}
+          name={game.name}
+          maxWidth={stageWidth > 0 ? stageWidth * 0.55 : 360}
+          maxHeight={stageWidth > 0 && stageWidth < 720 ? 84 : 110}
         >
-          {game.name}
-        </Text>
+          <Text
+            style={[
+              styles.deskTitle,
+              // A long name in a narrow stage climbed out of the top of
+              // the picture at 44pt; the size follows the frame.
+              stageWidth > 0 && stageWidth < 720 && styles.deskTitleTight,
+            ]}
+            numberOfLines={2}
+          >
+            {game.name}
+          </Text>
+        </TitleLogo>
         <StatStrip
           game={game}
           onEditLength={() => setEditingLength(true)}

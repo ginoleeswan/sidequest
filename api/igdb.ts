@@ -112,7 +112,10 @@ async function igdb<T>(
 
 /** Every field the page enriches with, shared by both lookup passes. */
 const GAME_FIELDS =
-  'id,slug,name,first_release_date,cover.image_id,aggregated_rating,aggregated_rating_count,storyline,similar_games.slug,similar_games.name,similar_games.cover.image_id';
+  'id,slug,name,first_release_date,cover.image_id,aggregated_rating,aggregated_rating_count,storyline,similar_games.slug,similar_games.name,similar_games.cover.image_id,external_games.category,external_games.uid';
+
+/** IGDB's `external_games.category` for a Steam listing. */
+const STEAM_CATEGORY = 1;
 
 interface IgdbGame {
   id: number;
@@ -128,6 +131,7 @@ interface IgdbGame {
     name?: string;
     cover?: { image_id?: string };
   }[];
+  external_games?: { category?: number; uid?: string }[];
 }
 
 interface Want {
@@ -512,11 +516,25 @@ export default async function handler(
         criticCount: number;
         storyline: string | null;
         similar: { slug: string; name: string; cover: string }[];
+        steam: string | null;
       }
     > = {};
     for (const [slug, game] of chosen) {
       extras[slug] = {
         cover: game.cover?.image_id ?? null,
+        /**
+         * The Steam app id, when IGDB knows one. RAWG's store links
+         * carry it too, but they arrive with the media, a request later;
+         * this rides the round trip the page already makes, so the logo
+         * lookup can ask by id from the first frame.
+         */
+        steam:
+          game.external_games?.find(
+            (external) =>
+              external.category === STEAM_CATEGORY &&
+              external.uid &&
+              /^\d+$/.test(external.uid)
+          )?.uid ?? null,
         critic:
           game.aggregated_rating != null
             ? Math.round(game.aggregated_rating)
