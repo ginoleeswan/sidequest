@@ -258,6 +258,73 @@ describe('the deep links the widgets write', () => {
 });
 
 /**
+ * The faces the widgets set type in.
+ *
+ * An extension is a separate bundle with its own font registry: the app
+ * registering a face at launch does nothing here, and `Font.custom`
+ * falls back to the system face SILENTLY when the file was never
+ * declared. So a widget rendering in SF because somebody added a face
+ * in Swift and forgot the plist looks deliberate, and nothing fails.
+ * Three things have to agree — the name in the Swift, the file beside
+ * the plist, and the plist's own list — and this is the only place they
+ * can be compared.
+ */
+describe('the fonts the widget target ships', () => {
+  const swift = read('Shared.swift');
+  const plist = read('Info.plist');
+
+  /** Every face named in `Brand`, by its PostScript name. */
+  const faces = Array.from(
+    new Set(Array.from(swift.matchAll(/face\("([\w-]+)"/g), (m) => m[1]))
+  );
+
+  it('finds the faces it is about to make claims about', () => {
+    expect(faces.sort()).toEqual([
+      'Geom-Black',
+      'Noah-Black',
+      'Noah-Bold',
+      'Noah-Regular',
+    ]);
+  });
+
+  it.each(faces)('%s is declared in UIAppFonts', (face) => {
+    expect(plist).toContain(`<string>${face}.ttf</string>`);
+  });
+
+  it.each(faces)('%s ships as a file in the target', (face) => {
+    expect(readdirSync(widgetsDir)).toContain(`${face}.ttf`);
+  });
+
+  it('declares no font the target does not carry', () => {
+    const declared = Array.from(
+      plist.matchAll(/<string>([\w-]+)\.ttf<\/string>/g),
+      (match) => match[1]
+    );
+    expect(declared.sort()).toEqual(faces.sort());
+  });
+
+  /**
+   * The wordmark is one word in one face across four surfaces — the
+   * app, the launch storyboard, the link-preview card and now the
+   * widgets. Lowercase is enforced rather than trusted to the string on
+   * every one of them.
+   */
+  it('sets the wordmark in the app’s own wordmark face, lowercase', () => {
+    const typography = readFileSync(
+      join(__dirname, '..', '..', 'styles', 'typography.ts'),
+      'utf8'
+    );
+    const appFace =
+      /export const WORDMARK = \{[^}]*fontFamily: '([\w-]+)'/.exec(
+        typography
+      )?.[1];
+    expect(appFace).toBe('Geom-Black');
+    expect(swift).toContain(`face("${appFace}"`);
+    expect(swift).toContain('Text("sidequest")');
+  });
+});
+
+/**
  * The keys, which are the container's whole schema.
  *
  * The app writes strings into `UserDefaults` under names it chooses and

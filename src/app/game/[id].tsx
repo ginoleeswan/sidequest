@@ -40,6 +40,7 @@ import { CommunityStats } from '@/components/CommunityStats';
 import { ChromeWeld } from '@/components/ChromeWeld';
 import { CoverImage } from '@/components/CoverImage';
 import { Decision } from '@/components/Decision';
+import { FitStrip } from '@/components/FitStrip';
 import { pickTrailer } from '@/lib/stage';
 import { StageTrailer } from '@/components/StageTrailer';
 import { GameTile } from '@/components/GameTile';
@@ -75,6 +76,7 @@ import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { MASTHEAD_TOP, POSTER, TITLE_SLOT } from '@/lib/detailHero';
 import { formatHours } from '@/lib/duration';
+import { verdictLine } from '@/lib/verdict';
 import { useDurations } from '@/lib/durations';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { usePlanStanding } from '@/hooks/usePlanStanding';
@@ -332,9 +334,17 @@ function finishRateOf(game: GameDetail): { pct: number; tint: string } | null {
 function PlanLine({
   game,
   onOpenPlan,
+  pace: showPace = true,
 }: {
   game: GameDetail;
   onOpenPlan: () => void;
+  /**
+   * Whether to fall back to the pace sentence for a game that is not in
+   * the plan. The phone draws the fit strip instead — a picture of the
+   * evenings beats "about 4 weeks at 6h a week", and printing both is
+   * the same fact twice in two registers.
+   */
+  pace?: boolean;
 }) {
   const { durationOf } = useDurations();
   const duration = durationOf(game);
@@ -379,7 +389,7 @@ function PlanLine({
       </Text>
     );
   }
-  if (duration.hours > 0) {
+  if (duration.hours > 0 && showPace) {
     return (
       <Text style={styles.statPace}>
         {duration.hours <= pace
@@ -688,6 +698,15 @@ export default function GameInfoScreen() {
   const [editingLength, setEditingLength] = useState(false);
   /** Which frame the stage shows: 0 is the key art, then screenshots. */
   const [stageIndex, setStageIndex] = useState(0);
+  /**
+   * When the page was opened.
+   *
+   * Captured once rather than read at render: the fit strip lays a game
+   * across the evenings from tonight, and a clock read during render is
+   * both impure and liable to re-cut the strip under the reader's thumb
+   * as the minutes pass.
+   */
+  const [openedAt] = useState(() => Date.now());
   /** The stage's measured width, so the strip divides the column it is in. */
   const [stageWidth, setStageWidth] = useState(0);
   /**
@@ -1152,7 +1171,11 @@ export default function GameInfoScreen() {
     <View style={styles.figures}>
       <InfoStrip game={game} onEditLength={() => setEditingLength(true)} />
       <View style={styles.figureNotes}>
-        <PlanLine game={game} onOpenPlan={() => router.push('/plan')} />
+        <PlanLine
+          game={game}
+          onOpenPlan={() => router.push('/plan')}
+          pace={false}
+        />
         {igdb?.times &&
         igdb.times.submissions >= 5 &&
         (igdb.times.hastily || igdb.times.completely) ? (
@@ -1717,8 +1740,19 @@ export default function GameInfoScreen() {
         )
         .join(' · ')
     : '';
+  const said = verdictLine({
+    liked: hasRatings ? likedShare : null,
+    finished: finishRate?.pct ?? null,
+    hours: durationOf(game).hours,
+  });
   const verdictCompact = (
     <>
+      {/* The sum the page used to leave to the reader. Two shares side
+          by side are two facts; what they mean together — loved and
+          finished, or loved and put down — is the only thing anybody
+          wants from this section, and it is the one thing a histogram
+          cannot say. */}
+      {said ? <Text style={styles.said}>{said}</Text> : null}
       {hasRatings || finishRate ? (
         <View style={styles.verdictFigures}>
           {hasRatings ? (
@@ -2065,7 +2099,12 @@ export default function GameInfoScreen() {
   const fileTags =
     game.tags && game.tags.length > 0 ? (
       <View style={fileSection}>
-        <Text style={styles.fileLabel}>TAGS</Text>
+        {/* Labelled only in the desk rail, where the register is the
+            micro label and every group carries one. Under the phone's
+            prose the chips are the description's index and need no
+            heading to say so — a label there was the page's fourth
+            voice inside two screens. */}
+        {isExpanded ? <Text style={styles.fileLabel}>TAGS</Text> : null}
         <View style={styles.tags}>
           {game.tags.slice(0, isExpanded ? 24 : 10).map((tag) => (
             <Chip key={tag.id} title={tag.name} quiet />
@@ -2252,6 +2291,12 @@ export default function GameInfoScreen() {
                 {hero}
                 {figures}
                 {controls}
+                {/* The app's own answer, and the reason this page is
+                    not a database entry: how the game lands on the
+                    evenings the reader actually has. */}
+                <View style={styles.fitSlot}>
+                  <FitStrip hours={durationOf(game).hours} now={openedAt} />
+                </View>
                 <Animated.View style={[styles.compactBody, { opacity }]}>
                   {/* The case, then the reader's own note on it, then
                       the file. "Your take" used to sit second on the
@@ -2468,6 +2513,14 @@ const styles = StyleSheet.create({
   },
   /** The plan's line and the split, under the strip, at the gutter. */
   figureNotes: { gap: SPACING.xs, paddingHorizontal: SPACING.xs },
+  /** The fit strip stands in the page's own column, under the decision. */
+  fitSlot: {
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.xl,
+    width: '100%',
+    maxWidth: LAYOUT.maxContentWidth,
+    alignSelf: 'center',
+  },
   heroTitle: {
     ...TYPE.display,
     color: COLORS.white,
@@ -2935,6 +2988,12 @@ const styles = StyleSheet.create({
     letterSpacing: -0.6,
   },
   verdictLabel: { ...TYPE.caption, color: COLORS.mediumGrey },
+  /** The verdict in words, ahead of the figures it is drawn from. */
+  said: {
+    ...TYPE.h3,
+    color: COLORS.white,
+    marginBottom: SPACING.sm + 2,
+  },
   community: {
     ...TYPE.caption,
     color: COLORS.mediumGrey,

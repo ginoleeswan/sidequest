@@ -462,6 +462,19 @@ func upNext(_ nights: [WeekNight]) -> [WeekNight] {
  */
 enum Brand {
   static func black(_ size: CGFloat) -> Font { face("Noah-Black", size, .heavy) }
+  /**
+   * The wordmark's own face, and nothing else's.
+   *
+   * `WORDMARK` in styles/typography sets the name in Geom Black,
+   * lowercase, with a little negative tracking; the launch storyboard
+   * and the link-preview card draw it from the same file. A widget
+   * spelling the name in Noah would be the one surface in the product
+   * wearing a different brand — so the face ships in this target too
+   * (see Info.plist) and the word is never typed in anything else.
+   */
+  static func wordmark(_ size: CGFloat) -> Font {
+    face("Geom-Black", size, .black)
+  }
   static func bold(_ size: CGFloat) -> Font { face("Noah-Bold", size, .bold) }
   static func regular(_ size: CGFloat) -> Font {
     face("Noah-Regular", size, .regular)
@@ -501,7 +514,36 @@ struct Nameplate: View {
   }
 }
 
-/** The empty state, written the same way everywhere it appears. */
+/**
+ * The app's name, set the way the app sets it.
+ *
+ * Lowercase and in Geom Black, enforced here rather than trusted to the
+ * string, exactly as `WORDMARK` does on the other side: a lockup that
+ * receives "Sidequest" still renders lowercase.
+ */
+struct Wordmark: View {
+  var size: CGFloat = 15
+
+  var body: some View {
+    Text("sidequest")
+      .font(Brand.wordmark(size))
+      .kerning(-0.4)
+      .foregroundStyle(Color("$muted"))
+      // Tinted with the wallpaper on iOS 18's glass Home Screen, like
+      // the nameplates: the brand is chrome, not content.
+      .widgetAccentable()
+  }
+}
+
+/**
+ * The empty state, written the same way everywhere it appears.
+ *
+ * The one moment a widget has nothing of the reader's to show — and so
+ * the one moment it should say whose widget it is. A card reading "No
+ * plan yet · Open Sidequest to pick a week" with no mark on it is a
+ * card that could belong to anything; the wordmark under it is what
+ * turns an empty slot into an invitation.
+ */
 struct Waiting: View {
   var line: String = "No plan yet"
   var hint: String = "Open Sidequest to pick a week"
@@ -515,6 +557,11 @@ struct Waiting: View {
         .font(Brand.regular(12))
         .foregroundStyle(Color("$muted"))
         .lineLimit(2)
+      // Every caller is a home-screen card with room for it; the Lock
+      // Screen accessories draw their own empty state, where the system
+      // owns the type and a lockup would not fit.
+      Wordmark()
+        .padding(.top, 8)
     }
   }
 }

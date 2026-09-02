@@ -15,8 +15,15 @@
   as target resources by the synchronised folder reference.
 
   The names are the FILE names here, and the PostScript names in Swift —
-  "Noah-Black", "Noah-Bold", "Noah-Regular", confirmed by reading name
-  ID 6 out of the TTFs rather than assuming they match the filenames.
+  "Noah-Black", "Noah-Bold", "Noah-Regular", "Geom-Black", confirmed by
+  reading name ID 6 out of the TTFs rather than assuming they match the
+  filenames.
+
+  Geom Black is the wordmark's own face and nothing else's. The app sets
+  "sidequest" in it (see WORDMARK in styles/typography), the launch
+  storyboard and the link-preview card draw it from the same file, and
+  a widget that spelled the name in Noah would be the one surface
+  wearing a different brand.
 -->
 <plist version="1.0">
   <dict>
@@ -30,6 +37,7 @@
       <string>Noah-Black.ttf</string>
       <string>Noah-Bold.ttf</string>
       <string>Noah-Regular.ttf</string>
+      <string>Geom-Black.ttf</string>
     </array>
   </dict>
 </plist>
