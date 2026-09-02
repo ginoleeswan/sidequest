@@ -546,7 +546,7 @@ export default function HomeScreen({
         kind={GENRES.some((g) => g.key === section.key) ? 'genre' : 'discover'}
         bleed={
           isExpanded
-            ? { top: SPACING.lg, sides: SPACING.xl }
+            ? { top: SPACING.lg, sides: SPACING.xl + GUTTER }
             : { top: headerHeight, sides: GUTTER }
         }
       />

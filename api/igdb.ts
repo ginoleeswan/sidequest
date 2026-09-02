@@ -144,6 +144,21 @@ interface Want {
  * the same game. A year either way is the same release seen through
  * two catalogues - a December game dated to the January port.
  */
+/**
+ * Whether a candidate is plausibly the title asked for: the same name,
+ * or at least one of the name's distinctive words in common. Short
+ * names ("City 33") have no distinctive words and so must match
+ * exactly - the right bar for a name that short.
+ */
+function sameTitle(want: Want, game: IgdbGame): boolean {
+  const name = game.name?.toLowerCase() ?? '';
+  const lower = want.name.toLowerCase();
+  if (name === lower) return true;
+  const mine = distinctiveWords(want.name);
+  const theirs = new Set(distinctiveWords(name));
+  return mine.some((word) => theirs.has(word));
+}
+
 function pickBest(
   want: Want,
   candidates: IgdbGame[]
@@ -239,11 +254,21 @@ export default async function handler(
   }
 
   const raw = req.query.slugs;
-  const slugs = (Array.isArray(raw) ? raw.join(',') : (raw ?? ''))
+  /**
+   * Positions kept, even for slugs that are thrown out.
+   *
+   * Names and years arrive index-aligned with the slugs, and this list
+   * used to drop an unusable slug before pairing them up - so every
+   * game after it was matched under its neighbour's title, which is
+   * how City 33 came back wearing Star Wars Zero Company's box. The
+   * pairing happens on the raw positions; the filter comes after.
+   */
+  const slots = (Array.isArray(raw) ? raw.join(',') : (raw ?? ''))
     .split(',')
     .map((slug) => slug.trim().toLowerCase())
-    .filter((slug) => /^[a-z0-9-]{1,80}$/.test(slug))
     .slice(0, MAX_SLUGS);
+  const valid = (slug: string) => /^[a-z0-9-]{1,80}$/.test(slug);
+  const slugs = slots.filter(valid);
 
   if (slugs.length === 0) {
     res.status(400).json({ error: 'No slugs' });
@@ -296,17 +321,22 @@ export default async function handler(
     value.replace(/[\u0400-\u04ff]/g, (ch) => HOMOGLYPHS[ch] ?? ch);
   const names = pipeSplit(req.query.names);
   const years = pipeSplit(req.query.years);
-  const wanted = slugs.map((slug, index) => ({
-    slug,
-    // Quotes and backslashes would break out of the apicalypse string;
-    // control characters would break the query. Everything else about a
-    // game title is fair game, including the punctuation IGDB keeps.
-    name: fold(names[index] ?? '')
-      .replace(/["\\\u0000-\u001f]/g, '')
-      .trim()
-      .slice(0, 120),
-    year: /^\d{4}$/.test(years[index] ?? '') ? Number(years[index]) : null,
-  }));
+  const wanted = slots.flatMap((slug, index) => {
+    if (!valid(slug)) return [];
+    return [
+      {
+        slug,
+        // Quotes and backslashes would break out of the apicalypse string;
+        // control characters would break the query. Everything else about a
+        // game title is fair game, including the punctuation IGDB keeps.
+        name: fold(names[index] ?? '')
+          .replace(/["\\\u0000-\u001f]/g, '')
+          .trim()
+          .slice(0, 120),
+        year: /^\d{4}$/.test(years[index] ?? '') ? Number(years[index]) : null,
+      },
+    ];
+  });
 
   // Deduplicated: several requested games can share a title only by
   // coincidence, but a repeated one would pad the query for nothing.
@@ -399,7 +429,14 @@ export default async function handler(
          * refused: that is the 1994 Marathon rule, and it stands.
          */
         const undated = best && best.game.first_release_date == null;
-        if (best && (best.score >= 7 || (best.exact && undated))) {
+        // And it has to look like the title, not merely share its year:
+        // a same-year cover under a stranger's name scored twelve on the
+        // year alone, which is one more way to wear the wrong box.
+        if (
+          best &&
+          sameTitle(want, best.game) &&
+          (best.score >= 7 || (best.exact && undated))
+        ) {
           chosen.set(want.slug, best.game);
           continue;
         }

@@ -342,4 +342,54 @@ describe('the search rescue for undated games', () => {
         .extras['phantom-blade-zero-1'].cover
     ).toBe('co-pbz');
   });
+  it('an unusable slug keeps every later name on its own game', async () => {
+    const zero = {
+      id: 1,
+      slug: 'star-wars-zero-company',
+      name: 'Star Wars Zero Company',
+      first_release_date: Date.UTC(2026, 3, 1) / 1000,
+      cover: { image_id: 'coc7a0' },
+    };
+    fetchMock.mockImplementation((url: string, init?: { body?: string }) => {
+      if (url.includes('oauth2/token'))
+        return ok({ access_token: 'tok', expires_in: 0 });
+      if (init?.body) bodies.push(init.body);
+      if (init?.body?.includes('search')) return ok([]);
+      return ok([zero]);
+    });
+    const sent = await call({
+      query: {
+        slugs: '"; bad,star-wars-zero-company,city-33',
+        names: 'Bad|Star Wars Zero Company|City 33',
+        years: '2026|2026|2026',
+      },
+    });
+    const extras = (sent.body as { extras: Record<string, { cover?: string }> })
+      .extras;
+    expect(extras['star-wars-zero-company']?.cover).toBe('coc7a0');
+    expect(extras['city-33']).toBeUndefined();
+  });
+
+  it('search does not rescue a same-year stranger', async () => {
+    const stranger = {
+      id: 2,
+      slug: 'somewhere-else-2026',
+      name: 'Somewhere Else',
+      first_release_date: Date.UTC(2026, 3, 1) / 1000,
+      cover: { image_id: 'cox' },
+    };
+    fetchMock.mockImplementation((url: string, init?: { body?: string }) => {
+      if (url.includes('oauth2/token'))
+        return ok({ access_token: 'tok', expires_in: 0 });
+      if (init?.body) bodies.push(init.body);
+      if (init?.body?.includes('search')) return ok([stranger]);
+      return ok([]);
+    });
+    const sent = await call({
+      query: { slugs: 'city-33', names: 'City 33', years: '2026' },
+    });
+    const extras = (sent.body as { extras: Record<string, { cover?: string }> })
+      .extras;
+    expect(extras['city-33']).toBeUndefined();
+  });
 });
