@@ -2,6 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Platform, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
 import { CoverImage } from './CoverImage';
+import { Seam } from './Seam';
 import { GrainScrim } from './Textured';
 import type { Game } from '@/api/types';
 import type { Section } from '@/constants/categories';
@@ -82,6 +83,13 @@ export function CategoryHero({
           <Text style={styles.description}>{section.description}</Text>
         ) : null}
       </View>
+      {/* The picture ends on a shoreline, not a rule. The gradient
+          above bottoms out a shade off the page's ground, and where a
+          hero runs edge to edge that shade met the page on a straight
+          line the whole width of the screen — a banner pasted on, in
+          an app whose footer arrives on a drawn wave. The same wave,
+          with the page's own colour coming in below the crest. */}
+      {bleed ? <Seam variant="wave" color={COLORS.darkGrey} /> : null}
     </View>
   );
 }
@@ -112,7 +120,8 @@ const styles = StyleSheet.create({
             'linear-gradient(to bottom, rgba(0,0,0,1) 45%, rgba(0,0,0,0.5) 78%, rgba(0,0,0,0) 100%)',
         } as unknown as ViewStyle)
       : {},
-  copyBleed: { paddingBottom: SPACING.lg },
+  /** The shoreline under it carries the foot's air; the copy sits on the crest. */
+  copyBleed: { paddingBottom: SPACING.xs },
   grain: {
     position: 'absolute',
     left: 0,

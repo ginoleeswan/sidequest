@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
-import Svg, { G, Path, Rect } from 'react-native-svg';
+import Svg, {
+  Defs,
+  G,
+  LinearGradient as SvgGradient,
+  Path,
+  Rect,
+  Stop,
+} from 'react-native-svg';
 
 import {
   GLYPH_BOX,
@@ -32,6 +39,12 @@ import { COLORS } from '@/styles/colors';
  * chapter break, for where the page genuinely changes subject. Its
  * chamfer alternates sides so two in view never rhyme.
  *
+ * **wave** — the shoreline without the pile: the footer's own edge,
+ * for where a picture ends and the page begins. A hero that stops on
+ * a straight line reads as a banner pasted onto the page; on a drawn
+ * waterline it reads as the page's own weather, and the depth under
+ * the crest is what says the water is deeper than the ground.
+ *
  * **glyphs** — the one decorated seam on the page: a skyline. The
  * pile's own belongings sit along the lit edge as solid silhouettes of
  * the incoming band, bases planted below the line, crowns rising above
@@ -43,7 +56,7 @@ import { COLORS } from '@/styles/colors';
  * section is a worse page, not a more accessible one.
  */
 
-export type SeamVariant = 'lip' | 'card' | 'glyphs';
+export type SeamVariant = 'lip' | 'card' | 'wave' | 'glyphs';
 
 /** How tall a card edge is. */
 const HEIGHT = 34;
@@ -59,6 +72,11 @@ const HEIGHT = 34;
 const GLYPH_FACE = 68;
 /** A plain lip needs no body — only the line and a little air under it. */
 const LIP_HEIGHT = 18;
+/**
+ * The shoreline's face: the wave's trough plus the depth shadow under
+ * it, which clears within the box so the page below is plain ground.
+ */
+const WAVE_HEIGHT = 44;
 /**
  * How far the pile rises ABOVE the seam's box.
  *
@@ -150,7 +168,14 @@ export function Seam({
   };
 
   const glyphs = variant === 'glyphs';
-  const height = glyphs ? GLYPH_FACE : variant === 'lip' ? LIP_HEIGHT : HEIGHT;
+  const wavy = glyphs || variant === 'wave';
+  const height = glyphs
+    ? GLYPH_FACE
+    : variant === 'wave'
+      ? WAVE_HEIGHT
+      : variant === 'lip'
+        ? LIP_HEIGHT
+        : HEIGHT;
   const right = index % 2 === 0;
   // Only the card variant cuts a corner. The lip is a line; the wavy
   // seam's whole top edge is already the special thing.
@@ -167,7 +192,7 @@ export function Seam({
   const waveY = (x: number) =>
     WAVE_MID + WAVE_AMP * Math.sin((x / WAVE_LENGTH) * Math.PI * 2 + 0.6);
   let wavePoints = '';
-  if (glyphs && W > 0) {
+  if (wavy && W > 0) {
     const pts: string[] = [];
     for (let x = 0; x <= W; x += WAVE_STEP)
       pts.push(`${x} ${waveY(x).toFixed(1)}`);
@@ -175,7 +200,7 @@ export function Seam({
     wavePoints = pts.join(' L');
   }
 
-  const face = glyphs
+  const face = wavy
     ? `M${wavePoints} V${height} H0 Z`
     : right
       ? `M0 0 H${W - cut} L${W} ${cut} V${height} H0 Z`
@@ -183,7 +208,7 @@ export function Seam({
 
   // The lit edge rides whatever the top edge is — the flat run and
   // the chamfer's diagonal, or the wave, crest to trough.
-  const lipPath = glyphs
+  const lipPath = wavy
     ? `M${wavePoints}`
     : right
       ? `M0 1 H${W - cut} L${W} ${cut + 1}`
@@ -247,6 +272,22 @@ export function Seam({
           style={rise > 0 ? svgRise : undefined}
         >
           <Path d={face} fill={color} />
+
+          {/* Depth, on the shoreline only: the same navy darkened just
+              under the crest and clear within the box, so the water
+              reads deeper than the ground without being another
+              colour — the footer's own trick, at the hero's foot. */}
+          {variant === 'wave' ? (
+            <>
+              <Defs>
+                <SvgGradient id="seamDepth" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0" stopColor="#0E1219" stopOpacity="0.42" />
+                  <Stop offset="1" stopColor="#0E1219" stopOpacity="0" />
+                </SvgGradient>
+              </Defs>
+              <Path d={face} fill="url(#seamDepth)" />
+            </>
+          ) : null}
 
           {/* The line of light, before the pile, so their planted feet
               stand in front of it. */}

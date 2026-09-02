@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { ScaleButton } from './ScaleButton';
+import { Seam } from './Seam';
 import { GrainScrim } from './Textured';
 import { useHydrated } from '@/hooks/useHydrated';
 import { hoursLeft } from '@/lib/planning';
@@ -51,42 +52,50 @@ export function PromptBand({ inset = GUTTER }: { inset?: number }) {
   if (!prompt) return null;
 
   return (
-    <View style={[styles.band, { marginHorizontal: -inset }]}>
-      <LinearGradient
-        colors={[COLORS.navy, '#2A3348', COLORS.darkGrey]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
-        pointerEvents="none"
-      />
-      <GrainScrim style={StyleSheet.absoluteFill} />
-      <View style={[styles.copy, { paddingHorizontal: inset }]}>
-        <Text style={styles.eyebrow}>{prompt.eyebrow.toUpperCase()}</Text>
-        <Text style={styles.headline}>{prompt.headline}</Text>
-        <Text style={styles.detail}>{prompt.detail}</Text>
-        <ScaleButton
-          onPress={() => router.push(prompt.href)}
-          style={styles.action}
-          activeScale={0.96}
-          hoverScale={1.03}
-          accessibilityLabel={prompt.action}
-        >
-          <Text style={styles.actionLabel}>{prompt.action}</Text>
-          <Ionicons name="arrow-forward" size={14} color={COLORS.accent} />
-        </ScaleButton>
+    <View style={[styles.bleed, { marginHorizontal: -inset }]}>
+      {/* The band arrives on a shoreline, as the footer does: deeper
+          water below the crest, the page above it. It used to arrive on
+          a hairline, which is a rule, and a rule across the whole width
+          of the page is the one edge this app draws nowhere else. The
+          water then fades back into the page on its own gradient, so the
+          foot needs no line at all. */}
+      <Seam variant="wave" color={COLORS.navy} index={1} />
+      <View style={styles.band}>
+        <LinearGradient
+          // Top to bottom, so the crest above is navy the whole way
+          // across and the foot dissolves into the page's ground.
+          colors={[COLORS.navy, '#2A3348', COLORS.darkGrey]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+        <GrainScrim style={StyleSheet.absoluteFill} />
+        <View style={[styles.copy, { paddingHorizontal: inset }]}>
+          <Text style={styles.eyebrow}>{prompt.eyebrow.toUpperCase()}</Text>
+          <Text style={styles.headline}>{prompt.headline}</Text>
+          <Text style={styles.detail}>{prompt.detail}</Text>
+          <ScaleButton
+            onPress={() => router.push(prompt.href)}
+            style={styles.action}
+            activeScale={0.96}
+            hoverScale={1.03}
+            accessibilityLabel={prompt.action}
+          >
+            <Text style={styles.actionLabel}>{prompt.action}</Text>
+            <Ionicons name="arrow-forward" size={14} color={COLORS.accent} />
+          </ScaleButton>
+        </View>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  band: {
-    overflow: 'hidden',
-    marginBottom: SPACING.xl,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: COLORS.stroke,
-  },
+  bleed: { marginBottom: SPACING.xl },
+  // Pulled up under the seam's face by a point, so no hairline of page
+  // shows between the water's crest and the band it opens.
+  band: { overflow: 'hidden', marginTop: -1 },
   copy: {
     paddingVertical: SPACING.xl,
     gap: SPACING.xs,
