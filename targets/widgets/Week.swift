@@ -140,20 +140,37 @@ struct NightRow: View {
                 .padding(.leading, 7)
             }
         } else {
-          RoundedRectangle(cornerRadius: 6)
-            .fill(planColour(night.colour))
-            // A floor under the width, so a half-hour is still a mark
-            // rather than a hairline nobody can see.
-            .frame(width: max(geo.size.width * fraction, 30))
-            .overlay(alignment: .leading) {
+          // A floor under the width, so a half-hour is still a mark
+          // rather than a hairline nobody can see.
+          let width = max(geo.size.width * fraction, 30)
+          // Whether the words fit inside the block. About five and a
+          // half points a character at this size: a short evening's
+          // block used to swallow half of "Pragmata · 2h", and a name
+          // cut to "Prag" is worse than no name. When the block is too
+          // narrow the label steps out beside it, in the row's own ink.
+          let fits = width >= CGFloat(label.count) * 5.6 + 14
+          HStack(spacing: 6) {
+            RoundedRectangle(cornerRadius: 6)
+              .fill(planColour(night.colour))
+              .frame(width: width)
+              .overlay(alignment: .leading) {
+                if fits {
+                  Text(label)
+                    .font(Brand.bold(compact ? 9 : 10))
+                    // Dark on amber, violet and mint alike — the one
+                    // ink all three of the plan's colours take.
+                    .foregroundStyle(Color("$ground"))
+                    .lineLimit(1)
+                    .padding(.horizontal, 7)
+                }
+              }
+            if !fits {
               Text(label)
                 .font(Brand.bold(compact ? 9 : 10))
-                // Dark on amber, violet and mint alike — the one ink
-                // all three of the plan's colours take.
-                .foregroundStyle(Color("$ground"))
+                .foregroundStyle(.white)
                 .lineLimit(1)
-                .padding(.horizontal, 7)
             }
+          }
         }
       }
 
@@ -163,6 +180,7 @@ struct NightRow: View {
         .font(.system(size: 9))
         .foregroundStyle(night.finishes ? Color("$accent") : .clear)
         .frame(width: 10)
+        .widgetAccentable()
     }
     .frame(height: compact ? 16 : 20)
   }
@@ -218,6 +236,27 @@ struct WeekView: View {
       Spacer(minLength: 0)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(Text(spoken))
+  }
+
+  /// The week as a sentence, for VoiceOver: each booked evening in
+  /// order, then the nights that are free.
+  private var spoken: String {
+    guard let nights = entry.nights, !nights.isEmpty else {
+      return "This week: no plan yet. Open Sidequest to plan your week."
+    }
+    let booked = nights.filter { !$0.isFree }
+    if booked.isEmpty { return "This week: nothing planned yet." }
+    let evenings = booked.map { night in
+      "\(night.day) \(night.date), \(night.title), \(spanLabel(night.hours))"
+        + (night.finishes ? ", the credits roll" : "")
+    }
+    let free = nights.count - booked.count
+    var line = "This week: " + evenings.joined(separator: "; ")
+    if free > 0 { line += ". \(free) \(free == 1 ? "night" : "nights") free" }
+    if entry.pressure.isPressing { line += ". \(entry.pressure.note)" }
+    return line
   }
 
   /**
@@ -238,7 +277,9 @@ struct WeekView: View {
     var line = free == 0
       ? "\(hours)h planned"
       : "\(hours)h planned · \(free) \(free == 1 ? "night" : "nights") free"
-    if hidden > 0 { line += " · +\(hidden) more" }
+    if hidden > 0 {
+      line += " · \(hidden) more \(hidden == 1 ? "night" : "nights")"
+    }
     return line
   }
 }

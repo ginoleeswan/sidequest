@@ -25,10 +25,30 @@ import WidgetKit
 
 let appGroup = "group.com.glstudio.sidequest"
 
-/** The app's URL scheme, for the tap targets below. */
+/**
+ * The app's URL scheme, for the tap targets below.
+ *
+ * Not one scheme but one per install: `app.config.js` gives the
+ * development and preview variants schemes of their own, so two builds
+ * on one phone cannot both claim `sidequest://` and leave iOS to pick.
+ * The extension's bundle id carries the same suffix as the app it
+ * ships inside — `com.glstudio.sidequest.dev.widget` — so the widget
+ * can read which app it belongs to and address that one. Hard-coded,
+ * a dev build's widget opened the App Store copy, or nothing.
+ */
 enum Deep {
-  static let plan = URL(string: "sidequest://plan")!
-  static let memcard = URL(string: "sidequest://memcard")!
+  /// The scheme of the build that ships; the variants derive from it.
+  static let productionScheme = "sidequest"
+
+  static var scheme: String {
+    let bundle = Bundle.main.bundleIdentifier ?? ""
+    if bundle.contains(".dev.") { return "\(productionScheme)-dev" }
+    if bundle.contains(".preview.") { return "\(productionScheme)-preview" }
+    return productionScheme
+  }
+
+  static var plan: URL { URL(string: "\(scheme)://plan")! }
+  static var memcard: URL { URL(string: "\(scheme)://memcard")! }
 
   /**
    * One game's own page.
@@ -40,7 +60,7 @@ enum Deep {
    * looks like.
    */
   static func game(_ id: Int?) -> URL {
-    guard let id, let url = URL(string: "sidequest://game/\(id)") else {
+    guard let id, let url = URL(string: "\(scheme)://game/\(id)") else {
       return plan
     }
     return url
@@ -335,6 +355,17 @@ func spanLabel(_ hours: Int) -> String {
 }
 
 /**
+ * The evenings after tonight that have something in them, for the
+ * medium card's second column. Tonight is the first booked evening, so
+ * it is skipped; free evenings are the week widget's to celebrate, not
+ * this card's. Two is what fits beside a title.
+ */
+func upNext(_ nights: [WeekNight]) -> [WeekNight] {
+  let booked = nights.filter { !$0.isFree }
+  return Array(booked.dropFirst().prefix(2))
+}
+
+/**
  * The app's own face, in the extension's own bundle.
  *
  * An extension is a separate bundle with a separate font registry: the
@@ -389,6 +420,11 @@ struct Nameplate: View {
       .font(Brand.black(11))
       .kerning(1.4)
       .foregroundStyle(tint)
+      // In iOS 18's tinted Home Screen the ground goes to glass and
+      // every colour is taken away; this is the one line on each card
+      // allowed to keep the wallpaper's tint, so the nameplate still
+      // reads as the nameplate.
+      .widgetAccentable()
   }
 }
 

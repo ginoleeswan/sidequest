@@ -123,6 +123,39 @@ private struct Axis {
   }
 }
 
+/**
+ * Which row each label stands in.
+ *
+ * Two games landing a few days apart are a few points apart on a
+ * widget, and their labels printed through each other — a date read
+ * through another date says less than no date. A label that would
+ * overlap the previous one steps down a row and its tick reaches the
+ * spine from there. Two rows is the most a widget has room for; a
+ * third collision keeps its slot on the spine and loses its words,
+ * which the "+ more" line below already accounts for.
+ */
+private func lanes(_ marks: [HorizonMark], axis: Axis) -> [Int] {
+  var rows: [Int] = []
+  var lastEnd: [CGFloat] = [-.infinity, -.infinity]
+  for mark in marks {
+    let x = axis.x(mark.at)
+    let lane: Int
+    if x - lastEnd[0] >= axis.labelWidth {
+      lane = 0
+    } else if x - lastEnd[1] >= axis.labelWidth {
+      lane = 1
+    } else {
+      lane = 2
+    }
+    rows.append(lane)
+    if lane < 2 { lastEnd[lane] = x }
+  }
+  return rows
+}
+
+/** How far the second row of labels sits below the first. */
+private let laneDrop: CGFloat = 30
+
 /** The save slot: a memcard chip, stamped when the credits rolled. */
 struct SaveSlot: View {
   let mark: HorizonMark
@@ -183,6 +216,26 @@ struct HorizonView: View {
       Spacer(minLength: 0)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(Text(spoken))
+  }
+
+  /// The month as a sentence: what landed, then where the credits fall.
+  private var spoken: String {
+    guard let horizon = entry.horizon, !horizon.marks.isEmpty else {
+      return "This month: no plan yet. Open Sidequest to plan your month."
+    }
+    let parts = horizon.marks.map { mark in
+      mark.done
+        ? "\(mark.name) finished \(mark.label)"
+        : "\(mark.name) lands \(mark.label)"
+    }
+    var line = "This month: " + parts.joined(separator: "; ")
+    if horizon.beyond > 0 { line += "; \(horizon.beyond) more after that" }
+    if !horizon.troubleLabel.isEmpty {
+      line += ". A deadline on \(horizon.troubleLabel) cannot be met"
+    }
+    return line
   }
 
   /**
@@ -219,6 +272,7 @@ struct HorizonView: View {
         }
         .frame(width: 70, alignment: .leading)
         .offset(x: todayX - 1, y: 0)
+        .widgetAccentable()
 
         // A date that cannot be met: coral weather on its own day.
         if let trouble = horizon.troubleAt, !horizon.troubleLabel.isEmpty {
@@ -262,28 +316,38 @@ struct HorizonView: View {
         }
         .offset(y: 30)
 
-        // One slot per mark, with its date and its name beneath.
-        ForEach(horizon.marks) { mark in
+        // One slot per mark, with its date and its name beneath — or,
+        // where the row is already taken, a row lower and reached by
+        // a longer tick. The medium card has no second row to give,
+        // so a colliding mark there keeps its slot and loses its words.
+        let rows = lanes(horizon.marks, axis: axis)
+        ForEach(Array(horizon.marks.enumerated()), id: \.offset) { pair in
+          let lane = rows[pair.offset]
+          let labelled = lane == 0 || (lane == 1 && tall)
           VStack(spacing: 2) {
-            SaveSlot(mark: mark)
-            Rectangle()
-              .fill(Color.white.opacity(0.16))
-              .frame(width: 2, height: 5)
-            Text(mark.label)
-              .font(Brand.bold(tall ? 11 : 10))
-              .foregroundStyle(.white)
-              .lineLimit(1)
-            Text(mark.name)
-              .font(Brand.regular(tall ? 10 : 9))
-              .foregroundStyle(Color("$muted"))
-              .lineLimit(1)
+            SaveSlot(mark: pair.element)
+            if labelled {
+              Rectangle()
+                .fill(Color.white.opacity(0.16))
+                .frame(width: 2, height: lane == 1 ? 5 + laneDrop : 5)
+              Text(pair.element.label)
+                .font(Brand.bold(tall ? 11 : 10))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+              Text(pair.element.name)
+                .font(Brand.regular(tall ? 10 : 9))
+                .foregroundStyle(Color("$muted"))
+                .lineLimit(1)
+            }
           }
           .frame(width: labelWidth)
-          .offset(x: axis.x(mark.at) - labelWidth / 2, y: 26)
+          .offset(x: axis.x(pair.element.at) - labelWidth / 2, y: 26)
         }
       }
     }
-    .frame(height: tall ? 104 : 96)
+    // The tall families hold the second row of labels; medium has no
+    // room for one and never draws it.
+    .frame(height: tall ? 104 + laneDrop : 96)
   }
 }
 

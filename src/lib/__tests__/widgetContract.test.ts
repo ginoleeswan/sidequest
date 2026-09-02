@@ -144,12 +144,14 @@ describe('the constants the widgets restate', () => {
 describe('the deep links the widgets write', () => {
   const swift = read('Shared.swift');
 
-  /** Every `sidequest://…` in the Swift, as a path with its dynamic
+  /** Every `\(scheme)://…` in the Swift, as a path with its dynamic
    * segments generalised — `game/\(id)` is the route, `game/12` is one
-   * of its addresses. */
+   * of its addresses. The scheme is interpolated per build variant
+   * (see `Deep.scheme`), so the links are recognised by their shape
+   * rather than by a literal scheme. */
   const linked = Array.from(
     swift.matchAll(
-      /sidequest:\/\/([A-Za-z0-9\-_/]*(?:\\\([a-z]+\)[A-Za-z0-9\-_/]*)*)/g
+      /\\\(scheme\):\/\/([A-Za-z0-9\-_/]*(?:\\\([a-z]+\)[A-Za-z0-9\-_/]*)*)/g
     ),
     (match) => match[1].replace(/\\\([a-z]+\)/g, ':param')
   );
@@ -210,17 +212,47 @@ describe('the deep links the widgets write', () => {
     }
   );
 
-  it('uses the scheme the config gives iOS', () => {
+  /**
+   * The scheme, per variant.
+   *
+   * `app.config.js` gives each install variant a scheme of its own so
+   * two builds on one phone cannot both claim `sidequest://`; the Swift
+   * derives which one it belongs to from the extension's bundle id.
+   * Both sides restate the same three names, so they are checked
+   * against each other: the production scheme the Swift hard-codes,
+   * and the suffixes it appends for the dev and preview bundles.
+   */
+  it('uses the scheme the config gives iOS, for every variant', () => {
     const appJson = JSON.parse(
       readFileSync(join(__dirname, '..', '..', '..', 'app.json'), 'utf8')
     );
-    // No APP_VARIANT under test, which the config reads as production —
-    // the variant whose scheme is the plain one the Swift hard-codes.
-    // A dev build's widgets are rewritten by prebuild; this is the
-    // build that ships.
-    const { scheme } = appConfig({ config: appJson.expo });
+    const production = swift.match(/productionScheme = "([a-z-]+)"/)?.[1];
+    expect(production).toBeDefined();
+
+    const original = process.env.APP_VARIANT;
+    try {
+      delete process.env.APP_VARIANT;
+      expect(appConfig({ config: appJson.expo }).scheme).toBe(production);
+      for (const [variant, marker] of [
+        ['development', 'dev'],
+        ['preview', 'preview'],
+      ] as const) {
+        process.env.APP_VARIANT = variant;
+        const { scheme, ios } = appConfig({ config: appJson.expo });
+        // The Swift appends the marker to the production scheme…
+        expect(scheme).toBe(`${production}-${marker}`);
+        expect(swift).toContain(`return "\\(productionScheme)-${marker}"`);
+        // …when the bundle id carries it, which is where it reads it.
+        expect(ios.bundleIdentifier).toContain(`.${marker}`);
+        expect(swift).toContain(`bundle.contains(".${marker}.")`);
+      }
+    } finally {
+      if (original === undefined) delete process.env.APP_VARIANT;
+      else process.env.APP_VARIANT = original;
+    }
+    // Nothing else in the Swift spells a scheme out.
     for (const url of swift.matchAll(/"([a-z-]+):\/\//g)) {
-      expect(url[1]).toBe(scheme);
+      expect(url[1]).toBe(production);
     }
   });
 });

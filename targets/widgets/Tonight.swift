@@ -19,11 +19,22 @@ import WidgetKit
  */
 
 struct TonightEntry: TimelineEntry {
-  let date: Date
+  var date: Date
   let tonight: Tonight?
   var pressure: Pressure = .calm
   /// Decoded once when the timeline is built, not once per draw.
   var cover: UIImage? = nil
+  /// The booked evenings after this one, for the medium card's column.
+  var next: [WeekNight] = []
+  /**
+   * How much this entry deserves the top of a Smart Stack.
+   *
+   * The stack rotates to whichever widget claims the moment, and this
+   * card's moment is the evening: the sofa at eight, not the commute
+   * at eight. Each day gets a quiet morning entry and a loud one from
+   * five o'clock, so the stack surfaces Tonight when tonight is near.
+   */
+  var relevance: TimelineEntryRelevance? = nil
 }
 
 struct TonightProvider: TimelineProvider {
@@ -72,13 +83,36 @@ struct TonightProvider: TimelineProvider {
     // three games between them, and re-reading the container per entry
     // is work done inside a window the system is timing.
     let covers = Store.covers()
-    let entries = planEntries(Store.plan()) { date, day in
-      TonightEntry(
-        date: date,
-        tonight: day?.tonight,
-        pressure: day?.pressure ?? .calm,
-        cover: coverImage(day?.tonight?.id, in: covers)
+    let days = Store.plan()
+    if days.isEmpty {
+      completion(
+        Timeline(entries: [TonightEntry(date: Date(), tonight: nil)], policy: .atEnd)
       )
+      return
+    }
+
+    var entries: [TonightEntry] = []
+    for day in days {
+      let morning = TonightEntry(
+        date: day.date,
+        tonight: day.tonight,
+        pressure: day.pressure,
+        cover: coverImage(day.tonight?.id, in: covers),
+        next: upNext(day.nights),
+        relevance: TimelineEntryRelevance(score: 0.4)
+      )
+      entries.append(morning)
+      // The same day, from five o'clock: the entry a Smart Stack should
+      // bring forward. Same content, louder claim.
+      if day.tonight != nil,
+        let evening = Calendar.current.date(
+          bySettingHour: 17, minute: 0, second: 0, of: day.date)
+      {
+        var prime = morning
+        prime.date = evening
+        prime.relevance = TimelineEntryRelevance(score: 1, duration: 6 * 3600)
+        entries.append(prime)
+      }
     }
     completion(Timeline(entries: entries, policy: .atEnd))
   }
@@ -91,47 +125,102 @@ struct TonightHome: View {
   var wide: Bool
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 6) {
-      HStack(spacing: 6) {
-        Nameplate(text: "TONIGHT")
-        if entry.tonight?.finishes == true {
-          // The app's own word for an evening that ends a game. It is
-          // the most interesting thing this widget can ever say.
-          Nameplate(text: "· CREDITS", tint: Color("$violet"))
+    HStack(alignment: .top, spacing: 14) {
+      VStack(alignment: .leading, spacing: 6) {
+        HStack(spacing: 6) {
+          Nameplate(text: "TONIGHT")
+          if entry.tonight?.finishes == true {
+            // The app's own word for an evening that ends a game. It is
+            // the most interesting thing this widget can ever say.
+            Nameplate(text: "· CREDITS", tint: Color("$violet"))
+          }
+        }
+
+        if let tonight = entry.tonight {
+          Text(tonight.title)
+            .font(Brand.bold(wide ? 24 : 19))
+            .foregroundStyle(.white)
+            .lineLimit(2)
+            .minimumScaleFactor(0.75)
+          Text(spanLabel(tonight.hours))
+            .font(Brand.regular(wide ? 15 : 13))
+            .foregroundStyle(Color("$muted"))
+        } else {
+          Waiting()
+        }
+        Spacer(minLength: 0)
+        /*
+         * The gradient, at the foot of the card.
+         *
+         * Below the evening rather than above it, because the evening is
+         * what somebody opened the widget for — a deadline they cannot
+         * meet is the second most important thing on this card, not the
+         * first. When nothing is pressing it is the plan in two numbers,
+         * which is the line §6.1 calls the marketing asset.
+         */
+        if !entry.pressure.note.isEmpty {
+          Text(entry.pressure.note)
+            .font(Brand.bold(wide ? 13 : 11))
+            .foregroundStyle(entry.pressure.tint)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
         }
       }
+      .frame(maxWidth: .infinity, alignment: .leading)
 
-      if let tonight = entry.tonight {
-        Text(tonight.title)
-          .font(Brand.bold(wide ? 24 : 19))
-          .foregroundStyle(.white)
-          .lineLimit(wide ? 1 : 2)
-          .minimumScaleFactor(0.75)
-        Text(spanLabel(tonight.hours))
-          .font(Brand.regular(wide ? 15 : 13))
-          .foregroundStyle(Color("$muted"))
-      } else {
-        Waiting()
-      }
-      Spacer(minLength: 0)
       /*
-       * The gradient, at the foot of the card.
+       * The medium card's second column: what follows tonight.
        *
-       * Below the evening rather than above it, because the evening is
-       * what somebody opened the widget for — a deadline they cannot
-       * meet is the second most important thing on this card, not the
-       * first. When nothing is pressing it is the plan in two numbers,
-       * which is the line §6.1 calls the marketing asset.
+       * Medium used to be the small card with a longer line — the same
+       * three facts across twice the width, and a right half that held
+       * nothing but the picture. A card twice as wide should say
+       * something more, and the thing worth saying beside tonight is
+       * the next two evenings with a game in them: enough to see the
+       * week's shape without opening it.
        */
-      if !entry.pressure.note.isEmpty {
-        Text(entry.pressure.note)
-          .font(Brand.bold(wide ? 13 : 11))
-          .foregroundStyle(entry.pressure.tint)
-          .lineLimit(1)
-          .minimumScaleFactor(0.8)
+      if wide, !entry.next.isEmpty {
+        VStack(alignment: .leading, spacing: 7) {
+          Nameplate(text: "THEN", tint: Color("$muted"))
+          ForEach(entry.next) { night in
+            VStack(alignment: .leading, spacing: 1) {
+              Text("\(night.day) \(night.date)")
+                .font(Brand.bold(10))
+                .foregroundStyle(Color("$muted"))
+              Text(night.title)
+                .font(Brand.bold(13))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+            }
+          }
+          Spacer(minLength: 0)
+        }
+        .frame(width: 104, alignment: .leading)
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(Text(spoken))
+  }
+
+  /**
+   * The card, said aloud.
+   *
+   * VoiceOver would otherwise read the nameplate, the title and the
+   * hours as three unrelated fragments in whatever order the tree
+   * puts them. One sentence in the order a person would say it.
+   */
+  private var spoken: String {
+    guard let tonight = entry.tonight else {
+      return "Tonight: no plan yet. Open Sidequest to pick a week."
+    }
+    var line = "Tonight: \(tonight.title), \(spanLabel(tonight.hours))"
+    if tonight.finishes { line += ", the credits roll" }
+    if !entry.pressure.note.isEmpty { line += ". \(entry.pressure.note)" }
+    if wide, !entry.next.isEmpty {
+      let then = entry.next.map { "\($0.day) \($0.date) \($0.title)" }
+      line += ". Then \(then.joined(separator: ", "))"
+    }
+    return line
   }
 }
 

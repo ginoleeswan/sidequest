@@ -162,6 +162,17 @@ struct YearView: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     .background(Shell().fill(Color("$well")))
     .overlay(Shell().stroke(Color.white.opacity(0.12), lineWidth: 1))
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(Text(spoken))
+  }
+
+  /// The card as a sentence, so a grid of twelve squares has words.
+  private var spoken: String {
+    guard let year = entry.year else {
+      return "Your year: nothing finished yet. Finish something and it lands here."
+    }
+    let games = year.count == 1 ? "one game" : "\(year.count) games"
+    return "\(year.year): \(games) finished, \(year.hours) hours."
   }
 }
 
