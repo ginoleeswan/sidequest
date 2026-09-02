@@ -147,7 +147,7 @@ interface Want {
 function pickBest(
   want: Want,
   candidates: IgdbGame[]
-): { game: IgdbGame; score: number } | null {
+): { game: IgdbGame; score: number; exact: boolean } | null {
   if (candidates.length === 0) return null;
   const lowerName = want.name.toLowerCase();
   return candidates
@@ -168,7 +168,9 @@ function pickBest(
       // A tie broken towards the entry that actually has art: the
       // whole reason this lookup exists.
       if (game.cover?.image_id) score += 1;
-      return { game, score };
+      const exact =
+        lowerName.length > 0 && game.name?.toLowerCase() === lowerName;
+      return { game, score, exact };
     })
     .sort((a, b) => b.score - a.score)[0];
 }
@@ -375,7 +377,17 @@ export default async function handler(
           `fields ${GAME_FIELDS}; search "${want.name}"; limit 3;`
         );
         const best = pickBest(want, found);
-        if (best && best.score >= 7) chosen.set(want.slug, best.game);
+        /**
+         * Adopted when the year agrees - or when the name is exact and
+         * the entry is undated. An announced game has no release date
+         * on IGDB yet, so no year can ever agree with it, and "Phantom
+         * Blade Zero" found by its exact name was being refused for a
+         * date nobody has. A dated entry whose year disagrees is still
+         * refused: that is the 1994 Marathon rule, and it stands.
+         */
+        const undated = best && best.game.first_release_date == null;
+        if (best && (best.score >= 7 || (best.exact && undated)))
+          chosen.set(want.slug, best.game);
       } catch {
         // The first pass already answered for most of the batch; a
         // failed rescue must not take those answers with it.

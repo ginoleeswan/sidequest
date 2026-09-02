@@ -223,3 +223,41 @@ describe('the search rescue', () => {
     ).toBeUndefined();
   });
 });
+
+/**
+ * An announced game has no release date on IGDB yet, so no year can
+ * ever agree with it; an exact name is enough for those. A dated entry
+ * whose year disagrees is still refused.
+ */
+describe('the search rescue for undated games', () => {
+  it('adopts an exact-name match that has no release date yet', async () => {
+    fetchMock.mockImplementation((url: string, init?: { body?: string }) => {
+      if (url.includes('oauth2/token'))
+        return ok({ access_token: 'tok', expires_in: 3600 });
+      const body = init?.body ?? '';
+      bodies.push(body);
+      if (body.includes('search "Phantom Blade Zero"'))
+        return ok([
+          {
+            id: 77,
+            slug: 'phantom-blade-zero',
+            name: 'Phantom Blade Zero',
+            cover: { image_id: 'co-pbz' },
+          },
+        ]);
+      return ok([]);
+    });
+    const sent = await call({
+      query: {
+        slugs: 'phantom-blade-zero-1',
+        names: 'Phantom Blade Zero',
+        years: '2026',
+      },
+    });
+    expect(sent.code).toBe(200);
+    expect(
+      (sent.body as { extras: Record<string, { cover: string | null }> })
+        .extras['phantom-blade-zero-1'].cover
+    ).toBe('co-pbz');
+  });
+});

@@ -52,8 +52,8 @@ function NavItem({
       onHoverOut={() => setHovered(false)}
       style={[
         styles.navItem,
-        compact && styles.navItemCompact,
         active && styles.navItemActive,
+        compact && styles.navItemCompact,
         !active && hovered && styles.navItemHovered,
       ]}
       accessibilityRole="link"
@@ -419,10 +419,19 @@ const styles = StyleSheet.create({
   // On the glyph column: the rail's padding puts the column at 28, and
   // a 32-point control centred on an 18-point glyph starts 7 before it.
   toggleFolded: { marginLeft: SPACING.sm + 4 - 7, marginTop: SPACING.sm },
+  /** Folded, the plate is a square on the rail's axis - a glyph in a
+      40pt tile, as the Mark and the hour are - not the open row's pill
+      with its label missing. */
   navItemCompact: {
     justifyContent: 'center',
+    alignSelf: 'center',
+    width: 40,
+    height: 40,
     paddingHorizontal: 0,
+    paddingVertical: 0,
     borderLeftWidth: 0,
+    borderTopLeftRadius: RADIUS.sm,
+    borderBottomLeftRadius: RADIUS.sm,
   },
   navRule: {
     height: 1,

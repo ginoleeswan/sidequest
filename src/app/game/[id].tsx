@@ -31,6 +31,8 @@ import { Chip } from '@/components/Chip';
 import { CommunityStats } from '@/components/CommunityStats';
 import { ChromeWeld } from '@/components/ChromeWeld';
 import { CoverImage } from '@/components/CoverImage';
+import { pickTrailer } from '@/lib/stage';
+import { StageTrailer } from '@/components/StageTrailer';
 import { GameCard } from '@/components/GameCard';
 import { Message } from '@/components/Message';
 import { Commitment } from '@/components/Commitment';
@@ -609,6 +611,23 @@ export default function GameInfoScreen() {
   // Four endpoints, one unit: the screen gets a single loading/error
   // state, and a hovered tile can prefetch exactly this.
   const { data, isPending, error } = useQuery(gameDetailQuery(id));
+  /**
+   * The dwell, as on Home's stage: linger on the key art and it comes
+   * to life. Both stores open on a moving trailer; here the still
+   * opens, so the page has its composed picture first, and the trailer
+   * arrives over it three seconds later, muted, under the same copy.
+   * Keyed by frame, so a swap away and back starts the wait again.
+   */
+  const dwellTrailer = data ? pickTrailer(data.trailers, data.game.name) : null;
+  const [dweltFor, setDweltFor] = useState<number | null>(null);
+  useEffect(() => {
+    if (!dwellTrailer || stageIndex !== 0) return;
+    const timer = setTimeout(() => setDweltFor(0), 3000);
+    return () => {
+      clearTimeout(timer);
+      setDweltFor(null);
+    };
+  }, [dwellTrailer, stageIndex]);
 
   /**
    * IGDB's half of the page: box art, the critic aggregate, the
@@ -967,7 +986,17 @@ export default function GameInfoScreen() {
   const titleBlock = (
     <View style={styles.titleLockup}>
       <View style={styles.deskHeroCopy}>
-        <Text style={styles.deskTitle}>{game.name}</Text>
+        <Text
+          style={[
+            styles.deskTitle,
+            // A long name in a narrow stage climbed out of the top of
+            // the picture at 44pt; the size follows the frame.
+            stageWidth > 0 && stageWidth < 720 && styles.deskTitleTight,
+          ]}
+          numberOfLines={2}
+        >
+          {game.name}
+        </Text>
         <StatStrip
           game={game}
           onEditLength={() => setEditingLength(true)}
@@ -1389,6 +1418,10 @@ export default function GameInfoScreen() {
             onPress={() => setLightboxUri(current.image)}
             accessibilityRole="button"
             accessibilityLabel="Open this image full size"
+            // The frame clips everything in it - the scrim included,
+            // which used to show square corners under the picture's
+            // round ones.
+            style={styles.stageFrame}
           >
             <CoverImage
               uri={current.image}
@@ -1396,6 +1429,11 @@ export default function GameInfoScreen() {
               iconSize={64}
               size="hero"
             />
+            {dweltFor === stageIndex &&
+            dwellTrailer &&
+            current.key === 'art' ? (
+              <StageTrailer key={dwellTrailer.id} movie={dwellTrailer} />
+            ) : null}
             {/* The masthead lives on the art, the way the phone's
                 always has. Floating beside it, the copy was a text
                 island in an empty band; on the image, name and figure
@@ -1656,6 +1694,14 @@ export default function GameInfoScreen() {
           transition={DURATION.base}
         />
       ) : null}
+      {/* The plate stands while IGDB is asked, so the rail has its
+          crown from the first frame and the box arrives on it, rather
+          than the controls jumping down when it lands. */}
+      {isExpanded && igdb === undefined ? (
+        <View style={[styles.railCover, styles.coverPlate]}>
+          <Textured fill />
+        </View>
+      ) : null}
       {/* On the phone the crate needs a name. On the wide page the
           rail's register is the micro label — GET IT, WHO ELSE HAS IT —
           and a heading above them was a second voice saying nothing
@@ -1674,6 +1720,11 @@ export default function GameInfoScreen() {
           contentFit="cover"
           transition={DURATION.base}
         />
+      ) : null}
+      {!isExpanded && igdb === undefined ? (
+        <View style={[styles.crateCover, styles.coverPlate]}>
+          <Textured fill />
+        </View>
       ) : null}
       {framed(
         isExpanded
@@ -2052,9 +2103,11 @@ const styles = StyleSheet.create({
   deskHero: { width: '100%', height: 0 },
   deskBackdrop: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
+    // Past the sheet's padding to its edges: the colour is the page's
+    // weather, and weather stopping at a margin reads as a panel.
+    top: -SPACING.lg,
+    left: -SPACING.xl,
+    right: -SPACING.xl,
     // 560, up from 430: at 430 the atmosphere died before the stage
     // began, so the art's colour never reached the thing made from it.
     height: 560,
@@ -2168,6 +2221,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   /** The rail's crown: full width, the cover's own 3:4, one hairline. */
+  coverPlate: { backgroundColor: COLORS.navy, overflow: 'hidden' },
   railCover: {
     width: '100%',
     aspectRatio: 3 / 4,
@@ -2191,6 +2245,7 @@ const styles = StyleSheet.create({
     lineHeight: 50,
     color: COLORS.white,
   },
+  deskTitleTight: { fontSize: 34, lineHeight: 38 },
   /**
    * Proportional, not one fixed track and one leftover.
    *
@@ -2210,6 +2265,7 @@ const styles = StyleSheet.create({
    * off a plane it is already sitting on.
    */
   stage: { gap: SPACING.sm },
+  stageFrame: { borderRadius: RADIUS.lg, overflow: 'hidden' },
   stageLead: {
     width: '100%',
     aspectRatio: 16 / 9,

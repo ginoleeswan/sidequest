@@ -46,34 +46,75 @@ import { TYPE, WORDMARK } from '@/styles/typography';
  * the copy so the words stay the subject. It is the app's own content,
  * which is the only honest thing to put here.
  */
+/**
+ * The wall is the picture, not a column beside the words.
+ *
+ * Two columns of covers standing to the right of the copy read as a
+ * table cut off at the top and the bottom - a mosaic with no
+ * composition, and a hard edge under the browser's chrome. Here the
+ * covers run the whole screen behind everything, four staggered
+ * columns dimmed under a scrim that clears toward the left third
+ * where the sentence stands: the same masthead grammar as Home's
+ * stage, with a hundred games' art for a picture.
+ */
 function CoverWall({ games }: { games: Game[] }) {
-  if (games.length < 4) return null;
-  const columns = [games.slice(0, 3), games.slice(3, 6)];
+  // Twelve plates stand from the first frame; the pictures arrive on
+  // them. Before, the wall waited for the request and the screen was
+  // a sentence on a blank field for as long as RAWG took.
+  const slots: (Game | null)[] =
+    games.length >= 4
+      ? games.slice(0, 12)
+      : Array.from({ length: 12 }, () => null);
+  const columns = [0, 1, 2, 3].map((i) => slots.slice(i * 3, i * 3 + 3));
 
   return (
     <View style={styles.wall} pointerEvents="none">
       {columns.map((column, index) => (
         <View
           key={index}
-          style={[styles.wallColumn, index === 1 && styles.wallColumnOffset]}
+          style={[
+            styles.wallColumn,
+            index % 2 === 1 && styles.wallColumnOffset,
+          ]}
         >
-          {column.map((game) => (
-            <CoverImage
-              key={game.id}
-              uri={game.background_image}
-              style={styles.wallCover}
-              size="tile"
-              iconSize={24}
-            />
-          ))}
+          {column.map((game, slot) =>
+            game ? (
+              <CoverImage
+                key={game.id}
+                uri={game.background_image}
+                style={styles.wallCover}
+                size="tile"
+                iconSize={24}
+              />
+            ) : (
+              <View key={`plate-${slot}`} style={styles.wallCover} />
+            )
+          )}
         </View>
       ))}
-      {/* The words are the subject; the wall arrives out of them. */}
+      {/* The words are the subject; the wall arrives out of them - dim
+          across the whole picture, near-solid where the sentence stands,
+          and dissolving at the top and the foot so no cover ends on the
+          screen's edge. */}
       <LinearGradient
-        colors={[COLORS.navy, 'rgba(39,47,63,0.65)', 'rgba(39,47,63,0)']}
-        locations={[0, 0.35, 1]}
+        colors={[
+          'rgba(39,47,63,0.9)',
+          'rgba(39,47,63,0.45)',
+          'rgba(39,47,63,0.2)',
+        ]}
+        locations={[0.3, 0.6, 1]}
         start={{ x: 0, y: 0.5 }}
         end={{ x: 1, y: 0.5 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <LinearGradient
+        colors={[
+          COLORS.navy,
+          'rgba(39,47,63,0)',
+          'rgba(39,47,63,0)',
+          COLORS.navy,
+        ]}
+        locations={[0, 0.18, 0.82, 1]}
         style={StyleSheet.absoluteFill}
       />
     </View>
@@ -433,11 +474,13 @@ export function Onboarding() {
     <View key="hook" style={styles.act}>
       {!isExpanded && <BacklogFan games={picks} />}
 
-      <Text style={styles.display}>Your backlog isn’t{'\n'}a to-do list.</Text>
+      <Text style={[styles.display, isExpanded && styles.displayWide]}>
+        Your backlog isn’t{'\n'}a to-do list.
+      </Text>
       {/* The fan just showed five games, so "Sidequest finds your next
           game" was the sentence repeating the picture. What is left is
           the half no image can carry. */}
-      <Text style={styles.lede}>
+      <Text style={[styles.lede, isExpanded && styles.ledeWide]}>
         It works out what you can actually finish — and gives you permission to
         skip the rest.
       </Text>
@@ -458,8 +501,10 @@ export function Onboarding() {
     // -------------------------------------------------- act 2: your pace
     <View key="pace" style={styles.act}>
       <Text style={styles.actLabel}>YOUR PACE</Text>
-      <Text style={styles.display}>How much do{'\n'}you really play?</Text>
-      <Text style={styles.lede}>
+      <Text style={[styles.display, isExpanded && styles.displayWide]}>
+        How much do{'\n'}you really play?
+      </Text>
+      <Text style={[styles.lede, isExpanded && styles.ledeWide]}>
         Be honest — this is what makes the plan trustworthy.
       </Text>
       <View style={styles.paceList}>
@@ -530,14 +575,14 @@ export function Onboarding() {
     // -------------------------------------------------- act 3: first saves
     <View key="picks" style={styles.act}>
       <Text style={styles.actLabel}>FIRST SAVES</Text>
-      <Text style={styles.display}>
+      <Text style={[styles.display, isExpanded && styles.displayWide]}>
         Been meaning to{'\n'}play any of these?
       </Text>
       {/* "Or skip; the bookmark is everywhere" named an affordance
           nobody has seen yet — the reader has not met a bookmark, and
           the way out of this screen is the Skip they have had all
           along. What is worth saying is what a tap does. */}
-      <Text style={styles.lede}>
+      <Text style={[styles.lede, isExpanded && styles.ledeWide]}>
         Tap the ones you have been meaning to play.
       </Text>
       <View style={styles.pickGrid}>
@@ -624,12 +669,14 @@ export function Onboarding() {
         </View>
 
         {isExpanded ? (
-          <View style={styles.split}>
-            <View style={styles.copyColumn}>
-              <FadeInView key={step}>{acts[step]}</FadeInView>
-            </View>
+          <>
             <CoverWall games={seeds.data ?? []} />
-          </View>
+            <View style={styles.split}>
+              <View style={styles.copyColumn}>
+                <FadeInView key={step}>{acts[step]}</FadeInView>
+              </View>
+            </View>
+          </>
         ) : (
           <View style={[styles.stage, { width: contentWidth }]}>
             <FadeInView key={step}>{acts[step]}</FadeInView>
@@ -691,17 +738,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xl,
     gap: SPACING.xl,
   },
-  copyColumn: { width: 480, flexShrink: 0, zIndex: 2 },
+  copyColumn: { width: 520, flexShrink: 0, zIndex: 2 },
   wall: {
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     flexDirection: 'row',
-    gap: SPACING.md,
+    gap: SPACING.lg,
+    // The sentence keeps the left third to itself: no cover stands under
+    // the words, the wall begins where the copy column ends.
+    paddingLeft: 640,
+    paddingRight: SPACING.xl,
     justifyContent: 'flex-end',
     alignItems: 'center',
-    alignSelf: 'stretch',
     overflow: 'hidden',
   },
-  wallColumn: { gap: SPACING.md, flex: 1, maxWidth: 240 },
+  wallColumn: { gap: SPACING.lg, flex: 1, maxWidth: 260 },
   /** Staggered, so it reads as a wall rather than a table. */
   wallColumnOffset: { marginTop: SPACING.xl * 2 },
   wallCover: {
@@ -709,7 +763,10 @@ const styles = StyleSheet.create({
     aspectRatio: LAYOUT.tileAspect,
     borderRadius: RADIUS.sm,
     overflow: 'hidden',
-    opacity: 0.75,
+    // The plate is there at the first frame; the picture arrives on it.
+    // Twelve blank rectangles for a second read as a page that broke.
+    backgroundColor: COLORS.raised,
+    opacity: 0.9,
   },
   act: { gap: SPACING.md, alignItems: 'flex-start' },
   masthead: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
@@ -755,11 +812,14 @@ const styles = StyleSheet.create({
     ...TYPE.display,
     color: COLORS.white,
   },
+  /** At a desk's distance the phone's sizes read as a caption. */
+  displayWide: { fontSize: 56, lineHeight: 60, letterSpacing: -1 },
   lede: {
     ...TYPE.body,
     color: COLORS.mediumGrey,
     marginBottom: SPACING.sm,
   },
+  ledeWide: { fontSize: 19, lineHeight: 28, maxWidth: 440 },
   cta: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -768,7 +828,8 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg,
     paddingVertical: SPACING.md + 1,
     paddingHorizontal: SPACING.xl,
-    backgroundColor: COLORS.white,
+    // The one filled button on the screen: amber, the primary action.
+    backgroundColor: COLORS.accent,
     alignSelf: 'stretch',
     marginTop: SPACING.sm,
   },
@@ -780,7 +841,7 @@ const styles = StyleSheet.create({
   ctaInline: { alignSelf: 'flex-start' },
   ctaText: {
     ...TYPE.h3,
-    color: COLORS.darkGrey,
+    color: COLORS.navy,
   },
   tally: {
     ...TYPE.caption,

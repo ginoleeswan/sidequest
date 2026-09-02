@@ -91,6 +91,9 @@ export function GameTile({
    * mixed row read as two different components side by side.
    */
   const questCard = shape === 'poster' && !cover;
+  // Undefined is "not yet": the plate stands bare until IGDB answers,
+  // and only a settled miss earns the quest card's name.
+  const awaitingCover = shape === 'poster' && cover === undefined;
   const images = [
     cover ? igdbCoverUri(cover) : game.background_image,
     ...(game.short_screenshots ?? [])
@@ -173,14 +176,16 @@ export function GameTile({
               {/* Hidden from assistive tech: the caption below already
                   announces the name, and box art is decoration when a
                   label sits under it. */}
-              <Text
-                style={styles.questName}
-                numberOfLines={3}
-                accessibilityElementsHidden
-                importantForAccessibility="no-hide-descendants"
-              >
-                {game.name}
-              </Text>
+              {awaitingCover ? null : (
+                <Text
+                  style={styles.questName}
+                  numberOfLines={3}
+                  accessibilityElementsHidden
+                  importantForAccessibility="no-hide-descendants"
+                >
+                  {game.name}
+                </Text>
+              )}
             </View>
           ) : (
             <>

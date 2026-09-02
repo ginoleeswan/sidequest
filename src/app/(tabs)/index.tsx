@@ -106,9 +106,6 @@ import { TYPE, WORDMARK } from '@/styles/typography';
 
 const FEATURED_COUNT = 5;
 
-/** Chips shown on the compact layout: discovery first, then genres. */
-const CHIP_SECTIONS = [...DISCOVER, ...GENRES];
-
 /** Sentinel filling an incomplete final grid row so tiles keep their width. */
 const SPACER = { spacer: true } as const;
 type GridItem = Game | typeof SPACER;
@@ -490,6 +487,11 @@ export default function HomeScreen() {
         lead={games[0]}
         count={totalCount}
         kind={GENRES.some((g) => g.key === section.key) ? 'genre' : 'discover'}
+        bleed={
+          isExpanded
+            ? { top: SPACING.lg, sides: SPACING.xl }
+            : { top: headerHeight, sides: GUTTER }
+        }
       />
       <FilterBar
         value={refine}
@@ -706,7 +708,14 @@ export default function HomeScreen() {
                       <SkeletonRow />
                     </>
                   ) : (
-                    <SkeletonCategory columns={columns} />
+                    <SkeletonCategory
+                      columns={columns}
+                      bleed={
+                        isExpanded
+                          ? { top: SPACING.lg, sides: SPACING.xl }
+                          : { top: headerHeight, sides: GUTTER }
+                      }
+                    />
                   )}
                 </View>
               )}
@@ -926,29 +935,6 @@ export default function HomeScreen() {
                 />
               </View>
             </View>
-          )}
-          {/* Off the home page only. On a section page this row is the
-              page's own navigation and the current section is marked;
-              on home the same sections are the feed's first row,
-              below the masthead, so the artwork carries nothing but
-              the wordmark. Bare here as well: a ring and a glyph are a
-              control's costume, and a row of eight reads as a toolbar. */}
-          {!searchOpen && !isHome && (
-            <FlatList
-              data={CHIP_SECTIONS}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(item) => item.key}
-              renderItem={({ item }) => (
-                <Chip
-                  title={item.title}
-                  selected={!searching && section.key === item.key}
-                  bare
-                  onPress={() => selectSection(item)}
-                />
-              )}
-              contentContainerStyle={styles.chips}
-            />
           )}
         </View>
       </View>

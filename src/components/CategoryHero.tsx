@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
 import { CoverImage } from './CoverImage';
 import { GrainScrim } from './Textured';
@@ -15,6 +15,14 @@ interface Props {
   count?: number;
   /** Whether this section came from the genre list or the discover list. */
   kind: 'discover' | 'genre';
+  /**
+   * Edge to edge, the way Home's stage runs: `sides` is the gutter the
+   * hero escapes, `top` the chrome it runs up under (the sheet's head
+   * on the desk, the floating header on the phone), and the art fades
+   * into the page rather than ending in a rounded frame. A card inset
+   * in a column read as a pill.
+   */
+  bleed?: { top: number; sides: number } | null;
 }
 
 /**
@@ -22,15 +30,34 @@ interface Props {
  * dimmed backdrop, the section's voice on top — so a browse page opens
  * like a magazine spread instead of a bare list.
  */
-export function CategoryHero({ section, lead, count, kind }: Props) {
+export function CategoryHero({
+  section,
+  lead,
+  count,
+  kind,
+  bleed = null,
+}: Props) {
   return (
-    <View style={styles.card}>
+    <View
+      style={[
+        styles.card,
+        bleed && styles.bleed,
+        bleed && {
+          marginHorizontal: -bleed.sides,
+          marginTop: -bleed.top,
+          paddingTop: bleed.top,
+          minHeight: 300 + bleed.top,
+        },
+      ]}
+    >
       {lead ? (
-        <CoverImage
-          uri={lead.background_image}
-          style={StyleSheet.absoluteFill}
-          size="hero"
-        />
+        <View style={[StyleSheet.absoluteFill, bleed && styles.fadeOut]}>
+          <CoverImage
+            uri={lead.background_image}
+            style={StyleSheet.absoluteFill}
+            size="hero"
+          />
+        </View>
       ) : null}
       <LinearGradient
         colors={['rgba(23,29,41,0.42)', 'rgba(30,36,50,0.82)', '#2A3346']}
@@ -39,7 +66,13 @@ export function CategoryHero({ section, lead, count, kind }: Props) {
         pointerEvents="none"
       />
       <GrainScrim style={styles.grain} />
-      <View style={styles.copy}>
+      <View
+        style={[
+          styles.copy,
+          bleed && styles.copyBleed,
+          bleed && { paddingHorizontal: bleed.sides * 1.5 },
+        ]}
+      >
         <Text style={styles.eyebrow}>
           {kind === 'genre' ? 'GENRE' : 'DISCOVER'}
           {count ? `  ·  ${count.toLocaleString()} games` : ''}
@@ -63,6 +96,23 @@ const styles = StyleSheet.create({
     minHeight: 168,
     justifyContent: 'flex-end',
   },
+  bleed: {
+    borderRadius: 0,
+    borderWidth: 0,
+    backgroundColor: 'transparent',
+  },
+  /** The picture fades out of existence over the sheet; nothing at the
+      bottom edge but the page. Web only: the mask is CSS. */
+  fadeOut:
+    Platform.OS === 'web'
+      ? ({
+          maskImage:
+            'linear-gradient(to bottom, rgba(0,0,0,1) 45%, rgba(0,0,0,0.5) 78%, rgba(0,0,0,0) 100%)',
+          WebkitMaskImage:
+            'linear-gradient(to bottom, rgba(0,0,0,1) 45%, rgba(0,0,0,0.5) 78%, rgba(0,0,0,0) 100%)',
+        } as unknown as ViewStyle)
+      : {},
+  copyBleed: { paddingBottom: SPACING.lg },
   grain: {
     position: 'absolute',
     left: 0,

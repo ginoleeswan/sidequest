@@ -39,6 +39,9 @@ const EYEBROW_H = TYPE.micro.lineHeight;
  * too, or every shelf below lands high.
  */
 const RAIL_NET = Math.round(SHADOW_ROOM.card * 0.4);
+/** The desk game page's cap and rail ceiling, mirrored from the page. */
+const DESK_PAGE_MAX = 1200;
+const DESK_RAIL = 340;
 
 /** Pulsing placeholder block — the atom every skeleton is built from. */
 export function Skeleton({
@@ -148,10 +151,29 @@ export function SkeletonHero() {
  * chip row, then the grid — the same three beats the loaded page opens
  * with, so nothing jumps when the data lands.
  */
-export function SkeletonCategory({ columns }: { columns: number }) {
+export function SkeletonCategory({
+  columns,
+  bleed = null,
+}: {
+  columns: number;
+  /** The hero's own bleed, so the bones stand where the art will. */
+  bleed?: { top: number; sides: number } | null;
+}) {
   return (
     <View style={styles.category}>
-      <Skeleton style={styles.masthead} />
+      <Skeleton
+        style={[
+          styles.masthead,
+          bleed
+            ? {
+                marginHorizontal: -bleed.sides,
+                marginTop: -bleed.top,
+                minHeight: 300 + bleed.top,
+                borderRadius: 0,
+              }
+            : undefined,
+        ]}
+      />
       <View style={styles.chipRow}>
         {[74, 66, 82, 52, 96].map((width) => (
           <Skeleton key={width} style={[styles.chip, { width }]} />
@@ -281,38 +303,35 @@ function SkeletonBand({ inset }: { inset: number }) {
  * a framed 16:9 art card) and the two-column body, so the loaded page
  * lands exactly where the bones were.
  */
+/**
+ * The desk game page's bones: the stage with its strip and the prose in
+ * the main column, the poster and the two controls in the rail - the
+ * same two tracks, at the same split and the same padding, as the page
+ * that replaces them.
+ */
 export function SkeletonDetailExpanded() {
   return (
-    <View>
-      <View style={styles.deskHero}>
-        <View style={styles.deskHeroCopy}>
-          <Skeleton style={styles.lineNarrow} />
-          <Skeleton style={styles.deskTitle} />
-          <View style={styles.row}>
-            <Skeleton style={styles.detailStat} />
-            <Skeleton style={styles.detailStat} />
-            <Skeleton style={styles.detailStat} />
-            <Skeleton style={styles.detailStat} />
-          </View>
-          <View style={styles.row}>
-            <Skeleton style={styles.detailChip} />
-            <Skeleton style={styles.detailChip} />
-            <Skeleton style={styles.detailChip} />
-          </View>
+    <View style={styles.deskColumns}>
+      <View style={styles.deskMain}>
+        <Skeleton style={styles.deskStage} />
+        <View style={styles.row}>
+          {Array.from({ length: 6 }, (_, i) => (
+            <Skeleton key={i} style={styles.deskThumb} />
+          ))}
         </View>
-        <Skeleton style={styles.deskArt} />
+        <View style={styles.deskProse}>
+          <Skeleton style={styles.detailLine} />
+          <Skeleton style={styles.detailLine} />
+          <Skeleton style={styles.detailLine} />
+          <Skeleton style={styles.detailLineShort} />
+          <Skeleton style={styles.detailReadMore} />
+        </View>
       </View>
-      <View style={styles.deskColumns}>
-        <View style={styles.deskMain}>
-          <Skeleton style={styles.lineFull} />
-          <Skeleton style={styles.lineFull} />
-          <Skeleton style={styles.lineWide} />
-          <SkeletonShelf tiles={3} />
-        </View>
-        <View style={styles.deskRail}>
-          <Skeleton style={styles.deskRailCard} />
-          <Skeleton style={styles.deskRailCard} />
-        </View>
+      <View style={styles.deskRail}>
+        <Skeleton style={styles.deskPoster} />
+        <Skeleton style={styles.deskRailLabel} />
+        <Skeleton style={styles.deskRailControl} />
+        <Skeleton style={styles.deskRailControl} />
       </View>
     </View>
   );
@@ -482,35 +501,31 @@ const styles = StyleSheet.create({
   detailStat: { height: 34, width: 64 },
   detailChip: { height: 26, width: 84, borderRadius: 14 },
   lineFull: { height: 12, width: '100%' },
-  deskHero: {
-    width: '100%',
-    maxWidth: LAYOUT.maxExpandedWidth,
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xl * 1.5,
-    paddingHorizontal: SPACING.xl * 2,
-    paddingVertical: SPACING.xl * 1.6,
-  },
-  deskHeroCopy: { flex: 1, gap: SPACING.sm },
-  deskTitle: { height: 44, width: '70%' },
-  deskArt: {
-    width: '42%',
-    maxWidth: 520,
-    aspectRatio: 16 / 9,
-    borderRadius: RADIUS.lg,
-  },
   deskColumns: {
     flexDirection: 'row',
-    gap: SPACING.xl,
+    gap: SPACING.xl + SPACING.sm,
     alignItems: 'flex-start',
     width: '100%',
-    maxWidth: LAYOUT.maxExpandedWidth,
+    maxWidth: DESK_PAGE_MAX,
     alignSelf: 'center',
     paddingHorizontal: SPACING.xl * 2,
     paddingTop: SPACING.lg,
   },
-  deskMain: { flex: 2, gap: SPACING.md },
-  deskRail: { flex: 1, maxWidth: 360, gap: SPACING.md },
-  deskRailCard: { height: 180, borderRadius: RADIUS.md },
+  deskMain: { flex: 70, minWidth: 0, gap: SPACING.sm },
+  deskStage: { width: '100%', aspectRatio: 16 / 9, borderRadius: RADIUS.lg },
+  deskThumb: { flex: 1, aspectRatio: 16 / 9, borderRadius: RADIUS.sm },
+  deskProse: { marginTop: SPACING.md, gap: 0 },
+  deskRail: {
+    flex: 30,
+    maxWidth: DESK_RAIL,
+    minWidth: 300,
+    gap: SPACING.md,
+  },
+  deskPoster: {
+    width: '100%',
+    aspectRatio: LAYOUT.tileAspect,
+    borderRadius: RADIUS.lg,
+  },
+  deskRailLabel: { height: EYEBROW_H, width: 96, marginTop: SPACING.lg },
+  deskRailControl: { height: 56, borderRadius: RADIUS.md },
 });

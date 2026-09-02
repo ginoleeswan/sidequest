@@ -75,7 +75,13 @@ interface DurationsValue {
    * `igdbCoverUri`, or null while unknown. Free — it arrives on the
    * round trip the durations already pay for.
    */
-  coverOf: (slug?: string | null) => string | null;
+  /**
+   * IGDB's cover id for a game: `undefined` while the lookup is still
+   * out, `null` once it has answered and there is none. The difference
+   * is a plate against a quest card - a tile must not announce "no box
+   * art" about a game whose art is three hundred milliseconds away.
+   */
+  coverOf: (slug?: string | null) => string | null | undefined;
   /** Record what a game actually takes. */
   setDuration: (id: number, hours: number) => void;
   /** Go back to RAWG's estimate. */
@@ -130,6 +136,7 @@ export function DurationsProvider({ children }: { children: React.ReactNode }) {
    * rather than earning a second pipeline of their own.
    */
   const [covers, setCovers] = useState<Record<string, string>>({});
+  const [settled, setSettled] = useState<ReadonlySet<string>>(() => new Set());
   const asked = useRef<Set<string>>(new Set());
   const [saveError, setSaveError] = useState<string | null>(null);
   // The pre-rendered HTML had no stored durations, so the hydration
@@ -173,16 +180,23 @@ export function DurationsProvider({ children }: { children: React.ReactNode }) {
         flushTimer.current = null;
         const wanted = [...pending.current.values()];
         pending.current.clear();
+        const answered = () =>
+          setSettled((prev) => {
+            const next = new Set(prev);
+            for (const lookup of wanted) next.add(lookup.slug);
+            return next;
+          });
         fetchIgdbBatch(wanted)
           .then(({ times, covers: found }) => {
             if (Object.keys(times).length > 0)
               setReported((prev) => ({ ...prev, ...times }));
             if (Object.keys(found).length > 0)
               setCovers((prev) => ({ ...prev, ...found }));
+            answered();
           })
           // A length nobody has is better than a screen that will not
           // draw: everything here degrades to RAWG's estimate.
-          .catch(() => {});
+          .catch(answered);
       }, 50);
     },
     []
@@ -218,7 +232,8 @@ export function DurationsProvider({ children }: { children: React.ReactNode }) {
           game.slug ? reported[game.slug] : undefined
         ),
       learnDurations,
-      coverOf: (slug) => (slug ? (covers[slug] ?? null) : null),
+      coverOf: (slug) =>
+        slug ? (covers[slug] ?? (settled.has(slug) ? null : undefined)) : null,
       setDuration,
       clearDuration,
       adoptSynced,
@@ -229,6 +244,7 @@ export function DurationsProvider({ children }: { children: React.ReactNode }) {
     }),
     [
       covers,
+      settled,
       overrides,
       reported,
       learnDurations,
