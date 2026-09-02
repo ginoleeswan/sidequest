@@ -141,6 +141,18 @@ interface Props {
   onChange: (next: BrowseRefinements) => void;
   /** Curated feeds (must-play) can't be re-sorted or filtered. */
   disabled?: boolean;
+  /**
+   * The parent's horizontal padding.
+   *
+   * A horizontal scroller inside a padded column clips at the padding:
+   * the last chip stopped dead at the gutter with the page's own margin
+   * showing past it, which is the one tell that a row was placed in a
+   * box rather than laid across the screen. Like `Rail`, the bar bleeds
+   * out by the inset and pays it back as content padding, so the first
+   * chip still lines up with the heading above and the row runs to the
+   * true edge.
+   */
+  inset?: number;
 }
 
 /**
@@ -149,7 +161,12 @@ interface Props {
  * shapes teach the behaviour before you tap anything, and a Clear appears
  * only once something is actually on.
  */
-export function FilterBar({ value, onChange, disabled = false }: Props) {
+export function FilterBar({
+  value,
+  onChange,
+  disabled = false,
+  inset = 0,
+}: Props) {
   if (disabled) return null;
 
   const active = activeCount(value);
@@ -168,8 +185,9 @@ export function FilterBar({ value, onChange, disabled = false }: Props) {
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      style={styles.scroller}
-      contentContainerStyle={styles.row}
+      testID="filter-bar"
+      style={[styles.scroller, inset > 0 && { marginHorizontal: -inset }]}
+      contentContainerStyle={[styles.row, { paddingHorizontal: inset }]}
     >
       <View style={styles.segmented}>
         {SORTS.map((sort) => (

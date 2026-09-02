@@ -566,7 +566,7 @@ export default function HomeScreen({
   const gridHeader =
     searching && !isExpanded ? (
       <View style={styles.searchHead}>
-        <FilterBar value={refine} onChange={setRefine} />
+        <FilterBar value={refine} onChange={setRefine} inset={GUTTER} />
         {refining ? <ProgressLine /> : null}
         {totalCount > 0 ? (
           <Text style={styles.resultCount}>
@@ -593,7 +593,11 @@ export default function HomeScreen({
           }
         />
         {creatorChips}
-        <FilterBar value={refine} onChange={setRefine} />
+        <FilterBar
+          value={refine}
+          onChange={setRefine}
+          inset={SPACING.xl + GUTTER}
+        />
         {refining && <ProgressLine />}
       </View>
     ) : !isHome ? (
@@ -615,6 +619,7 @@ export default function HomeScreen({
           value={refine}
           onChange={setRefine}
           disabled={section.key === 'must-play'}
+          inset={isExpanded ? SPACING.xl + GUTTER : GUTTER}
         />
         {refining && <ProgressLine />}
       </View>

@@ -116,6 +116,20 @@ describe('FilterBar', () => {
     expect(screen.queryByText(/^Clear/)).toBeNull();
   });
 
+  /**
+   * The bar sits in a padded column and must run past the padding: the
+   * scroller bleeds out by the inset and the content pays it back, so
+   * the first chip lines up and the last is never cut at the gutter.
+   */
+  it('bleeds across the inset it is given', async () => {
+    await render(
+      <FilterBar value={DEFAULT_REFINEMENTS} onChange={jest.fn()} inset={20} />
+    );
+    expect(screen.getByTestId('filter-bar')).toHaveStyle({
+      marginHorizontal: -20,
+    });
+  });
+
   it('renders nothing for a curated feed that cannot be refined', async () => {
     await render(
       <FilterBar value={DEFAULT_REFINEMENTS} onChange={jest.fn()} disabled />

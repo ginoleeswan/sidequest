@@ -175,7 +175,15 @@ export function SkeletonCategory({
             : undefined,
         ]}
       />
-      <View style={styles.chipRow}>
+      {/* Bled like the bar it stands for, so the bones do not stop at a
+          gutter the loaded row runs past. */}
+      <View
+        style={[
+          styles.chipRow,
+          bleed ? { marginHorizontal: -bleed.sides } : undefined,
+          bleed ? { paddingHorizontal: bleed.sides } : undefined,
+        ]}
+      >
         {[74, 66, 82, 52, 96].map((width) => (
           <Skeleton key={width} style={[styles.chip, { width }]} />
         ))}
