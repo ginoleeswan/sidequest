@@ -34,5 +34,8 @@ export const queryKeys = {
   /** Single-page storefront shelves. */
   shelf: (section: string) => ['shelf', section] as const,
   search: (query: string) => ['search', query] as const,
+  /** The record for one game — see api/gameDetail. */
   game: (id: string) => ['game', id] as const,
+  /** Its screenshots, trailers, series and stores, fetched beside it. */
+  gameMedia: (id: string) => ['game-media', id] as const,
 };

@@ -24,7 +24,18 @@ export function useBreakpoint(): Breakpoint {
   // dimensions are adopted on the next commit, once hydration is done.
   const hydrated = useHydrated();
   const width = Platform.OS !== 'web' || hydrated ? measured : SSR_WIDTH;
-  const isExpanded = width >= BREAKPOINTS.expanded;
+  /**
+   * The desk is a web layout.
+   *
+   * Width alone put an iPad in portrait — 1024 points — into the
+   * sidebar shell: a second set of tabs beside the real `NativeTabs`
+   * bar, a top bar with no safe-area clearance under the status bar,
+   * and a floating header the native stack was already drawing. The
+   * phone layout on a tablet is a centred column with margins; the
+   * desk layout on a tablet is broken chrome. Columns still follow the
+   * width, so a tablet's grids fill it.
+   */
+  const isExpanded = Platform.OS === 'web' && width >= BREAKPOINTS.expanded;
   const columns =
     width >= BREAKPOINTS.wide
       ? 5

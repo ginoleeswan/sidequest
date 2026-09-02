@@ -74,3 +74,23 @@ const { Share: RNShare } = require('react-native');
 jest
   .spyOn(RNShare, 'share')
   .mockResolvedValue({ action: RNShare.sharedAction });
+
+/**
+ * expo-linking reads the URL scheme from the expo-constants manifest,
+ * which the test runner does not have, so `createURL` throws where the
+ * app would build `sidequest://you`. The three calls the auth provider
+ * makes are stubbed: a link to build, no launch URL, and a listener that
+ * a test can fire through `globalThis.emitUrl`.
+ */
+jest.mock('expo-linking', () => ({
+  createURL: (path) => `sidequest://${path.replace(/^\//, '')}`,
+  getInitialURL: jest.fn(async () => globalThis.initialUrl ?? null),
+  addEventListener: jest.fn((_type, listener) => {
+    globalThis.emitUrl = (url) => listener({ url });
+    return {
+      remove: () => {
+        if (globalThis.emitUrl) delete globalThis.emitUrl;
+      },
+    };
+  }),
+}));

@@ -115,10 +115,11 @@ The web build is a static export — `vercel.json` is already configured.
    directory).
 2. Add environment variables in the project settings:
    - `RAWG_API_KEY` = your RAWG key. Server-side only (used by
-     `api/rawg-proxy.ts` and `api/preview.ts`) — kept out of the web
-     bundle entirely. `EXPO_PUBLIC_RAWG_API_KEY` is only needed for
-     native (EAS) builds, which call RAWG directly; the Vercel
-     deployment doesn't read it.
+     `api/rawg-proxy.ts` and `api/preview.ts`) — kept out of every
+     client bundle. Web and native both call RAWG through this proxy,
+     which answers from the edge cache; a native build only needs
+     `EXPO_PUBLIC_RAWG_API_KEY` (with `EXPO_PUBLIC_RAWG_DIRECT=1`) if
+     it should bypass the deployment and call RAWG itself.
    - `STEAM_API_KEY` = your Steam Web API key
      ([steamcommunity.com/dev/apikey](https://steamcommunity.com/dev/apikey)) —
      powers Steam connect on The Plan. Server-side only (used by

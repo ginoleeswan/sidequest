@@ -519,7 +519,11 @@ const styles = StyleSheet.create({
     paddingLeft: SPACING.md,
   },
   doorPressed: { opacity: 0.6 },
-  doorValue: { fontFamily: 'Geom-ExtraBold', fontSize: 30, letterSpacing: -0.8 },
+  doorValue: {
+    fontFamily: 'Geom-ExtraBold',
+    fontSize: 30,
+    letterSpacing: -0.8,
+  },
   doorLabel: { ...TYPE.micro, color: COLORS.mediumGrey },
 
   groupLabel: {

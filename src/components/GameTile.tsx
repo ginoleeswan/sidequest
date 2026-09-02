@@ -10,7 +10,7 @@ import { PlatformIcons } from './PlatformIcons';
 import { ScaleButton } from './ScaleButton';
 import { ScorePill } from './ScorePill';
 import { Textured } from './Textured';
-import { gameDetailQuery } from '@/api/gameDetail';
+import { prefetchGame } from '@/api/gameDetail';
 import { useToast } from './Toast';
 import type { Game } from '@/api/types';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
@@ -67,11 +67,7 @@ export function GameTile({
   // Warm the page you are about to open. By the time the tap lands the
   // detail query is usually already resolved, so the screen arrives with
   // content instead of bones.
-  const prefetch = () =>
-    queryClient.prefetchQuery({
-      ...gameDetailQuery(game.id),
-      staleTime: 5 * 60 * 1000,
-    });
+  const prefetch = () => prefetchGame(queryClient, game);
   const [shot, setShot] = useState(0);
 
   const saved = statusOf(game.id) != null;

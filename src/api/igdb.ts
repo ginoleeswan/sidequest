@@ -1,5 +1,7 @@
 /** Client side of the time-to-beat lookup. The credentials stay on the server. */
 
+import { apiUrl } from './base';
+
 export interface TimeToBeat {
   /** Rushing it. */
   hastily: number | null;
@@ -87,7 +89,7 @@ export async function fetchIgdbBatch(
             .map((lookup) => lookup.released?.slice(0, 4) ?? '')
             .join('|'),
         });
-        const response = await fetch(`/api/igdb?${query}`);
+        const response = await fetch(apiUrl(`/api/igdb?${query}`));
         if (!response.ok) return { times: {}, covers: {} };
         const body = (await response.json()) as {
           durations?: TimeToBeatBySlug;
@@ -143,7 +145,7 @@ export async function fetchIgdbExtras(
       names: lookup?.name ?? '',
       years: lookup?.released?.slice(0, 4) ?? '',
     });
-    const response = await fetch(`/api/igdb?${query}`);
+    const response = await fetch(apiUrl(`/api/igdb?${query}`));
     if (!response.ok) return null;
     const body = (await response.json()) as {
       durations?: TimeToBeatBySlug;

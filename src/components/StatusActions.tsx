@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { FinishCelebration } from './FinishCelebration';
 import { useToast } from './Toast';
 import type { Game } from '@/api/types';
+import { tap } from '@/lib/haptics';
 import { STATUS_META, useLibrary, type LibraryStatus } from '@/lib/library';
 import { COLORS } from '@/styles/colors';
 import { RADIUS, SPACING } from '@/styles/theme';
@@ -48,6 +49,9 @@ export function StatusActions({ game }: { game: Game }) {
           <Pressable
             key={status}
             onPress={() => {
+              // Felt as well as seen: a segmented control that clicks
+              // under the thumb is the platform's own behaviour.
+              tap();
               setStatus(game, active ? null : status);
               // Finishing gets a moment; everything else gets a toast.
               if (!active && status === 'finished') {

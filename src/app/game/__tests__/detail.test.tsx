@@ -1,7 +1,8 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import GameInfoScreen from '../[id]';
-import type { GameDetail } from '@/api/types';
+import { seedGame } from '@/api/gameDetail';
+import type { Game, GameDetail } from '@/api/types';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { renderApp, useFakeStorage } from '@/test-utils';
 
@@ -94,6 +95,51 @@ describe('the game screen', () => {
     store['sidequest.durations.v1'] = JSON.stringify({ '1': 9 });
     await renderApp(<GameInfoScreen />);
     await waitFor(() => expect(screen.getByText(/your length/)).toBeTruthy());
+  });
+
+  /**
+   * A tap from a shelf paints the masthead from the shelf's own row,
+   * before RAWG has answered: the name and the hours are on screen at
+   * once, and the record fills in the rest behind them.
+   */
+  it('paints the masthead from a row it already has', async () => {
+    const answering = globalThis.fetch;
+    let release: () => void = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    globalThis.fetch = jest.fn(async (input: RequestInfo | URL) => {
+      await held;
+      const url = String(input);
+      if (/\/(screenshots|movies|game-series|stores)\?/.test(url))
+        return new Response(JSON.stringify(empty));
+      return new Response(JSON.stringify(detail));
+    }) as unknown as typeof fetch;
+
+    seedGame({
+      id: 1,
+      slug: 'celeste',
+      name: 'Celeste',
+      background_image: null,
+      rating: 4.5,
+      rating_top: 5,
+      released: '2018-01-25',
+      playtime: 12,
+    } as Game);
+
+    await renderApp(<GameInfoScreen />);
+    // Before a single byte has come back.
+    expect(screen.getByText('Celeste')).toBeTruthy();
+    expect(screen.getByText(/to finish/)).toBeTruthy();
+    expect(screen.queryByText('Player verdict')).toBeNull();
+
+    release();
+    await waitFor(() =>
+      expect(
+        screen.getByText('A mountain, & a girl who climbs it.')
+      ).toBeTruthy()
+    );
+    globalThis.fetch = answering;
   });
 
   it('says so when the game cannot be loaded', async () => {

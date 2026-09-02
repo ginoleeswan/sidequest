@@ -1,6 +1,4 @@
-import { Slot } from 'expo-router';
+import { GroupStack } from '@/components/GroupStack';
 
-/** Native draws its own tab bar; the web sibling adds the phone's. */
-export default function Layout() {
-  return <Slot />;
-}
+/** Native pushes game after game; the web sibling adds the phone's bar. */
+export default GroupStack;

@@ -146,6 +146,41 @@ export function isAuthCallback(): boolean {
 }
 
 /**
+ * The session a sign-in link carries back into the native app.
+ *
+ * On the web supabase-js reads the tokens out of `window.location`
+ * itself. A phone has no location: the link opens the app through its
+ * URL scheme and the tokens arrive as a URL string, and nothing was
+ * reading it — so the email row on native sent a link that opened the
+ * website and never signed the app in. Both shapes Supabase uses are
+ * accepted: tokens in the fragment (the implicit flow) and a `code` in
+ * the query (PKCE). Pure, so it can be tested against real link shapes.
+ */
+export type LinkSession =
+  { access_token: string; refresh_token: string } | { code: string };
+
+export function sessionFromUrl(
+  url: string | null | undefined
+): LinkSession | null {
+  if (!url) return null;
+  const hashAt = url.indexOf('#');
+  const fragment = hashAt >= 0 ? url.slice(hashAt + 1) : '';
+  const hashParams = new URLSearchParams(fragment);
+  const access = hashParams.get('access_token');
+  const refresh = hashParams.get('refresh_token');
+  if (access && refresh)
+    return { access_token: access, refresh_token: refresh };
+
+  const queryAt = url.indexOf('?');
+  if (queryAt < 0) return null;
+  const queryEnd = hashAt > queryAt ? hashAt : url.length;
+  const code = new URLSearchParams(url.slice(queryAt + 1, queryEnd)).get(
+    'code'
+  );
+  return code ? { code } : null;
+}
+
+/**
  * Whether this page load has anything to restore, decided once.
  *
  * Memoised because the auth provider needs the answer while it is

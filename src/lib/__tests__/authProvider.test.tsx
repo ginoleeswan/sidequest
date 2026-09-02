@@ -24,8 +24,12 @@ jest.mock('../supabase', () => ({
   hasStoredSession: () => mockStored,
   isAuthCallback: () => false,
   somethingToRestore: () => mockStored,
+  // The real parser: the link-adoption test below feeds it real links.
+  sessionFromUrl: jest.requireActual('../supabase').sessionFromUrl,
   getSupabase: async () => ({
     auth: {
+      setSession: (args: unknown) => mockSetSession(args),
+      exchangeCodeForSession: (code: string) => mockExchangeCode(code),
       getSession: () => mockGetSession(),
       onAuthStateChange: (fn: Listener) => {
         mockListener = fn;
@@ -37,6 +41,15 @@ jest.mock('../supabase', () => ({
       signInWithOAuth: (args: unknown) => mockSignInWithOAuth(args),
     },
   }),
+}));
+
+const mockSetSession = jest.fn(async (tokens: unknown) => ({
+  data: { session: { access_token: 'adopted', tokens } },
+  error: null,
+}));
+const mockExchangeCode = jest.fn(async (code: string) => ({
+  data: { session: { access_token: `from-${code}` } },
+  error: null,
 }));
 
 const mockAppleSignIn = jest.fn();
@@ -175,6 +188,45 @@ describe('AuthProvider', () => {
       );
     });
     expect(mockSignInWithIdToken).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The link comes back to the app itself on a phone, and the app has
+   * to read the session out of it — supabase-js only reads
+   * `window.location`, which a phone does not have.
+   */
+  it('email: asks for the link to come back to the app, on the You page', async () => {
+    const { result } = await setup();
+    await act(async () => result.current.signInWithEmail('g@example.com'));
+    expect(mockSignInWithOtp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        options: { emailRedirectTo: 'sidequest://you' },
+      })
+    );
+  });
+
+  it('email: adopts the session a link carries into the open app', async () => {
+    const { result } = await setup();
+    await act(async () => {
+      (globalThis as { emitUrl?: (url: string) => void }).emitUrl?.(
+        'sidequest://you#access_token=abc&refresh_token=def&token_type=bearer'
+      );
+    });
+    expect(mockSetSession).toHaveBeenCalledWith({
+      access_token: 'abc',
+      refresh_token: 'def',
+    });
+    expect(result.current.session).toMatchObject({ access_token: 'adopted' });
+  });
+
+  it('email: exchanges a PKCE code the link carries', async () => {
+    await setup();
+    await act(async () => {
+      (globalThis as { emitUrl?: (url: string) => void }).emitUrl?.(
+        'sidequest://you?code=xyz'
+      );
+    });
+    expect(mockExchangeCode).toHaveBeenCalledWith('xyz');
   });
 
   it('email: sends the magic link and surfaces a Supabase refusal', async () => {

@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -15,12 +15,19 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { gameDetailQuery } from '@/api/gameDetail';
+import {
+  EMPTY_MEDIA,
+  cachedGame,
+  gameMediaQuery,
+  gameQuery,
+  placeholderDetail,
+} from '@/api/gameDetail';
 import { fetchIgdbExtras, igdbCoverUri } from '@/api/igdb';
 import { friendlyError, mediaUri } from '@/api/rawg';
 import type { Game, GameDetail, Movie, Named } from '@/api/types';
@@ -49,7 +56,12 @@ import { RatingsBreakdown } from '@/components/RatingsBreakdown';
 import { ReadMoreText } from '@/components/ReadMoreText';
 import { ScorePill } from '@/components/ScorePill';
 import { SectionHeader } from '@/components/SectionHeader';
-import { SkeletonDetail, SkeletonDetailExpanded } from '@/components/Skeleton';
+import {
+  Skeleton,
+  SkeletonDetail,
+  SkeletonDetailExpanded,
+} from '@/components/Skeleton';
+import { PlatformIcons } from '@/components/PlatformIcons';
 import { StatusActions } from '@/components/StatusActions';
 import { StoreLinks } from '@/components/StoreLinks';
 import { DurationSheet } from '@/components/DurationSheet';
@@ -58,6 +70,7 @@ import { GrainScrim, Textured } from '@/components/Textured';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { detailHeroHeight } from '@/lib/detailHero';
 import { formatHours } from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
 import { usePersistedState } from '@/hooks/usePersistedState';
@@ -367,6 +380,53 @@ function StatStrip({
     meta.push(<ScorePill key="mc" score={game.metacritic} />);
   }
 
+  /**
+   * The plan's answer, or the arithmetic that would produce one.
+   *
+   * Written once. It was two identical trees, one per width, and the
+   * copy had already started to drift between them.
+   */
+  const planLine =
+    standing?.kind === 'scheduled' ? (
+      <Text
+        style={[styles.statPace, styles.statPlan]}
+        onPress={onOpenPlan}
+        suppressHighlighting
+        accessibilityRole="link"
+        accessibilityLabel={`Open your plan — ${game.name} is number ${
+          standing.position + 1
+        }`}
+      >
+        #{standing.position + 1} in your plan · credits around{' '}
+        {new Date(standing.finishAt).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+        })}
+        <Text style={styles.statArrow}> →</Text>
+      </Text>
+    ) : standing?.kind === 'dropped' ? (
+      /* The relief stance, on a page about one game: the window has no
+         room for it and that is a fact about the window, not a failing
+         of the reader. §2.1 — no line in this app tells somebody they
+         are behind. */
+      <Text
+        style={styles.statPace}
+        onPress={onOpenPlan}
+        suppressHighlighting
+        accessibilityRole="link"
+        accessibilityLabel="Open your plan"
+      >
+        More than your window holds. It’ll still be here.
+        <Text style={styles.statArrow}> →</Text>
+      </Text>
+    ) : duration.hours > 0 ? (
+      <Text style={styles.statPace}>
+        {duration.hours <= pace
+          ? `Under a week at ${pace}h a week.`
+          : `About ${Math.round(duration.hours / pace)} weeks at ${pace}h a week.`}
+      </Text>
+    ) : null;
+
   return (
     <View style={[styles.statBlock, wide && styles.statBlockWide]}>
       <Pressable
@@ -414,49 +474,7 @@ function StatStrip({
           block under both. The phone keeps them stacked; at 358 the
           two would fight for the width. */}
       {wide ? (
-        <>
-          <View style={styles.bylineRow}>
-            {standing?.kind === 'scheduled' ? (
-              <Text
-                style={[styles.statPace, styles.statPlan]}
-                onPress={onOpenPlan}
-                suppressHighlighting
-                accessibilityRole="link"
-                accessibilityLabel={`Open your plan — ${game.name} is number ${
-                  standing.position + 1
-                }`}
-              >
-                #{standing.position + 1} in your plan · credits around{' '}
-                {new Date(standing.finishAt).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                })}
-                <Text style={styles.statArrow}> →</Text>
-              </Text>
-            ) : standing?.kind === 'dropped' ? (
-              /* The relief stance, on a page about one game: the window has
-           no room for it and that is a fact about the window, not a
-           failing of the reader. §2.1 — no line in this app tells
-           somebody they are behind. */
-              <Text
-                style={styles.statPace}
-                onPress={onOpenPlan}
-                suppressHighlighting
-                accessibilityRole="link"
-                accessibilityLabel="Open your plan"
-              >
-                More than your window holds. It’ll still be here.
-                <Text style={styles.statArrow}> →</Text>
-              </Text>
-            ) : duration.hours > 0 ? (
-              <Text style={styles.statPace}>
-                {duration.hours <= pace
-                  ? `Under a week at ${pace}h a week.`
-                  : `About ${Math.round(duration.hours / pace)} weeks at ${pace}h a week.`}
-              </Text>
-            ) : null}
-          </View>
-        </>
+        <View style={styles.bylineRow}>{planLine}</View>
       ) : (
         <>
           {meta.length > 0 && (
@@ -469,47 +487,38 @@ function StatStrip({
               ))}
             </View>
           )}
-          {standing?.kind === 'scheduled' ? (
-            <Text
-              style={[styles.statPace, styles.statPlan]}
-              onPress={onOpenPlan}
-              suppressHighlighting
-              accessibilityRole="link"
-              accessibilityLabel={`Open your plan — ${game.name} is number ${
-                standing.position + 1
-              }`}
-            >
-              #{standing.position + 1} in your plan · credits around{' '}
-              {new Date(standing.finishAt).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-              })}
-              <Text style={styles.statArrow}> →</Text>
-            </Text>
-          ) : standing?.kind === 'dropped' ? (
-            /* The relief stance, on a page about one game: the window has
-           no room for it and that is a fact about the window, not a
-           failing of the reader. §2.1 — no line in this app tells
-           somebody they are behind. */
-            <Text
-              style={styles.statPace}
-              onPress={onOpenPlan}
-              suppressHighlighting
-              accessibilityRole="link"
-              accessibilityLabel="Open your plan"
-            >
-              More than your window holds. It’ll still be here.
-              <Text style={styles.statArrow}> →</Text>
-            </Text>
-          ) : duration.hours > 0 ? (
-            <Text style={styles.statPace}>
-              {duration.hours <= pace
-                ? `Under a week at ${pace}h a week.`
-                : `About ${Math.round(duration.hours / pace)} weeks at ${pace}h a week.`}
-            </Text>
-          ) : null}
+          {planLine}
         </>
       )}
+    </View>
+  );
+}
+
+/**
+ * The phone's record, as a spec sheet.
+ *
+ * Label over value, a hairline between rows, nothing absent drawn. It
+ * was a run of label/value pairs with no rules and uneven gaps, which
+ * read as a list somebody stopped formatting.
+ */
+function FactList({
+  facts,
+}: {
+  facts: { label: string; value?: string | null; node?: React.ReactNode }[];
+}) {
+  const present = facts.filter((fact) => fact.value || fact.node);
+  if (present.length === 0) return null;
+  return (
+    <View>
+      {present.map((fact, index) => (
+        <View
+          key={fact.label}
+          style={[styles.fact, index > 0 && styles.factRule]}
+        >
+          <Text style={styles.metaLabel}>{fact.label}</Text>
+          {fact.node ?? <Text style={styles.metaValue}>{fact.value}</Text>}
+        </View>
+      ))}
     </View>
   );
 }
@@ -583,6 +592,7 @@ function Lightbox({
 export default function GameInfoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
   const [editingLength, setEditingLength] = useState(false);
   /** Which frame the stage shows: 0 is the key art, then screenshots. */
@@ -601,6 +611,7 @@ export default function GameInfoScreen() {
   const { durationOf, learnDurations } = useDurations();
 
   const { isExpanded, width } = useBreakpoint();
+  const { height: windowHeight } = useWindowDimensions();
   const hasNote = usePersonalNote(Number(id));
   const insets = useSafeAreaInsets();
   const opacity = useAnimatedValue(0);
@@ -608,9 +619,39 @@ export default function GameInfoScreen() {
   const railOpacity = useAnimatedValue(0);
   const reducedMotion = useReducedMotion();
 
-  // Four endpoints, one unit: the screen gets a single loading/error
-  // state, and a hovered tile can prefetch exactly this.
-  const { data, isPending, error } = useQuery(gameDetailQuery(id));
+  /**
+   * The record, standing on what the tile already knew.
+   *
+   * Every shelf row carries the fields the masthead is built from, so
+   * when a tap arrives from a list the page paints its hero from that
+   * row at zero network cost — no bones, no wait — and fills in the
+   * description, the verdict and the file when the record lands.
+   * `sketch` is true while it is standing on the row rather than the
+   * record; the body below the fold shows bones until then.
+   */
+  const {
+    data: game,
+    error,
+    isPending,
+    isPlaceholderData: sketch,
+  } = useQuery({
+    ...gameQuery(id),
+    placeholderData: () => {
+      const known = cachedGame(queryClient, id);
+      return known ? placeholderDetail(known) : undefined;
+    },
+  });
+
+  /**
+   * Screenshots, trailers, the series and the stores, beside the record
+   * rather than in front of it: none of them is needed before the
+   * reader can start reading, so none of them gets to hold the page.
+   */
+  const { data: media = EMPTY_MEDIA, isPending: mediaPending } = useQuery(
+    gameMediaQuery(id)
+  );
+  const { screenshots, trailers, series, storeLinks } = media;
+
   /**
    * The dwell, as on Home's stage: linger on the key art and it comes
    * to life. Both stores open on a moving trailer; here the still
@@ -618,7 +659,7 @@ export default function GameInfoScreen() {
    * arrives over it three seconds later, muted, under the same copy.
    * Keyed by frame, so a swap away and back starts the wait again.
    */
-  const dwellTrailer = data ? pickTrailer(data.trailers, data.game.name) : null;
+  const dwellTrailer = game ? pickTrailer(trailers, game.name) : null;
   const [dweltFor, setDweltFor] = useState<number | null>(null);
   useEffect(() => {
     if (!dwellTrailer || stageIndex !== 0) return;
@@ -641,28 +682,31 @@ export default function GameInfoScreen() {
     // v3: matching now settles on title and year, so a slug that used
     // to resolve to the wrong game of the same name has a different
     // answer - and the cached wrong one must not outlive the fix.
-    queryKey: ['igdb-extras', 'v3', data?.game?.slug],
+    // Asked the moment a slug is known — from the seeded row, when
+    // there is one — so IGDB's answer travels beside RAWG's rather
+    // than behind it.
+    queryKey: ['igdb-extras', 'v3', game?.slug],
     queryFn: () =>
-      fetchIgdbExtras(data!.game.slug, {
-        name: data!.game.name,
-        released: data!.game.released,
+      fetchIgdbExtras(game!.slug, {
+        name: game!.name,
+        released: game!.released,
       }),
-    enabled: Boolean(data?.game?.slug),
+    enabled: Boolean(game?.slug),
     staleTime: 24 * 60 * 60 * 1000,
   });
 
   // What people reported finishing this in, if anyone has.
   // Held in a name of its own so the effect can depend on the whole
   // game: matching now needs its title and year, not just the slug.
-  const loaded = data?.game;
   useEffect(() => {
-    if (loaded?.slug) learnDurations([loaded]);
-  }, [loaded, learnDurations]);
+    if (game?.slug) learnDurations([game]);
+  }, [game, learnDurations]);
 
-  // Somewhere to come back to. See lib/recent.
+  // Somewhere to come back to, once the game has actually been seen.
+  // See lib/recent.
   useEffect(() => {
-    if (data?.game) rememberGame(data.game);
-  }, [data?.game]);
+    if (game && !sketch) rememberGame(game);
+  }, [game, sketch]);
 
   /**
    * A staged arrival, not a curtain.
@@ -675,7 +719,7 @@ export default function GameInfoScreen() {
    * to an immediate appearance, which is that setting kept honestly.
    */
   useEffect(() => {
-    if (!data) return;
+    if (!game) return;
     if (reducedMotion) {
       opacity.setValue(1);
       railOpacity.setValue(1);
@@ -694,7 +738,7 @@ export default function GameInfoScreen() {
       easing: EASING.standard,
       useNativeDriver: true,
     }).start();
-  }, [data, opacity, railOpacity, reducedMotion]);
+  }, [game, opacity, railOpacity, reducedMotion]);
 
   if (isPending) {
     return isExpanded ? (
@@ -719,11 +763,11 @@ export default function GameInfoScreen() {
       <Textured style={styles.background}>
         {/* The name is not known yet, but a blank tab is never right. */}
         <PageTitle>Sidequest</PageTitle>
-        <View
-          style={[isExpanded ? styles.skeletonShellWide : styles.skeletonShell]}
-        >
-          {isExpanded ? <SkeletonDetailExpanded /> : <SkeletonDetail />}
-        </View>
+        {/* In the scroller, like the page it stands for: on native a
+            bare View is cropped at the first fold. */}
+        <Screen style={styles.skeletonShell}>
+          <SkeletonDetail />
+        </Screen>
         {/* Same join as the loaded hero: the bones run to the top of the
             document too, so they need it just as much. */}
         {!isExpanded && <ChromeWeld height={insets.top + WELD_HEIGHT} />}
@@ -736,7 +780,7 @@ export default function GameInfoScreen() {
     );
   }
 
-  if (error || !data) {
+  if (error || !game) {
     return (
       <View style={styles.background}>
         <PageTitle>Sidequest</PageTitle>
@@ -752,7 +796,6 @@ export default function GameInfoScreen() {
     );
   }
 
-  const { game, screenshots, trailers, series, storeLinks } = data;
   const summary = decodeEntities(
     game.description.replace(HTML_TAGS, '')
   ).trim();
@@ -802,7 +845,12 @@ export default function GameInfoScreen() {
   const current = frames[stageIndex] ?? frames[0];
 
   const hero = (
-    <View style={styles.hero}>
+    <View
+      style={[
+        styles.hero,
+        { height: detailHeroHeight(windowHeight) } as ViewStyle,
+      ]}
+    >
       {/*
         Artwork, and enough of it to be worth looking at.
 
@@ -1094,65 +1142,78 @@ export default function GameInfoScreen() {
    * Everything at nearly the screen's width, snapped to the frame
    * pitch so a thumb-flick never parks between two pictures.
    */
-  const mediaStage =
-    isExpanded || frames.length <= 1 ? null : (
-      <View style={mediaBlock}>
-        <SectionHeader
-          title="What it looks like"
-          eyebrow={`${frames.length - 1} screens and trailers`}
-        />
-        <Rail<(typeof frames)[number]>
-          data={frames.slice(1)}
-          keyExtractor={(item) => item.key}
-          inset={railInset}
-          gap={SPACING.sm}
-          snapInterval={shotWidth + SPACING.sm}
-          renderItem={(item, index) =>
-            /* Only the frame that plays gets a player. The others are
+  const mediaStage = isExpanded ? null : mediaPending ? (
+    /* The rail's bones, so the page keeps its rhythm while the
+       screenshots are still on their way rather than growing a section
+       under the reader's thumb when they land. */
+    <View style={mediaBlock}>
+      <SectionHeader
+        title="What it looks like"
+        eyebrow="Screens and trailers"
+      />
+      <View style={styles.mediaBones}>
+        <Skeleton style={{ width: shotWidth, height: shotHeight }} />
+        <Skeleton style={{ width: shotWidth, height: shotHeight }} />
+      </View>
+    </View>
+  ) : frames.length <= 1 ? null : (
+    <View style={mediaBlock}>
+      <SectionHeader
+        title="What it looks like"
+        eyebrow={`${frames.length - 1} screens and trailers`}
+      />
+      <Rail<(typeof frames)[number]>
+        data={frames.slice(1)}
+        keyExtractor={(item) => item.key}
+        inset={railInset}
+        gap={SPACING.sm}
+        snapInterval={shotWidth + SPACING.sm}
+        renderItem={(item, index) =>
+          /* Only the frame that plays gets a player. The others are
                poster frames until asked, which is what keeps a rail of
                six trailers from mounting six video elements. */
-            item.movie && index === 0 ? (
-              <StageVideo
-                movie={item.movie}
-                autoPlay
-                style={{ width: shotWidth, height: shotHeight }}
+          item.movie && index === 0 ? (
+            <StageVideo
+              movie={item.movie}
+              autoPlay
+              style={{ width: shotWidth, height: shotHeight }}
+            />
+          ) : item.movie ? (
+            <Pressable
+              onPress={() => setPlaying(item.movie?.id ?? null)}
+              accessibilityRole="button"
+              accessibilityLabel={`Play the trailer ${item.movie.name}`}
+            >
+              <Image
+                source={{ uri: mediaUri(item.image, 640) }}
+                style={[
+                  styles.screenshot,
+                  { width: shotWidth, height: shotHeight },
+                ]}
+                contentFit="cover"
+                transition={DURATION.base}
               />
-            ) : item.movie ? (
-              <Pressable
-                onPress={() => setPlaying(item.movie?.id ?? null)}
-                accessibilityRole="button"
-                accessibilityLabel={`Play the trailer ${item.movie.name}`}
-              >
-                <Image
-                  source={{ uri: mediaUri(item.image, 640) }}
-                  style={[
-                    styles.screenshot,
-                    { width: shotWidth, height: shotHeight },
-                  ]}
-                  contentFit="cover"
-                  transition={DURATION.base}
-                />
-                <View style={styles.posterPlay}>
-                  <Ionicons name="play" size={22} color={COLORS.navy} />
-                </View>
-              </Pressable>
-            ) : (
-              <Pressable onPress={() => setLightboxUri(item.image)}>
-                <Image
-                  source={{ uri: mediaUri(item.image, 640) }}
-                  style={[
-                    styles.screenshot,
-                    { width: shotWidth, height: shotHeight },
-                  ]}
-                  contentFit="cover"
-                  transition={DURATION.base}
-                />
-              </Pressable>
-            )
-          }
-        />
-      </View>
-    );
+              <View style={styles.posterPlay}>
+                <Ionicons name="play" size={22} color={COLORS.navy} />
+              </View>
+            </Pressable>
+          ) : (
+            <Pressable onPress={() => setLightboxUri(item.image)}>
+              <Image
+                source={{ uri: mediaUri(item.image, 640) }}
+                style={[
+                  styles.screenshot,
+                  { width: shotWidth, height: shotHeight },
+                ]}
+                contentFit="cover"
+                transition={DURATION.base}
+              />
+            </Pressable>
+          )
+        }
+      />
+    </View>
+  );
 
   const mediaTail = (
     <>
@@ -1319,37 +1380,54 @@ export default function GameInfoScreen() {
     return { pct, tint };
   })();
 
-  const whoElseWide =
-    isExpanded && game.added_by_status ? (
-      <View style={styles.whoElseRow}>
-        <Text style={styles.fileLabel}>WHO ELSE HAS IT</Text>
-        <CommunityStats status={game.added_by_status} />
-      </View>
-    ) : null;
+  const hasRatings = (game.ratings?.length ?? 0) > 0;
+
+  /**
+   * The community counts, filed under the verdict on every width.
+   *
+   * On the phone they lived in the crate, three screens below the
+   * ratings they are evidence for. Beside the verdict the two say one
+   * thing: this is what people did with it, and this is what they
+   * thought. The crate keeps to its purpose: where to get it, who made
+   * it, what it runs on.
+   */
+  const whoElse = game.added_by_status ? (
+    <View style={[styles.whoElseRow, !hasRatings && styles.whoElseFirst]}>
+      <Text style={styles.fileLabel}>WHO ELSE HAS IT</Text>
+      <CommunityStats status={game.added_by_status} />
+    </View>
+  ) : null;
+
+  const finish = finishRate ? (
+    <View style={styles.finishRow}>
+      <Text style={[styles.finishFigure, { color: finishRate.tint }]}>
+        {finishRate.pct}%
+      </Text>
+      <Text style={styles.finishLabel}>
+        of the people who own it reached the credits
+      </Text>
+    </View>
+  ) : null;
+
+  const verdict = (
+    <>
+      {hasRatings ? <RatingsBreakdown ratings={game.ratings!} /> : null}
+      {finish}
+      {whoElse}
+    </>
+  );
 
   const ratingsBreakdown =
-    game.ratings && game.ratings.length > 0 ? (
+    hasRatings || whoElse ? (
       <View style={styles.block}>
         <SectionHeader wide={isExpanded} title="Player verdict" />
-        {/* On the phone this sits on a plane, because there it is one
-            data block among prose. On the wide page the plane made it
-            the main column's last surviving box after everything else
-            went flush — and a 34pt "92%" needs no crate to read as a
-            finding. */}
-        <View style={isExpanded ? null : styles.panel}>
-          <RatingsBreakdown ratings={game.ratings} />
-        </View>
-        {finishRate ? (
-          <View style={styles.finishRow}>
-            <Text style={[styles.finishFigure, { color: finishRate.tint }]}>
-              {finishRate.pct}%
-            </Text>
-            <Text style={styles.finishLabel}>
-              of the people who own it reached the credits
-            </Text>
-          </View>
-        ) : null}
-        {whoElseWide}
+        {/* On the phone this sits on a plane — one card holding the
+            share, the shape, the finishing rate and the counts, so the
+            verdict reads as one finding. On the wide page the plane
+            made it the main column's last surviving box after
+            everything else went flush — and a 34pt "92%" needs no crate
+            to read as a finding. */}
+        {isExpanded ? verdict : <View style={styles.panel}>{verdict}</View>}
       </View>
     ) : null;
 
@@ -1542,34 +1620,61 @@ export default function GameInfoScreen() {
     </View>
   ) : null;
 
-  const fileWho = game.added_by_status ? (
-    <View style={styles.fileSection}>
-      <Text style={styles.fileLabel}>WHO ELSE HAS IT</Text>
-      <CommunityStats status={game.added_by_status} />
-    </View>
-  ) : null;
+  const platformNames = game.platforms
+    ?.map(({ platform }) => platform.name)
+    .join(', ');
 
   const fileDetails = (
     <View style={styles.fileSection}>
-      <Text style={styles.fileLabel}>DETAILS</Text>
-      <MetaRow
-        label="Platforms"
-        items={game.platforms?.map(({ platform }) => platform)}
+      <Text style={styles.fileLabel}>FACTS</Text>
+      <FactList
+        facts={[
+          {
+            label: 'Platforms',
+            node: platformNames ? (
+              <View style={styles.platformFact}>
+                {/* The glyphs the tiles already speak, then the full
+                    list: a glance and a lookup in one row. */}
+                {game.parent_platforms && game.parent_platforms.length > 0 ? (
+                  <PlatformIcons
+                    platforms={game.parent_platforms}
+                    size={14}
+                    color={COLORS.lightGrey}
+                  />
+                ) : null}
+                <Text style={styles.metaValue}>{platformNames}</Text>
+              </View>
+            ) : null,
+          },
+          {
+            label: 'Release date',
+            value: game.released ? calendarDate(game.released) : null,
+          },
+          {
+            label:
+              game.developers && game.developers.length > 1
+                ? 'Developers'
+                : 'Developer',
+            value: game.developers?.map((d) => d.name).join(', '),
+          },
+          {
+            label:
+              game.publishers && game.publishers.length > 1
+                ? 'Publishers'
+                : 'Publisher',
+            value: game.publishers?.map((d) => d.name).join(', '),
+          },
+          { label: 'Rated', value: game.esrb_rating?.name },
+          game.website
+            ? {
+                label: 'Official site',
+                value: game.website
+                  .replace(/^https?:\/\//, '')
+                  .replace(/\/$/, ''),
+              }
+            : { label: 'Official site' },
+        ]}
       />
-      {game.esrb_rating?.name ? (
-        <View style={styles.metaRow}>
-          <Text style={styles.metaLabel}>Rated</Text>
-          <Text style={styles.metaValue}>{game.esrb_rating.name}</Text>
-        </View>
-      ) : null}
-      <MetaRow label="Developers" items={game.developers} />
-      <MetaRow label="Publishers" items={game.publishers} />
-      {game.released ? (
-        <View style={styles.metaRow}>
-          <Text style={styles.metaLabel}>Release date</Text>
-          <Text style={styles.metaValue}>{calendarDate(game.released)}</Text>
-        </View>
-      ) : null}
     </View>
   );
 
@@ -1632,7 +1737,7 @@ export default function GameInfoScreen() {
       <View style={styles.fileSection}>
         <Text style={styles.fileLabel}>TAGS</Text>
         <View style={styles.tags}>
-          {game.tags.slice(0, isExpanded ? 24 : 12).map((tag) => (
+          {game.tags.slice(0, isExpanded ? 24 : 10).map((tag) => (
             <Chip key={tag.id} title={tag.name} quiet />
           ))}
         </View>
@@ -1707,7 +1812,7 @@ export default function GameInfoScreen() {
           and a heading above them was a second voice saying nothing
           the labels don't: two label registers inside 100pt. */}
       {!isExpanded && (
-        <SectionHeader title="The file" eyebrow="Where, who and what" />
+        <SectionHeader title="Details" eyebrow="Where to get it, who made it" />
       )}
       {/* The cover, at the crate's head on the phone too — parity is
           the rule, and the box was desktop-only by omission. A stamp
@@ -1727,9 +1832,7 @@ export default function GameInfoScreen() {
         </View>
       ) : null}
       {framed(
-        isExpanded
-          ? [controls, fileGetIt, fileFacts]
-          : [fileGetIt, fileWho, fileDetails]
+        isExpanded ? [controls, fileGetIt, fileFacts] : [fileGetIt, fileDetails]
       )}
     </View>
   );
@@ -1751,6 +1854,26 @@ export default function GameInfoScreen() {
       <View style={styles.recordTags}>{framed([fileTags])}</View>
     </View>
   ) : null;
+
+  /**
+   * What stands in for the body while the page is on a seeded row.
+   *
+   * The masthead and the decision are real — they are built from what
+   * the tile knew — so only the parts the record supplies wait: the
+   * prose, the verdict, the file. Prose sets solid, the way text does.
+   */
+  const bones = (
+    <View style={styles.block}>
+      <View style={styles.bonesProse}>
+        <Skeleton style={styles.bonesLine} />
+        <Skeleton style={styles.bonesLine} />
+        <Skeleton style={styles.bonesLine} />
+        <Skeleton style={styles.bonesLineShort} />
+      </View>
+      <Skeleton style={styles.bonesHeading} />
+      <Skeleton style={styles.bonesVerdict} />
+    </View>
+  );
 
   /* -------------------------------------------------------------- layout */
 
@@ -1774,9 +1897,15 @@ export default function GameInfoScreen() {
                     {stage ? null : titleBlock}
                     {current?.movie ? titleBlock : null}
                     {stage}
-                    {yourTake}
-                    {about}
-                    {ratingsBreakdown}
+                    {sketch ? (
+                      bones
+                    ) : (
+                      <>
+                        {yourTake}
+                        {about}
+                        {ratingsBreakdown}
+                      </>
+                    )}
                   </View>
                   {/* What you do about the game, then what the game is.
                       Both store pages put the action beside the media
@@ -1814,18 +1943,24 @@ export default function GameInfoScreen() {
                       most valuable position on the screen. It is a
                       response, so it follows what it responds to. */}
                   {mediaStage}
-                  {about}
-                  {/* Tags right after the prose, as Steam files them:
-                      they are the description's index, not archive
-                      material — and they were three screens deep in
-                      the crate. */}
-                  {!isExpanded && game.tags && game.tags.length > 0 ? (
-                    <View style={styles.block}>{fileTags}</View>
-                  ) : null}
-                  {ratingsBreakdown}
-                  {yourTake}
-                  {fileBox}
-                  {mediaTail}
+                  {sketch ? (
+                    bones
+                  ) : (
+                    <>
+                      {about}
+                      {/* Tags right after the prose, as Steam files
+                          them: they are the description's index, not
+                          archive material — and they were three
+                          screens deep in the crate. */}
+                      {game.tags && game.tags.length > 0 ? (
+                        <View style={styles.block}>{fileTags}</View>
+                      ) : null}
+                      {ratingsBreakdown}
+                      {yourTake}
+                      {fileBox}
+                      {mediaTail}
+                    </>
+                  )}
                 </Animated.View>
               </>
             )}
@@ -1884,7 +2019,7 @@ const styles = StyleSheet.create({
   },
 
   // hero
-  hero: { height: 480, justifyContent: 'flex-end' },
+  hero: { justifyContent: 'flex-end' },
   heroGrain: {
     position: 'absolute',
     left: 0,
@@ -2461,6 +2596,18 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   fileSectionLast: { borderBottomWidth: 0 },
+  /** Leading the panel, the counts need no rule above them. */
+  whoElseFirst: { marginTop: 0, paddingTop: 0, borderTopWidth: 0 },
+  /** A row of the spec sheet: label over value, a hairline between. */
+  fact: { paddingVertical: SPACING.sm + 2, gap: 3 },
+  factRule: { borderTopWidth: 1, borderTopColor: COLORS.stroke },
+  platformFact: { gap: SPACING.xs + 2, alignItems: 'flex-start' },
+  mediaBones: { flexDirection: 'row', gap: SPACING.sm },
+  bonesProse: { gap: 0 },
+  bonesLine: { height: 23, width: '100%' },
+  bonesLineShort: { height: 23, width: '72%' },
+  bonesHeading: { height: 24, width: 128, marginTop: SPACING.lg },
+  bonesVerdict: { height: 228, borderRadius: RADIUS.md },
   fileFlat: {},
   /** A label, at the size of a label — not a fourth headline. */
   fileLabel: { ...TYPE.micro, color: COLORS.mediumGrey },

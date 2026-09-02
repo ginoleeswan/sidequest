@@ -10,7 +10,7 @@ import { COLORS } from '@/styles/colors';
 import { OVER_IMAGE, TYPE } from '@/styles/typography';
 import { LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
 import { useQueryClient } from '@tanstack/react-query';
-import { gameDetailQuery } from '@/api/gameDetail';
+import { prefetchGame } from '@/api/gameDetail';
 
 interface Props {
   game: Game;
@@ -23,11 +23,7 @@ export function GameCard({ game, wide = false }: Props) {
 
   // Warm the detail query the moment a finger lands; see ScaleButton.
   const queryClient = useQueryClient();
-  const prefetch = () =>
-    queryClient.prefetchQuery({
-      ...gameDetailQuery(game.id),
-      staleTime: 5 * 60 * 1000,
-    });
+  const prefetch = () => prefetchGame(queryClient, game);
 
   return (
     <ScaleButton

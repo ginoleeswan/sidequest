@@ -18,3 +18,11 @@ export function celebrate(): void {
     )
     .catch(() => {});
 }
+
+/** The light click of a selection changing. */
+export function tap(): void {
+  if (Platform.OS === 'web') return;
+  import('expo-haptics')
+    .then((haptics) => haptics.selectionAsync())
+    .catch(() => {});
+}

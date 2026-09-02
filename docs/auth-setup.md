@@ -15,6 +15,26 @@ future us) will otherwise be reverse-engineering a dashboard.
 
 Enabled: **Email**, **Apple**, **Google**.
 
+### Redirect URLs
+
+Authentication → URL Configuration → Redirect URLs has to list every
+place a sign-in link is allowed to land, or Supabase sends the link to
+the Site URL instead and the app never sees it. The web needs the
+deployment's origin; native needs the app's own scheme, one per build
+variant (`app.config.js`), all pointing at the You page where the
+sign-in row lives:
+
+```
+https://gosidequest.vercel.app
+sidequest://you
+sidequest-dev://you
+sidequest-preview://you
+```
+
+The email flow depends on this on native: the app reads the session out
+of the URL it is opened with (`lib/auth.tsx`), which it can only do if
+the link was allowed to open the app.
+
 ## Google
 
 Cloud project `sidequest-506413`, under `ginoleemusic@gmail.com`. One

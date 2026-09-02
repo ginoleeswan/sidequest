@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react-native';
-import { Dimensions } from 'react-native';
+import { Dimensions, Platform } from 'react-native';
 
 import { useBreakpoint } from '../useBreakpoint';
 
@@ -16,7 +16,17 @@ const at = async (width: number) => {
   return result.current;
 };
 
-afterEach(() => jest.restoreAllMocks());
+const NATIVE_OS = Platform.OS;
+const onWeb = () =>
+  Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true });
+
+afterEach(() => {
+  jest.restoreAllMocks();
+  Object.defineProperty(Platform, 'OS', {
+    value: NATIVE_OS,
+    configurable: true,
+  });
+});
 
 describe('useBreakpoint', () => {
   it.each([
@@ -25,10 +35,26 @@ describe('useBreakpoint', () => {
     [899, 3, false],
     [900, 4, true],
     [1400, 5, true],
-  ])('%spx → %s columns, expanded=%s', async (width, columns, expanded) => {
-    const bp = await at(width);
-    expect(bp.columns).toBe(columns);
-    expect(bp.isExpanded).toBe(expanded);
-    expect(bp.isCompact).toBe(!expanded);
+  ])(
+    'on the web, %spx → %s columns, expanded=%s',
+    async (width, columns, expanded) => {
+      onWeb();
+      const bp = await at(width);
+      expect(bp.columns).toBe(columns);
+      expect(bp.isExpanded).toBe(expanded);
+      expect(bp.isCompact).toBe(!expanded);
+    }
+  );
+
+  /**
+   * The desk is a web layout. A tablet gets the phone's layout at the
+   * tablet's column count — never the sidebar shell, which duplicates
+   * the native tab bar and has no safe-area clearance.
+   */
+  it('never expands on native, however wide the screen', async () => {
+    const bp = await at(1024);
+    expect(bp.isExpanded).toBe(false);
+    expect(bp.isCompact).toBe(true);
+    expect(bp.columns).toBe(4);
   });
 });

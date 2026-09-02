@@ -20,6 +20,27 @@ describe('collapsible text', () => {
     expect(screen.getByText(BODY).props.numberOfLines).toBe(3);
   });
 
+  /**
+   * Native reports how many lines the text laid out in. Fewer than the
+   * clamp means the clamp cut nothing, and a "Read More" that opens
+   * nothing is the tell of a templated page.
+   */
+  it('withholds the control when the clamp cut nothing', async () => {
+    await render(<ReadMoreText>{BODY}</ReadMoreText>);
+    await fireEvent(screen.getByText(BODY), 'textLayout', {
+      nativeEvent: { lines: [{ text: BODY }] },
+    });
+    expect(screen.queryByText('Read More')).toBeNull();
+  });
+
+  it('keeps the control when the text ran past the clamp', async () => {
+    await render(<ReadMoreText>{BODY}</ReadMoreText>);
+    await fireEvent(screen.getByText(BODY), 'textLayout', {
+      nativeEvent: { lines: [{}, {}, {}, {}] },
+    });
+    expect(screen.getByText('Read More')).toBeTruthy();
+  });
+
   it('honours a clamp the caller sets', async () => {
     await render(<ReadMoreText numberOfLines={1}>{BODY}</ReadMoreText>);
     expect(screen.getByText(BODY).props.numberOfLines).toBe(1);

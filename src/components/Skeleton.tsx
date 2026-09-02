@@ -10,6 +10,7 @@ import {
 
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { detailHeroHeight } from '@/lib/detailHero';
 import { STAGE_BOUNDS, stageHeight } from '@/lib/stage';
 import { HOME_SHELVES } from '@/constants/categories';
 import { DURATION, EASING } from '@/styles/motion';
@@ -356,9 +357,17 @@ export function SkeletonDetailExpanded() {
  * About heading at 649 and its prose at 683.
  */
 export function SkeletonDetail() {
+  const { height } = useWindowDimensions();
   return (
     <View>
-      <View style={styles.detailHero}>
+      <View
+        style={[
+          styles.detailHero,
+          // The same share of the window the masthead takes — see
+          // lib/detailHero — so the art lands where the bone stood.
+          { height: detailHeroHeight(height) } as ViewStyle,
+        ]}
+      >
         <Skeleton style={styles.detailHeroFill} />
         <View style={styles.detailMasthead}>
           <Skeleton style={styles.detailTitle} />
@@ -462,7 +471,7 @@ const styles = StyleSheet.create({
    * Every number here is the loaded page measured at 390 points, so the
    * bones stand where the words will. See `SkeletonDetail`.
    */
-  detailHero: { height: 480, justifyContent: 'flex-end' },
+  detailHero: { justifyContent: 'flex-end' },
   /** The artwork's stand-in, behind the masthead rather than above it. */
   detailHeroFill: {
     position: 'absolute',

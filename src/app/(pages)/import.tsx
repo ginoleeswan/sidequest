@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -303,6 +304,34 @@ export default function ImportScreen() {
     );
   };
 
+  const bar =
+    picked.size > 0 ? (
+      <View
+        style={[
+          styles.bar,
+          !STICKY && styles.barFloating,
+          { paddingBottom: insets.bottom + SPACING.md },
+        ]}
+      >
+        <Pressable
+          onPress={runImport}
+          disabled={progress != null}
+          style={[styles.import, progress != null && styles.importBusy]}
+          accessibilityRole="button"
+        >
+          {progress ? (
+            <Text style={styles.importText}>
+              Matching {progress.done} of {progress.total}…
+            </Text>
+          ) : (
+            <Text style={styles.importText}>
+              Import {picked.size} {picked.size === 1 ? 'game' : 'games'}
+            </Text>
+          )}
+        </Pressable>
+      </View>
+    ) : null;
+
   return (
     <Textured style={styles.background}>
       <PageTitle>Import from Steam — Sidequest</PageTitle>
@@ -341,33 +370,22 @@ export default function ImportScreen() {
           {body()}
         </View>
 
-        {picked.size > 0 && (
-          <View
-            style={[styles.bar, { paddingBottom: insets.bottom + SPACING.md }]}
-          >
-            <Pressable
-              onPress={runImport}
-              disabled={progress != null}
-              style={[styles.import, progress != null && styles.importBusy]}
-              accessibilityRole="button"
-            >
-              {progress ? (
-                <Text style={styles.importText}>
-                  Matching {progress.done} of {progress.total}…
-                </Text>
-              ) : (
-                <Text style={styles.importText}>
-                  Import {picked.size} {picked.size === 1 ? 'game' : 'games'}
-                </Text>
-              )}
-            </Pressable>
-          </View>
-        )}
+        {/* Sticky on the web, in the document; on native the bar is a
+            sibling of the scroller, and this is only its room. */}
+        {STICKY ? (
+          bar
+        ) : picked.size > 0 ? (
+          <View style={styles.barRoom} />
+        ) : null}
         <SiteFooter />
       </Screen>
+      {STICKY ? null : bar}
     </Textured>
   );
 }
+
+/** Where a bar can pin itself: the browser knows sticky, Yoga does not. */
+const STICKY = Platform.OS === 'web';
 
 const styles = StyleSheet.create({
   background: { flexGrow: 1, backgroundColor: COLORS.darkGrey },
@@ -444,8 +462,9 @@ const styles = StyleSheet.create({
     color: COLORS.lightGrey,
   },
   bar: {
-    position: 'sticky' as unknown as 'absolute',
-    bottom: 0,
+    ...(STICKY
+      ? { position: 'sticky' as unknown as 'absolute', bottom: 0 }
+      : null),
     left: 0,
     right: 0,
     paddingHorizontal: SPACING.md,
@@ -454,6 +473,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: COLORS.stroke,
   },
+  barFloating: { position: 'absolute', bottom: 0 },
+  /** The height a floating bar covers, paid back under the list. */
+  barRoom: { height: 112 },
   import: {
     backgroundColor: COLORS.white,
     borderRadius: RADIUS.lg,

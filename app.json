@@ -18,7 +18,6 @@
       "appleTeamId": "A85929B4HV",
       "entitlements": {
         "com.apple.security.application-groups": [
-          "group.com.glstudio.sidequest",
           "group.com.glstudio.sidequest"
         ]
       },

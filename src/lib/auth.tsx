@@ -1,10 +1,16 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Linking from 'expo-linking';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 
 import type { Session } from '@supabase/supabase-js';
 
-import { authConfigured, getSupabase, somethingToRestore } from './supabase';
+import {
+  authConfigured,
+  getSupabase,
+  sessionFromUrl,
+  somethingToRestore,
+} from './supabase';
 import { kv } from './storage';
 import { forgetSyncCursors } from './sync/SyncProvider';
 
@@ -98,6 +104,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  /**
+   * The sign-in link, arriving on a phone.
+   *
+   * The email flow ends in a link, and on native that link opens the
+   * app through its scheme with the session in the URL. supabase-js
+   * only reads `window.location`, so the app reads the URL itself:
+   * the one it was opened with, and any that arrives while it is
+   * already open. The web never comes through here — there the client
+   * reads the redirect on its own.
+   */
+  useEffect(() => {
+    if (!authConfigured || Platform.OS === 'web') return;
+    let alive = true;
+
+    const adopt = async (url: string | null) => {
+      const carried = sessionFromUrl(url);
+      if (!carried) return;
+      const client = await getSupabase();
+      const { data, error } =
+        'code' in carried
+          ? await client.auth.exchangeCodeForSession(carried.code)
+          : await client.auth.setSession(carried);
+      if (!alive || error) return;
+      setSession(data.session);
+      setLoading(false);
+    };
+
+    Linking.getInitialURL()
+      .then(adopt)
+      .catch(() => {
+        // A link that will not parse is a link that did not sign in;
+        // the screen stays signed out, which is what it already shows.
+      });
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      void adopt(url).catch(() => {});
+    });
+    return () => {
+      alive = false;
+      subscription.remove();
+    };
+  }, []);
+
   const value = useMemo<AuthValue>(
     () => ({
       session,
@@ -167,14 +215,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) throw error;
       },
 
-      /** A link in the inbox — no password to invent, lose or reuse. */
+      /**
+       * A link in the inbox — no password to invent, lose or reuse.
+       *
+       * The link comes back to wherever it was asked for: the site on
+       * the web, and on a phone the app itself, through its scheme, on
+       * the You page where the sign-in lives. The scheme differs per
+       * build variant (see app.config.js), and each has to be on the
+       * Supabase project's redirect allow-list — docs/auth-setup.md.
+       */
       signInWithEmail: async (email: string) => {
         const client = await getSupabase();
         const { error } = await client.auth.signInWithOtp({
           email,
           options: {
             emailRedirectTo:
-              Platform.OS === 'web' ? window.location.origin : undefined,
+              Platform.OS === 'web'
+                ? window.location.origin
+                : Linking.createURL('you'),
           },
         });
         if (error) throw error;

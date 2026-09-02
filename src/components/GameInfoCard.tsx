@@ -11,7 +11,7 @@ import { COLORS } from '@/styles/colors';
 import { RADIUS, SHADOW, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 import { useQueryClient } from '@tanstack/react-query';
-import { gameDetailQuery } from '@/api/gameDetail';
+import { prefetchGame } from '@/api/gameDetail';
 
 /** Row-style result card: thumbnail, identity, facts. */
 export function GameInfoCard({ game }: { game: Game }) {
@@ -21,11 +21,7 @@ export function GameInfoCard({ game }: { game: Game }) {
 
   // Warm the detail query the moment a finger lands; see ScaleButton.
   const queryClient = useQueryClient();
-  const prefetch = () =>
-    queryClient.prefetchQuery({
-      ...gameDetailQuery(game.id),
-      staleTime: 5 * 60 * 1000,
-    });
+  const prefetch = () => prefetchGame(queryClient, game);
 
   return (
     <ScaleButton

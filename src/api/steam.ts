@@ -1,5 +1,7 @@
 /** Client side of Steam connect. The key never leaves the server function. */
 
+import { apiUrl } from './base';
+
 export interface SteamGame {
   appid: number;
   name: string;
@@ -63,7 +65,7 @@ export function recentGames(games: SteamGame[]): SteamGame[] {
 
 async function call<T>(params: Record<string, string>): Promise<T> {
   const search = new URLSearchParams(params);
-  const res = await fetch(`/api/steam?${search}`);
+  const res = await fetch(apiUrl(`/api/steam?${search}`));
   const body = (await res.json().catch(() => ({}))) as T & { error?: string };
   if (!res.ok) {
     throw new Error(body.error ?? `Steam request failed (${res.status})`);

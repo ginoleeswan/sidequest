@@ -6,6 +6,7 @@ import {
 } from '../rawg';
 
 const ORIGINAL_KEY = process.env.EXPO_PUBLIC_RAWG_API_KEY;
+const ORIGINAL_DIRECT = process.env.EXPO_PUBLIC_RAWG_DIRECT;
 
 function mockFetch(payload: unknown, ok = true, status = 200) {
   const spy = jest.fn().mockResolvedValue({
@@ -20,13 +21,47 @@ function mockFetch(payload: unknown, ok = true, status = 200) {
 
 const urlOf = (spy: jest.Mock) => new URL(spy.mock.calls[0][0] as string);
 
+/**
+ * Where a request goes by default: through the app's own proxy, on
+ * every platform. Jest runs the native code paths, so this is the
+ * phone's behaviour — no key in the URL, the deployment's origin in
+ * front of it. Ask for RAWG directly and the key travels along.
+ */
+describe('which door a request leaves by', () => {
+  afterEach(() => {
+    process.env.EXPO_PUBLIC_RAWG_API_KEY = ORIGINAL_KEY;
+    process.env.EXPO_PUBLIC_RAWG_DIRECT = ORIGINAL_DIRECT;
+  });
+
+  it('goes through the edge-cached proxy, with no key, by default', async () => {
+    delete process.env.EXPO_PUBLIC_RAWG_DIRECT;
+    delete process.env.EXPO_PUBLIC_RAWG_API_KEY;
+    const spy = mockFetch({ id: 1 });
+    await getGame(3498);
+    const url = urlOf(spy);
+    expect(url.origin).toBe('https://gosidequest.vercel.app');
+    expect(url.pathname).toBe('/rawg/games/3498');
+    expect(url.searchParams.has('key')).toBe(false);
+  });
+
+  it('calls RAWG itself only when asked to', async () => {
+    process.env.EXPO_PUBLIC_RAWG_DIRECT = '1';
+    process.env.EXPO_PUBLIC_RAWG_API_KEY = 'test-key';
+    const spy = mockFetch({ id: 1 });
+    await getGame(3498);
+    expect(urlOf(spy).origin).toBe('https://api.rawg.io');
+  });
+});
+
 describe('rawg client', () => {
   beforeEach(() => {
+    process.env.EXPO_PUBLIC_RAWG_DIRECT = '1';
     process.env.EXPO_PUBLIC_RAWG_API_KEY = 'test-key';
   });
 
   afterAll(() => {
     process.env.EXPO_PUBLIC_RAWG_API_KEY = ORIGINAL_KEY;
+    process.env.EXPO_PUBLIC_RAWG_DIRECT = ORIGINAL_DIRECT;
   });
 
   it('attaches the API key to every request', async () => {
@@ -68,7 +103,13 @@ describe('rawg client', () => {
 });
 
 describe('api key hygiene', () => {
+  afterAll(() => {
+    process.env.EXPO_PUBLIC_RAWG_API_KEY = ORIGINAL_KEY;
+    process.env.EXPO_PUBLIC_RAWG_DIRECT = ORIGINAL_DIRECT;
+  });
+
   it('strips whitespace pasted into the env var', async () => {
+    process.env.EXPO_PUBLIC_RAWG_DIRECT = '1';
     process.env.EXPO_PUBLIC_RAWG_API_KEY = '  abc123\n\n';
     const spy = jest.fn().mockResolvedValue({
       ok: true,

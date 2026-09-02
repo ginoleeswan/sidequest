@@ -20,7 +20,7 @@ import { WidgetPublisher } from '@/components/WidgetPublisher';
 import { SyncProvider } from '@/lib/sync/SyncProvider';
 import { DurationsProvider } from '@/lib/durations';
 import { LibraryProvider } from '@/lib/library';
-import { COLORS } from '@/styles/colors';
+import { NATIVE_STACK_OPTIONS } from '@/lib/nativeStack';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -174,24 +174,26 @@ export default function RootLayout() {
                      * navigation bar in a browser, and no history stack
                      * the platform will draw for us.
                      */}
-                    <Stack
-                      screenOptions={{
-                        headerShown: Platform.OS !== 'web',
-                        headerTransparent: true,
-                        headerTitle: '',
-                        /* Chevron only. Without this the capsule reads
-                         "(tabs)" — UIKit labels the back button with the
-                         previous route's name, and the previous route is
-                         a group. */
-                        headerBackButtonDisplayMode: 'minimal',
-                        headerBackTitle: '',
-                        headerTintColor: COLORS.white,
-                        contentStyle: { backgroundColor: COLORS.darkGrey },
-                      }}
-                    >
+                    <Stack screenOptions={NATIVE_STACK_OPTIONS}>
                       {/* The tab bar is the chrome inside this one. */}
                       <Stack.Screen
                         name="(tabs)"
+                        options={{ headerShown: false }}
+                      />
+                      {/* Each group is a stack of its own — see
+                          GroupStack — and draws the header for the
+                          screens inside it, so the root must not draw
+                          a second one over the top. */}
+                      <Stack.Screen
+                        name="game"
+                        options={{ headerShown: false }}
+                      />
+                      <Stack.Screen
+                        name="by"
+                        options={{ headerShown: false }}
+                      />
+                      <Stack.Screen
+                        name="(pages)"
                         options={{ headerShown: false }}
                       />
                     </Stack>

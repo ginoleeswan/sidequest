@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DROP_REASONS, type DropReason } from '@/lib/drops';
@@ -26,14 +26,32 @@ export function LetGoBar({
   /** How many are being let go, so the question can be plural or not. */
   count,
   onLetGo,
+  floating = false,
 }: {
   count: number;
   onLetGo: (reason?: DropReason) => void;
+  /**
+   * Pinned to the foot of the screen, over the scroller.
+   *
+   * On the web the bar is sticky and pins itself wherever it is in the
+   * document. Native has no sticky: rendered inside the scroller it sat
+   * in flow at the very end of the list, so the button that commits
+   * the act was a full library's scroll away. A floating bar is
+   * rendered by its screen as a sibling OUTSIDE the scroller, absolute
+   * at the bottom, which is what sticky was standing in for.
+   */
+  floating?: boolean;
 }) {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.bar, { paddingBottom: insets.bottom + SPACING.md }]}>
+    <View
+      style={[
+        styles.bar,
+        floating && styles.floating,
+        { paddingBottom: insets.bottom + SPACING.md },
+      ]}
+    >
       <Text style={styles.barCount}>
         Why {count === 1 ? 'this one' : 'these'}? Optional.
       </Text>
@@ -62,8 +80,11 @@ export function LetGoBar({
 
 const styles = StyleSheet.create({
   bar: {
-    position: 'sticky' as unknown as 'absolute',
-    bottom: 0,
+    // Sticky is CSS. Yoga does not know the word and drops the whole
+    // position, so it is only asked for where it exists.
+    ...(Platform.OS === 'web'
+      ? { position: 'sticky' as unknown as 'absolute', bottom: 0 }
+      : null),
     left: 0,
     right: 0,
     gap: SPACING.sm,
@@ -73,6 +94,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: COLORS.stroke,
   },
+  floating: { position: 'absolute', bottom: 0 },
   barCount: {
     ...TYPE.tag,
     // Letting go has its own colour in this app; the question that

@@ -1,5 +1,7 @@
 /** Client side of the live-stream lookup. The credentials stay on the server. */
 
+import { apiUrl } from './base';
+
 export interface LiveStream {
   id: string;
   /** The channel's display name. */
@@ -29,7 +31,9 @@ export interface LiveStream {
 export async function fetchLiveStreams(game: string): Promise<LiveStream[]> {
   if (!game.trim()) return [];
   try {
-    const res = await fetch(`/api/twitch?game=${encodeURIComponent(game)}`);
+    const res = await fetch(
+      apiUrl(`/api/twitch?game=${encodeURIComponent(game)}`)
+    );
     if (!res.ok) return [];
     const body = (await res.json()) as { streams?: LiveStream[] };
     return body.streams ?? [];

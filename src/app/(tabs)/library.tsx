@@ -726,7 +726,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: GUTTER,
-    height: 40 + SPACING.sm,
+    // A floor, not a fixed height: the safe-area inset is padding INSIDE
+    // this box, and at 48 the box was shorter than its own padding on a
+    // notched phone, so the wordmark rendered below it and the list
+    // scrolled over the top of the brand.
+    minHeight: 40 + SPACING.sm,
   },
   nativeBrand: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   nativeWordmark: { ...WORDMARK },

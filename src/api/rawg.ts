@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
 
+import { SITE_ORIGIN } from '@/constants/site';
+
 import type {
   CollectionFeedItem,
   Game,
@@ -11,21 +13,41 @@ import type {
 } from './types';
 
 /**
- * On web the API and image CDN are proxied through our own domain — in
- * production via the vercel.json rewrites (backed by api/rawg-proxy.ts),
- * in dev via the Metro middleware in metro.config.js. Same-origin
- * requests can't be blocked by CORS and are far less likely to be caught
- * by content blockers or privacy relays - the cause of "Load failed"
- * fetches on iOS Safari. It also means the API key never has to reach
- * the browser: the proxy holds it server-side and injects it, so web
- * requests carry no key at all (see `rawg()` below). Native still calls
- * RAWG directly with the key embedded in the app binary — a key shipped
- * that way is extractable regardless of where it lives, so there is
- * nothing to gain by proxying native traffic too.
+ * Every RAWG request goes through the app's own `/rawg` proxy, on every
+ * platform.
+ *
+ * On the web that is a same-origin path — in production the vercel.json
+ * rewrite backed by api/rawg-proxy.ts, in dev the Metro middleware in
+ * metro.config.js. Same-origin requests can't be blocked by CORS and are
+ * far less likely to be caught by content blockers or privacy relays,
+ * the cause of "Load failed" fetches on iOS Safari.
+ *
+ * Native used to call api.rawg.io directly with a key baked into the
+ * binary, on the reasoning that a shipped key is extractable anyway.
+ * True, but it left the faster path on the table: the proxy answers
+ * from Vercel's edge cache (`s-maxage=300, stale-while-revalidate=3600`),
+ * so the shelves everyone opens are served in tens of milliseconds
+ * from a node near the phone instead of hundreds from RAWG's origin,
+ * and one rate limit protects one key. It also means a native build
+ * needs no RAWG key at all, and `npx expo start` on a phone works with
+ * an empty .env.
+ *
+ * The direct path survives as an explicit opt-in for working offline
+ * from the deployment: set EXPO_PUBLIC_RAWG_DIRECT=1 alongside
+ * EXPO_PUBLIC_RAWG_API_KEY and native calls RAWG itself.
  */
-const USE_PROXY = Platform.OS === 'web';
+const SAME_ORIGIN_PROXY = Platform.OS === 'web';
 
-const BASE_URL = USE_PROXY ? '/rawg' : 'https://api.rawg.io/api';
+/** Set at build time; read lazily so tests can flip it. */
+const callsRawgDirectly = () =>
+  !SAME_ORIGIN_PROXY && Boolean(process.env.EXPO_PUBLIC_RAWG_DIRECT?.trim());
+
+const baseUrl = () =>
+  SAME_ORIGIN_PROXY
+    ? '/rawg'
+    : callsRawgDirectly()
+      ? 'https://api.rawg.io/api'
+      : `${SITE_ORIGIN}/rawg`;
 
 const PAGE_SIZE = '40';
 
@@ -79,7 +101,7 @@ export function mediaUri(
 ): string | undefined {
   if (!uri) return undefined;
   const source = slotWidth ? sized(uri, slotWidth) : uri;
-  if (USE_PROXY && source.startsWith('https://media.rawg.io/')) {
+  if (SAME_ORIGIN_PROXY && source.startsWith('https://media.rawg.io/')) {
     return source.replace('https://media.rawg.io', '/media');
   }
   return source;
@@ -168,12 +190,12 @@ async function rawg<T>(
   path: string,
   params: Record<string, string> = {}
 ): Promise<T> {
-  // Proxied (web): the server injects the real key, so none is sent from
-  // here — apiKey() reads EXPO_PUBLIC_RAWG_API_KEY, which a proxied build
-  // doesn't need to have set at all. Direct (native): the key travels
-  // with the request, same as it always has.
+  // Proxied: the server injects the real key, so none is sent from here
+  // — apiKey() reads EXPO_PUBLIC_RAWG_API_KEY, which a proxied build
+  // doesn't need to have set at all. Direct (opt-in on native): the key
+  // travels with the request.
   const search = new URLSearchParams(
-    USE_PROXY ? params : { key: apiKey(), ...params }
+    callsRawgDirectly() ? { key: apiKey(), ...params } : params
   );
 
   // A request that never settles is worse than one that fails: without a
@@ -184,7 +206,7 @@ async function rawg<T>(
 
   let res: Response;
   try {
-    res = await fetch(`${BASE_URL}/${path}?${search}`, {
+    res = await fetch(`${baseUrl()}/${path}?${search}`, {
       signal: controller.signal,
     });
   } catch (cause) {

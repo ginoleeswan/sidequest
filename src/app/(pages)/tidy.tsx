@@ -1,7 +1,14 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  Platform,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppHeader } from '@/components/AppHeader';
@@ -122,6 +129,46 @@ export default function TidyScreen() {
     );
   };
 
+  const hasBar = asking != null || picked.size > 0;
+  const bars = (
+    <>
+      {asking && (
+        <LetGoBar count={asking.length} onLetGo={letGo} floating={!STICKY} />
+      )}
+
+      {picked.size > 0 && !asking && (
+        <View
+          style={[
+            styles.bar,
+            !STICKY && styles.barFloating,
+            { paddingBottom: insets.bottom + SPACING.md },
+          ]}
+        >
+          <Text style={styles.barCount}>
+            {picked.size} chosen
+            {hours > 0 ? ` · ${formatHours(hours)} back` : ''}
+          </Text>
+          <View style={styles.barActions}>
+            <Pressable
+              onPress={() => move('finished')}
+              style={styles.secondary}
+              accessibilityRole="button"
+            >
+              <Text style={styles.secondaryText}>Actually finished</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setAsking(chosen())}
+              style={styles.primary}
+              accessibilityRole="button"
+            >
+              <Text style={styles.primaryText}>Let these go</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
+    </>
+  );
+
   return (
     <Textured style={styles.background}>
       <PageTitle>Backlog amnesty — Sidequest</PageTitle>
@@ -229,39 +276,20 @@ export default function TidyScreen() {
           )}
         </View>
 
-        {asking && <LetGoBar count={asking.length} onLetGo={letGo} />}
-
-        {picked.size > 0 && !asking && (
-          <View
-            style={[styles.bar, { paddingBottom: insets.bottom + SPACING.md }]}
-          >
-            <Text style={styles.barCount}>
-              {picked.size} chosen
-              {hours > 0 ? ` · ${formatHours(hours)} back` : ''}
-            </Text>
-            <View style={styles.barActions}>
-              <Pressable
-                onPress={() => move('finished')}
-                style={styles.secondary}
-                accessibilityRole="button"
-              >
-                <Text style={styles.secondaryText}>Actually finished</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setAsking(chosen())}
-                style={styles.primary}
-                accessibilityRole="button"
-              >
-                <Text style={styles.primaryText}>Let these go</Text>
-              </Pressable>
-            </View>
-          </View>
-        )}
+        {/* On the web the bars are sticky and live here, in the
+            document. Native has no sticky — see `floating` below — so
+            there they are siblings of the scroller and this is only
+            the room they need at the foot of the list. */}
+        {STICKY ? bars : hasBar ? <View style={styles.barRoom} /> : null}
         <SiteFooter />
       </Screen>
+      {STICKY ? null : bars}
     </Textured>
   );
 }
+
+/** Where a bar can pin itself: the browser knows sticky, Yoga does not. */
+const STICKY = Platform.OS === 'web';
 
 const styles = StyleSheet.create({
   background: { flexGrow: 1, backgroundColor: COLORS.darkGrey },
@@ -311,8 +339,9 @@ const styles = StyleSheet.create({
   },
   separator: { height: 1, backgroundColor: COLORS.stroke },
   bar: {
-    position: 'sticky' as unknown as 'absolute',
-    bottom: 0,
+    ...(STICKY
+      ? { position: 'sticky' as unknown as 'absolute', bottom: 0 }
+      : null),
     left: 0,
     right: 0,
     gap: SPACING.sm,
@@ -322,6 +351,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: COLORS.stroke,
   },
+  barFloating: { position: 'absolute', bottom: 0 },
+  /** The height a floating bar covers, paid back under the list. */
+  barRoom: { height: 148 },
   barCount: {
     ...TYPE.tag,
     // Letting go has its own colour in this app; the question that
