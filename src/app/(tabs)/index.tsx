@@ -37,7 +37,6 @@ import { Chip } from '@/components/Chip';
 import { FadeInView } from '@/components/FadeInView';
 import { SiteFooter } from '@/components/SiteFooter';
 import { HomeStage } from '@/components/HomeStage';
-import { GameInfoCard } from '@/components/GameInfoCard';
 import { GameTile } from '@/components/GameTile';
 import { Message } from '@/components/Message';
 import { PageTitle } from '@/components/PageTitle';
@@ -50,6 +49,9 @@ import { MoodShelf } from '@/components/MoodShelf';
 import { RecentShelf } from '@/components/RecentShelf';
 import { SeriesNews } from '@/components/SeriesNews';
 import { SearchInput } from '@/components/SearchInput';
+import { SearchLanding } from '@/components/SearchLanding';
+import { SearchResult } from '@/components/SearchResult';
+import { TopResult } from '@/components/TopResult';
 import { SectionHeader } from '@/components/SectionHeader';
 import { Shelf } from '@/components/Shelf';
 import { WhenNear } from '@/components/WhenNear';
@@ -86,6 +88,12 @@ import { useStage } from '@/hooks/useStage';
 import { stageHeight as stageHeightFor } from '@/lib/stage';
 import { useDurations } from '@/lib/durations';
 import { useLibrary } from '@/lib/library';
+import {
+  clearSearches,
+  forgetSearch,
+  readSearches,
+  rememberSearch,
+} from '@/lib/searchHistory';
 import {
   becauseYouFinished,
   becauseYouSaved,
@@ -173,7 +181,10 @@ export default function HomeScreen({
   }, [params.category, routedSection]);
 
   const debouncedQuery = useDebounced(query);
-  const searching = debouncedQuery.trim() !== '';
+  // An empty box is not a search, whatever the debounce still holds:
+  // clearing it, or Cancel, gives the page back at once rather than
+  // leaving the last results standing for another 400ms.
+  const searching = query.trim() !== '' && debouncedQuery.trim() !== '';
   const isHome = selection === 'home' && !searching;
   const section: Section = findSection(selection) ?? DISCOVER[0];
   const pageTitle = isHome
@@ -208,10 +219,24 @@ export default function HomeScreen({
 
   // ------------------------------------------------------------------ data
   const [searchOpen, setSearchOpen] = useState(false);
+  /**
+   * What the box remembers. Read when it opens rather than subscribed
+   * to: a list of eight on the device, and the only writer is this
+   * screen.
+   */
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const openSearch = () => {
+    setRecentSearches(readSearches());
+    setSearchOpen(true);
+  };
   const closeSearch = () => {
     setQuery('');
     setSearchOpen(false);
+    searchRef.current?.blur();
   };
+  // Written only when a search led somewhere - a result opened, or the
+  // return key pressed - so a half-typed word never makes the list.
+  const keepSearch = (term: string) => setRecentSearches(rememberSearch(term));
 
   const [refine, setRefine] = useState<BrowseRefinements>(DEFAULT_REFINEMENTS);
   const refineKey = [
@@ -329,9 +354,11 @@ export default function HomeScreen({
    * goldfish. The library is empty until hydration, so this is a no-op
    * on the pre-rendered render and takes effect on the next commit.
    */
+  // Search is the exception: asked for by name, a game you own is the
+  // answer, not noise - it comes back marked as yours rather than missing.
   const games = useMemo(
-    () => withoutOwned(fetched, library),
-    [fetched, library]
+    () => (searching ? fetched : withoutOwned(fetched, library)),
+    [fetched, library, searching]
   );
   const totalCount = list.data?.pages[0]?.count ?? 0;
   const featured = isHome ? games.slice(0, FEATURED_COUNT) : [];
@@ -504,59 +531,94 @@ export default function HomeScreen({
   // Previous results are on screen while the new key resolves.
   const refining = list.isPlaceholderData;
 
-  const gridHeader = searching ? (
-    <View style={styles.gridHeader}>
-      <SectionHeader
-        title={`Results for “${debouncedQuery}”`}
-        eyebrow={
-          totalCount ? `${totalCount.toLocaleString()} games` : undefined
-        }
-      />
-      {(creators.data?.length ?? 0) > 0 && (
-        <View style={styles.creatorRow}>
-          <Text style={styles.creatorLabel}>Also by</Text>
-          {creators.data?.map((creator) => (
-            <Chip
-              key={`${creator.kind}-${creator.id}`}
-              title={`${creator.name} (${creator.gamesCount})`}
-              onPress={() =>
-                router.push({
-                  pathname: '/by/[kind]',
-                  params: {
-                    kind: creator.kind,
-                    id: String(creator.id),
-                    name: creator.name,
-                  },
-                })
-              }
+  /**
+   * The phone's results head. The box above already shows the query,
+   * so a second "Results for" heading said the same thing twice at
+   * twice the size and pushed the first answer below the fold; here
+   * the controls come first, the count is a line, and the first match
+   * gets the frame.
+   */
+  const topResult =
+    searching && !isExpanded && games.length > 0 ? games[0] : null;
+  const creatorChips =
+    (creators.data?.length ?? 0) > 0 ? (
+      <View style={styles.creatorRow}>
+        <Text style={styles.creatorLabel}>Also by</Text>
+        {creators.data?.map((creator) => (
+          <Chip
+            key={`${creator.kind}-${creator.id}`}
+            title={`${creator.name} (${creator.gamesCount})`}
+            onPress={() =>
+              router.push({
+                pathname: '/by/[kind]',
+                params: {
+                  kind: creator.kind,
+                  id: String(creator.id),
+                  name: creator.name,
+                },
+              })
+            }
+          />
+        ))}
+      </View>
+    ) : null;
+
+  const gridHeader =
+    searching && !isExpanded ? (
+      <View style={styles.searchHead}>
+        <FilterBar value={refine} onChange={setRefine} />
+        {refining ? <ProgressLine /> : null}
+        {totalCount > 0 ? (
+          <Text style={styles.resultCount}>
+            {totalCount.toLocaleString()} {totalCount === 1 ? 'game' : 'games'}{' '}
+            for “{debouncedQuery}”
+          </Text>
+        ) : null}
+        {creatorChips}
+        {topResult ? (
+          <View style={refining && styles.refining}>
+            <TopResult
+              game={topResult}
+              onOpen={() => keepSearch(debouncedQuery)}
             />
-          ))}
-        </View>
-      )}
-      <FilterBar value={refine} onChange={setRefine} />
-      {refining && <ProgressLine />}
-    </View>
-  ) : !isHome ? (
-    <View style={styles.gridHeader}>
-      <CategoryHero
-        section={section}
-        lead={games[0]}
-        count={totalCount}
-        kind={GENRES.some((g) => g.key === section.key) ? 'genre' : 'discover'}
-        bleed={
-          isExpanded
-            ? { top: SPACING.lg, sides: SPACING.xl + GUTTER }
-            : { top: headerHeight, sides: GUTTER }
-        }
-      />
-      <FilterBar
-        value={refine}
-        onChange={setRefine}
-        disabled={section.key === 'must-play'}
-      />
-      {refining && <ProgressLine />}
-    </View>
-  ) : null;
+          </View>
+        ) : null}
+      </View>
+    ) : searching ? (
+      <View style={styles.gridHeader}>
+        <SectionHeader
+          title={`Results for “${debouncedQuery}”`}
+          eyebrow={
+            totalCount ? `${totalCount.toLocaleString()} games` : undefined
+          }
+        />
+        {creatorChips}
+        <FilterBar value={refine} onChange={setRefine} />
+        {refining && <ProgressLine />}
+      </View>
+    ) : !isHome ? (
+      <View style={styles.gridHeader}>
+        <CategoryHero
+          section={section}
+          lead={games[0]}
+          count={totalCount}
+          kind={
+            GENRES.some((g) => g.key === section.key) ? 'genre' : 'discover'
+          }
+          bleed={
+            isExpanded
+              ? { top: SPACING.lg, sides: SPACING.xl + GUTTER }
+              : { top: headerHeight, sides: GUTTER }
+          }
+        />
+        <FilterBar
+          value={refine}
+          onChange={setRefine}
+          disabled={section.key === 'must-play'}
+        />
+        {refining && <ProgressLine />}
+      </View>
+    ) : null;
 
   const grid = (
     <FadeInView
@@ -752,7 +814,9 @@ export default function HomeScreen({
       <PageTitle>{pageTitle}</PageTitle>
       <View style={styles.compactShell}>
         <Reveal
-          pending={list.isPending}
+          // The landing has nothing to load: its rows are on the device
+          // and its rail is what the storefront already fetched.
+          pending={list.isPending && !(searchOpen && !searching)}
           skeleton={
             // Only the non-home bones clear the header: the home stage
             // runs up behind it, so its skeleton starts at the top of
@@ -766,6 +830,8 @@ export default function HomeScreen({
                 >
                   {searching ? (
                     <>
+                      <SkeletonRow />
+                      <SkeletonRow />
                       <SkeletonRow />
                       <SkeletonRow />
                       <SkeletonRow />
@@ -786,7 +852,25 @@ export default function HomeScreen({
             </View>
           }
         >
-          {status ??
+          {searchOpen && !searching ? (
+            <SearchLanding
+              recent={recentSearches}
+              onPick={setQuery}
+              onForget={(term) => setRecentSearches(forgetSearch(term))}
+              onClear={() => {
+                clearSearches();
+                setRecentSearches([]);
+              }}
+              onOpenSection={(s) => {
+                setSearchOpen(false);
+                selectSection(s);
+              }}
+              popular={trendingShelf.slice(0, 10)}
+              paddingTop={headerHeight}
+              paddingBottom={SPACING.xl + insets.bottom}
+            />
+          ) : (
+            (status ??
             (isHome ? (
               <Screen
                 onRefresh={refreshHome}
@@ -903,10 +987,18 @@ export default function HomeScreen({
               </Screen>
             ) : searching ? (
               <FlatList
-                data={games}
+                // The first match is drawn in the head; the rows are the rest.
+                data={topResult ? games.slice(1) : games}
                 style={styles.listNative}
                 keyExtractor={(item) => String(item.id)}
-                renderItem={({ item }) => <GameInfoCard game={item} />}
+                renderItem={({ item }) => (
+                  <View style={refining && styles.refining}>
+                    <SearchResult
+                      game={item}
+                      onOpen={() => keepSearch(debouncedQuery)}
+                    />
+                  </View>
+                )}
                 keyboardShouldPersistTaps="handled"
                 keyboardDismissMode="on-drag"
                 showsVerticalScrollIndicator={false}
@@ -925,11 +1017,18 @@ export default function HomeScreen({
               />
             ) : (
               grid
-            ))}
+            )))
+          )}
         </Reveal>
 
         <View
-          style={[styles.headerFloat, { paddingTop: insets.top + SPACING.sm }]}
+          style={[
+            styles.headerFloat,
+            { paddingTop: insets.top + SPACING.sm },
+            // Nothing runs up behind the box: the dissolve the stage
+            // needs is thirty-two points of nothing over a list.
+            searchOpen && styles.headerFloatSearch,
+          ]}
           onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
         >
           {/* Opaque behind the wordmark only, then a long dissolve the
@@ -942,14 +1041,18 @@ export default function HomeScreen({
               ends under the wordmark, so the chips sit on the lip with
               the picture coming up behind them. */}
           <LinearGradient
-            colors={[
-              COLORS.navy,
-              COLORS.darkGrey,
-              'rgba(51,61,81,0.72)',
-              'rgba(51,61,81,0.34)',
-              'rgba(51,61,81,0)',
-            ]}
-            locations={[0, 0.3, 0.52, 0.78, 1]}
+            colors={
+              searchOpen
+                ? [COLORS.navy, COLORS.navy, 'rgba(39,47,63,0)']
+                : [
+                    COLORS.navy,
+                    COLORS.darkGrey,
+                    'rgba(51,61,81,0.72)',
+                    'rgba(51,61,81,0.34)',
+                    'rgba(51,61,81,0)',
+                  ]
+            }
+            locations={searchOpen ? [0, 0.72, 1] : [0, 0.3, 0.52, 0.78, 1]}
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
           />
@@ -965,10 +1068,16 @@ export default function HomeScreen({
                 style={styles.searchFull}
                 inputRef={searchRef}
                 autoFocus
+                onSubmit={keepSearch}
               />
-              <Text style={styles.cancel} onPress={closeSearch}>
-                Cancel
-              </Text>
+              <Pressable
+                onPress={closeSearch}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Close search"
+              >
+                <Text style={styles.cancel}>Cancel</Text>
+              </Pressable>
             </View>
           ) : (
             <View style={styles.titleRow}>
@@ -986,7 +1095,7 @@ export default function HomeScreen({
                   name="search"
                   size={21}
                   color={COLORS.lightGrey}
-                  onPress={() => setSearchOpen(true)}
+                  onPress={openSearch}
                   accessibilityLabel="Search games"
                   style={styles.libraryButton}
                 />
@@ -1041,6 +1150,12 @@ const styles = StyleSheet.create({
     color: COLORS.mediumGrey,
   },
   gridHeader: { marginBottom: SPACING.md, gap: SPACING.md },
+  /** The phone's results head: controls, a count, the first match. */
+  searchHead: { gap: SPACING.md, marginBottom: SPACING.sm },
+  resultCount: {
+    ...TYPE.caption,
+    color: COLORS.mediumGrey,
+  },
   gridRow: { gap: LAYOUT.gridGap },
   gridContent: {
     gap: LAYOUT.gridGap,
@@ -1097,6 +1212,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
     paddingBottom: SPACING.xl,
   },
+  headerFloatSearch: { paddingBottom: SPACING.sm },
   brand: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   titleRow: {
     flexDirection: 'row',

@@ -199,6 +199,7 @@ export function SkeletonGrid({ columns }: { columns: number }) {
 }
 
 /** Compact row-card silhouette. */
+/** A search result's bones: the poster, and the lines beside it. */
 export function SkeletonRow() {
   return (
     <View style={styles.rowCard}>
@@ -206,6 +207,7 @@ export function SkeletonRow() {
       <View style={styles.rowLines}>
         <Skeleton style={styles.lineWide} />
         <Skeleton style={styles.lineNarrow} />
+        <Skeleton style={styles.lineTiny} />
       </View>
     </View>
   );
@@ -431,17 +433,16 @@ const styles = StyleSheet.create({
   masthead: { minHeight: 168, borderRadius: RADIUS.lg },
   chipRow: { flexDirection: 'row', gap: SPACING.sm, overflow: 'hidden' },
   chip: { height: 36, borderRadius: 18 },
+  // No plate: the result rows sit on the page, so their bones do too.
   rowCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.md,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: RADIUS.lg,
-    padding: SPACING.sm + 2,
-    marginBottom: SPACING.md,
+    paddingVertical: SPACING.sm + 2,
   },
-  rowThumb: { width: 80, height: 80, borderRadius: RADIUS.md },
+  rowThumb: { ...LAYOUT.resultPoster, borderRadius: RADIUS.sm },
   rowLines: { flex: 1, gap: SPACING.sm },
+  lineTiny: { height: 8, width: '30%' },
   wideCard: {
     width: LAYOUT.cardWideWidth,
     height: LAYOUT.cardHeight,

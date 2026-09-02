@@ -90,6 +90,11 @@ export const LAYOUT = {
    * reads as a deliberate frame rather than a squashed box.
    */
   tileAspect: 3 / 4,
+  /**
+   * A search result's poster: a box on a shelf at the height of two
+   * lines of type and a fact, the 3:4 the tiles use.
+   */
+  resultPoster: { width: 56, height: 75 },
   cardWidth: 170,
   cardWideWidth: 300,
   cardHeight: 200,

@@ -23,6 +23,8 @@ interface Props {
   showShortcutHint?: boolean;
   /** Focus on mount — the compact header's search mode opens ready to type. */
   autoFocus?: boolean;
+  /** The return key was pressed with this text in the box. */
+  onSubmit?: (text: string) => void;
 }
 
 export function SearchInput({
@@ -32,6 +34,7 @@ export function SearchInput({
   inputRef,
   showShortcutHint = false,
   autoFocus = false,
+  onSubmit,
 }: Props) {
   return (
     <View style={[styles.container, style]}>
@@ -47,6 +50,7 @@ export function SearchInput({
         autoCorrect={false}
         autoCapitalize="none"
         autoFocus={autoFocus}
+        onSubmitEditing={() => onSubmit?.(value)}
       />
       {value.length > 0 ? (
         <Pressable

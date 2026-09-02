@@ -98,6 +98,7 @@ export const SUBSET_ICONS = [
   'sunny',
   'sync',
   'time',
+  'time-outline',
   'today',
   'trending-up',
   'trophy',

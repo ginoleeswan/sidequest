@@ -157,6 +157,43 @@ describe('the home screen', () => {
     }
   });
 
+  /**
+   * The phone's search is its own screen: the box opens on what you
+   * looked for before, and answers with the first match drawn large
+   * and the rest as rows — never a second heading repeating the query.
+   */
+  it('opens on your recent searches on a phone, and leads with the top result', async () => {
+    compact();
+    store['sidequest.searches.v1'] = JSON.stringify(['hades']);
+    jest.useFakeTimers();
+    try {
+      await renderApp(<HomeScreen />);
+      await act(async () => {
+        jest.advanceTimersByTime(500);
+      });
+      await fireEvent.press(screen.getByLabelText('Search games'));
+      expect(screen.getByText('hades')).toBeTruthy();
+      expect(screen.getByText('Start somewhere')).toBeTruthy();
+
+      await fireEvent.press(screen.getByLabelText('Search again for hades'));
+      await act(async () => {
+        jest.advanceTimersByTime(500);
+      });
+      await waitFor(() =>
+        expect(screen.getByText('12 games for “hades”')).toBeTruthy()
+      );
+      expect(screen.getByText('Top result')).toBeTruthy();
+      expect(screen.queryByText(/Results for/)).toBeNull();
+      // The top result is drawn once, in the frame, not again as a row.
+      expect(screen.getAllByText('Game 1')).toHaveLength(1);
+
+      await fireEvent.press(screen.getByLabelText('Close search'));
+      expect(screen.queryByText('Top result')).toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('leaves the storefront behind when you open a category', async () => {
     await renderApp(<HomeScreen />);
     await waitFor(() =>

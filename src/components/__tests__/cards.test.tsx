@@ -3,9 +3,9 @@ import { router } from 'expo-router';
 
 import { CommunityStats } from '../CommunityStats';
 import { GameCard } from '../GameCard';
-import { GameInfoCard } from '../GameInfoCard';
+import { SearchResult } from '../SearchResult';
 import type { AddedByStatus, Game } from '@/api/types';
-import { renderApp } from '@/test-utils';
+import { renderApp, useFakeStorage } from '@/test-utils';
 
 const game = {
   id: 7,
@@ -22,17 +22,17 @@ beforeEach(() => jest.mocked(router.push).mockClear());
 
 /** The three ways a game is shown outside its own page. */
 describe('the game cards', () => {
-  it('opens the game from a row card', async () => {
-    await renderApp(<GameInfoCard game={game} />);
+  it('opens the game from a search result, and says so first', async () => {
+    const onOpen = jest.fn();
+    await renderApp(<SearchResult game={game} onOpen={onOpen} />);
     await fireEvent.press(screen.getByText('Celeste'));
+    expect(onOpen).toHaveBeenCalled();
     expect(router.push).toHaveBeenCalledWith('/game/7');
   });
 
-  it('reads the facts off a row card in one line', async () => {
-    await renderApp(<GameInfoCard game={game} />);
-    expect(screen.getByText('4.5')).toBeTruthy();
-    expect(screen.getByText('· 2018')).toBeTruthy();
-    expect(screen.getByText('· Platformer')).toBeTruthy();
+  it('reads the facts off a search result in one line', async () => {
+    await renderApp(<SearchResult game={game} />);
+    expect(screen.getByText('2018 · Platformer · ★ 4.5')).toBeTruthy();
     expect(screen.getByText('91')).toBeTruthy();
   });
 
@@ -44,9 +44,23 @@ describe('the game cards', () => {
       genres: [],
       metacritic: null,
     };
-    await renderApp(<GameInfoCard game={sparse as unknown as Game} />);
+    await renderApp(<SearchResult game={sparse as unknown as Game} />);
     expect(screen.queryByText('91')).toBeNull();
     expect(screen.queryByText(/2018/)).toBeNull();
+  });
+
+  /**
+   * The one fact a games database cannot tell you: whether this is
+   * already yours. A result you have finished, offered as a discovery,
+   * is the search equivalent of a shop recommending what is in your bag.
+   */
+  it('marks a result you already have', async () => {
+    const store = useFakeStorage();
+    store['sidequest.library.v1'] = JSON.stringify({
+      '7': { addedAt: 1, status: 'playing', game },
+    });
+    await renderApp(<SearchResult game={game} />);
+    expect(screen.getByText('Playing')).toBeTruthy();
   });
 
   it('opens the game from a cover card', async () => {
