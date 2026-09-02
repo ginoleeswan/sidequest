@@ -28,7 +28,7 @@ import {
   gameQuery,
   placeholderDetail,
 } from '@/api/gameDetail';
-import { logoQuery, steamIdFrom } from '@/api/logo';
+import { artQuery, steamIdFrom } from '@/api/art';
 import { queryKeys } from '@/api/queryClient';
 import { fetchIgdbExtras, igdbCoverUri } from '@/api/igdb';
 import { friendlyError, mediaUri } from '@/api/rawg';
@@ -711,10 +711,25 @@ export default function GameInfoScreen() {
    * and stays if it answers nothing.
    */
   const steamId = igdb?.steam ?? steamIdFrom(storeLinks) ?? null;
-  const { data: logo } = useQuery({
-    ...logoQuery(game ?? { name: '', released: null, slug: '' }, steamId),
+  const { data: art } = useQuery({
+    ...artQuery(game ?? { name: '', released: null, slug: '' }, steamId),
     enabled: Boolean(game?.slug),
   });
+  const logo = art?.logo;
+  /**
+   * Box art, from IGDB where it has one and SteamGridDB where it does
+   * not — Valve's own where neither does. `undefined` while either is
+   * still out, so the plate stands rather than the crate deciding
+   * early that there is no box.
+   */
+  const boxArt: string | null | undefined =
+    igdb === undefined
+      ? undefined
+      : igdb?.cover
+        ? igdbCoverUri(igdb.cover, isExpanded ? '720p' : 'cover_big')
+        : art === undefined
+          ? undefined
+          : (art.grid?.url ?? null);
 
   useEffect(() => {
     if (game?.slug) learnDurations([game]);
@@ -1051,9 +1066,16 @@ export default function GameInfoScreen() {
   const deskHero = (
     <View style={styles.deskHero}>
       <View style={styles.deskBackdrop} pointerEvents="none">
-        {game.background_image ? (
+        {art?.hero || game.background_image ? (
           <Image
-            source={{ uri: mediaUri(game.background_image, 210) ?? undefined }}
+            // The hero's own colour where there is one — it is what the
+            // stage below is made of, so the weather matches the sky.
+            source={{
+              uri:
+                art?.hero?.thumb ??
+                mediaUri(game.background_image, 210) ??
+                undefined,
+            }}
             style={styles.deskBackdropImage}
             contentFit="cover"
             blurRadius={60}
@@ -1563,9 +1585,23 @@ export default function GameInfoScreen() {
             // round ones.
             style={styles.stageFrame}
           >
+            {/* The key-art frame becomes the hero where there is one:
+                the banner the publisher composed to carry its own logo,
+                at the 3:1 Steam's library page gives it, with the mark
+                set over it. The screenshots keep their 16:9. */}
             <CoverImage
-              uri={current.image}
-              style={styles.stageLead}
+              uri={
+                current.key === 'art' && art?.hero
+                  ? art.hero.url
+                  : current.image
+              }
+              fallbackUri={current.image}
+              style={[
+                styles.stageLead,
+                current.key === 'art' && art?.hero
+                  ? styles.stageLeadHero
+                  : null,
+              ]}
               iconSize={64}
               size="hero"
             />
@@ -1853,18 +1889,18 @@ export default function GameInfoScreen() {
           the right one: this is the column about having the game, and
           the box is the object you'd have. Full width, because a stamp
           floating in a 340pt column reads as lost. */}
-      {isExpanded && igdb?.cover ? (
+      {isExpanded && boxArt ? (
         <Image
-          source={{ uri: igdbCoverUri(igdb.cover, '720p') }}
+          source={{ uri: boxArt }}
           style={styles.railCover}
           contentFit="cover"
           transition={DURATION.base}
         />
       ) : null}
-      {/* The plate stands while IGDB is asked, so the rail has its
-          crown from the first frame and the box arrives on it, rather
-          than the controls jumping down when it lands. */}
-      {isExpanded && igdb === undefined ? (
+      {/* The plate stands while the box is asked for, so the rail has
+          its crown from the first frame and the box arrives on it,
+          rather than the controls jumping down when it lands. */}
+      {isExpanded && boxArt === undefined ? (
         <View style={[styles.railCover, styles.coverPlate]}>
           <Textured fill />
         </View>
@@ -1880,15 +1916,15 @@ export default function GameInfoScreen() {
           the rule, and the box was desktop-only by omission. A stamp
           here rather than the rail's crown: the phone masthead already
           owns the big picture. */}
-      {!isExpanded && igdb?.cover ? (
+      {!isExpanded && boxArt ? (
         <Image
-          source={{ uri: igdbCoverUri(igdb.cover) }}
+          source={{ uri: boxArt }}
           style={styles.crateCover}
           contentFit="cover"
           transition={DURATION.base}
         />
       ) : null}
-      {!isExpanded && igdb === undefined ? (
+      {!isExpanded && boxArt === undefined ? (
         <View style={[styles.crateCover, styles.coverPlate]}>
           <Textured fill />
         </View>
@@ -2479,6 +2515,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: COLORS.navy,
   },
+  /** A hero's own proportions: the banner, not a crop of it. */
+  stageLeadHero: { aspectRatio: 1920 / 620 },
   stageStrip: { flexDirection: 'row', gap: SPACING.sm },
   /**
    * Equal flex, so six frames and three both fill the column. The

@@ -2,11 +2,11 @@ import { Image } from 'expo-image';
 import { useState } from 'react';
 import { Platform, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import type { GameLogo } from '@/api/logo';
+import type { ArtAsset } from '@/api/art';
 import { DURATION } from '@/styles/motion';
 
 interface Props {
-  logo: GameLogo | null | undefined;
+  logo: ArtAsset | null | undefined;
   /** The game's name, for the screen reader and as the fallback. */
   name: string;
   /** The box the mark must fit inside, in points. */

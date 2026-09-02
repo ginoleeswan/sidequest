@@ -2,10 +2,10 @@ import { apiUrl } from './base';
 import type { Game, StoreLink } from './types';
 
 /**
- * Client side of the title-treatment lookup. The SteamGridDB key stays
- * on the server; see api/logo.ts.
+ * Client side of the artwork lookup. The SteamGridDB key stays on the
+ * server; see api/art.ts for what each piece is and where it comes from.
  */
-export interface GameLogo {
+export interface ArtAsset {
   url: string;
   thumb: string;
   width: number;
@@ -14,10 +14,28 @@ export interface GameLogo {
   style: string;
 }
 
+export interface GameArt {
+  /** The title as the publisher drew it, on transparency. */
+  logo: ArtAsset | null;
+  /** A wide banner composed to sit behind the logo, about 3:1. */
+  hero: ArtAsset | null;
+  /** Box art, 600×900 portrait. */
+  grid: ArtAsset | null;
+  /** The square mark, 256px. */
+  icon: ArtAsset | null;
+}
+
+export const NO_ART: GameArt = {
+  logo: null,
+  hero: null,
+  grid: null,
+  icon: null,
+};
+
 /**
  * The Steam app id hiding in RAWG's store links, if the game has a
  * Steam release. RAWG gives the store URL and nothing else; the id is
- * the only part of it the logo lookup wants.
+ * the only part of it the lookup wants.
  */
 export function steamIdFrom(
   links: readonly StoreLink[] | undefined
@@ -29,22 +47,27 @@ export function steamIdFrom(
   return null;
 }
 
-export async function fetchLogo(
+export async function fetchArt(
   game: Pick<Game, 'name' | 'released' | 'slug'>,
   steam: string | null = null
-): Promise<GameLogo | null> {
+): Promise<GameArt> {
   try {
     const query = new URLSearchParams({ name: game.name, slug: game.slug });
     const year = game.released?.slice(0, 4);
     if (year) query.set('year', year);
     if (steam) query.set('steam', steam);
-    const res = await fetch(apiUrl(`/api/logo?${query}`));
-    if (!res.ok) return null;
-    const body = (await res.json()) as { logo?: GameLogo | null };
-    return body.logo ?? null;
+    const res = await fetch(apiUrl(`/api/art?${query}`));
+    if (!res.ok) return NO_ART;
+    const body = (await res.json()) as Partial<GameArt>;
+    return {
+      logo: body.logo ?? null,
+      hero: body.hero ?? null,
+      grid: body.grid ?? null,
+      icon: body.icon ?? null,
+    };
   } catch {
-    // No logo is the typed title, which is the page as it was.
-    return null;
+    // No artwork is the page drawn from RAWG, which is the page as it was.
+    return NO_ART;
   }
 }
 
@@ -56,14 +79,14 @@ export async function fetchLogo(
  * without one and a page that later learned it are asking about the
  * same game, and must not pay for two round trips.
  */
-export function logoQuery(
+export function artQuery(
   game: Pick<Game, 'name' | 'released' | 'slug'>,
   steam: string | null = null
 ) {
   return {
-    queryKey: ['logo', game.slug] as const,
-    queryFn: () => fetchLogo(game, steam),
-    // A logo changes about never.
+    queryKey: ['art', game.slug] as const,
+    queryFn: () => fetchArt(game, steam),
+    // Artwork changes about never.
     staleTime: 7 * 24 * 60 * 60 * 1000,
   };
 }

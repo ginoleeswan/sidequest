@@ -22,7 +22,7 @@ import { CoverImage } from './CoverImage';
 import { ScaleButton } from './ScaleButton';
 import { StageTrailer } from './StageTrailer';
 import { gameQuery, seedGame } from '@/api/gameDetail';
-import { logoQuery } from '@/api/logo';
+import { artQuery } from '@/api/art';
 import { TitleLogo } from './TitleLogo';
 import { getMovies } from '@/api/rawg';
 import type { Game, Movie } from '@/api/types';
@@ -229,6 +229,23 @@ function SlideArt({
   const parallax = useStageParallax(height);
   const room = Math.round(height * PARALLAX_RATE);
 
+  /**
+   * The publisher's hero behind the copy, on the desk.
+   *
+   * A hero is a 3:1 banner composed with the subject to one side and
+   * room for a logo on the other — exactly the stage's own shape on a
+   * wide screen, and what Steam's library page and Netflix's billboard
+   * are both drawn from. The phone's stage is a portrait crop that
+   * would keep a third of it, so there the key art stays; it was
+   * already cropped the same way.
+   */
+  const { data: art } = useQuery({
+    ...artQuery(slide.game),
+    enabled: isExpanded && Boolean(slide.game.slug),
+  });
+  const artwork =
+    isExpanded && art?.hero ? art.hero.url : slide.game.background_image;
+
   useEffect(() => {
     if (reduced) return;
     // Out and back, so it never arrives anywhere and never snaps home.
@@ -288,7 +305,8 @@ function SlideArt({
           pointerEvents="none"
         >
           <CoverImage
-            uri={slide.game.background_image}
+            uri={artwork}
+            fallbackUri={slide.game.background_image}
             style={StyleSheet.absoluteFill}
             size="hero"
             iconSize={48}
@@ -420,10 +438,11 @@ function StageCopy({
    * mark carries the name; the other slides' titles are the name and
    * simply give way.
    */
-  const { data: logo } = useQuery({
-    ...logoQuery(slide.game),
+  const { data: art } = useQuery({
+    ...artQuery(slide.game),
     enabled: Boolean(slide.game.slug),
   });
+  const logo = art?.logo;
   const verb =
     slide.kind === 'tonight'
       ? slide.title.replace(slide.game.name, '').trim()

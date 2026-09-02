@@ -127,10 +127,11 @@ The web build is a static export — `vercel.json` is already configured.
      Steam connect shows a friendly "not configured" message.
    - `STEAMGRIDDB_API_KEY` = a SteamGridDB key
      ([steamgriddb.com/profile/preferences/api](https://www.steamgriddb.com/profile/preferences/api)) —
-     the publishers' own title logos, set over the artwork on the game
-     page and the home stage. Server-side only (used by `api/logo.ts`).
-     Optional: without it, logos come from Steam's CDN for games with a
-     Steam release, and every other title stays typed.
+     the publishers' own artwork: title logos over the art, the wide
+     heroes behind them on the desk, box art where IGDB has none, and
+     the square marks on the plan's rows. Server-side only (used by
+     `api/art.ts`). Optional: without it, the same come from Steam's CDN
+     for games with a Steam release, and the rest draw from RAWG.
    - `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` = a Twitch application
      ([dev.twitch.tv/console/apps](https://dev.twitch.tv/console/apps)) —
      IGDB authenticates through Twitch, and these power the reported

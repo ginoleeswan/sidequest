@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -14,6 +14,7 @@ import { prefetchGame } from '@/api/gameDetail';
 import { useToast } from './Toast';
 import type { Game } from '@/api/types';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { artQuery } from '@/api/art';
 import { igdbCoverUri } from '@/api/igdb';
 import { formatHours } from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
@@ -54,13 +55,13 @@ export function GameTile({
   const router = useRouter();
   const { statusOf, setStatus } = useLibrary();
   const { durationOf, coverOf, learnDurations } = useDurations();
+  const { isCompact } = useBreakpoint();
   // Each tile asks after its own game; the provider collects a beat and
   // sends one batch for the whole shelf. Idempotent, so a screen that
   // already asked costs nothing.
   useEffect(() => {
     if (game.slug) learnDurations([game]);
   }, [game, learnDurations]);
-  const { isCompact } = useBreakpoint();
   const toast = useToast();
   const [hovered, setHovered] = useState(false);
   const queryClient = useQueryClient();
@@ -79,6 +80,22 @@ export function GameTile({
    */
   const cover = shape === 'wide' ? null : coverOf(game.slug);
   /**
+   * The second place box art can come from, asked only once the first
+   * has said no. IGDB covers most of the catalogue; for the rest,
+   * SteamGridDB's community grids and Valve's own library art turn a
+   * typed quest card back into a box on the shelf. Keyed by slug and
+   * cached for a week, so a shelf that repeats a game asks once.
+   */
+  const { data: art } = useQuery({
+    ...artQuery(game),
+    enabled: shape === 'poster' && cover === null && Boolean(game.slug),
+  });
+  const grid = cover === null ? art?.grid : null;
+  // The 267px cut suits a phone's tile; a desk tile at 220 points wants
+  // the 600px file.
+  const gridUri = grid ? (isCompact ? grid.thumb : grid.url) : null;
+  const boxArt = cover ? igdbCoverUri(cover) : gridUri;
+  /**
    * The card face carries the title only, the way printed box art
    * does - and like box art, the caption below repeats it. Hours and
    * meta live in the caption alone, so every tile in a row keeps the
@@ -86,12 +103,15 @@ export function GameTile({
    * a first cut put them on the face and suppressed the caption, and a
    * mixed row read as two different components side by side.
    */
-  const questCard = shape === 'poster' && !cover;
-  // Undefined is "not yet": the plate stands bare until IGDB answers,
-  // and only a settled miss earns the quest card's name.
-  const awaitingCover = shape === 'poster' && cover === undefined;
+  const questCard = shape === 'poster' && !boxArt;
+  // Undefined is "not yet": the plate stands bare until IGDB answers —
+  // and, after a miss there, until SteamGridDB has — and only a settled
+  // miss from both earns the quest card's name.
+  const awaitingCover =
+    shape === 'poster' &&
+    (cover === undefined || (cover === null && art === undefined));
   const images = [
-    cover ? igdbCoverUri(cover) : game.background_image,
+    boxArt ?? game.background_image,
     ...(game.short_screenshots ?? [])
       .map((s) => s.image)
       .filter((uri) => uri && uri !== game.background_image)

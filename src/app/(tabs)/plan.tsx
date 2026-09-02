@@ -1,5 +1,6 @@
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, Platform } from 'react-native';
@@ -30,6 +31,7 @@ import { usePersistedState } from '@/hooks/usePersistedState';
 import { DurationSheet } from '@/components/DurationSheet';
 import { formatHours, type DurationSource } from '@/lib/duration';
 import { useToast } from '@/components/Toast';
+import { artQuery } from '@/api/art';
 import { prefetchGame, warmGame } from '@/api/gameDetail';
 import { useDurations } from '@/lib/durations';
 import { useSync } from '@/lib/sync/SyncProvider';
@@ -45,6 +47,7 @@ import { measuredPace, worthSaying } from '@/lib/measuredPace';
 import { hoursLeft, planItems } from '@/lib/planning';
 import { pickTonight, planSchedule, type ScheduledItem } from '@/lib/scheduler';
 import { COLORS } from '@/styles/colors';
+import { DURATION } from '@/styles/motion';
 import { GUTTER, LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
 import { OVER_IMAGE, TYPE, WORDMARK } from '@/styles/typography';
 
@@ -122,6 +125,44 @@ interface Entry {
  * this game wears in the week above, so the block on Tuesday and this
  * row are visibly the same thing.
  */
+/**
+ * The game's mark beside its row.
+ *
+ * A 64×40 strip cut from a screenshot identifies a game about as well
+ * as a strip cut from a photograph identifies a person. The square
+ * icon SteamGridDB holds for most games is the thing drawn to be
+ * recognised at this size, so it takes the slot where there is one;
+ * the strip stays for the rest, in the same box, so the rows keep
+ * their edge either way.
+ */
+function RowMark({ game }: { game?: Game }) {
+  const { data: art } = useQuery({
+    ...artQuery(game ?? { name: '', released: null, slug: '' }),
+    enabled: Boolean(game?.slug),
+  });
+  if (art?.icon) {
+    return (
+      <View style={styles.questThumb}>
+        <Image
+          source={{ uri: art.icon.url }}
+          style={styles.questIcon}
+          contentFit="cover"
+          transition={DURATION.base}
+          accessible={false}
+        />
+      </View>
+    );
+  }
+  return (
+    <CoverImage
+      uri={game?.background_image}
+      style={styles.questThumb}
+      size="thumb"
+      iconSize={16}
+    />
+  );
+}
+
 function QuestRow({
   item,
   index,
@@ -159,12 +200,7 @@ function QuestRow({
           </Text>
         </View>
       </View>
-      <CoverImage
-        uri={game?.background_image}
-        style={styles.questThumb}
-        size="thumb"
-        iconSize={16}
-      />
+      <RowMark game={game} />
       <View style={styles.questBody}>
         <View style={styles.questTitleRow}>
           {entry?.must && (
@@ -1420,7 +1456,15 @@ const styles = StyleSheet.create({
     ...TYPE.h4,
     color: COLORS.white,
   },
-  questThumb: { width: 64, height: 40, borderRadius: 6 },
+  questThumb: {
+    width: 64,
+    height: 40,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  /** The square mark, sat in the strip's box so the column keeps its edge. */
+  questIcon: { width: 40, height: 40, borderRadius: 9 },
   questBody: { flex: 1, gap: 1 },
   questTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   questTitle: {
