@@ -47,6 +47,11 @@ interface Props {
    */
   blurRadius?: number;
   /**
+   * How urgently the picture is wanted. The masthead a page opens on is
+   * `high`; a tile three shelves down can wait its turn behind it.
+   */
+  priority?: 'low' | 'normal' | 'high';
+  /**
    * What this artwork is, for a screen reader. Pass the game's name where
    * the image is the only thing identifying it. Leave unset where a title
    * sits next to it: the cover then adds nothing but noise, and is hidden
@@ -68,6 +73,7 @@ export function CoverImage({
   iconSize = 32,
   size = 'tile',
   blurRadius,
+  priority,
   label,
 }: Props) {
   /**
@@ -118,6 +124,10 @@ export function CoverImage({
         contentFit={contentFit}
         blurRadius={blurRadius}
         transition={DURATION.base}
+        priority={priority}
+        // In a virtualised list a recycled view must not show the last
+        // row's cover while this one decodes.
+        recyclingKey={src}
         onError={() =>
           setFailed((prev) => {
             const next = new Set(prev);

@@ -26,6 +26,7 @@ import { SiteFooter } from '@/components/SiteFooter';
 import { Textured } from '@/components/Textured';
 import { useToast } from '@/components/Toast';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { useTopPad } from '@/hooks/useTopPad';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { useLibrary } from '@/lib/library';
 import { formatHours } from '@/lib/duration';
@@ -111,6 +112,7 @@ function GameRow({
 export default function ImportScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const topPad = useTopPad(true);
   const { isExpanded } = useBreakpoint();
   const { addGames } = useLibrary();
   const toast = useToast();
@@ -348,9 +350,7 @@ export default function ImportScreen() {
           style={[
             styles.inner,
             {
-              paddingTop: isExpanded
-                ? SPACING.xl * 1.5
-                : insets.top + SPACING.xl * 2,
+              paddingTop: topPad,
             },
           ]}
         >

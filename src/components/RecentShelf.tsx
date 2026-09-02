@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -9,6 +10,7 @@ import { CoverImage } from './CoverImage';
 import { Rail } from './Rail';
 import { ScaleButton } from './ScaleButton';
 import { SectionHeader } from './SectionHeader';
+import { warmGame } from '@/api/gameDetail';
 import { useHydrated } from '@/hooks/useHydrated';
 import { clearRecent, readRecent } from '@/lib/recent';
 import { COLORS } from '@/styles/colors';
@@ -24,6 +26,7 @@ import { OVER_IMAGE, TYPE } from '@/styles/typography';
  */
 export function RecentShelf({ inset = SPACING.md }: { inset?: number }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const hydrated = useHydrated();
   const [games, setGames] = useState(() => (hydrated ? readRecent() : []));
   // The pre-rendered HTML had no history, so the hydration render must
@@ -70,6 +73,7 @@ export function RecentShelf({ inset = SPACING.md }: { inset?: number }) {
              frame you could press play on. */
           <ScaleButton
             onPress={() => router.push(`/game/${game.id}`)}
+            onPressIn={() => warmGame(queryClient, game.id)}
             style={styles.card}
             activeScale={0.97}
             hoverScale={1.03}

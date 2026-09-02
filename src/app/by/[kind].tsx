@@ -17,6 +17,7 @@ import { SiteFooter } from '@/components/SiteFooter';
 import { SkeletonGrid } from '@/components/Skeleton';
 import { Textured } from '@/components/Textured';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { useTopPad } from '@/hooks/useTopPad';
 import { useHydrated } from '@/hooks/useHydrated';
 import { COLORS } from '@/styles/colors';
 import { LAYOUT, SPACING } from '@/styles/theme';
@@ -33,6 +34,7 @@ import { TYPE } from '@/styles/typography';
 export default function ByCreatorScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const topPad = useTopPad(true);
   const { isExpanded, columns } = useBreakpoint();
   const params = useLocalSearchParams<{
     kind?: string;
@@ -82,14 +84,13 @@ export default function ByCreatorScreen() {
           if (list.hasNextPage && !list.isFetchingNextPage)
             list.fetchNextPage();
         }}
+        onRefresh={() => list.refetch()}
       >
         <View
           style={[
             styles.inner,
             {
-              paddingTop: isExpanded
-                ? SPACING.xl * 1.5
-                : insets.top + SPACING.xl * 2,
+              paddingTop: topPad,
             },
           ]}
         >

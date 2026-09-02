@@ -24,6 +24,7 @@ import { SiteFooter } from '@/components/SiteFooter';
 import { Textured } from '@/components/Textured';
 import { useToast } from '@/components/Toast';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { useTopPad } from '@/hooks/useTopPad';
 import { recordDrop, type DropReason } from '@/lib/drops';
 import { formatHours } from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
@@ -69,6 +70,7 @@ function matches(entry: LibraryEntry, filter: Filter, now: number): boolean {
 export default function TidyScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const topPad = useTopPad(true);
   const { isExpanded } = useBreakpoint();
   const { entries, removeMany, moveMany } = useLibrary();
   const { durationOf } = useDurations();
@@ -185,9 +187,7 @@ export default function TidyScreen() {
           style={[
             styles.inner,
             {
-              paddingTop: isExpanded
-                ? SPACING.xl * 1.5
-                : insets.top + SPACING.xl * 2,
+              paddingTop: topPad,
             },
           ]}
         >

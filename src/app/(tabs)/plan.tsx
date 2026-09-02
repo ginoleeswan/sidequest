@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -29,7 +30,9 @@ import { usePersistedState } from '@/hooks/usePersistedState';
 import { DurationSheet } from '@/components/DurationSheet';
 import { formatHours, type DurationSource } from '@/lib/duration';
 import { useToast } from '@/components/Toast';
+import { prefetchGame, warmGame } from '@/api/gameDetail';
 import { useDurations } from '@/lib/durations';
+import { useSync } from '@/lib/sync/SyncProvider';
 import { buildAlerts } from '@/lib/alerts';
 import { planColour } from '@/lib/planColours';
 import { CAN_COPY, handOff } from '@/lib/clipboard';
@@ -126,6 +129,7 @@ function QuestRow({
   game,
   entry,
   onPress,
+  onPressIn,
   onEditLength,
 }: {
   item: ScheduledItem;
@@ -134,6 +138,8 @@ function QuestRow({
   game?: Game;
   entry?: Entry;
   onPress: () => void;
+  /** A finger landing: the moment to warm the page it opens. */
+  onPressIn?: () => void;
   onEditLength: () => void;
 }) {
   const colour = planColour(index);
@@ -141,6 +147,7 @@ function QuestRow({
     <Pressable
       style={[styles.quest, isLast && styles.questLast]}
       onPress={onPress}
+      onPressIn={onPressIn}
     >
       {/* the path: a node per game, a thread connecting them */}
       <View style={styles.questRail}>
@@ -277,6 +284,26 @@ export default function PlanScreen() {
     () => new Map(entries.map((e) => [e.game.id, e.game])),
     [entries]
   );
+  /**
+   * Warm the page a row is about to open. The row's game is the seed
+   * for the masthead; a row without one still gets its record early.
+   */
+  const queryClient = useQueryClient();
+  const sync = useSync();
+  const warm = (id: number) => {
+    const known = gamesById.get(id);
+    if (known) prefetchGame(queryClient, known);
+    else warmGame(queryClient, id);
+  };
+  /**
+   * Pull to refresh: a sync round when signed in, then everything on
+   * screen asks again — the lengths, the box art, the series news.
+   */
+  const refresh = async () => {
+    if (sync.active) await sync.syncNow();
+    await queryClient.refetchQueries({ type: 'active' });
+  };
+
   const entriesById = useMemo(
     () => new Map(entries.map((e) => [e.game.id, e])),
     [entries]
@@ -578,7 +605,7 @@ export default function PlanScreen() {
         </View>
       )}
 
-      <Screen>
+      <Screen onRefresh={refresh}>
         <View style={{ paddingBottom: SPACING.xl * 1.5 }}>
           <FadeInView>
             <View
@@ -773,6 +800,7 @@ export default function PlanScreen() {
                     <Pressable
                       style={[styles.tonight, isExpanded && styles.tonightWide]}
                       onPress={() => router.push(`/game/${tonightPick.id}`)}
+                      onPressIn={() => warm(tonightPick.id)}
                     >
                       <View
                         style={[
@@ -907,6 +935,7 @@ export default function PlanScreen() {
                                 game={gamesById.get(item.id)}
                                 entry={entriesById.get(item.id)}
                                 onPress={() => router.push(`/game/${item.id}`)}
+                                onPressIn={() => warm(item.id)}
                                 onEditLength={() => {
                                   const target = gamesById.get(item.id);
                                   if (target) setEditing(target);

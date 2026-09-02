@@ -1,10 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useQueries } from '@tanstack/react-query';
+import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CoverImage } from './CoverImage';
+import { prefetchGame } from '@/api/gameDetail';
 import { getSeries } from '@/api/rawg';
 import type { Game, Paged } from '@/api/types';
 import { useHydrated } from '@/hooks/useHydrated';
@@ -26,6 +27,7 @@ const MAX = 2;
  */
 export function SeriesNews({ inset = SPACING.md }: { inset?: number }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const hydrated = useHydrated();
   const { entries } = useLibrary();
 
@@ -61,6 +63,7 @@ export function SeriesNews({ inset = SPACING.md }: { inset?: number }) {
         <Pressable
           key={item.game.id}
           onPress={() => router.push(`/game/${item.game.id}`)}
+          onPressIn={() => prefetchGame(queryClient, item.game)}
           style={styles.card}
           accessibilityRole="link"
           accessibilityLabel={item.message}

@@ -94,3 +94,15 @@ jest.mock('expo-linking', () => ({
     };
   }),
 }));
+
+/**
+ * expo-network's native module is absent in the runner. The app treats
+ * a device that cannot report its network as online, and so does this.
+ */
+jest.mock('expo-network', () => ({
+  getNetworkStateAsync: jest.fn(async () => ({
+    isConnected: true,
+    isInternetReachable: true,
+  })),
+  addNetworkStateListener: jest.fn(() => ({ remove: () => {} })),
+}));

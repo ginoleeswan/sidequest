@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import {
   Animated,
@@ -21,6 +21,7 @@ import {
 import { CoverImage } from './CoverImage';
 import { ScaleButton } from './ScaleButton';
 import { StageTrailer } from './StageTrailer';
+import { gameQuery, seedGame } from '@/api/gameDetail';
 import { getMovies } from '@/api/rawg';
 import type { Game, Movie } from '@/api/types';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
@@ -102,6 +103,21 @@ export function HomeStage({
     return () => clearTimeout(timer);
   }, [wantsTrailer, index]);
   const dwelt = dweltFor === index;
+
+  /**
+   * The slide on show is the likeliest tap on the page, so its record
+   * is fetched while the reader is still looking at the picture: one
+   * cached call per slide, against a page that opens with no wait. The
+   * record only — the trailers and screenshots wait for the page, so a
+   * phone that never plays a stage trailer never asks for one here.
+   */
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (!currentGame) return;
+    seedGame(currentGame);
+    void queryClient.prefetchQuery(gameQuery(currentGame.id));
+  }, [currentGame, queryClient]);
+
   const { data: trailer } = useQuery({
     queryKey: ['stage-trailer', currentGame?.id],
     queryFn: () => getMovies(currentGame!.id),

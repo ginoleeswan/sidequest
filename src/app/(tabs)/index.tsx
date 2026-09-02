@@ -3,6 +3,7 @@ import {
   useInfiniteQuery,
   useQueries,
   useQuery,
+  useQueryClient,
 } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -104,6 +105,26 @@ import { COLORS } from '@/styles/colors';
 import { GUTTER, LAYOUT, SPACING } from '@/styles/theme';
 import { TYPE, WORDMARK } from '@/styles/typography';
 
+/**
+ * How much of a long list is alive at once, on native.
+ *
+ * The defaults render ten rows up front and keep twenty-one screens'
+ * worth mounted, which on a page of cover art is a few hundred decoded
+ * images held for rows nobody is looking at. A smaller window keeps
+ * the scroll smooth and the memory flat; batches of four keep the
+ * fill-in ahead of a fast thumb. Web is left alone: there the document
+ * scrolls and the list renders in flow, and a window would cut it off.
+ */
+const LIST_TUNING =
+  Platform.OS === 'web'
+    ? {}
+    : {
+        initialNumToRender: 8,
+        maxToRenderPerBatch: 4,
+        windowSize: 7,
+        removeClippedSubviews: true,
+      };
+
 const FEATURED_COUNT = 5;
 
 /** Sentinel filling an incomplete final grid row so tiles keep their width. */
@@ -199,6 +220,14 @@ export default function HomeScreen({
     refine.platformIds.join(','),
     refine.minMetacritic,
   ] as const;
+
+  /**
+   * Pull to refresh on the storefront: every shelf on screen asks
+   * again, and so do the stage's week and today's count. The browse
+   * view's list has its own control on the FlatList below.
+   */
+  const queryClient = useQueryClient();
+  const refreshHome = () => queryClient.refetchQueries({ type: 'active' });
 
   const list = useInfiniteQuery({
     // Refining is a change of answer, not a fresh page: hold the results
@@ -558,6 +587,7 @@ export default function HomeScreen({
         refreshControl={refresh}
         onEndReached={loadMore}
         onEndReachedThreshold={1.2}
+        {...LIST_TUNING}
         ListHeaderComponent={gridHeader}
         ListFooterComponent={listEnd}
         // No height of its own: the document scrolls, so rows run past the
@@ -604,7 +634,7 @@ export default function HomeScreen({
                 <SkeletonGrid columns={columns} />
               )
             ) : isHome ? (
-              <Screen style={styles.homeScroll}>
+              <Screen style={styles.homeScroll} onRefresh={refreshHome}>
                 <FadeInView>
                   <View style={styles.stageBleedWide}>
                     <HomeStage
@@ -753,6 +783,7 @@ export default function HomeScreen({
           {status ??
             (isHome ? (
               <Screen
+                onRefresh={refreshHome}
                 style={[
                   styles.compactHome,
                   stage.length === 0 && { paddingTop: headerHeight },
@@ -875,6 +906,7 @@ export default function HomeScreen({
                 showsVerticalScrollIndicator={false}
                 onEndReached={loadMore}
                 onEndReachedThreshold={1.2}
+                {...LIST_TUNING}
                 ListHeaderComponent={gridHeader}
                 ListFooterComponent={listEnd}
                 contentContainerStyle={[

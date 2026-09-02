@@ -1,14 +1,19 @@
+import { useState } from 'react';
 import {
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   View,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
+  type RefreshControlProps,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { COLORS } from '@/styles/colors';
 
 /** How far from the end the scroller counts as "near it". */
 const END_SLACK = 900;
@@ -25,6 +30,48 @@ interface Props {
    * window-scroll listeners the infinite lists use on web.
    */
   onEndReached?: () => void;
+  /**
+   * What pulling down past the top does.
+   *
+   * Native only: the browser has its own pull-to-refresh, which reloads
+   * the page. The spinner shows until the promise settles, so a screen
+   * says what it is doing rather than flashing an indicator that stops
+   * before anything has changed.
+   */
+  onRefresh?: () => Promise<unknown> | void;
+}
+
+/**
+ * The pull-to-refresh control, in the app's own colours, for any
+ * native scroller: `Screen`'s own ScrollView, or a screen that has to
+ * be a `FlatList` for the sake of a long list.
+ *
+ * Returns `undefined` when there is nothing to refresh, so a screen
+ * that passes it straight through gets no control rather than a dead
+ * one.
+ */
+export function useRefreshControl(
+  onRefresh?: () => Promise<unknown> | void
+): React.ReactElement<RefreshControlProps> | undefined {
+  const [refreshing, setRefreshing] = useState(false);
+  if (!onRefresh || Platform.OS === 'web') return undefined;
+  const refresh = async () => {
+    setRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+  return (
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={refresh}
+      tintColor={COLORS.accent}
+      colors={[COLORS.accent]}
+      progressBackgroundColor={COLORS.navy}
+    />
+  );
 }
 
 /**
@@ -39,8 +86,9 @@ interface Props {
  * Headers and back buttons stay outside: on native that pins them while
  * the body scrolls underneath, which is what an app is expected to do.
  */
-export function Screen({ children, style, onEndReached }: Props) {
+export function Screen({ children, style, onEndReached, onRefresh }: Props) {
   const insets = useSafeAreaInsets();
+  const refreshControl = useRefreshControl(onRefresh);
 
   if (Platform.OS === 'web') {
     return style ? <View style={style}>{children}</View> : <>{children}</>;
@@ -78,6 +126,7 @@ export function Screen({ children, style, onEndReached }: Props) {
       showsVerticalScrollIndicator={false}
       onScroll={onScroll}
       scrollEventThrottle={onScroll ? 64 : undefined}
+      refreshControl={refreshControl}
     >
       {children}
     </ScrollView>

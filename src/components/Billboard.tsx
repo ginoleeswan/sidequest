@@ -1,9 +1,11 @@
 import { LinearGradient } from 'expo-linear-gradient';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { CoverImage } from './CoverImage';
 import { ScaleButton } from './ScaleButton';
+import { prefetchGame } from '@/api/gameDetail';
 import type { Game } from '@/api/types';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { formatHours } from '@/lib/duration';
@@ -30,6 +32,7 @@ export function Billboard({
   eyebrow?: string;
 }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { isCompact } = useBreakpoint();
   const { durationOf } = useDurations();
   const { hours } = durationOf(game);
@@ -38,6 +41,7 @@ export function Billboard({
   return (
     <ScaleButton
       onPress={() => router.push(`/game/${game.id}`)}
+      onPressIn={() => prefetchGame(queryClient, game)}
       style={[styles.frame, isCompact && styles.frameCompact]}
       activeScale={0.99}
       hoverScale={1.005}

@@ -8,6 +8,7 @@ import { BackButton } from './BackButton';
 import { SiteFooter } from './SiteFooter';
 import { Textured } from './Textured';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { useTopPad } from '@/hooks/useTopPad';
 import { COLORS } from '@/styles/colors';
 import { GUTTER, LAYOUT, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
@@ -28,6 +29,7 @@ export function ContentPage({
   children,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const topPad = useTopPad(true);
   const { isExpanded } = useBreakpoint();
   return (
     <Textured style={styles.background}>
@@ -44,9 +46,7 @@ export function ContentPage({
           style={[
             styles.scroll,
             {
-              paddingTop: isExpanded
-                ? SPACING.xl * 1.5
-                : insets.top + SPACING.xl * 2.5,
+              paddingTop: topPad,
               paddingBottom: SPACING.xl * 1.5,
             },
           ]}

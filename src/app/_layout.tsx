@@ -10,6 +10,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { MAX_AGE, persister } from '@/api/persist';
 import { queryClient } from '@/api/queryClient';
 import { CommandPalette } from '@/components/CommandPalette';
+import { OfflineNotice } from '@/components/OfflineNotice';
 import { Onboarding } from '@/components/Onboarding';
 import { ScreenFade } from '@/components/ScreenFade';
 import { SplashCurtain } from '@/components/SplashCurtain';
@@ -21,6 +22,7 @@ import { SyncProvider } from '@/lib/sync/SyncProvider';
 import { DurationsProvider } from '@/lib/durations';
 import { LibraryProvider } from '@/lib/library';
 import { NATIVE_STACK_OPTIONS } from '@/lib/nativeStack';
+import { wireOnlineManager } from '@/lib/network';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -128,6 +130,9 @@ export default function RootLayout() {
     if (fontsLoaded || fontError) SplashScreen.hideAsync().catch(() => {});
   }, [fontsLoaded, fontError]);
 
+  // React Query learns about the phone's connection — see lib/network.
+  useEffect(() => wireOnlineManager(), []);
+
   if (!fontsLoaded && !fontError) return null;
 
   return (
@@ -201,6 +206,7 @@ export default function RootLayout() {
                   <Onboarding />
                   <CommandPalette />
                   <SaveErrorNotice />
+                  <OfflineNotice />
                   {/* Last, so it covers the tab bar and the onboarding
                   sheet too: until it lifts, the app has not opened. */}
                   <SplashCurtain />

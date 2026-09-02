@@ -28,6 +28,7 @@ import {
   gameQuery,
   placeholderDetail,
 } from '@/api/gameDetail';
+import { queryKeys } from '@/api/queryClient';
 import { fetchIgdbExtras, igdbCoverUri } from '@/api/igdb';
 import { friendlyError, mediaUri } from '@/api/rawg';
 import type { Game, GameDetail, Movie, Named } from '@/api/types';
@@ -633,6 +634,7 @@ export default function GameInfoScreen() {
     data: game,
     error,
     isPending,
+    fetchStatus,
     isPlaceholderData: sketch,
   } = useQuery({
     ...gameQuery(id),
@@ -740,7 +742,7 @@ export default function GameInfoScreen() {
     }).start();
   }, [game, opacity, railOpacity, reducedMotion]);
 
-  if (isPending) {
+  if (isPending && fetchStatus !== 'paused') {
     return isExpanded ? (
       <DesktopShell activeKey={null} foldByDefault>
         {/* The name is not known yet, but a blank tab is never right. */}
@@ -781,6 +783,10 @@ export default function GameInfoScreen() {
   }
 
   if (error || !game) {
+    /* Offline and nothing saved: a different sentence from a failed
+       request. The query is paused, not broken, and it will ask on its
+       own the moment the signal comes back. */
+    const offline = !error && fetchStatus === 'paused';
     return (
       <View style={styles.background}>
         <PageTitle>Sidequest</PageTitle>
@@ -789,8 +795,12 @@ export default function GameInfoScreen() {
         </View>
         <Message
           icon="cloud-offline-outline"
-          title="Couldn't load this game"
-          detail={friendlyError(error)}
+          title={offline ? "You're offline" : "Couldn't load this game"}
+          detail={
+            offline
+              ? 'This game isn’t saved on this device yet. It will load when you’re back online.'
+              : friendlyError(error)
+          }
         />
       </View>
     );
@@ -821,6 +831,19 @@ export default function GameInfoScreen() {
       router.push({ pathname: '/', params: { category: genre.slug } });
     }
   };
+
+  /**
+   * Pull to refresh: everything this page asked for, asked again — the
+   * record, the media, IGDB's half and who is live. Cached answers stay
+   * on screen while the new ones come in.
+   */
+  const refresh = () =>
+    Promise.all([
+      queryClient.refetchQueries({ queryKey: queryKeys.game(id) }),
+      queryClient.refetchQueries({ queryKey: queryKeys.gameMedia(id) }),
+      queryClient.refetchQueries({ queryKey: ['igdb-extras'] }),
+      queryClient.refetchQueries({ queryKey: ['twitch', 'streams'] }),
+    ]);
 
   /* -------------------------------------------------------------- pieces */
 
@@ -866,6 +889,9 @@ export default function GameInfoScreen() {
         style={styles.heroImage}
         iconSize={72}
         size="hero"
+        // The one picture the page opens on goes to the front of the
+        // queue, ahead of the thumbnails and covers below it.
+        priority="high"
         label={`${game.name} cover art`}
       />
       {/* Art dissolves into the page colour — the hero belongs to the page,
@@ -1887,7 +1913,7 @@ export default function GameInfoScreen() {
           </View>
         )}
 
-        <Screen>
+        <Screen onRefresh={refresh}>
           <View style={{ paddingBottom: SPACING.xl * 1.5 }}>
             {isExpanded ? (
               <View style={styles.expandedInner}>

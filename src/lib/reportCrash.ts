@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
 
+import { apiUrl } from '@/api/base';
+
 /**
  * Anonymous crash reporting.
  *
@@ -16,7 +18,9 @@ const ENDPOINT = '/api/report';
 const seen = new Set<string>();
 
 export function reportCrash(error: unknown): void {
-  if (Platform.OS !== 'web' || __DEV__) return;
+  // Native reports too, now that it can reach the endpoint at all: a
+  // screen that breaks in somebody's pocket is the one nobody sees.
+  if (__DEV__) return;
 
   const message = error instanceof Error ? error.message : String(error);
   const stack = error instanceof Error ? error.stack : undefined;
@@ -28,7 +32,7 @@ export function reportCrash(error: unknown): void {
     const body = JSON.stringify({
       message: message.slice(0, 500),
       stack: stack?.slice(0, 4000),
-      route: globalThis.location?.pathname ?? 'unknown',
+      route: globalThis.location?.pathname ?? Platform.OS,
       viewport: globalThis.innerWidth
         ? `${globalThis.innerWidth}x${globalThis.innerHeight}`
         : undefined,
@@ -37,7 +41,7 @@ export function reportCrash(error: unknown): void {
 
     // Fire and forget: keepalive lets it survive the navigation that a
     // crashed screen often triggers.
-    void fetch(ENDPOINT, {
+    void fetch(apiUrl(ENDPOINT), {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body,

@@ -89,8 +89,12 @@ interface SyncValue {
   stuck: { key: string; reason: string }[];
   /** Whether an account is signed in and sync is therefore possible. */
   active: boolean;
-  /** Run a round now — the account screen's retry. */
-  syncNow: () => void;
+  /**
+   * Run a round now — the account screen's retry, and what a pull to
+   * refresh does. Resolves when the round has settled, so a spinner
+   * can wait for it.
+   */
+  syncNow: () => Promise<void>;
 }
 
 const SyncContext = createContext<SyncValue | null>(null);
@@ -180,7 +184,7 @@ export function SyncProvider({
    */
   const syncNow = useCallback(() => {
     kv.removeItem(STUCK_KEY);
-    void run();
+    return run();
   }, [run]);
 
   // Signing in: catch up immediately, in both directions.
@@ -240,7 +244,7 @@ export function useSync(): SyncValue {
       status: { state: 'idle' },
       stuck: [],
       active: false,
-      syncNow: () => {},
+      syncNow: async () => {},
     }
   );
 }

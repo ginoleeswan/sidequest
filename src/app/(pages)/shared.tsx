@@ -15,6 +15,7 @@ import { SiteFooter } from '@/components/SiteFooter';
 import { Textured } from '@/components/Textured';
 import { WeekView } from '@/components/WeekView';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { useTopPad } from '@/hooks/useTopPad';
 import { useHydrated } from '@/hooks/useHydrated';
 import { formatHours } from '@/lib/duration';
 import { planColour } from '@/lib/planColours';
@@ -72,6 +73,7 @@ const finishDate = (ms: number) =>
 export default function SharedPlanScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const topPad = useTopPad(true);
   const { isExpanded } = useBreakpoint();
   const params = useLocalSearchParams<{ p?: string }>();
 
@@ -100,9 +102,7 @@ export default function SharedPlanScreen() {
           style={[
             styles.inner,
             {
-              paddingTop: isExpanded
-                ? SPACING.xl * 1.5
-                : insets.top + SPACING.xl * 2,
+              paddingTop: topPad,
             },
           ]}
         >

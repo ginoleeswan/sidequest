@@ -16,6 +16,7 @@ import { SiteFooter } from '@/components/SiteFooter';
 import { Textured } from '@/components/Textured';
 import { useToast } from '@/components/Toast';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { useTopPad } from '@/hooks/useTopPad';
 import { useHydrated } from '@/hooks/useHydrated';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { useAuth } from '@/lib/auth';
@@ -168,6 +169,7 @@ const SYNC_LABEL: Record<SyncStatus['state'], string> = {
 export default function YouScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const topPad = useTopPad(true);
   const { isExpanded } = useBreakpoint();
   const { entries, count, exportJson } = useLibrary();
   const { session, available } = useAuth();
@@ -246,7 +248,7 @@ export default function YouScreen() {
             style={[
               styles.masthead,
               isExpanded && styles.mastheadExpanded,
-              { paddingTop: isExpanded ? SPACING.xl : insets.top + SPACING.xl },
+              { paddingTop: topPad },
             ]}
           >
             {cover ? <Wall cover={cover} /> : null}

@@ -158,3 +158,13 @@ export function prefetchGame(queryClient: QueryClient, game: Game): void {
   void queryClient.prefetchQuery(gameQuery(game.id));
   void queryClient.prefetchQuery(gameMediaQuery(game.id));
 }
+
+/**
+ * Warm a page for a game known only by id — a recent-games row, an
+ * alert — where there is no list row to seed the masthead from. The
+ * record and the media still arrive ahead of the tap.
+ */
+export function warmGame(queryClient: QueryClient, id: string | number): void {
+  void queryClient.prefetchQuery(gameQuery(id));
+  void queryClient.prefetchQuery(gameMediaQuery(id));
+}
