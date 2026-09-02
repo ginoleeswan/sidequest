@@ -129,6 +129,15 @@ const FONT_BOLD = readFileSync(
 const FONT_BODY = readFileSync(
   join(ROOT, 'assets/fonts/Noah-Regular.ttf')
 ).toString('base64');
+/**
+ * The wordmark's face. `WORDMARK` in styles/typography.ts sets the name
+ * in Geom Black, lowercase, at 22pt with -0.5 tracking; everything that
+ * draws the word outside React — the launch storyboard, the OG card —
+ * has to draw it from the same face or the brand is two brands.
+ */
+const FONT_WORDMARK = readFileSync(
+  join(ROOT, 'assets/fonts/Geom-Black.ttf')
+).toString('base64');
 
 /**
  * The memory card, drawn at card scale.
@@ -191,6 +200,7 @@ function ogCard() {
     @font-face { font-family: Noah; font-weight: 900; src: url(data:font/ttf;base64,${FONT}); }
     @font-face { font-family: Noah; font-weight: 700; src: url(data:font/ttf;base64,${FONT_BOLD}); }
     @font-face { font-family: Noah; font-weight: 400; src: url(data:font/ttf;base64,${FONT_BODY}); }
+    @font-face { font-family: Geom; font-weight: 900; src: url(data:font/ttf;base64,${FONT_WORDMARK}); }
     * { margin: 0; box-sizing: border-box; }
     body { width: 1200px; height: 630px; font-family: Noah, sans-serif;
            background:
@@ -201,7 +211,7 @@ function ogCard() {
     /* Held short of the art so the sub-line does not orphan a word. */
     .copy { flex: 1; min-width: 0; max-width: 560px; }
     .lockup { display: flex; align-items: center; gap: 18px; margin-bottom: 40px; }
-    .word { font-weight: 900; font-size: 40px; letter-spacing: 0.5px; color: ${WHITE}; }
+    .word { font-family: Geom, sans-serif; font-weight: 900; font-size: 40px; letter-spacing: -0.9px; color: ${WHITE}; }
     h1 { font-weight: 900; font-size: 66px; line-height: 1.04; letter-spacing: -1.6px;
          color: ${WHITE}; margin-bottom: 26px; }
     p { font-weight: 400; font-size: 27px; line-height: 1.35; color: ${GREY}; }
@@ -212,7 +222,7 @@ function ogCard() {
   <div class="copy">
     <div class="lockup">
       <svg viewBox="${TIGHT}" width="52" height="52">${mark({ lift: false })}</svg>
-      <div class="word">SIDEQUEST</div>
+      <div class="word">sidequest</div>
     </div>
     <h1>Know what you<br/>can actually finish.</h1>
     <p>Backlog triage for people with<br/>more games than time.</p>
@@ -299,8 +309,15 @@ await shoot(wrap(icon(), 64), {
  * the hand-off jumps.
  */
 const SPLASH_MARK_PT = 145; // the 94-unit box, as Mark.tsx's `size` means it
-const WORD_PT = 20;
-const TRACK_PT = 7;
+/**
+ * WORDMARK in styles/typography.ts, restated: 22pt Geom Black, tracked
+ * -0.5, lowercase. The curtain in SplashCurtain.tsx sets the same word
+ * from that token at the same size, and the storyboard's bitmap has to
+ * be the same glyphs at the same size or the hand-off is a jump — the
+ * one place the brand is seen twice in a second.
+ */
+const WORD_PT = 22;
+const TRACK_PT = -0.5;
 
 /** Square and mark-only: exactly what the plugin's image view expects. */
 await shoot(
@@ -315,8 +332,8 @@ await shoot(
  *
  * Rendered at 1x, 2x and 3x rather than scaled at build time, so the
  * type is rasterised from the outline at every density instead of
- * resampled from one bitmap. Nine tracked capitals at 20pt is exactly
- * the case where resampling shows.
+ * resampled from one bitmap. Nine letters of a black geometric at 22pt
+ * is exactly the case where resampling shows.
  *
  * The box is padded rather than tight: a bitmap cropped hard to the
  * glyphs has no consistent baseline to constrain against, and the
@@ -327,17 +344,17 @@ const WORDMARK_H = 32;
 for (const density of [1, 2, 3]) {
   await shoot(
     `<!doctype html><meta charset="utf-8"><style>*{margin:0}` +
-      `@font-face { font-family: Noah; font-weight: 900; src: url(data:font/ttf;base64,${FONT}); }` +
+      `@font-face { font-family: Geom; font-weight: 900; src: url(data:font/ttf;base64,${FONT_WORDMARK}); }` +
       `body{width:${WORDMARK_W * density}px;height:${WORDMARK_H * density}px}` +
       `svg{display:block;width:${WORDMARK_W * density}px;height:${WORDMARK_H * density}px}</style>` +
       `<svg viewBox="0 0 ${WORDMARK_W} ${WORDMARK_H}">` +
       // x is nudged by half a letter-space: `text-anchor="middle"` centres
-      // the full advance width, which includes the space trailing the
-      // final T. Left alone the word sits visibly left of centre.
+      // the full advance width, which includes the tracking trailing the
+      // final letter. Left alone the word sits a hair off centre.
       `<text x="${WORDMARK_W / 2 + TRACK_PT / 2}" y="${WORDMARK_H / 2}"` +
-      ` font-family="Noah" font-weight="900" font-size="${WORD_PT}"` +
+      ` font-family="Geom" font-weight="900" font-size="${WORD_PT}"` +
       ` letter-spacing="${TRACK_PT}" fill="${WHITE}"` +
-      ` text-anchor="middle" dominant-baseline="central">SIDEQUEST</text>` +
+      ` text-anchor="middle" dominant-baseline="central">sidequest</text>` +
       `</svg>`,
     {
       width: WORDMARK_W * density,

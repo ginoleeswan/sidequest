@@ -463,8 +463,9 @@ const styles = StyleSheet.create({
   },
   wordmark: {
     ...WORDMARK,
-    // Lowercase and close-set now, like every lockup; the static splash
-    // image still carries the old tracked caps until it is regenerated.
+    // Lowercase and close-set, like every lockup — and the storyboard's
+    // bitmap is drawn from the same face at the same size (see
+    // scripts/brand-assets.mjs), so the hand-off does not move a glyph.
     fontSize: 22,
     lineHeight: 27,
     color: COLORS.white,
