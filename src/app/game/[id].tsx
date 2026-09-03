@@ -41,6 +41,7 @@ import { ChromeWeld } from '@/components/ChromeWeld';
 import { CoverImage } from '@/components/CoverImage';
 import { Decision } from '@/components/Decision';
 import { FitStrip } from '@/components/FitStrip';
+import { fitFrom } from '@/lib/fit';
 import { pickTrailer } from '@/lib/stage';
 import { StageTrailer } from '@/components/StageTrailer';
 import { GameTile } from '@/components/GameTile';
@@ -506,25 +507,47 @@ function InfoStrip({
   const duration = durationOf(game);
   const finish = finishRateOf(game);
 
+  /*
+   * A length nobody has reported is not a figure.
+   *
+   * It used to read "Set" in amber display type, in the first and
+   * loudest cell — an empty state wearing a value's clothes, and the
+   * app's one colour for time spent on a game whose time is unknown.
+   * The row is a row of facts, and the honest mark for a missing one is
+   * the em dash the rest of the app already uses (see `formatHours`).
+   *
+   * The invitation does not disappear, it changes register: the amber
+   * moves off the figure and onto the label, which stops being a
+   * caption and becomes the question — "how long?" under a dash, with
+   * the pencil beside it. What is loud is the thing you can answer,
+   * not a number that is not there.
+   */
+  const known = duration.hours > 0;
+
   const cells: {
     key: string;
     value: string;
     label: string;
     tint?: string;
+    labelTint?: string;
     onPress?: () => void;
     accessibilityLabel?: string;
     edit?: boolean;
   }[] = [
     {
       key: 'hours',
-      value: duration.hours > 0 ? formatHours(duration.hours) : 'Set',
-      label:
-        duration.rough && duration.hours > 0
+      value: known ? formatHours(duration.hours) : '—',
+      label: known
+        ? duration.rough
           ? `${hoursLabelFor(duration)} · est.`
-          : hoursLabelFor(duration),
-      tint: COLORS.accent,
+          : hoursLabelFor(duration)
+        : 'how long?',
+      tint: known ? COLORS.accent : COLORS.mediumGrey,
+      labelTint: known ? undefined : COLORS.accent,
       onPress: onEditLength,
-      accessibilityLabel: `Change how long ${game.name} takes`,
+      accessibilityLabel: known
+        ? `Change how long ${game.name} takes`
+        : `Say how long ${game.name} takes`,
       edit: true,
     },
   ];
@@ -589,11 +612,21 @@ function InfoStrip({
             {cell.value}
           </Text>
           <View style={styles.stripLabelRow}>
-            <Text style={styles.stripLabel} numberOfLines={1}>
+            <Text
+              style={[
+                styles.stripLabel,
+                cell.labelTint ? { color: cell.labelTint } : null,
+              ]}
+              numberOfLines={1}
+            >
               {cell.label}
             </Text>
             {cell.edit ? (
-              <Ionicons name="pencil" size={10} color={COLORS.mediumGrey} />
+              <Ionicons
+                name="pencil"
+                size={10}
+                color={cell.labelTint ?? COLORS.mediumGrey}
+              />
             ) : null}
           </View>
         </Pressable>
@@ -1126,6 +1159,16 @@ export default function GameInfoScreen() {
    * completionist. Submitted times, so it only speaks when enough
    * people have.
    */
+  /**
+   * How this game lands on the evenings ahead, or nothing at all.
+   *
+   * Worked out here rather than inside the strip: whether there is a
+   * fit decides whether the section exists, and a component that
+   * answers that for itself leaves the page holding an empty slot
+   * between the decision and the screenshots.
+   */
+  const fit = fitFrom(durationOf(game).hours, openedAt);
+
   const figures = (
     <View style={styles.figures}>
       {/* Identity, and only identity: who made it, when, and what kind
@@ -1156,32 +1199,36 @@ export default function GameInfoScreen() {
         </Text>
       ) : null}
       <InfoStrip game={game} onEditLength={() => setEditingLength(true)} />
-      <View style={styles.figureNotes}>
-        <PlanLine
-          game={game}
-          onOpenPlan={() => router.push('/plan')}
-          pace={false}
-        />
-        {igdb?.times &&
-        igdb.times.submissions >= 5 &&
-        (igdb.times.hastily || igdb.times.completely) ? (
-          <Text style={styles.splitLegend}>
-            {[
-              igdb.times.hastily
-                ? `Rushing it ${Math.round(igdb.times.hastily)}h`
-                : null,
-              igdb.times.normally
-                ? `Most people ${Math.round(igdb.times.normally)}h`
-                : null,
-              igdb.times.completely
-                ? `100% ${Math.round(igdb.times.completely)}h`
-                : null,
-            ]
-              .filter(Boolean)
-              .join(' · ')}
-          </Text>
-        ) : null}
-      </View>
+      {/* Loose in the column rather than wrapped in a box of their own.
+          Both of these decline to render for most games — a game not in
+          the plan has no standing, a game with few submissions has no
+          split — and a wrapper around two absent children is a gap the
+          column pays for and nobody can see the cause of. Flex gaps
+          count what is actually drawn. */}
+      <PlanLine
+        game={game}
+        onOpenPlan={() => router.push('/plan')}
+        pace={false}
+      />
+      {igdb?.times &&
+      igdb.times.submissions >= 5 &&
+      (igdb.times.hastily || igdb.times.completely) ? (
+        <Text style={styles.splitLegend}>
+          {[
+            igdb.times.hastily
+              ? `Rushing it ${Math.round(igdb.times.hastily)}h`
+              : null,
+            igdb.times.normally
+              ? `Most people ${Math.round(igdb.times.normally)}h`
+              : null,
+            igdb.times.completely
+              ? `100% ${Math.round(igdb.times.completely)}h`
+              : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </Text>
+      ) : null}
     </View>
   );
 
@@ -2293,10 +2340,15 @@ export default function GameInfoScreen() {
                 {controls}
                 {/* The app's own answer, and the reason this page is
                     not a database entry: how the game lands on the
-                    evenings the reader actually has. */}
-                <View style={styles.fitSlot}>
-                  <FitStrip hours={durationOf(game).hours} now={openedAt} />
-                </View>
+                    evenings the reader actually has. Absent for a game
+                    of unknown length — and then the slot is absent too,
+                    rather than standing empty between the decision and
+                    the screenshots. */}
+                {fit ? (
+                  <View style={styles.fitSlot}>
+                    <FitStrip fit={fit} now={openedAt} />
+                  </View>
+                ) : null}
                 <Animated.View style={[styles.compactBody, { opacity }]}>
                   {/* The case, then the reader's own note on it, then
                       the file. "Your take" used to sit second on the
@@ -2494,8 +2546,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     color: COLORS.mediumGrey,
   },
-  /** The plan's line and the split, under the strip, at the gutter. */
-  figureNotes: { gap: SPACING.xs, paddingHorizontal: SPACING.xs },
   /** The fit strip stands in the page's own column, under the decision. */
   fitSlot: {
     paddingHorizontal: SPACING.md,

@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { SectionHeader } from './SectionHeader';
-import { fitFrom, fitLine, fitTitle, type FitDay } from '@/lib/fit';
+import { fitLine, fitTitle, type Fit, type FitDay } from '@/lib/fit';
 import { eveningHours } from '@/lib/week';
 import { COLORS } from '@/styles/colors';
 import { RADIUS, SPACING } from '@/styles/theme';
@@ -35,18 +35,21 @@ const COLUMN = 46;
  * started tonight.
  */
 export function FitStrip({
-  hours,
+  fit,
   now,
   inset = 0,
 }: {
-  hours: number;
+  /**
+   * The laid-out evenings. The caller works out whether there are any —
+   * a component that can decide it has nothing to draw leaves the
+   * caller holding space for a section that never appears, which is
+   * how a page grows a hole nobody can find in the styles.
+   */
+  fit: Fit;
   /** Captured by the caller, so the strip is pure and stays still. */
   now: number;
   inset?: number;
 }) {
-  const fit = fitFrom(hours, now);
-  if (!fit) return null;
-
   // The evenings the game does not reach are still drawn: a fortnight
   // with four evenings spent and ten free is the good news, and news
   // the app should show rather than crop away.
