@@ -216,7 +216,19 @@ export function HomeStage({
     : undefined;
 
   return (
-    <View style={{ height }} onLayout={onLayout}>
+    // Taller than the stage by the glow's reach and pulled back by the
+    // same amount, so the layout is exactly the stage's and the box
+    // still clips. The glow is deliberately wider than the screen, and
+    // unclipped that width was real: on a phone the layout viewport
+    // grew to fit it, and the whole page rendered eighty points too
+    // wide with its right edge off the glass.
+    <View
+      style={[
+        styles.frame,
+        { height: height + GLOW_BLEED, marginBottom: -GLOW_BLEED },
+      ]}
+      onLayout={onLayout}
+    >
       {glow ? (
         <View
           pointerEvents="none"
@@ -712,7 +724,14 @@ function StageCopy({
                 24,
               0
             )}
-            maxHeight={Math.round(fontSize * 2.1)}
+            // A wide wordmark is bound by the column and never reaches
+            // this; a tall or square emblem is bound by it and came out
+            // a stamp — a mark a third the height of the sentence below
+            // it, with its own transparent margins eating more. Marks
+            // shaped like that get half again the height.
+            maxHeight={Math.round(
+              fontSize * (logo && logo.width / logo.height < 2 ? 3.1 : 2.1)
+            )}
             style={styles.logo}
           >
             <Text style={[styles.title, display]} numberOfLines={3}>
@@ -897,6 +916,7 @@ const styles = StyleSheet.create({
    * mask, and what is left at the stage's last rows IS the page.
    */
   stage: { overflow: 'hidden' },
+  frame: { overflow: 'hidden' },
   /**
    * Wider than the screen on both sides, because a blurred picture goes
    * soft at its own edges and a soft edge inside the frame would read

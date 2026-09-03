@@ -87,6 +87,21 @@ for (const viewport of VIEWPORTS) {
       waitUntil: 'domcontentloaded',
     });
     await page.waitForTimeout(3000);
+    // The page must never be wider than the glass. A child hung past
+    // the right edge does not get clipped on a phone: the layout
+    // viewport grows to fit it, and the whole page renders wider than
+    // the screen with its edge off the glass. The home hero's glow did
+    // exactly this — eighty points wide of a 390 viewport — and nothing
+    // here noticed, because hydration was clean.
+    const width = await page.evaluate(() => ({
+      inner: window.innerWidth,
+      scroll: document.documentElement.scrollWidth,
+    }));
+    if (width.inner !== viewport.width || width.scroll > viewport.width) {
+      errors.push(
+        `page is ${Math.max(width.inner, width.scroll)}px wide on a ${viewport.width}px viewport — something hangs past the right edge`
+      );
+    }
     await page.close();
 
     const label = `${route} (${viewport.name})`;
