@@ -554,8 +554,21 @@ function InfoStrip({
       tint: finish.tint,
     });
 
+  /*
+   * Two figures do not fill a phone the way four do.
+   *
+   * An unreleased game has no score, no finishing rate and no length,
+   * so the strip comes down to a length to set and a star rating —
+   * and at a quarter of the width each they sat marooned in their own
+   * halves with a rule stranded between them. Equal cells are right
+   * where there are enough of them to read as a row; below that the
+   * group closes up and centres, which is a set of two facts rather
+   * than a table with holes in it.
+   */
+  const spread = cells.length > 2;
+
   return (
-    <View style={styles.strip}>
+    <View style={[styles.strip, !spread && styles.stripTight]}>
       {cells.map((cell, index) => (
         <Pressable
           key={cell.key}
@@ -563,7 +576,11 @@ function InfoStrip({
           disabled={!cell.onPress}
           accessibilityRole={cell.onPress ? 'button' : undefined}
           accessibilityLabel={cell.accessibilityLabel}
-          style={[styles.stripCell, index > 0 && styles.stripCellRule]}
+          style={[
+            styles.stripCell,
+            !spread && styles.stripCellTight,
+            index > 0 && styles.stripCellRule,
+          ]}
         >
           <Text
             style={[styles.stripValue, cell.tint ? { color: cell.tint } : null]}
@@ -1385,21 +1402,32 @@ export default function GameInfoScreen() {
        screenshots are still on their way rather than growing a section
        under the reader's thumb when they land. */
     <View style={mediaBlock}>
-      <SectionHeader
-        title="What it looks like"
-        eyebrow="Screens and trailers"
-      />
       <View style={styles.mediaBones}>
         <Skeleton style={{ width: shotWidth, height: shotHeight }} />
         <Skeleton style={{ width: shotWidth, height: shotHeight }} />
       </View>
     </View>
   ) : frames.length <= 1 ? null : (
-    <View style={mediaBlock}>
-      <SectionHeader
-        title="What it looks like"
-        eyebrow={`${frames.length - 1} screens and trailers`}
-      />
+    /* No heading.
+     *
+     * "What it looks like" over a row of screenshots states what the
+     * screenshots are already saying, and the count above it was
+     * inventory — a reader can see how many there are by pushing them.
+     * It is the same argument the description won when its "About"
+     * came off: the only prose on a page about one game does not need
+     * a label announcing that it is about the game. The pictures follow
+     * the masthead's picture, which is a better join than a title bar
+     * between them.
+     *
+     * Named for assistive tech, where the pictures are not
+     * self-evident and a row of images with no context is a worse
+     * experience than a heading nobody sees.
+     */
+    <View
+      style={mediaBlock}
+      accessibilityRole="summary"
+      accessibilityLabel={`${frames.length - 1} screens and trailers`}
+    >
       <Rail<(typeof frames)[number]>
         data={frames.slice(1)}
         keyExtractor={(item) => item.key}
@@ -2410,6 +2438,21 @@ const styles = StyleSheet.create({
   strip: {
     flexDirection: 'row',
     alignItems: 'stretch',
+  },
+  stripTight: { justifyContent: 'center' },
+  /*
+   * `flexGrow: 0` with an automatic basis, never `flex: 0`.
+   *
+   * React Native reads `flex: 0` as grow 0, shrink 0 and basis ZERO —
+   * not the auto basis the CSS shorthand gives — so the cell took no
+   * width at all and the figures vanished, leaving two labels under an
+   * empty rule. The layout only breaks for a game with fewer than
+   * three facts, which is exactly the game nobody tests with.
+   */
+  stripCellTight: {
+    flexGrow: 0,
+    flexBasis: 'auto',
+    paddingHorizontal: SPACING.xl,
   },
   stripCell: {
     flex: 1,
