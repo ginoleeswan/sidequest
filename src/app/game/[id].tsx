@@ -2183,9 +2183,12 @@ export default function GameInfoScreen() {
           rail's register is the micro label — GET IT, WHO ELSE HAS IT —
           and a heading above them was a second voice saying nothing
           the labels don't: two label registers inside 100pt. */}
-      {!isExpanded && (
-        <SectionHeader title="Details" eyebrow="Where to get it, who made it" />
-      )}
+      {/* No eyebrow. It read "WHERE TO GET IT, WHO MADE IT" directly
+          above a label reading "GET IT" — the same words twice, in two
+          sizes, four points apart. The labels inside the file already
+          say what each group is; the heading only has to name the
+          file. */}
+      {!isExpanded && <SectionHeader title="Details" />}
       {framed(
         isExpanded ? [controls, fileGetIt, fileFacts] : [fileGetIt, fileDetails]
       )}

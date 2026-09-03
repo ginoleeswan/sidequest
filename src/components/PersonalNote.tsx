@@ -120,7 +120,7 @@ export function PersonalNote({ gameId }: { gameId: number }) {
             addTag(gameId, tagDraft);
             setTagDraft('');
           }}
-          placeholder="+ shelf"
+          placeholder="Shelve it as…"
           placeholderTextColor={COLORS.mediumGrey}
           style={[styles.tagInput, WEB_INPUT]}
           accessibilityLabel="Add this game to one of your shelves"
@@ -183,7 +183,17 @@ const styles = StyleSheet.create({
   input: {
     ...TYPE.body,
     color: COLORS.lightGrey,
-    minHeight: 64,
+    /*
+     * One line, not three.
+     *
+     * The floor was 64 — three lines of body copy — so a one-line note
+     * left forty points of nothing between what somebody wrote and the
+     * controls under it, and the card was the emptiest-looking object
+     * on a page it is supposed to be the most personal part of. Empty,
+     * the placeholder wraps to two lines and sets the height itself;
+     * written in, the box is the size of the note.
+     */
+    minHeight: 24,
     textAlignVertical: 'top',
     outlineWidth: 0,
   },
