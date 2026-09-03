@@ -17,6 +17,7 @@ import {
   View,
   type StyleProp,
   type ViewStyle,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -771,6 +772,8 @@ export default function GameInfoScreen() {
   const { durationOf, learnDurations } = useDurations();
 
   const { isExpanded, width } = useBreakpoint();
+  /** The band takes a share of the window; see `bannerHeight`. */
+  const { height: windowHeight } = useWindowDimensions();
   const hasNote = usePersonalNote(Number(id));
   const insets = useSafeAreaInsets();
   const opacity = useAnimatedValue(0);
@@ -1090,7 +1093,12 @@ export default function GameInfoScreen() {
   const banner = art?.hero?.url ?? game.background_image;
 
   const hero = (
-    <View style={[styles.hero, { height: bannerHeight(width, insets.top) }]}>
+    <View
+      style={[
+        styles.hero,
+        { height: bannerHeight(width, insets.top, windowHeight) },
+      ]}
+    >
       {banner ? (
         <Image
           source={{ uri: banner }}

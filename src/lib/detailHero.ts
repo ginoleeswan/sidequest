@@ -17,30 +17,42 @@
  */
 
 /**
- * The band's own proportions, and why they are not the hero's.
+ * The two crops the band is allowed to make, and why it is a range.
  *
  * A hero is 3.1:1. Shown at that ratio on a 390-point phone it is 126
  * points tall — a letterbox, and barely half of any band worth calling
  * a masthead. Composited over a blurred copy of itself it gains the
  * height and gains a seam with it: a straight line across the page
  * where the sharp frame stops, which no ramp gentle enough to let the
- * blur show is strong enough to hide.
+ * blur read is ever strong enough to hide. So one picture fills the
+ * band, and the height is bought with a crop.
  *
- * So one picture fills the band, and the height is bought with a crop.
- * Which side it comes off matters more than how much. Valve's
+ * Which side that comes off matters more than how much. Valve's
  * convention puts the subject hard right and leaves the left clear,
- * because Steam composites the logo there — so a centre crop takes a
- * bite out of the one thing the picture is of. Directive 8020's
- * astronaut stands at the right edge. The crop therefore comes off the
- * left, and what it spends is the empty half the logo was meant for,
- * which this design does not use: the mark is centred, low, on the
- * ramp.
+ * because Steam composites the logo there — a centre crop takes a bite
+ * out of the one thing the picture is of, and Directive 8020's
+ * astronaut stands at the right edge. The crop comes off the left, and
+ * what it spends is the empty half the logo was meant for, which this
+ * design does not use: the mark is centred, low, on the ramp.
  *
- * A 16:9 screenshot standing in for a missing hero is cropped top and
- * bottom against the same box, and centred — the middle of a game
- * frame is where the game is.
+ * `tightest` is the most picture this page will ever spend: at 1.6 it
+ * keeps 52% of a hero — the right half, where the game is. `widest` is
+ * a floor, so a short window still gets a band rather than a strip.
  */
-export const BAND_RATIO = 1.8;
+export const BAND_CROP = { tightest: 1.6, widest: 2.2 } as const;
+
+/**
+ * How much of the window the band asks for.
+ *
+ * A ratio alone is a masthead whose presence depends on how tall the
+ * reader's phone happens to be: at a flat 1.8 the picture was 31% of an
+ * iPhone SE and 26% of a Pro Max, so the same design read as a stage on
+ * a small phone and a header image on a large one. Driving the height
+ * from the window and bounding the crop holds it near a third
+ * everywhere, which is what makes it feel like one decision rather than
+ * an accident of the device.
+ */
+export const BAND_SHARE = 0.34;
 
 /**
  * The title treatment's box, low on the art.
@@ -56,7 +68,16 @@ export const TITLE_SLOT = 64;
  *
  * The art runs to the top of the document — under the clock, under the
  * brand — so the inset is part of the band rather than a bite out of
- * the picture.
+ * the picture. A window of zero, which is what a pre-render has before
+ * anything is measured, falls to the floor rather than to nothing.
  */
-export const bannerHeight = (width: number, top: number): number =>
-  top + Math.round(width / BAND_RATIO);
+export function bannerHeight(
+  width: number,
+  top: number,
+  windowHeight: number
+): number {
+  const tallest = width / BAND_CROP.tightest;
+  const shortest = width / BAND_CROP.widest;
+  const wanted = windowHeight * BAND_SHARE;
+  return top + Math.round(Math.min(tallest, Math.max(shortest, wanted)));
+}

@@ -408,14 +408,17 @@ export function SkeletonDetailExpanded() {
  */
 export function SkeletonDetail() {
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   return (
     <View>
       {/* The band the art will fill, with the mark's slot at its foot —
           the same constants the loaded masthead is built from, so the
           swap is a dissolve rather than a jump. */}
       <View
-        style={[styles.detailHero, { height: bannerHeight(width, insets.top) }]}
+        style={[
+          styles.detailHero,
+          { height: bannerHeight(width, insets.top, height) },
+        ]}
       >
         {/* One picture fills the band; the mark's slot sits low on it —
             the same measures the loaded masthead is built from. */}
