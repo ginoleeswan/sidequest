@@ -81,7 +81,8 @@ const BULK = {
 
 /**
  * Each scenario is a page and the sentences that make it that page.
- * `absent` guards the regressions where the wrong thing appeared.
+ * `absent` guards the regressions where the wrong thing appeared;
+ * `once` the ones where the right thing appeared twice.
  */
 const SCENARIOS = [
   {
@@ -91,6 +92,26 @@ const SCENARIOS = [
     expect: ['Hades', 'Player verdict', 'More in this series', 'Want to play'],
     // The onboarding must never cover a page somebody was linked to.
     absent: ['Your backlog isn’t'],
+    // The spec sheet is a spec sheet: one row per fact.
+    once: ['Platforms', 'Release date', 'Developer', 'Publisher'],
+  },
+  {
+    /**
+     * The same page with a sidebar and two columns.
+     *
+     * The wide layout files the lookups in a rail and the argument in
+     * a column, and for a while it also lifted the tags into a band
+     * under both — with the platform list beside them for company.
+     * A game on eight platforms then printed that comma list twice on
+     * one screen, four hundred points apart, and nothing here saw it:
+     * every check ran at 390, where the band does not exist.
+     */
+    name: 'the game page on a desk, each fact filed once',
+    route: '/game/3498',
+    viewport: { width: 1280, height: 900 },
+    seed: {},
+    expect: ['Details', 'Player verdict', 'More in this series'],
+    once: ['Platforms', 'Release date', 'Developers', 'Publishers'],
   },
   {
     name: 'the home shelves, with data',
@@ -214,10 +235,12 @@ const browser = await chromium.launch({
 const failures = [];
 
 for (const scenario of SCENARIOS) {
+  const viewport = scenario.viewport ?? { width: 390, height: 844 };
+  const phone = viewport.width < 900;
   const context = await browser.newContext({
-    viewport: { width: 390, height: 844 },
-    isMobile: true,
-    hasTouch: true,
+    viewport,
+    isMobile: phone,
+    hasTouch: phone,
   });
   await context.route(`**/localhost:${PORT}/rawg/**`, (route) => {
     const url = new URL(route.request().url());
@@ -253,6 +276,17 @@ for (const scenario of SCENARIOS) {
   for (const text of scenario.absent ?? []) {
     const count = await page.getByText(text, { exact: false }).count();
     if (count > 0) missing.push(`must not show "${text}"`);
+  }
+  // Whole-string, so a label matches its own element and not every
+  // wrapper that contains it — and case-insensitive, because a label
+  // set in display caps is the same fact as one set in sentence case,
+  // which is exactly how the duplicate this guards got past a
+  // case-sensitive read.
+  for (const text of scenario.once ?? []) {
+    const count = await page
+      .getByText(new RegExp(`^\\s*${text}\\s*$`, 'i'))
+      .count();
+    if (count !== 1) missing.push(`shows "${text}" ${count} times, not once`);
   }
   if (scenario.maxNodes) {
     const nodes = await page.evaluate(

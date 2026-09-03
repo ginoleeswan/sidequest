@@ -1869,21 +1869,22 @@ export default function GameInfoScreen() {
     (storeLinks.length > 0 && game.stores?.length) || Boolean(game.website);
 
   /**
-   * The file, in two halves that only separate when there is room.
+   * The file, and where the tags left it.
    *
-   * All four sections stack in one framed object on a phone, which is
-   * what they were consolidated into and what still works there. On a
-   * desktop they sit in a 360pt rail, and the two halves behave very
-   * differently in it: "Get it" and "Who else has it" are chips and
-   * tiles that were designed narrow, while Details and Tags are long
-   * comma lists and a cloud — at 360 they measured 326 and 265, which
-   * is most of a rail running 466pt past the column beside it and a
-   * void that size at the foot of the page.
+   * All of it stacks in one framed object on a phone. On a desktop the
+   * lookups sit in a 360pt rail, which suits chips and label-and-value
+   * rows but not a cloud of two dozen tags — so the tags used to be
+   * lifted out into a full-width band under both columns, with the
+   * platform list beside them to keep the band from being one lonely
+   * half. That band printed the platform list a second time, four
+   * hundred points under the first, and stood a tag cloud six rows
+   * deep in the narrow track while a single comma list held the wide
+   * one.
    *
-   * So the record goes full width when the page is wide enough to give
-   * it one. Nothing is hidden and nothing is reordered: the rail
-   * carries what this game is right now, the band under it carries the
-   * catalogue entry, and on a phone they are the same object they were.
+   * The tags now follow the prose in the main column, which is where
+   * the phone has always filed them and the only place they read as
+   * what they are: the description's index. The rail keeps the spec
+   * sheet, once.
    */
   /**
    * The stage: one big frame, and the strip that changes it.
@@ -2099,10 +2100,11 @@ export default function GameInfoScreen() {
    *
    * Steam fills its rail with reference material under the actions and
    * it reads as a column with a job; ours pinned two short groups and
-   * scrolled sparse. These four are the facts that fit a 400pt track —
-   * label and value, one line each. Platforms is the one that does
-   * not: it is a comma list that wrapped to three lines here, so it
-   * stays in the record band where it gets the wide track.
+   * scrolled sparse. These are the facts that fit a 400pt track — label
+   * and value, a line or two each, and the whole spec sheet in one
+   * place. Platforms also had a home in a full-width band under the
+   * columns, which meant a game on eight of them printed the same
+   * comma list twice on one screen, four hundred points apart.
    */
   const fileFacts = isExpanded ? (
     <View style={fileSection}>
@@ -2148,20 +2150,24 @@ export default function GameInfoScreen() {
     </View>
   ) : null;
 
+  /**
+   * The chips, with no label and no padding of their own.
+   *
+   * No label, in either layout: they follow the prose on both, and
+   * there they are the description's index — a reader who has just
+   * read the sentence does not need a heading to be told that
+   * "Atmospheric" and "Story Rich" describe it. And no `fileSection`
+   * wrapper any more: that padding is what separates the crate's
+   * sections from each other, and out here it was twenty points the
+   * block's own margin had already paid for, so the tags sat looser
+   * from the prose than any two blocks on the page.
+   */
   const fileTags =
     game.tags && game.tags.length > 0 ? (
-      <View style={fileSection}>
-        {/* Labelled only in the desk rail, where the register is the
-            micro label and every group carries one. Under the phone's
-            prose the chips are the description's index and need no
-            heading to say so — a label there was the page's fourth
-            voice inside two screens. */}
-        {isExpanded ? <Text style={styles.fileLabel}>TAGS</Text> : null}
-        <View style={styles.tags}>
-          {game.tags.slice(0, isExpanded ? 24 : 10).map((tag) => (
-            <Chip key={tag.id} title={tag.name} quiet />
-          ))}
-        </View>
+      <View style={styles.tags}>
+        {game.tags.slice(0, isExpanded ? 24 : 10).map((tag) => (
+          <Chip key={tag.id} title={tag.name} quiet />
+        ))}
       </View>
     ) : null;
 
@@ -2247,24 +2253,6 @@ export default function GameInfoScreen() {
     </View>
   );
 
-  /** The catalogue entry, given the width its lists actually need. */
-  const record = isExpanded ? (
-    <View style={[styles.block, styles.recordBand]}>
-      <View style={styles.recordDetails}>
-        {framed([
-          <View key="platforms" style={fileSection}>
-            <Text style={styles.fileLabel}>PLATFORMS</Text>
-            <MetaRow
-              label=""
-              items={game.platforms?.map(({ platform }) => platform)}
-            />
-          </View>,
-        ])}
-      </View>
-      <View style={styles.recordTags}>{framed([fileTags])}</View>
-    </View>
-  ) : null;
-
   /**
    * What stands in for the body while the page is on a seeded row.
    *
@@ -2300,10 +2288,12 @@ export default function GameInfoScreen() {
         <Screen onRefresh={refresh}>
           <View
             style={[
-              // The last block already leaves its own margin; on the
-              // phone another forty-eight under it was a void before
-              // the footer's shore.
-              { paddingBottom: isExpanded ? SPACING.xl * 1.5 : SPACING.xs },
+              // The last block already leaves its own margin, so this
+              // is what goes on top of it. Forty-eight there was a void
+              // before the footer's shore on the phone, and the same
+              // forty-eight was still standing on the desk, where the
+              // shore is wider and the emptiness reads longer.
+              { paddingBottom: isExpanded ? SPACING.lg : SPACING.xs },
               isExpanded && styles.deskPad,
             ]}
           >
@@ -2321,6 +2311,14 @@ export default function GameInfoScreen() {
                       <>
                         {yourTake}
                         {about}
+                        {/* After the prose they annotate, the same
+                            place the phone files them. They were in a
+                            full-width band below both columns, which
+                            put the description's index two screens
+                            below the description it indexes. */}
+                        {game.tags && game.tags.length > 0 ? (
+                          <View style={styles.block}>{fileTags}</View>
+                        ) : null}
                         {ratingsBreakdown}
                       </>
                     )}
@@ -2337,7 +2335,6 @@ export default function GameInfoScreen() {
                     {fileBox}
                   </Animated.View>
                 </Animated.View>
-                <Animated.View style={{ opacity }}>{record}</Animated.View>
                 {/* media escapes the column: full-bleed rails, gutter-aligned */}
                 <Animated.View style={{ opacity }}>{mediaTail}</Animated.View>
               </View>
@@ -2930,31 +2927,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  /** Full width, and split so neither half runs to a 1152pt measure. */
-  recordBand: {
-    flexDirection: 'row',
-    gap: SPACING.xl + SPACING.sm,
-    alignItems: 'flex-start',
-    width: '100%',
-    maxWidth: PAGE_MAX,
-    alignSelf: 'center',
-    paddingHorizontal: SPACING.xl * 2,
-  },
-  /**
-   * The same two tracks as everything above, not an even split.
-   *
-   * A 50/50 band would have reintroduced the fault this page just lost:
-   * columns at 560 and 560 under columns at 760 and 360, a third
-   * rhythm on a page that should have one.
-   *
-   * Details takes the wide track and tags the narrow one, which is also
-   * the way round they want. Details is label-and-value rows that fit
-   * one line each at 760 and wrapped to 326pt at 360; tags are chips
-   * that wrap to fill whatever they are given. Put the other way round
-   * the band would stand 60pt taller for the same content.
-   */
-  recordDetails: { flex: 70, minWidth: 0 },
-  recordTags: { flex: 30, maxWidth: RAIL, minWidth: 0 },
   /**
    * Pinned, the same move the Plan's rail makes and for the same
    * reason: the rail is the short column — a decision and two lookup
