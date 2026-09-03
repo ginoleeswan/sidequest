@@ -82,7 +82,16 @@ function LinkColumn({
  * footer. The mascot sits out on the landing page, where the horizon
  * section above has already given the Mark its real scene.
  */
-const SHORE_H = 64;
+/**
+ * How deep the shoreline is, crest to foot.
+ *
+ * Exported because the water only paints BELOW the wave: everything
+ * above the crest is transparent and shows whatever the footer is
+ * standing on. A page that ends on a colour of its own has to carry
+ * that colour under here, or the shore hands the reader a straight
+ * edge and a stripe of page background before the wave arrives.
+ */
+export const SHORE_H = 64;
 const SHORE_AMP = 10;
 const SHORE_MID = 30;
 const SHORE_LENGTH = 560;

@@ -71,7 +71,7 @@ import { StatusActions } from '@/components/StatusActions';
 import { StoreLinks } from '@/components/StoreLinks';
 import { TitleLogo } from '@/components/TitleLogo';
 import { DurationSheet } from '@/components/DurationSheet';
-import { SiteFooter } from '@/components/SiteFooter';
+import { SHORE_H, SiteFooter } from '@/components/SiteFooter';
 import { GrainScrim, Textured } from '@/components/Textured';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
@@ -3060,6 +3060,20 @@ const styles = StyleSheet.create({
     marginTop: -1,
     paddingHorizontal: SPACING.md,
     paddingTop: SPACING.lg,
+    /*
+     * The band's colour carries on under the footer's shoreline.
+     *
+     * The water is only painted below the wave; above the crest the
+     * shore is transparent and shows what it stands on. The band is a
+     * step darker than the page, so where it stopped the reader got a
+     * straight edge and then thirty points of lighter page before the
+     * wave — the file entered over a shoreline and left over a cut.
+     * The padding extends the colour by the shore's own depth and the
+     * negative margin gives that height back to the layout, so the
+     * footer rides up onto the band and the wave is the only edge.
+     */
+    paddingBottom: SHORE_H,
+    marginBottom: -SHORE_H,
   },
   fileJoin: { borderBottomWidth: 1, borderBottomColor: COLORS.stroke },
   /**
