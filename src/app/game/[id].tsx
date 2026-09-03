@@ -1559,7 +1559,7 @@ export default function GameInfoScreen() {
           like. Renders nothing when nobody is live, when Twitch has no
           such category, or when the deployment has no Twitch keys — so
           it can never be the reason this page looks unfinished. */}
-      <LiveStreams game={game.name} style={mediaBlock} />
+      <LiveStreams game={game.name} style={mediaBlock} inset={railInset} />
 
       {/* IGDB's graph, beside RAWG's series: the series answers "what
           else is THIS", similar answers "what else is LIKE this" —
