@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   type NativeScrollEvent,
@@ -81,6 +81,18 @@ export function HomeStage({
    */
   const width = measured || windowWidth;
   const [index, setIndex] = useState(0);
+  const list = useRef<FlatList<StageSlide>>(null);
+
+  /**
+   * Where the swipe is, between pages.
+   *
+   * The copy is mounted once above the list and re-keyed on the slide,
+   * so at the halfway point of a drag the outgoing words vanished and
+   * the incoming ones appeared - a cut, in the middle of a gesture the
+   * artwork was still smoothly following. This carries the scroll
+   * offset so the block can dissolve across the join instead.
+   */
+  const scrollX = useAnimatedValue(0);
 
   /**
    * The dwell: linger on a slide and its still comes to life.
@@ -148,16 +160,33 @@ export function HomeStage({
    * end in one, and the copy must never disagree with the picture it is
    * written over. Guarded so the state only moves when the page does.
    */
-  const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    if (width <= 0) return;
-    const next = Math.round(event.nativeEvent.contentOffset.x / width);
-    const clamped = Math.min(Math.max(next, 0), slides.length - 1);
-    if (clamped !== index) setIndex(clamped);
+  const onScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+    {
+      // The value drives an opacity, which the native driver can own;
+      // the listener still runs so the copy knows which slide it is.
+      useNativeDriver: true,
+      listener: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+        if (width <= 0) return;
+        const next = Math.round(event.nativeEvent.contentOffset.x / width);
+        const clamped = Math.min(Math.max(next, 0), slides.length - 1);
+        if (clamped !== index) setIndex(clamped);
+      },
+    }
+  );
+
+  /** Page by tap: the dots, and the desk's chevrons. */
+  const goTo = (to: number) => {
+    const clamped = Math.min(Math.max(to, 0), slides.length - 1);
+    if (clamped === index) return;
+    list.current?.scrollToIndex({ index: clamped, animated: true });
+    setIndex(clamped);
   };
 
   return (
     <View style={[styles.stage, { height }]} onLayout={onLayout}>
-      <FlatList
+      <Animated.FlatList
+        ref={list}
         data={slides}
         horizontal
         pagingEnabled
@@ -199,8 +228,10 @@ export function HomeStage({
         count={slides.length}
         inset={inset}
         width={width}
+        scrollX={scrollX}
         onOpen={() => router.push(`/game/${current.game.id}`)}
         onSurprise={surprise}
+        onGoTo={goTo}
       />
     </View>
   );
@@ -416,16 +447,21 @@ function StageCopy({
   count,
   inset,
   width,
+  scrollX,
   onOpen,
   onSurprise,
+  onGoTo,
 }: {
   slide: StageSlide;
   index: number;
   count: number;
   inset: number;
   width: number;
+  /** The list's scroll offset, so the words can cross the join. */
+  scrollX: Animated.Value;
   onOpen: () => void;
   onSurprise: () => void;
+  onGoTo: (index: number) => void;
 }) {
   const reduced = useReducedMotion();
   const { isExpanded } = useBreakpoint();
@@ -506,6 +542,24 @@ function StageCopy({
   }, [enter, reduced]);
 
   /**
+   * Out on the way across, in on the way down.
+   *
+   * The words belong to the slide under them, and the slide changes at
+   * the halfway point of the drag - so held at full strength they cut
+   * from one game's sentence to another's mid-gesture, over artwork
+   * that was still sliding smoothly. Fading on the distance from the
+   * nearest page means the block is gone before the swap and back
+   * after it, and a swipe that changes its mind and springs back never
+   * shows a flicker. Reduced motion holds it at one and takes the cut.
+   */
+  const crossing = reduced
+    ? 1
+    : Animated.modulo(
+        Animated.divide(scrollX, Math.max(width, 1)),
+        1
+      ).interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0, 1] });
+
+  /**
    * One value, four arrivals.
    *
    * Each line reads a different window of the same timeline, so the
@@ -532,11 +586,11 @@ function StageCopy({
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-      <View
+      <Animated.View
         style={[
           styles.copy,
           isExpanded && styles.copyWide,
-          { left: inset, right: inset },
+          { left: inset, right: inset, opacity: crossing },
         ]}
       >
         {/* The reason, then the date — in that order and in two
@@ -620,36 +674,119 @@ function StageCopy({
             <Ionicons name="dice-outline" size={16} color={COLORS.lightGrey} />
             <Text style={styles.ghostLabel}>Surprise me</Text>
           </Pressable>
-          {/* Each slide draws its own position, so there is no scroll
-              listener and nothing to keep in sync. On a wide stage they
-              ride the end of the action row instead of stranding
-              themselves against the far edge. */}
+          {/* On a wide stage they ride the end of the action row
+              instead of stranding themselves against the far edge. */}
           {count > 1 && !isExpanded && (
-            <View style={styles.dots} pointerEvents="none">
-              {Array.from({ length: count }, (_, i) => (
-                <View
-                  key={i}
-                  style={[styles.dot, i === index && styles.dotOn]}
-                />
-              ))}
-            </View>
+            <Dots count={count} index={index} onGoTo={onGoTo} />
           )}
         </Animated.View>
-      </View>
+      </Animated.View>
       {/* On a desk the dots take the frame's own corner, the way a
           billboard's page indicator does, rather than riding the end of
           the action row a screen's width from the frame's edge. */}
       {count > 1 && isExpanded && (
-        <View
-          style={[styles.dotsCorner, { right: inset }]}
-          pointerEvents="none"
-        >
-          {Array.from({ length: count }, (_, i) => (
-            <View key={i} style={[styles.dot, i === index && styles.dotOn]} />
-          ))}
+        <View style={[styles.dotsCorner, { right: inset }]}>
+          <Dots count={count} index={index} onGoTo={onGoTo} />
         </View>
       )}
+      {/* The desk has no swipe. A trackpad can drag the list and a
+          touchscreen laptop can flick it, but a mouse could only ever
+          reach the second slide by accident - so the two thirds of the
+          stage nobody was told about went unseen. Every other shelf on
+          this page pages by chevron; the largest one on it should not
+          be the exception. */}
+      {count > 1 && isExpanded && (
+        <>
+          {index > 0 && (
+            <Chevron
+              side="left"
+              inset={inset}
+              onPress={() => onGoTo(index - 1)}
+            />
+          )}
+          {index < count - 1 && (
+            <Chevron
+              side="right"
+              inset={inset}
+              onPress={() => onGoTo(index + 1)}
+            />
+          )}
+        </>
+      )}
     </View>
+  );
+}
+
+/**
+ * The page indicator, which is also how you turn the page.
+ *
+ * It was a decoration - `pointerEvents: none` - so on a desk the only
+ * way to the other slides was to guess that the picture could be
+ * dragged. A row of marks that says "there are three of these" and
+ * does nothing when pressed is a control that has been drawn but not
+ * wired. The marks stay six points; the press target around each one
+ * is the full row height, which is what a thumb needs.
+ */
+function Dots({
+  count,
+  index,
+  onGoTo,
+}: {
+  count: number;
+  index: number;
+  onGoTo: (index: number) => void;
+}) {
+  return (
+    <View style={styles.dots}>
+      {Array.from({ length: count }, (_, i) => (
+        <Pressable
+          key={i}
+          onPress={() => onGoTo(i)}
+          hitSlop={{ top: 14, bottom: 14, left: 5, right: 5 }}
+          accessibilityRole="button"
+          accessibilityState={{ selected: i === index }}
+          accessibilityLabel={`Slide ${i + 1} of ${count}`}
+        >
+          <View style={[styles.dot, i === index && styles.dotOn]} />
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
+/**
+ * Prev and next, on the desk, at the frame's own vertical middle.
+ *
+ * Absent at the ends rather than dimmed: a greyed disc over a bright
+ * still is a smudge on the artwork, and the one at the left edge sits
+ * directly above the headline where a smudge is least welcome. They
+ * are absolutely positioned, so nothing reflows when one goes.
+ */
+function Chevron({
+  side,
+  inset,
+  onPress,
+}: {
+  side: 'left' | 'right';
+  inset: number;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.chevron,
+        side === 'left' ? { left: inset } : { right: inset },
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={side === 'left' ? 'Previous slide' : 'Next slide'}
+    >
+      <Ionicons
+        name={side === 'left' ? 'chevron-back' : 'chevron-forward'}
+        size={20}
+        color={COLORS.white}
+      />
+    </Pressable>
   );
 }
 
@@ -714,10 +851,25 @@ const styles = StyleSheet.create({
     // The action row's centre line: copy bottom (48) plus half a 40pt
     // button, less half a dot. Measured, not eyeballed.
     bottom: SPACING.xl * 1.5 + 20 - 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
   },
+  /**
+   * A plate, not a bare glyph. It sits over whatever the artwork
+   * happens to be at the frame's midline, which on a bright still is
+   * white on white; the disc is the same one the game page's back
+   * button uses and for the same reason.
+   */
+  chevron: {
+    position: 'absolute',
+    top: '50%',
+    marginTop: -20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(20,25,35,0.55)',
+  },
+
   /**
    * The copy carries its own legibility.
    *

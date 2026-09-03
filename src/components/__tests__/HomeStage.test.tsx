@@ -147,6 +147,78 @@ describe('the home stage', () => {
     expect(fills(view)).toEqual([]);
   });
 
+  /**
+   * The indicator was `pointerEvents: none` — three marks saying
+   * "there are three of these" and doing nothing when pressed. On a
+   * desk, where there is no swipe, that made two thirds of the stage
+   * reachable only by guessing that the picture could be dragged.
+   */
+  it('turns the page when you press a dot', async () => {
+    await renderApp(
+      <HomeStage
+        slides={[slide(), slide({ key: 'b', game: game(2, 'Tunic') })]}
+        games={[]}
+        headerHeight={0}
+        height={400}
+      />
+    );
+    const second = screen.getByLabelText('Slide 2 of 2');
+    expect(second).toBeTruthy();
+    await fireEvent.press(second);
+    // The copy follows the picture: the second slide's action is now
+    // the one under the reader's thumb.
+    expect(screen.getByLabelText('Finish it: Tunic')).toBeTruthy();
+  });
+
+  it('gives a phone no chevrons to press, because it has a thumb', async () => {
+    await renderApp(
+      <HomeStage
+        slides={[slide(), slide({ key: 'b', game: game(2, 'Tunic') })]}
+        games={[]}
+        headerHeight={0}
+        height={400}
+      />
+    );
+    expect(screen.queryByLabelText('Next slide')).toBeNull();
+  });
+
+  describe('on a desk, where there is no swipe', () => {
+    beforeEach(() =>
+      jest.mocked(useBreakpoint).mockReturnValue({
+        width: 1280,
+        isCompact: false,
+        isExpanded: true,
+        columns: 4,
+      })
+    );
+    afterEach(() =>
+      jest.mocked(useBreakpoint).mockReturnValue({
+        width: 390,
+        isCompact: true,
+        isExpanded: false,
+        columns: 2,
+      })
+    );
+
+    it('pages by chevron, and hides the one with nowhere to go', async () => {
+      await renderApp(
+        <HomeStage
+          slides={[slide(), slide({ key: 'b', game: game(2, 'Tunic') })]}
+          games={[]}
+          headerHeight={0}
+          height={400}
+        />
+      );
+      // Nothing behind the first slide, so nothing to press: a dimmed
+      // disc over a bright still is a smudge on the artwork.
+      expect(screen.queryByLabelText('Previous slide')).toBeNull();
+      await fireEvent.press(screen.getByLabelText('Next slide'));
+      expect(screen.getByLabelText('Finish it: Tunic')).toBeTruthy();
+      expect(screen.getByLabelText('Previous slide')).toBeTruthy();
+      expect(screen.queryByLabelText('Next slide')).toBeNull();
+    });
+  });
+
   it('opens the game behind the primary action', async () => {
     await renderApp(
       <HomeStage slides={[slide()]} games={[]} headerHeight={0} height={400} />
