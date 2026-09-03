@@ -39,7 +39,14 @@
  * keeps 52% of a hero — the right half, where the game is. `widest` is
  * a floor, so a short window still gets a band rather than a strip.
  */
-export const BAND_CROP = { tightest: 1.6, widest: 2.2 } as const;
+/**
+ * ...and then tighter again, for the melt. At 1.6 the band was 244
+ * points on a 390 phone, and a dissolve long enough to read as one —
+ * two fifths of the frame — left too little picture above it. 1.35
+ * buys 45 more points and keeps 44% of a hero: still the right half,
+ * still where the game is.
+ */
+export const BAND_CROP = { tightest: 1.35, widest: 2.2 } as const;
 
 /**
  * How much of the window the band asks for.
@@ -52,7 +59,7 @@ export const BAND_CROP = { tightest: 1.6, widest: 2.2 } as const;
  * everywhere, which is what makes it feel like one decision rather than
  * an accident of the device.
  */
-export const BAND_SHARE = 0.34;
+export const BAND_SHARE = 0.4;
 
 /**
  * The title treatment's box, low on the art.

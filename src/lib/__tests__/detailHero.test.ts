@@ -28,7 +28,7 @@ describe('how tall the band is', () => {
     ];
     for (const [w, h] of phones) {
       const share = picture(w, h) / h;
-      expect(share).toBeGreaterThan(0.28);
+      expect(share).toBeGreaterThan(0.33);
       expect(share).toBeLessThanOrEqual(BAND_SHARE + 0.001);
     }
   });
