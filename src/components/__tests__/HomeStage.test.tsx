@@ -29,12 +29,39 @@ const slide = (over: Partial<StageSlide> = {}): StageSlide => ({
   key: 'tonight-1',
   kind: 'tonight',
   game: game(1, 'Hades'),
-  eyebrow: 'Thursday, 20 August · Tonight',
-  title: 'Finish Hades',
-  detail: '3h left. You could see the credits before bed.',
+  eyebrow: 'Tonight',
+  date: 'Thu, 20 Aug',
+  title: 'Hades',
+  figure: '3h left',
+  detail: 'You could see the credits before bed.',
   action: 'Finish it',
   ...over,
 });
+
+/**
+ * Every percentage-width box in the tree: the progress bar's fill, and
+ * nothing else on this stage. RNTL 14 dropped the component queries,
+ * and the bar has no text to find it by.
+ */
+function fills(view: { toJSON: () => unknown }): string[] {
+  const found: string[] = [];
+  const walk = (node: unknown) => {
+    if (!node || typeof node !== 'object') return;
+    const el = node as {
+      props?: { style?: unknown };
+      children?: unknown[];
+    };
+    for (const style of StyleSheet.flatten(el.props?.style)
+      ? [StyleSheet.flatten(el.props?.style)]
+      : []) {
+      const width = (style as { width?: unknown }).width;
+      if (typeof width === 'string' && width.endsWith('%')) found.push(width);
+    }
+    el.children?.forEach(walk);
+  };
+  walk(view.toJSON());
+  return found;
+}
 
 /** The first thing anyone sees. */
 describe('the home stage', () => {
@@ -55,11 +82,69 @@ describe('the home stage', () => {
     await renderApp(
       <HomeStage slides={[slide()]} games={[]} headerHeight={0} height={400} />
     );
-    expect(screen.getByText('THURSDAY, 20 AUGUST · TONIGHT')).toBeTruthy();
-    expect(screen.getByText('Finish Hades')).toBeTruthy();
+    expect(screen.getByText(/TONIGHT/)).toBeTruthy();
+    expect(screen.getByText('Hades')).toBeTruthy();
     expect(
-      screen.getByText('3h left. You could see the credits before bed.')
+      screen.getByText(/You could see the credits before bed\./)
     ).toBeTruthy();
+  });
+
+  /**
+   * The headline is the name. It used to be the sentence "Finish
+   * Hades", which put the verb in the largest type on the page and
+   * again on the button two hundred points below it — and left the
+   * publisher's mark, which can only ever stand for a name, with a
+   * sentence to stand in for.
+   */
+  it('sets the name as the headline, and the verb only on the button', async () => {
+    await renderApp(
+      <HomeStage slides={[slide()]} games={[]} headerHeight={0} height={400} />
+    );
+    expect(screen.getByText('Hades')).toBeTruthy();
+    expect(screen.queryByText('Finish Hades')).toBeNull();
+    expect(screen.getByText('Finish it')).toBeTruthy();
+  });
+
+  /**
+   * The date is proof the page is today's; the reason is why this game
+   * is on it. Welded together they read as one line of tracked caps
+   * with the proof in front — "THURSDAY, SEPTEMBER 3 · TONIGHT".
+   */
+  it('says the reason first and the date after it', async () => {
+    await renderApp(
+      <HomeStage slides={[slide()]} games={[]} headerHeight={0} height={400} />
+    );
+    const eyebrow = screen.getByText(/TONIGHT/);
+    expect(eyebrow).toBeTruthy();
+    expect(screen.getByText(/Thu, 20 Aug/)).toBeTruthy();
+  });
+
+  it('draws how far through a game already under way', async () => {
+    const view = await renderApp(
+      <HomeStage
+        slides={[slide({ progress: 0.75 })]}
+        games={[]}
+        headerHeight={0}
+        height={400}
+      />
+    );
+    expect(fills(view)).toEqual(['75%']);
+  });
+
+  /**
+   * A bar at zero in the loudest place on the page says "you have not
+   * started this" about the one game the stage is recommending.
+   */
+  it('draws no bar for a game with nothing to measure', async () => {
+    const view = await renderApp(
+      <HomeStage
+        slides={[slide({ progress: undefined })]}
+        games={[]}
+        headerHeight={0}
+        height={400}
+      />
+    );
+    expect(fills(view)).toEqual([]);
   });
 
   it('opens the game behind the primary action', async () => {

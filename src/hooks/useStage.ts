@@ -79,11 +79,17 @@ export function useStage({
             short,
             trending,
             outToday: count ?? 0,
+            /**
+             * Abbreviated. Spelled out, "Thursday, September 3" was
+             * twenty-one characters of tracked caps standing in front
+             * of the word that says why the game below it is there.
+             * The date is proof the page is today's, not a headline.
+             */
             dateLabel: hydrated
               ? new Date(now).toLocaleDateString(undefined, {
-                  weekday: 'long',
+                  weekday: 'short',
                   day: 'numeric',
-                  month: 'long',
+                  month: 'short',
                 })
               : '',
           }),

@@ -252,13 +252,12 @@ describe('the home screen', () => {
     // The date lives in the stage's eyebrow now, next to the reason the
     // slide is there — a floating date line above a carousel said nothing
     // about anything on screen.
-    const today = new Date()
-      .toLocaleDateString(undefined, {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-      })
-      .toUpperCase();
+    // Abbreviated, and beside the reason rather than in front of it.
+    const today = new Date().toLocaleDateString(undefined, {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    });
     await waitFor(() =>
       expect(screen.getByText(new RegExp(today, 'i'))).toBeTruthy()
     );
@@ -276,8 +275,21 @@ describe('the home screen', () => {
     await waitFor(() =>
       expect(screen.getAllByText('Game 1').length).toBeGreaterThan(0)
     );
-    // Saved last week; the storefront has moved on.
-    expect(screen.queryByText('Game 3')).toBeNull();
+    /**
+     * Saved last week; the storefront has moved on — but the stage has
+     * not, and must not: the shortest thing you saved is exactly what
+     * the Tonight slide is for. So once, at the top, and nowhere in the
+     * shelves below.
+     *
+     * This used to read `queryByText('Game 3')).toBeNull()` and passed
+     * only because the stage's headline was the sentence "Start Game 3"
+     * rather than the name. The moment the verb moved to the button
+     * where it belongs, the assertion started failing on correct
+     * behaviour — which is what an assertion aimed at the whole screen
+     * to make a claim about one part of it does eventually.
+     */
+    expect(screen.getAllByText('Game 3')).toHaveLength(1);
+    expect(screen.getByText('Start it')).toBeTruthy();
   });
 
   it('builds a shelf out of the last thing you saved', async () => {

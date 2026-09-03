@@ -433,21 +433,17 @@ function StageCopy({
 
   /**
    * The publisher's mark instead of the typed name — the billboard's
-   * grammar. A Tonight slide's title is a sentence ("Continue Hades"),
-   * so with a mark on show the verb moves up into the eyebrow and the
-   * mark carries the name; the other slides' titles are the name and
-   * simply give way.
+   * grammar. Every slide's title is now the game's name and nothing
+   * else, so the mark stands in for all of them; it used to have to
+   * push a verb up into the eyebrow on the Tonight slide, which made
+   * a line reading "THURSDAY, SEPTEMBER 3 · TONIGHT · CONTINUE" — the
+   * loudest thing on the page and the least worth reading.
    */
   const { data: art } = useQuery({
     ...artQuery(slide.game),
     enabled: Boolean(slide.game.slug),
   });
   const logo = art?.logo;
-  const verb =
-    slide.kind === 'tonight'
-      ? slide.title.replace(slide.game.name, '').trim()
-      : '';
-  const eyebrow = logo && verb ? `${slide.eyebrow} · ${verb}` : slide.eyebrow;
 
   /**
    * The headline scales with the stage.
@@ -543,8 +539,16 @@ function StageCopy({
           { left: inset, right: inset },
         ]}
       >
+        {/* The reason, then the date — in that order and in two
+            weights. The date used to lead and to be spelled out in
+            full ("THURSDAY, SEPTEMBER 3 · TONIGHT"), which put thirty
+            characters of tracked caps in front of the one word that
+            says why this game is on the screen. */}
         <Animated.Text style={[styles.eyebrow, step(0, 0.4)]} numberOfLines={1}>
-          {eyebrow.toUpperCase()}
+          {slide.eyebrow.toUpperCase()}
+          {slide.date ? (
+            <Text style={styles.eyebrowDate}>{`  ${slide.date}`}</Text>
+          ) : null}
         </Animated.Text>
         <Animated.View style={step(0.1, 0.6)}>
           <TitleLogo
@@ -565,10 +569,35 @@ function StageCopy({
             </Text>
           </TitleLogo>
         </Animated.View>
+        {/* How far through, for a game already under way.
+            The stage's whole claim is that it knows your library, and
+            it was making that claim in a grey sentence. Eighteen and a
+            half hours of twenty-one is a picture, and the app already
+            had the numbers. */}
+        {slide.progress != null ? (
+          <Animated.View style={[styles.track, step(0.18, 0.7)]}>
+            <View
+              style={[
+                styles.trackFill,
+                { width: `${Math.round(slide.progress * 100)}%` },
+              ]}
+            />
+          </Animated.View>
+        ) : null}
+        {/* The figure in the app's own figure treatment, the sentence
+            after it. "2.5h left. Already under way — chip away at it."
+            set the one fact the reader came for in the same grey as
+            the encouragement that followed it. */}
         <Animated.Text
           style={[styles.detail, step(0.22, 0.75)]}
           numberOfLines={2}
         >
+          {slide.figure ? (
+            <>
+              <Text style={styles.figure}>{slide.figure}</Text>
+              {'  ·  '}
+            </>
+          ) : null}
           {slide.detail}
         </Animated.Text>
         <Animated.View style={[styles.actions, step(0.34, 0.9)]}>
@@ -656,7 +685,14 @@ const styles = StyleSheet.create({
   scrim: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '72%' },
   copy: {
     position: 'absolute',
-    bottom: SPACING.lg,
+    /**
+     * Inside the picture, not on its rim. At twenty the action row sat
+     * on the last rows of the stage, where the artwork has already
+     * faded to the page's own grey — so the buttons read as the first
+     * thing on the page below rather than the last thing in the
+     * picture above. The desk got this fix and the phone did not.
+     */
+    bottom: SPACING.xl,
     gap: SPACING.xs,
     /**
      * Capped, even on a 1600px stage. A headline set across the whole
@@ -700,9 +736,11 @@ const styles = StyleSheet.create({
   eyebrow: {
     ...TYPE.tag,
     ...OVER_IMAGE.body,
-    color: COLORS.lightGrey,
+    color: COLORS.white,
     marginBottom: 2,
   },
+  /** Proof the page is today's, at the volume proof deserves. */
+  eyebrowDate: { color: 'rgba(216,218,228,0.62)' },
   /** The mark's own breathing room, where the headline's leading was. */
   logo: { marginVertical: 6 },
   title: {
@@ -717,6 +755,33 @@ const styles = StyleSheet.create({
     marginTop: 2,
     marginBottom: SPACING.md,
     maxWidth: 460,
+  },
+  /**
+   * The one number, in the colour this app gives to time everywhere
+   * else. Amber is spoken for by the primary button in this block, so
+   * it is deliberately the same voice: both are about the hours you
+   * have, which is the only thing the button is offering to spend.
+   */
+  figure: { ...TYPE.label, color: COLORS.accent },
+  /**
+   * How far through. Two points tall and no label: the sentence beside
+   * it already says "2.5h left", so this is the shape of that sentence
+   * and not a second copy of it. Full width of the copy column, capped
+   * with it, so the bar and the headline share an edge.
+   */
+  track: {
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    overflow: 'hidden',
+    marginTop: 12,
+    marginBottom: 6,
+    maxWidth: 240,
+  },
+  trackFill: {
+    height: '100%',
+    borderRadius: 2,
+    backgroundColor: COLORS.accent,
   },
   actions: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   primary: {
@@ -754,11 +819,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 5,
   },
+  /**
+   * Six points, not five, and half-lit rather than a third. Over a
+   * photograph the old ones read as dust on the screen — the only
+   * thing on the stage saying there is more than one slide, and it was
+   * the least visible mark on it.
+   */
   dot: {
-    width: 5,
-    height: 5,
+    width: 6,
+    height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.32)',
+    backgroundColor: 'rgba(255,255,255,0.5)',
   },
-  dotOn: { width: 16, backgroundColor: COLORS.white },
+  dotOn: { width: 18, backgroundColor: COLORS.white },
 });

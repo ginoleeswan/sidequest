@@ -36,9 +36,41 @@ describe('buildStage', () => {
       })
     );
     expect(slides[0].kind).toBe('tonight');
-    expect(slides[0].title).toBe('Finish Hades');
-    expect(slides[0].detail).toContain('3h left');
+    // The name, not "Finish Hades". The verb is on the button, and a
+    // headline that repeats it spends the largest type on the page
+    // saying what the smallest already said.
+    expect(slides[0].title).toBe('Hades');
+    expect(slides[0].figure).toBe('3h left');
     expect(slides[0].action).toBe('Finish it');
+  });
+
+  it('carries how far through, so the stage can draw it', () => {
+    const [slide] = buildStage(
+      input({
+        tonight: {
+          game: game(1, 'Hades'),
+          hours: 3,
+          verb: 'Continue',
+          reason: 'Already under way — chip away at it.',
+          progress: 0.88,
+        },
+      })
+    );
+    expect(slide.progress).toBe(0.88);
+  });
+
+  it('leaves the bar off a game nobody has started', () => {
+    const [slide] = buildStage(
+      input({
+        tonight: {
+          game: game(1, 'Hades'),
+          hours: 3,
+          verb: 'Start',
+          reason: 'The shortest thing you’ve saved.',
+        },
+      })
+    );
+    expect(slide.progress).toBeUndefined();
   });
 
   it('says how many games landed today, not just that some did', () => {
@@ -60,11 +92,29 @@ describe('buildStage', () => {
     expect(slide.eyebrow).toBe('Out this week');
   });
 
-  it('puts the date on whichever reason leads', () => {
+  /**
+   * Beside the reason, not welded in front of it. Concatenated, the
+   * lead slide's eyebrow read "THURSDAY, SEPTEMBER 3 · TONIGHT" — the
+   * proof-of-freshness in front of the one word that says why the game
+   * is on the screen, and both in the same tracked caps.
+   */
+  it('puts the date on whichever reason leads, as its own line', () => {
     const [slide] = buildStage(
-      input({ fresh: [game(2, 'Brand New')], dateLabel: 'Thursday, 20 August' })
+      input({ fresh: [game(2, 'Brand New')], dateLabel: 'Thu 20 Aug' })
     );
-    expect(slide.eyebrow).toBe('Thursday, 20 August · Out this week');
+    expect(slide.eyebrow).toBe('Out this week');
+    expect(slide.date).toBe('Thu 20 Aug');
+  });
+
+  it('leaves the date off the slides behind the first', () => {
+    const slides = buildStage(
+      input({
+        fresh: [game(2, 'Brand New')],
+        short: [game(3, 'Quick One', 4)],
+        dateLabel: 'Thu 20 Aug',
+      })
+    );
+    expect(slides[1].date).toBeUndefined();
   });
 
   it('never shows the same game twice in one stage', () => {
@@ -113,6 +163,7 @@ describe('buildStage', () => {
     const [slide] = buildStage(
       input({ fresh: [game(2, 'Unknown Length', 0)] })
     );
+    expect(slide.figure).toBe('');
     expect(slide.detail).not.toContain('0h');
     expect(slide.detail).toContain('just landed');
   });

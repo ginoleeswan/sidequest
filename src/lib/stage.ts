@@ -19,10 +19,37 @@ export interface StageSlide {
   game: Game;
   /** Small caps line above the title: the reason this is here. */
   eyebrow: string;
-  /** The argument. For a pick from the library this is a sentence. */
+  /**
+   * Today, on whichever slide leads. Its own field rather than a
+   * clause welded onto the eyebrow: the reason is why this game is
+   * here and the date is only proof the page is not stale, so they
+   * are not the same sentence and must not be set in the same weight.
+   */
+  date?: string;
+  /**
+   * The game's name. Never a sentence with a verb in it: the verb is
+   * already on the button, and a headline that says "Continue" over a
+   * button that says "Continue it" spends the largest type on the page
+   * repeating the smallest. It is also what lets the publisher's mark
+   * stand in for the line on every slide rather than only on some.
+   */
   title: string;
-  /** One line of substance under it — length, freshness, why. */
+  /**
+   * The number, if there is one — "2.5h left", "About 12h". Split from
+   * the sentence because this app sets figures in figures everywhere
+   * else, and buried mid-sentence in grey body copy the one fact the
+   * reader came for was the quietest thing in the block.
+   */
+  figure?: string;
+  /**
+   * One sentence of substance under it — freshness, why, what it is.
+   * A whole sentence on its own, so it reads either way: after the
+   * figure with a separator between them, or alone on a slide that
+   * has no figure to lead with.
+   */
   detail: string;
+  /** How far through, 0-1, for a game already under way. */
+  progress?: number;
   /** Primary button label. */
   action: string;
 }
@@ -32,6 +59,8 @@ export interface TonightPick {
   hours: number;
   verb: 'Finish' | 'Continue' | 'Start';
   reason: string;
+  /** How far through, 0-1, when the library knows. */
+  progress?: number;
 }
 
 export interface StageInput {
@@ -116,15 +145,17 @@ export function buildStage(input: StageInput): StageSlide[] {
     games.find((game) => game && !used.has(game.id));
 
   if (input.tonight) {
-    const { game, hours, verb, reason } = input.tonight;
+    const { game, hours, verb, reason, progress } = input.tonight;
     used.add(game.id);
     slides.push({
       key: `tonight-${game.id}`,
       kind: 'tonight',
       game,
       eyebrow: 'Tonight',
-      title: `${verb} ${game.name}`,
-      detail: hours > 0 ? `${formatHours(hours)} left. ${reason}` : reason,
+      title: game.name,
+      figure: hours > 0 ? `${formatHours(hours)} left` : '',
+      detail: reason,
+      progress,
       action: verb === 'Finish' ? 'Finish it' : `${verb} it`,
     });
   }
@@ -144,9 +175,8 @@ export function buildStage(input: StageInput): StageSlide[] {
             : `${input.outToday} games out today`
           : 'Out this week',
       title: fresh.name,
-      detail: length
-        ? `${length}, and it just landed.`
-        : 'It just landed — nobody has finished it yet either.',
+      figure: length,
+      detail: 'It just landed — nobody has finished it yet either.',
       action: 'Take a look',
     });
   }
@@ -160,7 +190,8 @@ export function buildStage(input: StageInput): StageSlide[] {
       game: short,
       eyebrow: 'Short enough to finish',
       title: short.name,
-      detail: `${hoursPhrase(short.playtime)} — a weekend, not a second job.`,
+      figure: hoursPhrase(short.playtime),
+      detail: 'A weekend, not a second job.',
       action: 'Take a look',
     });
   }
@@ -179,9 +210,8 @@ export function buildStage(input: StageInput): StageSlide[] {
       game: trending,
       eyebrow: 'Trending now',
       title: trending.name,
-      detail: hoursPhrase(trending.playtime)
-        ? `${hoursPhrase(trending.playtime)}, and everyone is playing it.`
-        : 'What everyone is playing right now.',
+      figure: hoursPhrase(trending.playtime),
+      detail: 'What everyone is playing right now.',
       action: 'Take a look',
     });
   }
@@ -193,10 +223,7 @@ export function buildStage(input: StageInput): StageSlide[] {
   // whether you are looking at it this morning or last month is the
   // cheapest kind of stale.
   if (stage.length > 0 && input.dateLabel) {
-    stage[0] = {
-      ...stage[0],
-      eyebrow: `${input.dateLabel} · ${stage[0].eyebrow}`,
-    };
+    stage[0] = { ...stage[0], date: input.dateLabel };
   }
 
   return stage;

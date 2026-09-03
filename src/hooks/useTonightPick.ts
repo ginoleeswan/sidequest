@@ -56,9 +56,22 @@ export function useTonightPick(): TonightPick | null {
 
     const chosen =
       tonight.finishable ?? tonight.continueGame ?? tonight.shortest;
-    const game = entries.find((e) => e.entry.game.id === chosen?.id)?.entry
-      .game;
-    if (!chosen || !game) return null;
+    const found = entries.find((e) => e.entry.game.id === chosen?.id)?.entry;
+    const game = found?.game;
+    if (!chosen || !game || !found) return null;
+
+    /**
+     * How far in, when the library knows.
+     *
+     * Only for a game with hours on it: a wishlist pick has nothing to
+     * measure, and a bar sitting at zero says "you have not started"
+     * in the loudest place on the page, which is the one thing the
+     * stage must never say about the game it is recommending.
+     */
+    const total = durationOf(game).hours;
+    const played = found.hoursPlayed ?? 0;
+    const progress =
+      played > 0 && total > 0 ? Math.min(played / total, 1) : undefined;
 
     return {
       game,
@@ -73,6 +86,7 @@ export function useTonightPick(): TonightPick | null {
         : tonight.continueGame
           ? 'Already under way — chip away at it.'
           : 'The shortest thing you’ve saved.',
+      progress,
     };
   }, [byStatus, durationOf, sessionMinutes]);
 }

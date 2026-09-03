@@ -65,6 +65,32 @@ describe('useTonightPick', () => {
     expect(result.current.pick?.game.name).toBe('The Epic');
   });
 
+  /**
+   * The stage draws a bar from this, so it has to be the real
+   * fraction and it has to be absent rather than zero — a bar sitting
+   * empty in the loudest place on the page says "you have not started
+   * this" about the game being recommended.
+   */
+  it('reports how far through a game under way is', async () => {
+    const { result } = await harness();
+    await act(async () => {
+      result.current.library.setStatus(game(1, 80, 'The Epic'), 'playing');
+    });
+    await act(async () => {
+      result.current.library.setProgress({ 1: 60 });
+    });
+    expect(result.current.pick?.progress).toBeCloseTo(0.75);
+  });
+
+  it('reports no progress for a game nobody has started', async () => {
+    const { result } = await harness();
+    await act(async () => {
+      result.current.library.setStatus(game(1, 40, 'The Shorter'), 'wishlist');
+    });
+    expect(result.current.pick?.verb).toBe('Start');
+    expect(result.current.pick?.progress).toBeUndefined();
+  });
+
   it('Start: nothing under way, so the shortest thing saved', async () => {
     const { result } = await harness();
     await act(async () => {
