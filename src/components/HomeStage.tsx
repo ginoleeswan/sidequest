@@ -18,13 +18,15 @@ import {
   type ViewStyle,
 } from 'react-native';
 
+import { Image } from 'expo-image';
+
 import { CoverImage } from './CoverImage';
 import { ScaleButton } from './ScaleButton';
 import { StageTrailer } from './StageTrailer';
 import { gameQuery, seedGame } from '@/api/gameDetail';
 import { artQuery } from '@/api/art';
 import { TitleLogo } from './TitleLogo';
-import { getMovies } from '@/api/rawg';
+import { getMovies, mediaUri } from '@/api/rawg';
 import type { Game, Movie } from '@/api/types';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
@@ -184,54 +186,95 @@ export function HomeStage({
   };
 
   /**
-   * The picture's own share of the stage.
+   * The picture is the whole stage, on every screen.
    *
-   * Nothing is drawn over it. The phone's stage was a 0.70:1 window
-   * onto a 16:9 frame with two hundred points of copy across its
-   * bottom third, so the artwork was cropped to its middle 39% and
-   * then half-covered by the words — dominant and unreadable at the
-   * same time. A band of its own crops far less and is never written
-   * on; the copy takes the ground below it, where type needs no
-   * shadow to survive and can be set to be read rather than to
-   * compete. The desk already has the room to do it the other way and
-   * keeps doing it: a 3:1 banner at 1280 has a whole empty half for
-   * the copy to sit in, which is what the asset was composed for.
+   * It was split for one build — a landscape band with the copy on the
+   * page below it — on the argument that type over a photograph is a
+   * compromise. On a real phone the split read as a banner pasted to
+   * the top of a form: two flat zones with no shared light, and a
+   * publisher's banner whose logo-space became a white smear against
+   * the navy. The billboards this borrows from all keep the words IN
+   * the picture on a phone; what makes them feel expensive is depth,
+   * which is a long melt and the artwork's light reaching into the
+   * page. That is what the layers below do.
    */
-  const band = isCompact ? Math.max(height - COMPACT_COPY, 180) : height;
+  const band = height;
+
+  /**
+   * The artwork's light, reaching into the page.
+   *
+   * A blurred copy of the slide on show sits under the stage's lower
+   * half and runs on past its foot, so the ground the browse row stands
+   * on is lit by the picture above it rather than cut off from it. It
+   * is the same move the desk makes with its backdrop and the one thing
+   * the great mobile billboards all share: the hero and the page read
+   * as one object because they are made of the same light. Thumb-sized
+   * and blurred to nothing but colour, so it costs a few kilobytes.
+   */
+  const glow = isCompact
+    ? mediaUri(current.game.background_image, 100)
+    : undefined;
 
   return (
-    <View style={[styles.stage, { height }]} onLayout={onLayout}>
-      <Animated.FlatList
-        ref={list}
-        testID="stage-band"
-        data={slides}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        keyExtractor={(slide) => slide.key}
-        // Every slide is exactly the viewport, so the offset is
-        // arithmetic rather than measurement.
-        style={{ height: band }}
-        getItemLayout={(_, i) => ({
-          length: width,
-          offset: width * i,
-          index: i,
-        })}
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-        renderItem={({ item, index: slideIndex }) => (
-          <SlideArt
-            slide={item}
-            index={slideIndex}
-            width={width}
-            height={band}
-            headerHeight={headerHeight}
-            covered={!isCompact}
-            trailer={slideIndex === index && dwelt ? (trailer ?? null) : null}
+    <View style={{ height }} onLayout={onLayout}>
+      {glow ? (
+        <View
+          pointerEvents="none"
+          style={[
+            styles.glow,
+            {
+              top: Math.round(height * 0.45),
+              height: Math.round(height * 0.55) + GLOW_BLEED,
+            },
+          ]}
+        >
+          <Image
+            source={{ uri: glow }}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            blurRadius={70}
+            transition={DURATION.slow}
+            accessible={false}
+            alt=""
           />
-        )}
-      />
-      {/* The copy and its controls, held still while the pictures move.
+          <LinearGradient
+            colors={['rgba(51,61,81,0)', 'rgba(51,61,81,0)', COLORS.darkGrey]}
+            locations={[0, 0.55, 1]}
+            style={StyleSheet.absoluteFill}
+          />
+        </View>
+      ) : null}
+      <View style={[styles.stage, { height }]}>
+        <Animated.FlatList
+          ref={list}
+          testID="stage-band"
+          data={slides}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(slide) => slide.key}
+          // Every slide is exactly the viewport, so the offset is
+          // arithmetic rather than measurement.
+          style={{ height: band }}
+          getItemLayout={(_, i) => ({
+            length: width,
+            offset: width * i,
+            index: i,
+          })}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
+          renderItem={({ item, index: slideIndex }) => (
+            <SlideArt
+              slide={item}
+              index={slideIndex}
+              width={width}
+              height={band}
+              headerHeight={headerHeight}
+              trailer={slideIndex === index && dwelt ? (trailer ?? null) : null}
+            />
+          )}
+        />
+        {/* The copy and its controls, held still while the pictures move.
 
           They used to travel inside each slide, which meant the button
           under your thumb slid away as you swiped and the page dots -
@@ -240,52 +283,44 @@ export function HomeStage({
           carousel, not contents of it, so they sit above the list and
           swap what they say. box-none so the swipe still reaches the
           artwork everywhere except on the controls themselves. */}
-      <StageCopy
-        key={current.key}
-        slide={current}
-        index={index}
-        count={slides.length}
-        inset={inset}
-        width={width}
-        scrollX={scrollX}
-        onOpen={() => router.push(`/game/${current.game.id}`)}
-        onSurprise={surprise}
-        onGoTo={goTo}
-      />
+        <StageCopy
+          key={current.key}
+          slide={current}
+          index={index}
+          count={slides.length}
+          inset={inset}
+          width={width}
+          scrollX={scrollX}
+          onOpen={() => router.push(`/game/${current.game.id}`)}
+          onSurprise={surprise}
+          onGoTo={goTo}
+        />
+      </View>
     </View>
   );
 }
 
+/** How far the picture's light runs on past the stage, into the page. */
+const GLOW_BLEED = 160;
+
 /**
  * Where the picture stops being a picture.
  *
- * The dissolve starts at just over half the frame where words are set
- * on the artwork: the copy needs the ground under it to be quiet well
- * before the edge. On a phone the words have left, so the same early
- * fade was only washing out artwork nobody has to read through — it
- * holds full strength most of the way down and dissolves over the last
- * quarter, which is all the join with the page below actually needs.
+ * A long melt, not a fade at the edge. Full strength through the upper
+ * two fifths, then a slow dissolve that reaches nothing at the foot —
+ * so the copy sits inside the picture's last third with the artwork
+ * still faintly around it, darkened rather than gone. That is the whole
+ * difference between a billboard and a strip with words under it.
  */
-const fadeOut = (covered: boolean): ViewStyle => {
-  if (Platform.OS !== 'web') return {};
-  const hold = covered ? 52 : 74;
-  const ramp = covered ? 78 : 89;
-  const mask = `linear-gradient(to bottom, rgba(0,0,0,1) ${hold}%, rgba(0,0,0,0.55) ${ramp}%, rgba(0,0,0,0) 100%)`;
-  return { maskImage: mask, WebkitMaskImage: mask } as unknown as ViewStyle;
-};
-
-/**
- * What the copy block needs at the foot of a phone's stage.
- *
- * Measured from the lockup it holds rather than guessed: an eyebrow, a
- * two-line title, the progress bar, one line of detail, a 42pt action
- * row and the block's own 32pt off the bottom edge. It is a fixed
- * reservation so the artwork above it never changes height with the
- * length of a game's name — the stage is a fixed box, and a hero that
- * resized itself around its words would put a layout shift at the top
- * of the first screen.
- */
-const COMPACT_COPY = 244;
+const fadeOut: ViewStyle =
+  Platform.OS === 'web'
+    ? ({
+        maskImage:
+          'linear-gradient(to bottom, rgba(0,0,0,1) 40%, rgba(0,0,0,0.6) 70%, rgba(0,0,0,0.18) 90%, rgba(0,0,0,0) 100%)',
+        WebkitMaskImage:
+          'linear-gradient(to bottom, rgba(0,0,0,1) 40%, rgba(0,0,0,0.6) 70%, rgba(0,0,0,0.18) 90%, rgba(0,0,0,0) 100%)',
+      } as unknown as ViewStyle)
+    : {};
 
 /** One slide's artwork and its scrims. The words live above the list. */
 function SlideArt({
@@ -294,7 +329,6 @@ function SlideArt({
   width,
   height,
   headerHeight,
-  covered,
   trailer,
 }: {
   slide: StageSlide;
@@ -302,13 +336,6 @@ function SlideArt({
   width: number;
   height: number;
   headerHeight: number;
-  /**
-   * Whether words are set over this picture. On the desk they are, and
-   * the picture needs a scrim under them to stay legible. On a phone
-   * the copy has a ground of its own now, so the same scrim would only
-   * be dimming artwork nobody has to read through.
-   */
-  covered: boolean;
   /** Set once the dwell has elapsed on this slide; null unmounts it. */
   trailer: Movie | null;
 }) {
@@ -319,22 +346,21 @@ function SlideArt({
   const room = Math.round(height * PARALLAX_RATE);
 
   /**
-   * The publisher's banner, on every screen now.
+   * The publisher's hero behind the copy, on the desk.
    *
    * A hero is a 3:1 banner composed with the subject to one side and
-   * room for a logo on the other — what Steam's library page and
-   * Netflix's billboard are both drawn from. The phone used to be
-   * given RAWG's key art instead, because a 0.70:1 portrait stage
-   * would have kept a third of a 3:1 banner. That reasoning was sound
-   * about the old stage and is the wrong way round now: the picture
-   * has a landscape band of its own, so the composed banner is the
-   * asset that fits it and the screenshot is the one that does not.
+   * room for a logo on the other — exactly the stage's own shape on a
+   * wide screen. The phone's stage is a portrait crop that keeps a
+   * third of it, and the third it keeps can be the empty logo-space:
+   * one build tried it and got a white field with a car in the corner.
+   * The key art is composed for a portrait crop, so the phone keeps it.
    */
   const { data: art } = useQuery({
     ...artQuery(slide.game),
-    enabled: Boolean(slide.game.slug),
+    enabled: isExpanded && Boolean(slide.game.slug),
   });
-  const artwork = art?.hero ? art.hero.url : slide.game.background_image;
+  const artwork =
+    isExpanded && art?.hero ? art.hero.url : slide.game.background_image;
 
   useEffect(() => {
     if (reduced) return;
@@ -374,7 +400,7 @@ function SlideArt({
           Translating a picture that exactly fills its container just
           uncovers the background; room below it would buy nothing, since
           the artwork only ever moves one way. */}
-      <View style={[StyleSheet.absoluteFill, fadeOut(covered)]}>
+      <View style={[StyleSheet.absoluteFill, fadeOut]}>
         <Animated.View
           style={[
             styles.artLayer,
@@ -449,50 +475,44 @@ function SlideArt({
         style={[styles.topScrim, { height: Math.round(headerHeight * 2.4) }]}
         pointerEvents="none"
       />
-      {/* Only where words are set over the picture. On a phone they no
-          longer are, and the artwork keeps its own contrast; the mask
-          above still dissolves the band into the page, which is the
-          part of this that was never about legibility. */}
-      {covered ? (
-        <LinearGradient
-          colors={
-            Platform.OS === 'web'
-              ? [
-                  'rgba(51,61,81,0)',
-                  'rgba(51,61,81,0.5)',
-                  'rgba(51,61,81,0.55)',
-                  'rgba(51,61,81,0.25)',
-                  'rgba(51,61,81,0)',
-                ]
-              : [
-                  'rgba(51,61,81,0)',
-                  'rgba(51,61,81,0.5)',
-                  'rgba(51,61,81,0.9)',
-                  COLORS.darkGrey,
-                  COLORS.darkGrey,
-                ]
-          }
-          /**
-           * Solid before the edge, not at it.
-           *
-           * Going opaque only at the last pixel was fine over a still,
-           * where the residual twelve percent of picture is invisible.
-           * Over a bright, moving trailer it is a lighter band that ends
-           * in one hard line where the page ground begins - measured at
-           * 3x, plainly there. The gradient now reaches the page's own
-           * colour seven percent above the stage's bottom and holds it,
-           * so the stage meets the page darkGrey on darkGrey and the join
-           * cannot be seen. The picture still fades, not stops: the
-           * solid strip is the last forty pixels of a 400-pixel dissolve.
-           * The stops are the page ground's own RGB, not the navy the
-           * old stops carried - a navy scrim ending in grey was itself a
-           * colour step at the join.
-           */
-          locations={[0, 0.45, 0.8, 0.93, 1]}
-          style={styles.scrim}
-          pointerEvents="none"
-        />
-      ) : null}
+      <LinearGradient
+        colors={
+          Platform.OS === 'web'
+            ? [
+                'rgba(51,61,81,0)',
+                'rgba(51,61,81,0.5)',
+                'rgba(51,61,81,0.55)',
+                'rgba(51,61,81,0.25)',
+                'rgba(51,61,81,0)',
+              ]
+            : [
+                'rgba(51,61,81,0)',
+                'rgba(51,61,81,0.5)',
+                'rgba(51,61,81,0.9)',
+                COLORS.darkGrey,
+                COLORS.darkGrey,
+              ]
+        }
+        /**
+         * Solid before the edge, not at it.
+         *
+         * Going opaque only at the last pixel was fine over a still,
+         * where the residual twelve percent of picture is invisible.
+         * Over a bright, moving trailer it is a lighter band that ends
+         * in one hard line where the page ground begins - measured at
+         * 3x, plainly there. The gradient now reaches the page's own
+         * colour seven percent above the stage's bottom and holds it,
+         * so the stage meets the page darkGrey on darkGrey and the join
+         * cannot be seen. The picture still fades, not stops: the
+         * solid strip is the last forty pixels of a 400-pixel dissolve.
+         * The stops are the page ground's own RGB, not the navy the
+         * old stops carried - a navy scrim ending in grey was itself a
+         * colour step at the join.
+         */
+        locations={[0, 0.45, 0.8, 0.93, 1]}
+        style={styles.scrim}
+        pointerEvents="none"
+      />
     </View>
   );
 }
@@ -576,13 +596,13 @@ function StageCopy({
    * column holds a 27-character title on one line.
    */
   /**
-   * Smaller on a phone than it was, because it no longer has to shout
-   * over a photograph. Fifty-six was the size type needs to hold its
-   * own against artwork behind it; on the page's own ground a name at
-   * forty is read faster, wraps to two lines instead of three, and
-   * leaves the picture above it the height it was taking.
+   * Capped lower on a desk than the width alone would allow. At 56 in
+   * a 640 column "Continue Grand Theft Auto V" broke to leave "V" on a
+   * line of its own - the orphan is the tell of a headline set to fill
+   * a frame rather than to fit its sentence. 48 across the wider desk
+   * column holds a 27-character title on one line.
    */
-  const cap = isExpanded ? 48 : 40;
+  const cap = isExpanded ? 48 : 52;
   const fontSize = Math.round(Math.min(Math.max(width * 0.094 * fit, 26), cap));
   const display = {
     fontSize,
@@ -675,10 +695,7 @@ function StageCopy({
             full ("THURSDAY, SEPTEMBER 3 · TONIGHT"), which put thirty
             characters of tracked caps in front of the one word that
             says why this game is on the screen. */}
-        <Animated.Text
-          style={[styles.eyebrow, isExpanded && OVER_IMAGE.body, step(0, 0.4)]}
-          numberOfLines={1}
-        >
+        <Animated.Text style={[styles.eyebrow, step(0, 0.4)]} numberOfLines={1}>
           {slide.eyebrow.toUpperCase()}
           {slide.date ? (
             <Text style={styles.eyebrowDate}>{`  ${slide.date}`}</Text>
@@ -691,23 +708,14 @@ function StageCopy({
             // The copy column's own width, and no taller than the two
             // lines of headline the mark stands in for.
             maxWidth={Math.max(
-              (isExpanded
-                ? Math.min(width * 0.5, 560)
-                : (width - inset * 2) * 0.8) - 24,
+              (isExpanded ? Math.min(width * 0.5, 560) : width - inset * 2) -
+                24,
               0
             )}
-            // Roughly the height the name would have been, not the
-            // height of a banner. Over artwork a mark has to hold the
-            // frame; on the page's own ground it only has to be the
-            // title, and at two lines' worth it ran the full width of
-            // the column and outweighed everything under it.
-            maxHeight={Math.round(fontSize * (isExpanded ? 2.1 : 1.5))}
+            maxHeight={Math.round(fontSize * 2.1)}
             style={styles.logo}
           >
-            <Text
-              style={[styles.title, isExpanded && OVER_IMAGE.heading, display]}
-              numberOfLines={3}
-            >
+            <Text style={[styles.title, display]} numberOfLines={3}>
               {slide.title}
             </Text>
           </TitleLogo>
@@ -732,11 +740,7 @@ function StageCopy({
             set the one fact the reader came for in the same grey as
             the encouragement that followed it. */}
         <Animated.Text
-          style={[
-            styles.detail,
-            isExpanded && OVER_IMAGE.body,
-            step(0.22, 0.75),
-          ]}
+          style={[styles.detail, step(0.22, 0.75)]}
           numberOfLines={2}
         >
           {slide.figure ? (
@@ -893,6 +897,18 @@ const styles = StyleSheet.create({
    * mask, and what is left at the stage's last rows IS the page.
    */
   stage: { overflow: 'hidden' },
+  /**
+   * Wider than the screen on both sides, because a blurred picture goes
+   * soft at its own edges and a soft edge inside the frame would read
+   * as a vignette. Half strength: it is weather, not a second picture.
+   */
+  glow: {
+    position: 'absolute',
+    left: -80,
+    right: -80,
+    opacity: 0.55,
+    zIndex: -1,
+  },
   artLayer: { position: 'absolute', left: 0, right: 0 },
   /**
    * The picture fades out of existence, rather than a colour fading in
@@ -972,6 +988,7 @@ const styles = StyleSheet.create({
    */
   eyebrow: {
     ...TYPE.tag,
+    ...OVER_IMAGE.body,
     color: COLORS.white,
     marginBottom: 2,
   },
@@ -981,10 +998,12 @@ const styles = StyleSheet.create({
   logo: { marginVertical: 6 },
   title: {
     ...TYPE.display,
+    ...OVER_IMAGE.heading,
     color: COLORS.white,
   },
   detail: {
     ...TYPE.body,
+    ...OVER_IMAGE.body,
     color: COLORS.lightGrey,
     marginTop: 2,
     marginBottom: SPACING.md,

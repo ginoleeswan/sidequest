@@ -200,24 +200,6 @@ describe('the home stage', () => {
       })
     );
 
-    /**
-     * The desk keeps its words on the artwork: a 3:1 banner at this
-     * width has a whole empty half for them, which is what the asset
-     * was composed for. So there the picture is the whole stage.
-     */
-    it('keeps the picture behind the words, where there is room for both', async () => {
-      await renderApp(
-        <HomeStage
-          slides={[slide()]}
-          games={[]}
-          headerHeight={0}
-          height={500}
-        />
-      );
-      const band = screen.getByTestId('stage-band');
-      expect(StyleSheet.flatten(band.props.style)?.height).toBe(500);
-    });
-
     it('pages by chevron, and hides the one with nowhere to go', async () => {
       await renderApp(
         <HomeStage
@@ -238,22 +220,16 @@ describe('the home stage', () => {
   });
 
   /**
-   * The picture gets a band and the words get the ground.
-   *
-   * A phone's stage was a 0.70:1 window onto a 16:9 frame with two
-   * hundred points of copy laid across its bottom third — the artwork
-   * cropped to its middle and then half covered by the words. The band
-   * is shorter than the stage by exactly the room the copy needs, so
-   * nothing is ever drawn over the picture.
+   * The picture is the whole stage. It was split once — a band with the
+   * copy on the page beneath — and on a real phone that read as a
+   * banner pasted to the top of a form. The words live in the picture.
    */
-  it('gives the picture a band of its own on a phone', async () => {
+  it('keeps the picture behind the words on a phone', async () => {
     await renderApp(
       <HomeStage slides={[slide()]} games={[]} headerHeight={0} height={500} />
     );
     const band = screen.getByTestId('stage-band');
-    const height = StyleSheet.flatten(band.props.style)?.height;
-    expect(height).toBeLessThan(500);
-    expect(height).toBeGreaterThan(180);
+    expect(StyleSheet.flatten(band.props.style)?.height).toBe(500);
   });
 
   it('opens the game behind the primary action', async () => {
