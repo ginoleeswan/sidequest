@@ -1,4 +1,10 @@
-import handler, { pickGame, pickGrid, pickHero, pickLogo } from '../art';
+import handler, {
+  pickGame,
+  pickGrid,
+  pickHero,
+  pickLogo,
+  withoutYear,
+} from '../art';
 import { fakeReq, fakeRes } from '../test-utils';
 
 type Req = Parameters<typeof handler>[0];
@@ -224,6 +230,91 @@ describe('choosing the game', () => {
     expect(pickGame(games, 'PREY', 2017)?.id).toBe(1);
     expect(pickGame(games, 'Prey: Day', 2017)?.id).toBe(3);
     expect(pickGame(games, 'Pray', 2017)).toBeNull();
+  });
+
+  /**
+   * The two catalogues do not number sequels the same way. Measured
+   * against the thirty most-played games on the storefront, four had
+   * no artwork at all, and two of them were this: RAWG files "Red Dead
+   * Redemption 2", SteamGridDB has "Red Dead Redemption II".
+   */
+  it('reads a sequel numbered either way as the same game', () => {
+    const sequels = [
+      { id: 9, name: 'Red Dead Redemption II', verified: true },
+      { id: 10, name: 'Grand Theft Auto IV', verified: true },
+    ];
+    expect(pickGame(sequels, 'Red Dead Redemption 2', null)?.id).toBe(9);
+    expect(pickGame(sequels, 'Grand Theft Auto 4', null)?.id).toBe(10);
+    expect(pickGame(sequels, 'Grand Theft Auto IV', null)?.id).toBe(10);
+  });
+
+  /**
+   * A lone letter is not a numeral. "Mega Man X" is a character, and
+   * folding it to ten would hand it the artwork of a different game in
+   * its own series — the precise failure this function is strict to
+   * avoid, arrived at from the other direction.
+   */
+  it('leaves a single letter alone, whatever Rome thought', () => {
+    const mega = [
+      { id: 11, name: 'Mega Man X', verified: true },
+      { id: 12, name: 'Mega Man 10', verified: true },
+    ];
+    expect(pickGame(mega, 'Mega Man X', null)?.id).toBe(11);
+    expect(pickGame(mega, 'Mega Man 10', null)?.id).toBe(12);
+  });
+
+  /**
+   * SteamGridDB often files the boxed re-release where RAWG has the
+   * plain title. Its artwork is this game's artwork, so the edition is
+   * a match — but only when everything after the title is packaging.
+   */
+  it('accepts a boxed edition of the title, and nothing else', () => {
+    const boxed = [
+      {
+        id: 13,
+        name: 'Grand Theft Auto IV: The Complete Edition',
+        verified: true,
+      },
+      { id: 14, name: 'Assassin’s Creed Odyssey', verified: true },
+      { id: 15, name: 'Hades II', verified: true },
+    ];
+    expect(pickGame(boxed, 'Grand Theft Auto IV', null)?.id).toBe(13);
+    // Odyssey is a different game, not a re-release of the first one.
+    expect(pickGame(boxed, 'Assassin’s Creed', null)).toBeNull();
+    // And a sequel is not an edition of its predecessor.
+    expect(pickGame(boxed, 'Hades', null)).toBeNull();
+  });
+
+  it('prefers the exact title over an edition of it', () => {
+    const both = [
+      { id: 16, name: 'Doom Eternal: Deluxe Edition', verified: true },
+      { id: 17, name: 'Doom Eternal', verified: true },
+    ];
+    expect(pickGame(both, 'DOOM Eternal', null)?.id).toBe(17);
+  });
+});
+
+/**
+ * RAWG disambiguates a reboot in the title — "DOOM (2016)" — and
+ * SteamGridDB does not, which is why two of the most played games on
+ * the storefront had no artwork. The year is kept, not dropped: it is
+ * what tells the reboot from the original once the search lands.
+ */
+describe('RAWG’s year suffix', () => {
+  it('comes off the search term and becomes the year', () => {
+    expect(withoutYear('DOOM (2016)')).toEqual({ name: 'DOOM', year: 2016 });
+    expect(withoutYear('God of War (2018)')).toEqual({
+      name: 'God of War',
+      year: 2018,
+    });
+  });
+
+  it('leaves a title that merely contains brackets alone', () => {
+    expect(withoutYear('Hades')).toEqual({ name: 'Hades', year: null });
+    expect(withoutYear('Fez (Anniversary)')).toEqual({
+      name: 'Fez (Anniversary)',
+      year: null,
+    });
   });
 });
 

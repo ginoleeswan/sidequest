@@ -117,13 +117,117 @@ async function sgdb<T>(key: string, path: string): Promise<T | null> {
   }
 }
 
-/** Letters only, lowercased: "Hades" and "HADES" and "Hades!" agree. */
+/**
+ * Roman numerals, as far as anybody numbers a sequel.
+ *
+ * Only the multi-character ones. A lone "x" is Mega Man's, not ten,
+ * and a lone "i", "v" or "c" is almost never a number either — mapping
+ * those would invent collisions worse than the ones this fixes.
+ */
+const NUMERALS: Record<string, string> = {
+  ii: '2',
+  iii: '3',
+  iv: '4',
+  vi: '6',
+  vii: '7',
+  viii: '8',
+  ix: '9',
+  xi: '11',
+  xii: '12',
+  xiii: '13',
+  xiv: '14',
+  xv: '15',
+  xvi: '16',
+  xvii: '17',
+  xviii: '18',
+  xix: '19',
+  xx: '20',
+};
+
+/**
+ * Letters only, lowercased: "Hades" and "HADES" and "Hades!" agree.
+ *
+ * And numerals in one notation. The two catalogues do not agree on
+ * them: RAWG files "Red Dead Redemption 2" where SteamGridDB has
+ * "Red Dead Redemption II", so the biggest games on the storefront
+ * were the ones with no artwork — measured against the top thirty by
+ * players, the misses were Red Dead Redemption 2, Grand Theft Auto IV,
+ * God of War (2018) and DOOM (2016). Both sides come through here, so
+ * settling on one notation is enough to make them meet.
+ */
 const fold = (name: string) =>
   name
     .toLowerCase()
     .replace(/&/g, 'and')
     .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
+    .trim()
+    .split(' ')
+    .map((word) => NUMERALS[word] ?? word)
+    .join(' ');
+
+/**
+ * RAWG's own disambiguator, which SteamGridDB does not use.
+ *
+ * A reboot is filed as "DOOM (2016)" there and simply as "DOOM" here,
+ * so the parenthesis was the whole reason two of the most played games
+ * on the page had no artwork. The year is not thrown away: it is
+ * exactly what `pickGame` needs to tell the reboot from the original,
+ * so stripping it makes the match more precise rather than less.
+ */
+export function withoutYear(name: string): {
+  name: string;
+  year: number | null;
+} {
+  const match = /^(.*?)\s*\((\d{4})\)\s*$/.exec(name);
+  if (!match) return { name, year: null };
+  return { name: match[1], year: Number(match[2]) };
+}
+
+/**
+ * The words a publisher adds to a re-release without changing the game.
+ *
+ * SteamGridDB often files the boxed edition — "Grand Theft Auto IV:
+ * The Complete Edition" — where RAWG has the plain title. Matching a
+ * candidate that is the wanted name plus one of these is safe because
+ * the artwork is the same game's. Matching a candidate that is the
+ * wanted name plus anything else is not: "Assassin's Creed" plus
+ * "Odyssey" is a different game, and its art on the first game's page
+ * is the exact failure this whole function is strict to avoid.
+ */
+const EDITION_WORDS = new Set([
+  'edition',
+  'complete',
+  'definitive',
+  'deluxe',
+  'ultimate',
+  'premium',
+  'gold',
+  'goty',
+  'game',
+  'of',
+  'the',
+  'year',
+  'remastered',
+  'remaster',
+  'enhanced',
+  'anniversary',
+  'directors',
+  'director',
+  'cut',
+  'collection',
+  'bundle',
+  'hd',
+  'redux',
+  'reloaded',
+  'special',
+]);
+
+/** Is `candidate` the wanted title with only edition words after it? */
+function isEditionOf(candidate: string, wanted: string): boolean {
+  if (!candidate.startsWith(`${wanted} `)) return false;
+  const rest = candidate.slice(wanted.length + 1).split(' ');
+  return rest.length > 0 && rest.every((word) => EDITION_WORDS.has(word));
+}
 
 /**
  * Which search result is the game that was asked about.
@@ -141,14 +245,20 @@ export function pickGame(
 ): SgdbGame | null {
   const wanted = fold(name);
   const exact = candidates.filter((game) => fold(game.name) === wanted);
-  if (exact.length === 0) return null;
-  if (exact.length === 1 || year == null) return exact[0];
-  const dated = exact.filter((game) => {
+  // Only when nothing wore the title exactly, and only ever a boxed
+  // edition of it — never a longer name that is its own game.
+  const matched =
+    exact.length > 0
+      ? exact
+      : candidates.filter((game) => isEditionOf(fold(game.name), wanted));
+  if (matched.length === 0) return null;
+  if (matched.length === 1 || year == null) return matched[0];
+  const dated = matched.filter((game) => {
     if (!game.release_date) return false;
     const released = new Date(game.release_date * 1000).getUTCFullYear();
     return Math.abs(released - year) <= 1;
   });
-  return dated[0] ?? exact.find((game) => game.verified) ?? exact[0];
+  return dated[0] ?? matched.find((game) => game.verified) ?? matched[0];
 }
 
 /**
@@ -278,11 +388,17 @@ async function fromSgdb(
     const art = await categories(key, `steam/${steam}`);
     if (!empty(art)) return art;
   }
+  // "DOOM (2016)" is RAWG's way of saying which DOOM; SteamGridDB has
+  // one called DOOM and a release date. Ask for the name it files and
+  // let the year do the telling apart.
+  const asked = withoutYear(name);
+  const term = asked.name;
+  const when = year ?? asked.year;
   const found = await sgdb<SgdbGame[]>(
     key,
-    `/search/autocomplete/${encodeURIComponent(name)}`
+    `/search/autocomplete/${encodeURIComponent(term)}`
   );
-  const game = found ? pickGame(found, name, year) : null;
+  const game = found ? pickGame(found, term, when) : null;
   if (!game) return NOTHING;
   return categories(key, `game/${game.id}`);
 }
