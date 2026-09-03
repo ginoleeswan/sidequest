@@ -74,7 +74,7 @@ import { GrainScrim, Textured } from '@/components/Textured';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { MASTHEAD_TOP, POSTER, TITLE_SLOT } from '@/lib/detailHero';
+import { TITLE_SLOT, bannerHeight } from '@/lib/detailHero';
 import { formatHours } from '@/lib/duration';
 import { verdictLine } from '@/lib/verdict';
 import { useDurations } from '@/lib/durations';
@@ -1023,139 +1023,65 @@ export default function GameInfoScreen() {
   ];
 
   /**
-   * The ambient ground behind the box: the game's own colours, out of
-   * focus. The hero banner where SteamGridDB has one, else RAWG's
-   * screenshot - at the small cut, since it is about to be blurred
-   * past recognition anyway.
+   * The band, and the mark set on it.
+   *
+   * The hero where SteamGridDB has one; RAWG's screenshot where it does
+   * not, cropped to the same band. Both are art nobody here chose, so
+   * the ramp at the foot closes to the page's own colour and the mark
+   * sits on the closed end of it — legible over a night city and over a
+   * bleached desert alike, without painting either of them out.
    */
-  const ambient =
-    art?.hero?.thumb ?? mediaUri(game.background_image, 210) ?? null;
+  /** The copy column, so the mark never runs wider than the page's text. */
   const column = Math.min(width, LAYOUT.maxContentWidth);
+  const banner = art?.hero?.url ?? game.background_image;
 
   const hero = (
-    <View style={styles.hero}>
-      {/*
-        The box, standing on its own weather.
-
-        The masthead was a banner: a landscape screenshot cropped to a
-        portrait screen, which lost whatever the frame was composed
-        around, with the name typed over its foot. Every storefront
-        shelves a game by its box, and this app's own tiles are boxes -
-        so the page a tile opens onto now opens on the same object, at
-        the size the shelf could not give it. The screenshot is not
-        gone: it is the atmosphere behind the box, blurred until it is
-        colour, so the page takes the game's palette without the art
-        having to survive a crop.
-      */}
-      <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        {ambient ? (
-          <Image
-            source={{ uri: ambient }}
-            style={styles.ambient}
-            contentFit="cover"
-            blurRadius={36}
-            transition={DURATION.slow}
-            priority="high"
-            accessible={false}
-            importantForAccessibility="no-hide-descendants"
-          />
-        ) : (
-          <Textured fill />
-        )}
-        <LinearGradient
-          colors={[
-            'rgba(51,61,81,0.30)',
-            'rgba(51,61,81,0.62)',
-            'rgba(51,61,81,0.92)',
-            COLORS.darkGrey,
-          ]}
-          locations={[0, 0.5, 0.86, 1]}
+    <View style={[styles.hero, { height: bannerHeight(width, insets.top) }]}>
+      {banner ? (
+        <Image
+          source={{ uri: banner }}
           style={StyleSheet.absoluteFill}
-          pointerEvents="none"
+          contentFit="cover"
+          transition={DURATION.base}
+          // The one picture the page opens on goes to the front of the
+          // queue, ahead of the thumbnails below it.
+          priority="high"
+          accessibilityLabel={`${game.name} key art`}
+          alt={`${game.name} key art`}
         />
-        <GrainScrim style={styles.heroGrain} />
-        <ChromeWeld height={insets.top + WELD_HEIGHT} />
-      </View>
-      <View
-        style={[
-          styles.masthead,
-          { paddingTop: insets.top + MASTHEAD_TOP, width: column },
+      ) : (
+        <Textured fill />
+      )}
+      <LinearGradient
+        colors={[
+          'rgba(20,25,35,0.46)',
+          'rgba(20,25,35,0.04)',
+          'rgba(51,61,81,0.72)',
+          COLORS.darkGrey,
         ]}
-      >
-        <View style={styles.posterFrame}>
-          {boxArt ? (
-            <Image
-              source={{ uri: boxArt }}
-              style={styles.poster}
-              contentFit="cover"
-              transition={DURATION.base}
-              // The one picture the page opens on goes to the front of
-              // the queue, ahead of the thumbnails below it.
-              priority="high"
-              accessibilityLabel={`${game.name} box art`}
-              alt={`${game.name} box art`}
-            />
-          ) : (
-            /* The quest card, as the tiles draw it: the brand's own
-               plate while the box is asked for, and the name set on it
-               if there turns out to be no box anywhere. Hidden from
-               assistive tech - the title under it already speaks. */
-            <View style={[styles.poster, styles.posterPlate]}>
-              <Textured fill />
-              {boxArt === null ? (
-                <Text
-                  style={styles.posterName}
-                  numberOfLines={4}
-                  accessibilityElementsHidden
-                  importantForAccessibility="no-hide-descendants"
-                >
-                  {game.name}
-                </Text>
-              ) : null}
-            </View>
-          )}
-        </View>
-        {/* A fixed slot: the typed name arrives first and the
-            publisher's mark replaces it, and the page must not move
-            under the reader when the taller one lands. */}
-        <View style={styles.titleSlot}>
-          <TitleLogo
-            logo={logo}
-            name={game.name}
-            maxWidth={column - SPACING.xl * 2}
-            maxHeight={TITLE_SLOT}
+        locations={[0, 0.34, 0.84, 1]}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
+      <GrainScrim style={styles.heroGrain} />
+      <ChromeWeld height={insets.top + WELD_HEIGHT} />
+      {/* A reserved slot: the typed name arrives first and the
+          publisher's mark replaces it when it lands, and the masthead
+          must not resize under the reader when the taller one does. */}
+      <View style={[styles.mastheadCopy, { width: column }]}>
+        <TitleLogo
+          logo={logo}
+          name={game.name}
+          maxWidth={column - SPACING.md * 2}
+          maxHeight={TITLE_SLOT}
+        >
+          <Text
+            style={[styles.heroTitle, OVER_IMAGE.heading]}
+            numberOfLines={2}
           >
-            <Text style={styles.heroTitle} numberOfLines={2}>
-              {game.name}
-            </Text>
-          </TitleLogo>
-        </View>
-        {/* Identity, and only identity: who made it, when, and what
-            kind of thing it is. The figures stand in the strip under
-            the masthead, on the page's own colour. The genres are the
-            live parts - each is a door into its section. */}
-        {identity.length > 0 ? (
-          <Text style={styles.heroIdentity}>
-            {identity.map((bit, index) => (
-              <React.Fragment key={bit.key}>
-                {index > 0 ? ' · ' : null}
-                {bit.onPress ? (
-                  <Text
-                    onPress={bit.onPress}
-                    suppressHighlighting
-                    accessibilityRole="link"
-                    accessibilityLabel={`Browse ${bit.text} games`}
-                    style={styles.heroIdentityLink}
-                  >
-                    {bit.text}
-                  </Text>
-                ) : (
-                  bit.text
-                )}
-              </React.Fragment>
-            ))}
+            {game.name}
           </Text>
-        ) : null}
+        </TitleLogo>
       </View>
     </View>
   );
@@ -1169,6 +1095,33 @@ export default function GameInfoScreen() {
    */
   const figures = (
     <View style={styles.figures}>
+      {/* Identity, and only identity: who made it, when, and what kind
+          of thing it is. It stands on the page rather than on the art —
+          the mark above owns the picture, and a grey line over a
+          photograph is the first thing to become unreadable. The genres
+          are the live parts; each is a door into its section. */}
+      {identity.length > 0 ? (
+        <Text style={styles.heroIdentity}>
+          {identity.map((bit, index) => (
+            <React.Fragment key={bit.key}>
+              {index > 0 ? ' · ' : null}
+              {bit.onPress ? (
+                <Text
+                  onPress={bit.onPress}
+                  suppressHighlighting
+                  accessibilityRole="link"
+                  accessibilityLabel={`Browse ${bit.text} games`}
+                  style={styles.heroIdentityLink}
+                >
+                  {bit.text}
+                </Text>
+              ) : (
+                bit.text
+              )}
+            </React.Fragment>
+          ))}
+        </Text>
+      ) : null}
       <InfoStrip game={game} onEditLength={() => setEditingLength(true)} />
       <View style={styles.figureNotes}>
         <PlanLine
@@ -2402,47 +2355,14 @@ const styles = StyleSheet.create({
   },
 
   // hero
-  hero: { alignItems: 'center', overflow: 'hidden' },
-  /** Past the edges, so the blur has no hard border to reveal. */
-  ambient: {
-    position: 'absolute',
-    top: -SPACING.xl,
-    left: -SPACING.xl,
-    right: -SPACING.xl,
-    bottom: -SPACING.xl,
-    opacity: 0.9,
-  },
-  masthead: {
-    alignItems: 'center',
+  hero: { width: '100%', overflow: 'hidden', justifyContent: 'flex-end' },
+  /** The mark, at the foot of the band where the ramp has closed. */
+  mastheadCopy: {
+    alignSelf: 'center',
     paddingHorizontal: SPACING.md,
     paddingBottom: SPACING.md,
-    gap: SPACING.md,
-  },
-  /** The shadow on the frame, the clip on the box inside it. */
-  posterFrame: {
-    borderRadius: RADIUS.sm,
-    ...SHADOW.hero,
-  },
-  poster: {
-    ...POSTER,
-    borderRadius: RADIUS.sm,
-    overflow: 'hidden',
-    backgroundColor: COLORS.navy,
-  },
-  posterPlate: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: SPACING.md,
-  },
-  posterName: {
-    ...TYPE.h1,
-    color: COLORS.white,
-    textAlign: 'center',
-  },
-  titleSlot: {
     minHeight: TITLE_SLOT,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-end',
   },
   heroGrain: {
     position: 'absolute',
@@ -2481,7 +2401,7 @@ const styles = StyleSheet.create({
    */
   figures: {
     paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.xs,
+    paddingTop: SPACING.md,
     gap: SPACING.sm + 2,
     width: '100%',
     maxWidth: LAYOUT.maxContentWidth,
@@ -2527,15 +2447,12 @@ const styles = StyleSheet.create({
   heroTitle: {
     ...TYPE.display,
     color: COLORS.white,
-    textAlign: 'center',
   },
   heroIdentity: {
     ...TYPE.labelSmall,
     color: COLORS.mediumGrey,
-    textAlign: 'center',
-    paddingHorizontal: SPACING.md,
   },
-  heroIdentityLink: { color: COLORS.white },
+  heroIdentityLink: { color: COLORS.lightGrey },
 
   /**
    * Stats sit on the artwork, so they carry their own contrast the way

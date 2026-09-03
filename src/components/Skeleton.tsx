@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { MASTHEAD_TOP, POSTER, TITLE_SLOT } from '@/lib/detailHero';
+import { TITLE_SLOT, bannerHeight } from '@/lib/detailHero';
 import { STAGE_BOUNDS, stageHeight } from '@/lib/stage';
 import { HOME_SHELVES } from '@/constants/categories';
 import { DURATION, EASING } from '@/styles/motion';
@@ -408,24 +408,23 @@ export function SkeletonDetailExpanded() {
  */
 export function SkeletonDetail() {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   return (
     <View>
-      {/* The masthead's bones: the box standing where the box will, the
-          title slot under it, the identity line under that - the same
-          constants the loaded masthead is built from. */}
+      {/* The band the art will fill, with the mark's slot at its foot —
+          the same constants the loaded masthead is built from, so the
+          swap is a dissolve rather than a jump. */}
       <View
-        style={[styles.detailHero, { paddingTop: insets.top + MASTHEAD_TOP }]}
+        style={[styles.detailHero, { height: bannerHeight(width, insets.top) }]}
       >
-        <Skeleton style={styles.detailPoster} />
-        <View style={styles.detailTitleSlot}>
-          <Skeleton style={styles.detailTitle} />
-        </View>
-        <Skeleton style={styles.detailIdentity} />
+        <Skeleton style={styles.detailHeroFill} />
+        <Skeleton style={styles.detailTitle} />
       </View>
       <View style={styles.detailBody}>
-        {/* The strip of figures, its note, then the status segments and
-            the session line under them. */}
+        {/* The identity line, the strip of figures and its note, then
+            the status segments and the session line under them. */}
         <View style={styles.detailFigures}>
+          <Skeleton style={styles.detailIdentity} />
           <View style={styles.detailStrip}>
             <Skeleton style={styles.detailStripCell} />
             <Skeleton style={styles.detailStripCell} />
@@ -532,19 +531,21 @@ const styles = StyleSheet.create({
    * bones stand where the words will. See `SkeletonDetail`.
    */
   detailHero: {
-    alignItems: 'center',
+    justifyContent: 'flex-end',
     paddingHorizontal: SPACING.md,
     paddingBottom: SPACING.md,
-    gap: SPACING.md,
+    overflow: 'hidden',
   },
-  detailPoster: { ...POSTER, borderRadius: RADIUS.sm },
-  detailTitleSlot: {
-    minHeight: TITLE_SLOT,
-    justifyContent: 'center',
-    alignItems: 'center',
-    alignSelf: 'stretch',
+  /** The artwork's stand-in, behind the mark rather than above it. */
+  detailHeroFill: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 0,
   },
-  detailTitle: { height: 36, width: '55%' },
+  detailTitle: { height: TITLE_SLOT * 0.62, width: '62%' },
   detailIdentity: { height: 17, width: '62%' },
   detailFigures: { gap: SPACING.sm + 2, paddingTop: SPACING.xs },
   detailStrip: { flexDirection: 'row', gap: SPACING.sm },
