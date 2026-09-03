@@ -417,6 +417,8 @@ export function SkeletonDetail() {
       <View
         style={[styles.detailHero, { height: bannerHeight(width, insets.top) }]}
       >
+        {/* One picture fills the band; the mark's slot sits low on it —
+            the same measures the loaded masthead is built from. */}
         <Skeleton style={styles.detailHeroFill} />
         <Skeleton style={styles.detailTitle} />
       </View>
@@ -545,7 +547,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     borderRadius: 0,
   },
-  detailTitle: { height: TITLE_SLOT * 0.62, width: '62%' },
+  detailTitle: { height: TITLE_SLOT * 0.62, width: '62%', alignSelf: 'center' },
   detailIdentity: { height: 17, width: '62%' },
   detailFigures: { gap: SPACING.sm + 2, paddingTop: SPACING.xs },
   detailStrip: { flexDirection: 'row', gap: SPACING.sm },

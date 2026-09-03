@@ -17,19 +17,33 @@
  */
 
 /**
- * How wide the artwork is against its height.
+ * The band's own proportions, and why they are not the hero's.
  *
- * A hero is 3.1:1 and a phone is 390 points across, so its own
- * proportions give a 126-point band — a letterbox, not a masthead.
- * 2.4 is the most height that can be taken before the crop starts
- * eating the subject: it trims a fifth of a hero's width, and it
- * trims top and bottom off the 16:9 screenshot that stands in when a
- * game has no hero, which is the direction a screenshot survives.
+ * A hero is 3.1:1. Shown at that ratio on a 390-point phone it is 126
+ * points tall — a letterbox, and barely half of any band worth calling
+ * a masthead. Composited over a blurred copy of itself it gains the
+ * height and gains a seam with it: a straight line across the page
+ * where the sharp frame stops, which no ramp gentle enough to let the
+ * blur show is strong enough to hide.
+ *
+ * So one picture fills the band, and the height is bought with a crop.
+ * Which side it comes off matters more than how much. Valve's
+ * convention puts the subject hard right and leaves the left clear,
+ * because Steam composites the logo there — so a centre crop takes a
+ * bite out of the one thing the picture is of. Directive 8020's
+ * astronaut stands at the right edge. The crop therefore comes off the
+ * left, and what it spends is the empty half the logo was meant for,
+ * which this design does not use: the mark is centred, low, on the
+ * ramp.
+ *
+ * A 16:9 screenshot standing in for a missing hero is cropped top and
+ * bottom against the same box, and centred — the middle of a game
+ * frame is where the game is.
  */
-export const BANNER_RATIO = 2.4;
+export const BAND_RATIO = 1.8;
 
 /**
- * The title treatment's box, at the foot of the art.
+ * The title treatment's box, low on the art.
  *
  * A fixed slot because the typed name arrives first and the logo
  * replaces it when it lands: without a reserved height the masthead
@@ -38,12 +52,11 @@ export const BANNER_RATIO = 2.4;
 export const TITLE_SLOT = 64;
 
 /**
- * How tall the masthead is, including the part behind the status bar.
+ * The whole band, including the part behind the status bar.
  *
  * The art runs to the top of the document — under the clock, under the
- * brand — so the height is the inset plus the band itself, and the
- * band keeps its full depth below the chrome rather than losing a
- * third of it to the notch.
+ * brand — so the inset is part of the band rather than a bite out of
+ * the picture.
  */
 export const bannerHeight = (width: number, top: number): number =>
-  top + Math.round(width / BANNER_RATIO);
+  top + Math.round(width / BAND_RATIO);

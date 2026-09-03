@@ -1040,13 +1040,17 @@ export default function GameInfoScreen() {
   ];
 
   /**
-   * The band, and the mark set on it.
+   * The band: the picture, the fade it sinks into, and the mark across
+   * the join.
    *
    * The hero where SteamGridDB has one; RAWG's screenshot where it does
-   * not, cropped to the same band. Both are art nobody here chose, so
-   * the ramp at the foot closes to the page's own colour and the mark
-   * sits on the closed end of it — legible over a night city and over a
-   * bleached desert alike, without painting either of them out.
+   * not. The sharp frame keeps its own proportions and is never cut —
+   * see HERO_RATIO for why a wide asset cannot afford a crop — so the
+   * height a masthead needs comes from underneath it instead: the same
+   * art, out of focus, carrying the colour down until it becomes the
+   * page. The mark sits low across that join, over the foot of the
+   * sharp frame and on the soft part, where the ramp has closed enough
+   * to hold type over a night city and a bleached desert alike.
    */
   /** The copy column, so the mark never runs wider than the page's text. */
   const column = Math.min(width, LAYOUT.maxContentWidth);
@@ -1059,6 +1063,12 @@ export default function GameInfoScreen() {
           source={{ uri: banner }}
           style={StyleSheet.absoluteFill}
           contentFit="cover"
+          // The crop comes off the left on a real hero, where the
+          // subject is hard right by convention and the left is the
+          // space Steam reserves for a logo we are not putting there.
+          // A screenshot standing in has no such convention, and is
+          // cropped top and bottom from its middle.
+          contentPosition={art?.hero ? 'right' : 'center'}
           transition={DURATION.base}
           // The one picture the page opens on goes to the front of the
           // queue, ahead of the thumbnails below it.
@@ -1069,27 +1079,33 @@ export default function GameInfoScreen() {
       ) : (
         <Textured fill />
       )}
+      {/* The ramp carries its weight in the last third, where the mark
+          sits: clear enough above it that the picture is a picture, and
+          closed to the page's own colour at the foot so the band has no
+          edge to show. */}
       <LinearGradient
         colors={[
-          'rgba(20,25,35,0.46)',
-          'rgba(20,25,35,0.04)',
-          'rgba(51,61,81,0.72)',
+          'rgba(20,25,35,0.44)',
+          'rgba(20,25,35,0.02)',
+          'rgba(31,38,52,0.34)',
+          'rgba(41,49,66,0.86)',
           COLORS.darkGrey,
         ]}
-        locations={[0, 0.34, 0.84, 1]}
+        locations={[0, 0.28, 0.6, 0.88, 1]}
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
       <GrainScrim style={styles.heroGrain} />
       <ChromeWeld height={insets.top + WELD_HEIGHT} />
-      {/* A reserved slot: the typed name arrives first and the
+      {/* Centred and low, the way every title page sets a mark on its
+          art. A reserved slot: the typed name paints first and the
           publisher's mark replaces it when it lands, and the masthead
           must not resize under the reader when the taller one does. */}
       <View style={[styles.mastheadCopy, { width: column }]}>
         <TitleLogo
           logo={logo}
           name={game.name}
-          maxWidth={column - SPACING.md * 2}
+          maxWidth={column - SPACING.lg * 2}
           maxHeight={TITLE_SLOT}
         >
           <Text
@@ -2384,11 +2400,12 @@ const styles = StyleSheet.create({
 
   // hero
   hero: { width: '100%', overflow: 'hidden', justifyContent: 'flex-end' },
-  /** The mark, at the foot of the band where the ramp has closed. */
+  /** The mark, centred and low, across the join. */
   mastheadCopy: {
     alignSelf: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingBottom: SPACING.md,
+    alignItems: 'center',
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.lg,
     minHeight: TITLE_SLOT,
     justifyContent: 'flex-end',
   },
@@ -2490,10 +2507,12 @@ const styles = StyleSheet.create({
   heroTitle: {
     ...TYPE.display,
     color: COLORS.white,
+    textAlign: 'center',
   },
   heroIdentity: {
     ...TYPE.labelSmall,
     color: COLORS.mediumGrey,
+    textAlign: 'center',
   },
   heroIdentityLink: { color: COLORS.lightGrey },
 
