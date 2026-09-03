@@ -1090,7 +1090,48 @@ export default function GameInfoScreen() {
    */
   /** The copy column, so the mark never runs wider than the page's text. */
   const column = Math.min(width, LAYOUT.maxContentWidth);
-  const banner = art?.hero?.url ?? game.background_image;
+  /**
+   * The band paints in layers, and never has none.
+   *
+   * It used to ask for one picture: the publisher's hero if the art
+   * manifest had landed, and otherwise `background_image` raw — the
+   * full-size original RAWG stores, which for one game measured 222 KB
+   * and for another 3.7 MB. Two things followed from that. The reader
+   * had just tapped a tile showing THIS picture, and the tile asks for
+   * a derivative off the width ladder; the masthead asked for the
+   * original, a different URL, so the one file already on the device
+   * was the one file it would not use and the band stood empty through
+   * a fresh download of a much larger one. Then when the manifest
+   * landed the whole picture was replaced in place.
+   *
+   * The underlay is now the shelf tile's own file — a 320 slot and a
+   * 640 slot both round up to the ladder's 640 rung, so this is
+   * literally the request the tile already made, 85 KB and already
+   * cached, painting on the first frame. Over it goes whatever is
+   * genuinely better, fading in when it arrives, and the underlay is
+   * never removed: there is no frame of the band with nothing in it.
+   */
+  const seeded = mediaUri(game.background_image, 320);
+  const banded = art?.hero;
+  /**
+   * A sharper cut of the same screenshot, only where the band is wide
+   * enough to want one. The 640 rung is 780 device pixels, which is a
+   * phone's band exactly; the next rung up is 1280 and 250 KB, so on a
+   * phone the second layer would be a quarter of a megabyte to sharpen
+   * a picture nobody can tell apart. A desk band runs past a thousand
+   * points and does want it.
+   *
+   * The banner itself takes its own thumb where the band is narrow: a
+   * SteamGridDB hero is a 1920-wide PNG that can run to megabytes, and
+   * the thumb covers a phone at two pixels a point.
+   */
+  const sharper =
+    width > 700 ? mediaUri(game.background_image, width) : undefined;
+  const banner = banded
+    ? width * 2 <= 1100
+      ? banded.thumb
+      : banded.url
+    : sharper;
 
   const hero = (
     <View
@@ -1099,24 +1140,43 @@ export default function GameInfoScreen() {
         { height: bannerHeight(width, insets.top, windowHeight) },
       ]}
     >
-      {banner ? (
-        <Image
-          source={{ uri: banner }}
-          style={StyleSheet.absoluteFill}
-          contentFit="cover"
-          // The crop comes off the left on a real hero, where the
-          // subject is hard right by convention and the left is the
-          // space Steam reserves for a logo we are not putting there.
-          // A screenshot standing in has no such convention, and is
-          // cropped top and bottom from its middle.
-          contentPosition={art?.hero ? 'right' : 'center'}
-          transition={DURATION.base}
-          // The one picture the page opens on goes to the front of the
-          // queue, ahead of the thumbnails below it.
-          priority="high"
-          accessibilityLabel={`${game.name} key art`}
-          alt={`${game.name} key art`}
-        />
+      {seeded || banner ? (
+        <>
+          {/* The picture the reader was looking at a moment ago, at the
+              size the tile asked for it. No transition: it is a cache
+              hit, and fading in something that is already there reads
+              as a delay the page did not have. */}
+          {seeded ? (
+            <Image
+              source={{ uri: seeded }}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              contentPosition="center"
+              priority="high"
+              accessible={false}
+              alt=""
+            />
+          ) : null}
+          {banner && banner !== seeded ? (
+            <Image
+              source={{ uri: banner }}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              // The crop comes off the left on a real hero, where the
+              // subject is hard right by convention and the left is the
+              // space Steam reserves for a logo we are not putting
+              // there. A screenshot standing in has no such convention,
+              // and is cropped top and bottom from its middle.
+              contentPosition={banded ? 'right' : 'center'}
+              transition={DURATION.base}
+              // The one picture the page opens on goes to the front of
+              // the queue, ahead of the thumbnails below it.
+              priority="high"
+              accessibilityLabel={`${game.name} key art`}
+              alt={`${game.name} key art`}
+            />
+          ) : null}
+        </>
       ) : (
         <Textured fill />
       )}

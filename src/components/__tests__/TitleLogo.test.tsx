@@ -41,6 +41,27 @@ describe('the title treatment', () => {
       expect.arrayContaining([{ width: 160, height: 80 }])
     );
     expect(box.props.accessibilityLabel).toBe('Hades');
+  });
+
+  /**
+   * Knowing a mark exists and having it are half a second to several
+   * seconds apart: the manifest is edge-cached JSON, the mark is a
+   * transparent PNG from a third-party CDN. Dropping the words the
+   * moment the JSON landed left the game page's title slot empty for
+   * that whole window — it opened, said the game's name, and then
+   * unsaid it.
+   */
+  it('keeps the typed name up until the mark has actually arrived', async () => {
+    await render(
+      <TitleLogo logo={logo} name="Hades" maxWidth={300} maxHeight={80}>
+        <Text>Hades</Text>
+      </TitleLogo>
+    );
+    // The manifest has landed — there IS a logo — and the file has not.
+    expect(screen.getByText('Hades')).toBeTruthy();
+
+    const image = image_of();
+    await fireEvent(image as never, 'load', { nativeEvent: { source: {} } });
     expect(screen.queryByText('Hades')).toBeNull();
   });
 
@@ -50,8 +71,17 @@ describe('the title treatment', () => {
         <Text>Hades</Text>
       </TitleLogo>
     );
-    const image = screen.getByTestId('title-logo').children[0];
-    await fireEvent(image as never, 'error', { nativeEvent: { error: 'x' } });
+    await fireEvent(image_of() as never, 'error', {
+      nativeEvent: { error: 'x' },
+    });
     expect(screen.getByText('Hades')).toBeTruthy();
+    expect(screen.queryByTestId('title-logo')).toBeNull();
   });
 });
+
+/** The mark itself, whichever child of the box it happens to be. */
+function image_of() {
+  const box = screen.getByTestId('title-logo');
+  const kids = box.children as never[];
+  return kids[kids.length - 1];
+}
