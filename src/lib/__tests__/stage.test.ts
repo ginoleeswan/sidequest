@@ -177,8 +177,8 @@ describe('buildStage', () => {
  * bounds are exported rather than inlined.
  */
 describe('stageHeight', () => {
-  it('gives a phone two thirds of its window', () => {
-    expect(stageHeight(844, false)).toBe(557);
+  it('gives a phone three fifths of its window', () => {
+    expect(stageHeight(844, false)).toBe(506);
   });
 
   it('floors on a short window rather than collapsing', () => {
@@ -190,14 +190,19 @@ describe('stageHeight', () => {
   });
 
   /**
-   * The sidebar is already competing for attention, and a hero at the
-   * phone's proportion left no room for the first shelf.
+   * The two shapes have swapped, and for a reason worth stating.
+   *
+   * The phone's stage used to be the taller of the two, because the
+   * picture WAS the stage there: edge to edge, with the copy laid
+   * across its bottom third. It is a picture band plus a block of copy
+   * on the page's own ground now, so it needs less of the window than
+   * a desk whose masthead still carries its words on the artwork.
    */
-  it('leaves a desktop room to see the first shelf', () => {
+  it('gives the desk the taller stage, since its words sit on the art', () => {
     // 0.62 of a 900px window: a masthead near the 16:7 the streaming
     // apps use, and the first shelf's header still above the fold.
     expect(stageHeight(900, true)).toBe(558);
-    expect(stageHeight(900, true)).toBeLessThan(stageHeight(900, false));
+    expect(stageHeight(900, true)).toBeGreaterThan(stageHeight(900, false));
   });
 
   it('still floors on a short laptop window', () => {
@@ -210,7 +215,7 @@ describe('stageHeight', () => {
    */
   it('keeps the bounds the CSS clamp is written from', () => {
     const { min, max, ratio } = STAGE_BOUNDS;
-    expect({ min, max, ratio }).toEqual({ min: 380, max: 620, ratio: 0.66 });
+    expect({ min, max, ratio }).toEqual({ min: 420, max: 620, ratio: 0.6 });
   });
 });
 

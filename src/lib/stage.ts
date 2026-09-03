@@ -103,9 +103,24 @@ export const MAX_SLIDES = 3;
  * this weekend" on screen, which is what says there is more here.
  */
 export const STAGE_BOUNDS = {
-  min: 380,
+  /**
+   * The floor rose with the split. A phone's stage is a picture band
+   * plus a fixed copy block now, so the copy is what the floor has to
+   * clear — under this the band is thinner than the artwork it holds.
+   */
+  min: 420,
   max: 620,
-  ratio: 0.66,
+  /**
+   * Three fifths, not two thirds.
+   *
+   * The stage took two thirds of the window when the picture WAS the
+   * stage: edge to edge, the copy laid across its bottom third. The
+   * picture is a band of its own now with the copy on the page below
+   * it, so the same height would only be buying empty ground between
+   * the buttons and the first shelf — and the band it leaves is closer
+   * to the shape of the artwork going into it.
+   */
+  ratio: 0.6,
   /**
    * Taller on a desk than it was. At 0.52 of a 900px window the stage
    * was a 2.6:1 letterbox - the art's subject cropped out top and
