@@ -1,0 +1,32 @@
+# Publish the current commit to the development channel.
+#
+# An OTA update outlives the build it was made for. The runtime version
+# is a fingerprint of the NATIVE project, so a JS-only change leaves it
+# untouched — which means an update published days ago still matches a
+# device build made today, and the app downloads it over the top of the
+# bundle that shipped inside the binary. That is exactly what happened
+# on 2 September: the update from that evening shadowed the build made
+# from fa26963 two days later, and the phone ran the older screens.
+#
+# So a build is only half of getting native current. This publishes the
+# same commit to the channel, so the newest update really is the newest
+# code, and it is here as a workflow rather than a note in a commit
+# message because the note is what got skipped.
+name: Publish update
+
+on:
+  workflow_dispatch:
+    inputs:
+      note:
+        type: string
+        required: false
+        description: Message recorded against the published update
+        default: Catch the development channel up to the installed build
+
+jobs:
+  publish:
+    name: Publish to the development channel
+    type: update
+    params:
+      channel: development
+      message: ${{ inputs.note }}
