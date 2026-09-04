@@ -161,6 +161,19 @@ struct NightRow: View {
           // cut to "Prag" is worse than no name. When the block is too
           // narrow the label steps out beside it, in the row's own ink.
           let fits = width >= CGFloat(label.count) * 5.6 + 14 + markRoom
+          // ...but only if there is a beside to step out to.
+          //
+          // The longest evening of the week IS the row: its block is
+          // the full width, so a label that would not fit inside it
+          // stepped out into nothing and was never drawn. The week's
+          // one named night lost its name and kept only its icon —
+          // and it was the icon that caused it, by taking seventeen
+          // points off the fit and pushing a title that used to just
+          // squeeze in over the line. A long name truncated inside a
+          // wide block still reads; a name in a room with no width
+          // does not read at all.
+          let beside = geo.size.width - width - 6
+          let stepsOut = !fits && beside >= 60
           HStack(spacing: 6) {
             RoundedRectangle(cornerRadius: 6)
               .fill(planColour(night.colour))
@@ -170,18 +183,19 @@ struct NightRow: View {
                   if marked, let icon {
                     ArtMark(image: icon, size: compact ? 11 : 13)
                   }
-                  if fits {
+                  if !stepsOut {
                     Text(label)
                       .font(Brand.bold(compact ? 9 : 10))
                       // Dark on amber, violet and mint alike — the one
                       // ink all three of the plan's colours take.
                       .foregroundStyle(Color("$ground"))
                       .lineLimit(1)
+                      .truncationMode(.tail)
                   }
                 }
                 .padding(.horizontal, marked ? 4 : 7)
               }
-            if !fits {
+            if stepsOut {
               Text(label)
                 .font(Brand.bold(compact ? 9 : 10))
                 .foregroundStyle(.white)

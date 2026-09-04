@@ -150,9 +150,14 @@ struct YearView: View {
               .font(Brand.black(wide ? 22 : 18))
               .foregroundStyle(.white)
             Spacer(minLength: 4)
+            // A zero is not an achievement, and the accent is what
+            // this app uses to mark one. An empty year says so in the
+            // quiet ink and lets the twelve unlit slots do the rest.
             Text("\(year.count) · \(year.hours)h")
               .font(Brand.bold(11))
-              .foregroundStyle(Color("$accent"))
+              .foregroundStyle(
+                year.count > 0 ? Color("$accent") : Color("$muted")
+              )
           }
 
           LazyVGrid(columns: columns, spacing: 3) {
@@ -165,7 +170,13 @@ struct YearView: View {
           }
 
           if wide {
-            Text(year.count == 1 ? "one game finished" : "\(year.count) games finished")
+            Text(
+              year.count == 0
+                ? "nothing finished yet this year"
+                : year.count == 1
+                  ? "one game finished"
+                  : "\(year.count) games finished"
+            )
               .font(Brand.regular(12))
               .foregroundStyle(Color("$muted"))
           }

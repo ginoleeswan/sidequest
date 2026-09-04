@@ -209,14 +209,27 @@ struct TonightHome: View {
       if wide, !entry.next.isEmpty {
         VStack(alignment: .leading, spacing: 7) {
           Nameplate(text: "THEN", tint: Color("$muted"))
+          /*
+           * The name only where the name changes.
+           *
+           * A run of evenings on one game printed its title on every
+           * row, and a title has about a hundred points to be printed
+           * in — so two nights of The Legend of Zelda: Breath of the
+           * Wild read "The Legend of..." twice, which says nothing at
+           * all and says it in the widest type in the column. What
+           * the reader does not know at that point is how LONG those
+           * evenings are, so the nights that carry on tonight's game
+           * carry their hours instead.
+           */
           ForEach(entry.next) { night in
+            let sameGame = night.title == entry.tonight?.title
             VStack(alignment: .leading, spacing: 1) {
               Text("\(night.day) \(night.date)")
                 .font(Brand.bold(10))
                 .foregroundStyle(Color("$muted"))
-              Text(night.title)
+              Text(sameGame ? "\(night.hours)h more" : night.title)
                 .font(Brand.bold(13))
-                .foregroundStyle(.white)
+                .foregroundStyle(sameGame ? Color("$muted") : .white)
                 .lineLimit(1)
             }
           }
