@@ -1,5 +1,5 @@
 import { act, render, screen } from '@testing-library/react-native';
-import { Animated, Text } from 'react-native';
+import { Animated, Platform, Text } from 'react-native';
 
 import { ScreenFade } from '../ScreenFade';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -11,6 +11,12 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
  * necessary: the first paint is left alone, a later route change
  * actually moves the opacity, and anyone who asked for less animation
  * gets the cut back.
+ *
+ * And that it only happens on web. The fault is the WEB navigator's;
+ * iOS animates its own transitions, and this ran there too — wrapping
+ * the whole router and dipping all of it, tab bar included, on every
+ * change of path. A tab switch is a change of path, so switching tabs
+ * flashed the entire app.
  */
 jest.mock('@/hooks/useReducedMotion', () => ({
   useReducedMotion: jest.fn(() => false),
@@ -29,6 +35,11 @@ const at = (pathname: string) => {
   (globalThis as { routePathname?: string }).routePathname = pathname;
 };
 
+/** The suite runs as iOS; the fade is a web behaviour. */
+const NATIVE = Platform.OS;
+const setPlatform = (os: string) =>
+  Object.defineProperty(Platform, 'OS', { value: os, configurable: true });
+
 beforeEach(() => {
   jest.useFakeTimers();
   mockedReduced.mockReturnValue(false);
@@ -36,6 +47,7 @@ beforeEach(() => {
   timing = jest.spyOn(Animated, 'timing');
 });
 afterEach(() => {
+  setPlatform(NATIVE);
   jest.useRealTimers();
   timing.mockRestore();
   delete (globalThis as { routePathname?: string }).routePathname;
@@ -61,7 +73,8 @@ describe('ScreenFade', () => {
     expect(timing).not.toHaveBeenCalled();
   });
 
-  it('a later route change dips and settles back to full', async () => {
+  it('a later route change dips and settles back to full, on web', async () => {
+    setPlatform('web');
     const view = await render(
       <ScreenFade>
         <Text>the screen</Text>
@@ -83,6 +96,28 @@ describe('ScreenFade', () => {
     await act(async () => {
       jest.runAllTimers();
     });
+    expect(screen.getByText('the screen')).toBeTruthy();
+  });
+
+  /**
+   * The platform draws its own transitions, so a second one laid over
+   * the top is not a refinement — it is a flash on every tab switch.
+   */
+  it('never dips on native, whatever the route does', async () => {
+    const view = await render(
+      <ScreenFade>
+        <Text>the screen</Text>
+      </ScreenFade>
+    );
+    at('/plan');
+    await act(async () => {
+      view.rerender(
+        <ScreenFade>
+          <Text>the screen</Text>
+        </ScreenFade>
+      );
+    });
+    expect(timing).not.toHaveBeenCalled();
     expect(screen.getByText('the screen')).toBeTruthy();
   });
 

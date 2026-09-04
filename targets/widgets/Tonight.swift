@@ -404,10 +404,36 @@ struct CoverGround: View {
         // its ideal, which is how a 420px picture ends up deciding how
         // big the card wants to be.
         GeometryReader { geo in
+          /*
+           * Which side the crop comes off.
+           *
+           * A hero is composed with the subject hard right and the
+           * left kept clear, because that is where Steam composites
+           * the logo. The medium card is nearly the banner's own shape
+           * and loses almost nothing. The SMALL card is a square: a
+           * centre crop of a 3:1 banner keeps its middle third, which
+           * on that convention is the half with nothing in it — the
+           * card came out a picture of a sky with the character
+           * cropped away off the right edge.
+           *
+           * So where the picture is much wider than the slot it has to
+           * fill, the crop comes off the left, which is the same
+           * convention the game page's masthead already follows. A
+           * screenshot standing in for a missing banner is not
+           * composed that way and is not much wider than the slot
+           * either, so it stays centred by the same test.
+           */
+          let slot = geo.size.width / max(geo.size.height, 1)
+          let picture = cover.size.width / max(cover.size.height, 1)
+          let banner = picture > slot * 1.5
           Image(uiImage: cover)
             .resizable()
             .scaledToFill()
-            .frame(width: geo.size.width, height: geo.size.height)
+            .frame(
+              width: geo.size.width,
+              height: geo.size.height,
+              alignment: banner ? .trailing : .center
+            )
             .clipped()
         }
         LinearGradient(
