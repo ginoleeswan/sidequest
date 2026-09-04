@@ -8,19 +8,18 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   FlatList,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
   useWindowDimensions,
   View,
   type LayoutChangeEvent,
-  type ViewStyle,
 } from 'react-native';
 
 import { Image } from 'expo-image';
 
 import { CoverImage } from './CoverImage';
+import { Melt } from './Melt';
 import { ScaleButton } from './ScaleButton';
 import { StageTrailer } from './StageTrailer';
 import { gameQuery, seedGame } from '@/api/gameDetail';
@@ -315,25 +314,6 @@ export function HomeStage({
 /** How far the picture's light runs on past the stage, into the page. */
 const GLOW_BLEED = 160;
 
-/**
- * Where the picture stops being a picture.
- *
- * A long melt, not a fade at the edge. Full strength through the upper
- * two fifths, then a slow dissolve that reaches nothing at the foot —
- * so the copy sits inside the picture's last third with the artwork
- * still faintly around it, darkened rather than gone. That is the whole
- * difference between a billboard and a strip with words under it.
- */
-const fadeOut: ViewStyle =
-  Platform.OS === 'web'
-    ? ({
-        maskImage:
-          'linear-gradient(to bottom, rgba(0,0,0,1) 40%, rgba(0,0,0,0.6) 70%, rgba(0,0,0,0.18) 90%, rgba(0,0,0,0) 100%)',
-        WebkitMaskImage:
-          'linear-gradient(to bottom, rgba(0,0,0,1) 40%, rgba(0,0,0,0.6) 70%, rgba(0,0,0,0.18) 90%, rgba(0,0,0,0) 100%)',
-      } as unknown as ViewStyle)
-    : {};
-
 /** One slide's artwork and its scrims. The words live above the list. */
 function SlideArt({
   slide,
@@ -412,7 +392,7 @@ function SlideArt({
           Translating a picture that exactly fills its container just
           uncovers the background; room below it would buy nothing, since
           the artwork only ever moves one way. */}
-      <View style={[StyleSheet.absoluteFill, fadeOut]}>
+      <Melt style={StyleSheet.absoluteFill}>
         <Animated.View
           style={[
             styles.artLayer,
@@ -444,7 +424,7 @@ function SlideArt({
           picture exactly as it was over the still. Keyed so a new
           trailer is a fresh fade rather than a source swap. */}
         {trailer ? <StageTrailer key={trailer.id} movie={trailer} /> : null}
-      </View>
+      </Melt>
       {/* On a desk, a third scrim runs left to right. The copy lives in
           the frame's left third there, and a bottom-only gradient left
           it reading across the picture's brightest region; the
@@ -487,40 +467,21 @@ function SlideArt({
         style={[styles.topScrim, { height: Math.round(headerHeight * 2.4) }]}
         pointerEvents="none"
       />
+      {/* Ends transparent on both platforms now. It used to close on
+          the page's own colour on native, because there was no mask
+          there to dissolve the picture - and a scrim that closes over a
+          bright frame lands on a shade lighter than the ground before
+          it snaps to it, which is a shelf where the design wanted a
+          melt. `Melt` removes the picture on iOS too, so what is left
+          at the foot is the page. */}
       <LinearGradient
-        colors={
-          Platform.OS === 'web'
-            ? [
-                'rgba(51,61,81,0)',
-                'rgba(51,61,81,0.5)',
-                'rgba(51,61,81,0.55)',
-                'rgba(51,61,81,0.25)',
-                'rgba(51,61,81,0)',
-              ]
-            : [
-                'rgba(51,61,81,0)',
-                'rgba(51,61,81,0.5)',
-                'rgba(51,61,81,0.9)',
-                COLORS.darkGrey,
-                COLORS.darkGrey,
-              ]
-        }
-        /**
-         * Solid before the edge, not at it.
-         *
-         * Going opaque only at the last pixel was fine over a still,
-         * where the residual twelve percent of picture is invisible.
-         * Over a bright, moving trailer it is a lighter band that ends
-         * in one hard line where the page ground begins - measured at
-         * 3x, plainly there. The gradient now reaches the page's own
-         * colour seven percent above the stage's bottom and holds it,
-         * so the stage meets the page darkGrey on darkGrey and the join
-         * cannot be seen. The picture still fades, not stops: the
-         * solid strip is the last forty pixels of a 400-pixel dissolve.
-         * The stops are the page ground's own RGB, not the navy the
-         * old stops carried - a navy scrim ending in grey was itself a
-         * colour step at the join.
-         */
+        colors={[
+          'rgba(51,61,81,0)',
+          'rgba(51,61,81,0.5)',
+          'rgba(51,61,81,0.55)',
+          'rgba(51,61,81,0.25)',
+          'rgba(51,61,81,0)',
+        ]}
         locations={[0, 0.45, 0.8, 0.93, 1]}
         style={styles.scrim}
         pointerEvents="none"

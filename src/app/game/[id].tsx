@@ -72,6 +72,7 @@ import { StoreLinks } from '@/components/StoreLinks';
 import { TitleLogo } from '@/components/TitleLogo';
 import { DurationSheet } from '@/components/DurationSheet';
 import { SHORE_H, SiteFooter } from '@/components/SiteFooter';
+import { Melt } from '@/components/Melt';
 import { GrainScrim, Textured } from '@/components/Textured';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
@@ -1088,25 +1089,6 @@ export default function GameInfoScreen() {
    * sharp frame and on the soft part, where the ramp has closed enough
    * to hold type over a night city and a bleached desert alike.
    */
-  /**
-   * Where the picture stops being a picture.
-   *
-   * The same long melt the home stage has: full strength through the
-   * upper two fifths, then a slow dissolve reaching nothing at the foot,
-   * so the mark sits inside the last third with the artwork still faintly
-   * around it. Web only — the mask is CSS — and native keeps the scrim's
-   * closed end instead.
-   */
-  const MELT: ViewStyle =
-    Platform.OS === 'web'
-      ? ({
-          maskImage:
-            'linear-gradient(to bottom, rgba(0,0,0,1) 42%, rgba(0,0,0,0.62) 70%, rgba(0,0,0,0.16) 91%, rgba(0,0,0,0) 100%)',
-          WebkitMaskImage:
-            'linear-gradient(to bottom, rgba(0,0,0,1) 42%, rgba(0,0,0,0.62) 70%, rgba(0,0,0,0.16) 91%, rgba(0,0,0,0) 100%)',
-        } as unknown as ViewStyle)
-      : {};
-
   /** The copy column, so the mark never runs wider than the page's text. */
   const column = Math.min(width, LAYOUT.maxContentWidth);
   /**
@@ -1160,7 +1142,7 @@ export default function GameInfoScreen() {
       ]}
     >
       {seeded || banner ? (
-        <View style={[StyleSheet.absoluteFill, MELT]}>
+        <Melt style={StyleSheet.absoluteFill}>
           {/* The picture the reader was looking at a moment ago, at the
               size the tile asked for it. No transition: it is a cache
               hit, and fading in something that is already there reads
@@ -1195,37 +1177,25 @@ export default function GameInfoScreen() {
               alt={`${game.name} key art`}
             />
           ) : null}
-        </View>
+        </Melt>
       ) : (
         <Textured fill />
       )}
-      {/* The scrim used to carry the join: solid page colour at the
-          foot, ramping up from sixty percent. Laid over a bright
-          picture it could not reach the page's colour without first
-          passing through a mix of the two — over Dawnwalker's orange
-          that mix was a warm grey LIGHTER than the ground it was about
-          to meet, so the band ended on a shelf. The picture dissolves
-          now (MELT, above) and what is left at the foot IS the page, so
-          on the web this only has to light the mark; native has no mask
-          and keeps the closed end. */}
+      {/* The scrim lights the mark and nothing else. It used to carry
+          the join as well - solid page colour at the foot - and a
+          colour laid over a bright picture cannot reach the page's
+          colour without passing through a mix of the two, which over
+          Dawnwalker's orange was a warm grey lighter than the ground it
+          was about to meet. `Melt` removes the picture instead, on both
+          platforms, so this ends transparent on both. */}
       <LinearGradient
-        colors={
-          Platform.OS === 'web'
-            ? [
-                'rgba(20,25,35,0.44)',
-                'rgba(20,25,35,0.02)',
-                'rgba(31,38,52,0.30)',
-                'rgba(41,49,66,0.42)',
-                'rgba(51,61,81,0)',
-              ]
-            : [
-                'rgba(20,25,35,0.44)',
-                'rgba(20,25,35,0.02)',
-                'rgba(31,38,52,0.34)',
-                'rgba(41,49,66,0.86)',
-                COLORS.darkGrey,
-              ]
-        }
+        colors={[
+          'rgba(20,25,35,0.44)',
+          'rgba(20,25,35,0.02)',
+          'rgba(31,38,52,0.30)',
+          'rgba(41,49,66,0.42)',
+          'rgba(51,61,81,0)',
+        ]}
         locations={[0, 0.28, 0.6, 0.88, 1]}
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
