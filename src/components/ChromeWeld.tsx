@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
 import { GrainScrim } from './Textured';
 import { COLORS } from '@/styles/colors';
@@ -14,8 +14,17 @@ import { COLORS } from '@/styles/colors';
  *
  * Shared by the loaded hero and its skeleton so the seam cannot be fixed
  * in one and forgotten in the other.
+ *
+ * Nothing to weld in the app: there is no browser chrome above the
+ * artwork, only the status bar, which floats over the picture rather than
+ * sitting on a band of its own. Painted there it read as a grey lid over
+ * the top of every game's hero — a seam invented to hide a seam that does
+ * not exist. The masthead's own top gradient stop keeps white status-bar
+ * type legible without it.
  */
 export function ChromeWeld({ height }: { height: number }) {
+  if (Platform.OS !== 'web') return null;
+
   return (
     <>
       <LinearGradient

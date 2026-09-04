@@ -603,7 +603,7 @@ function InfoStrip({
           accessibilityLabel={cell.accessibilityLabel}
           style={[
             styles.stripCell,
-            !spread && styles.stripCellTight,
+            spread ? styles.stripCellSpread : styles.stripCellTight,
             index > 0 && styles.stripCellRule,
           ]}
         >
@@ -2579,26 +2579,30 @@ const styles = StyleSheet.create({
   },
   stripTight: { justifyContent: 'center' },
   /*
-   * `flexGrow: 0` with an automatic basis, never `flex: 0`.
+   * Two styles that never meet, rather than one overriding the other.
    *
-   * React Native reads `flex: 0` as grow 0, shrink 0 and basis ZERO —
-   * not the auto basis the CSS shorthand gives — so the cell took no
-   * width at all and the figures vanished, leaving two labels under an
-   * empty rule. The layout only breaks for a game with fewer than
-   * three facts, which is exactly the game nobody tests with.
+   * This was `stripCell` carrying `flex: 1` with `stripCellTight`
+   * layering `flexGrow: 0` and `flexBasis: 'auto'` over the top of it,
+   * and a comment explaining that `flex: 0` sets a basis of ZERO in
+   * React Native and would collapse the cell. The comment was right
+   * about the trap and wrong about having escaped it: a flattened style
+   * holding `flex` AND `flexGrow` AND `flexBasis` is three inputs to
+   * one Yoga node, and the web and the phone did not resolve them the
+   * same way. On the phone the cells took no width at all — so the
+   * figures were clipped to nothing and the only thing left on screen
+   * was cell two's left border: a stray hairline standing between the
+   * meta line and the button, on any game with fewer than three facts.
+   *
+   * There is nothing to resolve now. The spread cell grows; the tight
+   * cell does not and is never told to.
    */
-  stripCellTight: {
-    flexGrow: 0,
-    flexBasis: 'auto',
-    paddingHorizontal: SPACING.xl,
-  },
+  stripCellSpread: { flex: 1, paddingHorizontal: SPACING.xs },
+  stripCellTight: { paddingHorizontal: SPACING.xl },
   stripCell: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 3,
     paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.xs,
   },
   stripCellRule: { borderLeftWidth: 1, borderLeftColor: COLORS.strokeStrong },
   stripValue: {
