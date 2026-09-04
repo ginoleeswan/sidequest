@@ -363,7 +363,19 @@ const styles = StyleSheet.create({
   rank: {
     ...TYPE.numeral,
     position: 'absolute',
-    bottom: -6,
+    /*
+     * Inside the frame, which is the whole reason it was moved here.
+     *
+     * It was a watermark behind the tile once, clipped by the rail's
+     * edge on the first item, and it came in here to stop being cut.
+     * Then it was hung six points below the bottom — and the frame
+     * clips, so it was cut again: measured on the built site, the
+     * text box overhung the frame by five pixels, which takes the
+     * round foot off a 5 or a 6 and leaves a 1 or a 7 looking fine.
+     * That is what makes it read as a rendering fault rather than a
+     * style. Two points up from the edge puts the whole glyph in.
+     */
+    bottom: 2,
     left: SPACING.sm,
     fontSize: 52,
     lineHeight: 56,
