@@ -11,7 +11,6 @@ import {
   Modal,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -39,7 +38,6 @@ import { BackButton } from '@/components/BackButton';
 import { Chip } from '@/components/Chip';
 import { CommunityStats } from '@/components/CommunityStats';
 import { ChromeWeld } from '@/components/ChromeWeld';
-import { CoverImage } from '@/components/CoverImage';
 import { Decision } from '@/components/Decision';
 import { FitStrip } from '@/components/FitStrip';
 import { fitFrom } from '@/lib/fit';
@@ -77,7 +75,12 @@ import { GrainScrim, Textured } from '@/components/Textured';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { TITLE_SLOT, bannerHeight } from '@/lib/detailHero';
+import {
+  DESK_BAND,
+  TITLE_SLOT,
+  bannerHeight,
+  deskBandCeiling,
+} from '@/lib/detailHero';
 import { formatHours } from '@/lib/duration';
 import { verdictLine } from '@/lib/verdict';
 import { useDurations } from '@/lib/durations';
@@ -106,6 +109,12 @@ const HTML_TAGS = /(<([^>]+)>)/gi;
  * margins, where a wide monitor is supposed to put it.
  */
 const PAGE_MAX = 1200;
+
+/** The columns' own margin inside the cap; the masthead's lockup shares it. */
+const DESK_GUTTER = SPACING.xl * 2;
+
+/** The tallest the publisher's mark stands on the desk's band. */
+const DESK_MARK = 150;
 
 /**
  * The rail's ceiling. Steam's is 375 and Epic's 280; 340 sits between
@@ -190,7 +199,7 @@ function StageVideo({
   return (
     <VideoView
       player={player}
-      style={[styles.stageLead, style]}
+      style={[styles.video, style]}
       contentFit="contain"
       nativeControls
     />
@@ -428,10 +437,17 @@ function StatStrip({
   game,
   onEditLength,
   onOpenPlan,
+  onGround = false,
 }: {
   game: GameDetail;
   onEditLength: () => void;
   onOpenPlan: () => void;
+  /**
+   * Standing on the page rather than on a picture. The contact shadow
+   * the figure wears over artwork is a smudge under amber on a flat
+   * navy ground, so it comes off.
+   */
+  onGround?: boolean;
 }) {
   const { durationOf } = useDurations();
   const duration = durationOf(game);
@@ -444,10 +460,18 @@ function StatStrip({
         accessibilityLabel={`Change how long ${game.name} takes`}
       >
         <View style={styles.hoursLine}>
-          <Text style={[styles.hoursValue, styles.hoursValueWide]}>
+          <Text
+            style={[
+              styles.hoursValue,
+              styles.hoursValueWide,
+              onGround && styles.onGround,
+            ]}
+          >
             {duration.hours > 0 ? formatHours(duration.hours) : 'Set'}
           </Text>
-          <Text style={styles.hoursLabel}>{hoursLabelFor(duration)}</Text>
+          <Text style={[styles.hoursLabel, onGround && styles.onGround]}>
+            {hoursLabelFor(duration)}
+          </Text>
           {/* Said, rather than punctuated. A bare "?" after the figure
               read as text that had failed to render — and it was doing
               a different job from the "~", which says the number is not
@@ -748,8 +772,6 @@ export default function GameInfoScreen() {
   const queryClient = useQueryClient();
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
   const [editingLength, setEditingLength] = useState(false);
-  /** Which frame the stage shows: 0 is the key art, then screenshots. */
-  const [stageIndex, setStageIndex] = useState(0);
   /**
    * When the page was opened.
    *
@@ -759,8 +781,8 @@ export default function GameInfoScreen() {
    * as the minutes pass.
    */
   const [openedAt] = useState(() => Date.now());
-  /** The stage's measured width, so the strip divides the column it is in. */
-  const [stageWidth, setStageWidth] = useState(0);
+  /** The main column's measured width, so the gallery's frames divide it. */
+  const [columnWidth, setColumnWidth] = useState(0);
   /**
    * Which trailer the phone's carousel has been asked to play.
    *
@@ -824,15 +846,15 @@ export default function GameInfoScreen() {
    * Keyed by frame, so a swap away and back starts the wait again.
    */
   const dwellTrailer = game ? pickTrailer(trailers, game.name) : null;
-  const [dweltFor, setDweltFor] = useState<number | null>(null);
+  const [dwelt, setDwelt] = useState(false);
   useEffect(() => {
-    if (!dwellTrailer || stageIndex !== 0) return;
-    const timer = setTimeout(() => setDweltFor(0), 3000);
+    if (!dwellTrailer || !isExpanded) return;
+    const timer = setTimeout(() => setDwelt(true), 3000);
     return () => {
       clearTimeout(timer);
-      setDweltFor(null);
+      setDwelt(false);
     };
-  }, [dwellTrailer, stageIndex]);
+  }, [dwellTrailer, isExpanded]);
 
   /**
    * IGDB's half of the page: box art, the critic aggregate, the
@@ -876,21 +898,6 @@ export default function GameInfoScreen() {
     enabled: Boolean(game?.slug),
   });
   const logo = art?.logo;
-  /**
-   * Box art, from IGDB where it has one and SteamGridDB where it does
-   * not — Valve's own where neither does. `undefined` while either is
-   * still out, so the plate stands rather than the crate deciding
-   * early that there is no box.
-   */
-  const boxArt: string | null | undefined =
-    igdb === undefined
-      ? undefined
-      : igdb?.cover
-        ? igdbCoverUri(igdb.cover, isExpanded ? '720p' : 'cover_big')
-        : art === undefined
-          ? undefined
-          : (art.grid?.url ?? null);
-
   useEffect(() => {
     if (game?.slug) learnDurations([game]);
   }, [game, learnDurations]);
@@ -1056,7 +1063,20 @@ export default function GameInfoScreen() {
     })),
     ...screenshots.map((shot) => ({ key: String(shot.id), image: shot.image })),
   ];
-  const current = frames[stageIndex] ?? frames[0];
+  /**
+   * The frames the band does not already show, screenshots first.
+   *
+   * The phone leads with the trailer because its first frame is a
+   * running player. Here a trailer is a poster until pressed, and
+   * RAWG's poster for a trailer is its first frame - a fade-up from
+   * black, so two trailers opened the shelf as two black boxes. The
+   * band above already plays the trailer for anyone who lingers; the
+   * shelf can afford to show the game first and file the films after.
+   */
+  const gallery = [
+    ...frames.filter((frame) => frame.key !== 'art' && !frame.movie),
+    ...frames.filter((frame) => frame.movie),
+  ];
 
   /** Who made it, when, and what kind of thing it is — the art's one line. */
   const identity: { key: string; text: string; onPress?: () => void }[] = [
@@ -1368,108 +1388,189 @@ export default function GameInfoScreen() {
     </View>
   );
 
-  /* A tall banner works on a phone; on desktop it's a wall. The art
-     becomes a framed card beside the title block, sitting on an ambient
-     blur of itself that melts into the page. */
+  /**
+   * The masthead, on the desk: the whole width of the sheet.
+   *
+   * It was a 3:1 card inside the main column with the name, the figure
+   * and two lines of small print stacked in its left third - and beside
+   * it, sixty points away, a box the height of the column carrying the
+   * same title again. Two pictures of one game, the name twice, and the
+   * decision pushed under the box to the fold. The band is now the
+   * page's first object, running to the sheet's edges the way the
+   * phone's does; it carries the publisher's mark and one line of
+   * identity, and nothing else. The publisher's hero is composed for
+   * exactly this - subject right, the left clear for a logo - so the
+   * mark stands where Valve's own library puts it, and the scrim only
+   * has to quieten the side the picture already left empty.
+   */
+  const lockupWidth = Math.min(
+    520,
+    Math.round((Math.min(width, PAGE_MAX) - DESK_GUTTER * 2) * 0.5)
+  );
   const deskHero = (
-    <View style={styles.deskHero}>
-      <View style={styles.deskBackdrop} pointerEvents="none">
-        {art?.hero || game.background_image ? (
-          <Image
-            // The hero's own colour where there is one — it is what the
-            // stage below is made of, so the weather matches the sky.
-            source={{
-              uri:
-                art?.hero?.thumb ??
-                mediaUri(game.background_image, 210) ??
-                undefined,
-            }}
-            style={styles.deskBackdropImage}
-            contentFit="cover"
-            blurRadius={60}
-          />
+    <View
+      style={[
+        styles.deskMasthead,
+        { maxHeight: deskBandCeiling(windowHeight) },
+      ]}
+    >
+      {seeded || banner ? (
+        <Melt style={StyleSheet.absoluteFill}>
+          {seeded ? (
+            <Image
+              source={{ uri: seeded }}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              contentPosition="center"
+              priority="high"
+              accessible={false}
+              alt=""
+            />
+          ) : null}
+          {banner && banner !== seeded ? (
+            <Image
+              source={{ uri: banner }}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              contentPosition={banded ? 'right' : 'center'}
+              transition={DURATION.base}
+              priority="high"
+              accessibilityLabel={`${game.name} key art`}
+              alt={`${game.name} key art`}
+            />
+          ) : null}
+          {/* Linger and it comes to life, as Home's stage does: the
+              composed still first, the trailer over it three seconds
+              later, muted, under the same mark. Cropped to the band
+              rather than letterboxed into it - a trailer's middle is
+              where its action is, and this is a masthead, not a
+              player; the gallery below has the frame that plays whole. */}
+          {dwelt && dwellTrailer ? (
+            <StageTrailer key={dwellTrailer.id} movie={dwellTrailer} />
+          ) : null}
+        </Melt>
+      ) : (
+        <Textured fill />
+      )}
+      {/* Sideways, not down. The Melt already takes the picture out at
+          the foot; what the mark needs is the left third quietened, and
+          a left-to-right ramp leaves the subject on the right untouched
+          - the half of the picture the picture is of. */}
+      <LinearGradient
+        colors={[
+          'rgba(14,18,27,0.72)',
+          'rgba(14,18,27,0.40)',
+          'rgba(14,18,27,0.08)',
+          'rgba(14,18,27,0)',
+        ]}
+        locations={[0, 0.24, 0.52, 0.7]}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
+      <GrainScrim style={styles.heroGrain} />
+      {/* On the columns' grid: the mark's left edge is the figure's and
+          the prose's, so the band and the page below it are one layout
+          rather than a picture with a page under it. */}
+      <View style={styles.deskLockup}>
+        <TitleLogo
+          logo={logo}
+          name={game.name}
+          maxWidth={lockupWidth}
+          maxHeight={DESK_MARK}
+          align="start"
+        >
+          <Text style={styles.deskTitle} numberOfLines={2}>
+            {game.name}
+          </Text>
+        </TitleLogo>
+        {identity.length > 0 ? (
+          <Text style={styles.deskIdentity}>
+            {identity.map((bit, index) => (
+              <React.Fragment key={bit.key}>
+                {index > 0 ? ' · ' : null}
+                {bit.onPress ? (
+                  <Text
+                    onPress={bit.onPress}
+                    suppressHighlighting
+                    accessibilityRole="link"
+                    accessibilityLabel={`Browse ${bit.text} games`}
+                    style={styles.deskIdentityLink}
+                  >
+                    {bit.text}
+                  </Text>
+                ) : (
+                  bit.text
+                )}
+              </React.Fragment>
+            ))}
+          </Text>
         ) : null}
-        <LinearGradient
-          colors={[
-            'rgba(51,61,81,0.55)',
-            'rgba(51,61,81,0.82)',
-            COLORS.darkGrey,
-          ]}
-          locations={[0, 0.62, 1]}
-          style={StyleSheet.absoluteFill}
-        />
-        <GrainScrim style={styles.deskGrain} />
       </View>
     </View>
   );
 
   /**
-   * The title block, as the head of the main column.
+   * The argument, at the head of the column and on the ground.
    *
-   * It was a band of its own above the columns, and with the artwork
-   * gone from it the band had nothing on its right half — so the week
-   * rule ran the full 1072pt across both tracks over an empty corner,
-   * the one stripe on the page that ignored the grid everything else
-   * had just been put on. In the column, the title, the figure, the
-   * rule and the stage under them share two edges exactly; and the
-   * rail rises to sit level with the title, so the decision is beside
-   * the name of the thing being decided about — the one arrangement
-   * every store page agrees on.
+   * The figure used to stand on the picture under the mark, with the
+   * split and its source as two grey lines beneath - four registers in
+   * the left third of a photograph. On the page's own colour the hours
+   * lead, the pace answers them, and the split stands beside them as
+   * cells rather than a sentence: three figures over three labels, read
+   * across the way the phone's strip is, so the same 35 hours is
+   * visibly a different promise to someone who mainlines than to a
+   * completionist. Under a rule, because this is the head of the page
+   * and what follows is a different kind of thing.
    */
-  const titleBlock = (
-    <View style={styles.titleLockup}>
-      <View style={styles.deskHeroCopy}>
-        <TitleLogo
-          logo={logo}
-          name={game.name}
-          maxWidth={stageWidth > 0 ? stageWidth * 0.55 : 360}
-          maxHeight={stageWidth > 0 && stageWidth < 720 ? 84 : 110}
-        >
-          <Text
-            style={[
-              styles.deskTitle,
-              // A long name in a narrow stage climbed out of the top of
-              // the picture at 44pt; the size follows the frame.
-              stageWidth > 0 && stageWidth < 720 && styles.deskTitleTight,
-            ]}
-            numberOfLines={2}
-          >
-            {game.name}
-          </Text>
-        </TitleLogo>
+  const split =
+    igdb?.times &&
+    igdb.times.submissions >= 5 &&
+    (igdb.times.hastily || igdb.times.completely)
+      ? igdb.times
+      : null;
+  const splitCells: { label: string; hours: number }[] = split
+    ? [
+        { label: 'Rushing it', hours: split.hastily ?? 0 },
+        { label: 'Most people', hours: split.normally ?? 0 },
+        { label: 'Completionist', hours: split.completely ?? 0 },
+      ].filter((cell) => cell.hours > 0)
+    : [];
+  const figuresWide = (
+    <View style={styles.deskFigures}>
+      <View style={styles.deskFiguresLead}>
         <StatStrip
           game={game}
+          onGround
           onEditLength={() => setEditingLength(true)}
           onOpenPlan={() => router.push('/plan')}
         />
-        {/* The split HowLongToBeat built a site on, under the rule it
-          annotates: the same 74 hours is a different promise to
-          someone who mainlines than to a completionist, and one
-          number was always a compromise between them. Submitted
-          times, so it only speaks when enough people have. */}
-        {igdb?.times &&
-        igdb.times.submissions >= 5 &&
-        (igdb.times.hastily || igdb.times.completely) ? (
-          <Text style={styles.splitLegend}>
-            {[
-              /* Whole hours: 119.3 promises a precision 68
-                 submissions cannot keep. */
-              igdb.times.hastily
-                ? `Rushing it ${Math.round(igdb.times.hastily)}h`
-                : null,
-              igdb.times.normally
-                ? `Most people ${Math.round(igdb.times.normally)}h`
-                : null,
-              igdb.times.completely
-                ? `100% ${Math.round(igdb.times.completely)}h`
-                : null,
-            ]
-              .filter(Boolean)
-              .join(' · ')}
-            {`  — ${igdb.times.submissions} players, via IGDB`}
-          </Text>
-        ) : null}
       </View>
+      {split ? (
+        <View style={styles.splitBlock}>
+          <View style={styles.strip}>
+            {splitCells.map((cell, index) => (
+              <View
+                key={cell.label}
+                style={[
+                  styles.stripCell,
+                  styles.splitCell,
+                  index > 0 && styles.stripCellRule,
+                ]}
+              >
+                {/* Whole hours: 119.3 promises a precision 68
+                    submissions cannot keep. */}
+                <Text style={styles.stripValue}>{Math.round(cell.hours)}h</Text>
+                <Text style={styles.stripLabel}>{cell.label}</Text>
+              </View>
+            ))}
+          </View>
+          <Text style={styles.splitSource}>
+            {split.submissions} players, via IGDB
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 
@@ -1951,147 +2052,73 @@ export default function GameInfoScreen() {
    * sheet, once.
    */
   /**
-   * The stage: one big frame, and the strip that changes it.
+   * The evidence: what it is like to play, in frames that open.
    *
-   * The artwork was a plate in the top-right corner that ran off the
-   * side of the window, and the screenshots — the only assets that show
-   * what playing this actually looks like — were a scrolling rail near
-   * the foot of the page. Both store pages this borrows from do it the
-   * other way round for a good reason: the picture is what a person
-   * came to look at, so it is the first object under the title, at the
-   * width of the column rather than the width of a thumbnail.
-   *
-   * The bleed went with it. Running off the right edge made sense while
-   * the art was a corner element and stopped making sense the moment it
-   * became the lead — an object at the head of a column wants the
-   * column's edges, not the window's.
-   *
-   * Key art first and then the screenshots, because the opening frame
-   * has to identify the game: a street at night is not a cover.
+   * The desk had a stage - one lead frame with a strip of six under it
+   * - and the lead was the key art, so the strip's first thumb stood
+   * "selected" showing a screenshot the lead did not: a viewer with
+   * nothing in it to view, under a masthead that had already shown the
+   * art. Now the band above IS the art, and this is a shelf of the
+   * things the band is not: trailers first, because motion answers the
+   * question better than a still, then the screenshots, two to a row
+   * with a third peeking, each opening full size. Paged by the same
+   * chevrons every other row on this page is.
    */
-  const stage =
-    isExpanded && frames.length > 0 ? (
-      <View
-        style={styles.stage}
-        // Measured, not derived. The thumb width was hard-coded from
-        // the 1200-cap column, so below the cap six of them no longer
-        // filled the lead above them and the strip lost its rhythm
-        // against the only edge it has to agree with.
-        onLayout={(event) => setStageWidth(event.nativeEvent.layout.width)}
-      >
-        {current.movie ? (
-          <StageVideo movie={current.movie} autoPlay />
-        ) : (
-          <Pressable
-            onPress={() => setLightboxUri(current.image)}
-            accessibilityRole="button"
-            accessibilityLabel="Open this image full size"
-            // The frame clips everything in it - the scrim included,
-            // which used to show square corners under the picture's
-            // round ones.
-            style={styles.stageFrame}
-          >
-            {/* The key-art frame becomes the hero where there is one:
-                the banner the publisher composed to carry its own logo,
-                at the 3:1 Steam's library page gives it, with the mark
-                set over it. The screenshots keep their 16:9. */}
-            <CoverImage
-              uri={
-                current.key === 'art' && art?.hero
-                  ? art.hero.url
-                  : current.image
-              }
-              fallbackUri={current.image}
-              style={[
-                styles.stageLead,
-                current.key === 'art' && art?.hero
-                  ? styles.stageLeadHero
-                  : null,
-              ]}
-              iconSize={64}
-              size="hero"
-            />
-            {dweltFor === stageIndex &&
-            dwellTrailer &&
-            current.key === 'art' ? (
-              <StageTrailer key={dwellTrailer.id} movie={dwellTrailer} />
-            ) : null}
-            {/* The masthead lives on the art, the way the phone's
-                always has. Floating beside it, the copy was a text
-                island in an empty band; on the image, name and figure
-                anchor the one object the page opens with — and the
-                scrim is the phone's own, so both platforms speak one
-                design. Image frames only: a video's controls own its
-                lower strip. */}
-            <LinearGradient
-              colors={['#333D5100', '#333D5126', '#333D51E6']}
-              locations={[0.45, 0.62, 1]}
-              style={StyleSheet.absoluteFill}
-              pointerEvents="none"
-            />
-            <View style={styles.stageCopy} pointerEvents="box-none">
-              {titleBlock}
-            </View>
-          </Pressable>
-        )}
-        {frames.length > 1 ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.stageStrip}
-          >
-            {frames.map((frame, index) => (
-              <Pressable
-                key={frame.key}
-                onPress={() => setStageIndex(index)}
-                /* The hover is the invitation. At rest the strip sits
-                   at 65% so the lead owns the light; a thumb that
-                   brightens under the cursor says "this one opens"
-                   without a border or a caption — the response IS the
-                   affordance. (Cast because react-native-web reports
-                   hover in the state callback and core RN's types do
-                   not know it.) */
-                style={(state) => [
-                  styles.stageThumb,
-                  stageWidth > 0 && {
-                    width: (stageWidth - SPACING.sm * 5) / 6,
-                  },
-                  (state as { hovered?: boolean }).hovered &&
-                    styles.stageThumbHover,
-                  index === stageIndex && styles.stageThumbOn,
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={
-                  frame.movie
-                    ? `Play the trailer ${frame.movie.name}`
-                    : `Show image ${index + 1}`
-                }
-              >
-                <Image
-                  source={{ uri: mediaUri(frame.image, 200) }}
-                  style={[
-                    styles.stageThumbImage,
-                    // RAWG's trailer preview frames are near-black —
-                    // a fade-to-title held on the first frame — so the
-                    // play badge was doing all the identifying and the
-                    // thumb read as a dead slot. Lifted, the frame at
-                    // least shows it is a frame.
-                    frame.movie && styles.stageThumbMovie,
-                  ]}
-                  contentFit="cover"
-                  transition={DURATION.base}
-                />
-                {frame.movie ? (
-                  <View style={styles.stagePlayBadge}>
-                    <Ionicons name="play" size={12} color={COLORS.white} />
-                  </View>
-                ) : null}
-              </Pressable>
-            ))}
-          </ScrollView>
-        ) : null}
+  const frameWidth =
+    columnWidth > 0 ? Math.round((columnWidth - SPACING.md) * 0.46) : 300;
+  const deskGallery = !isExpanded ? null : mediaPending ? (
+    /* The shelf's bones, so the page keeps its rhythm while the frames
+       are on their way rather than growing a section under the reader. */
+    <View style={styles.block}>
+      <Skeleton style={styles.frameHeading} />
+      <View style={styles.mediaBones}>
+        <Skeleton style={[styles.frameBone, { width: frameWidth }]} />
+        <Skeleton style={[styles.frameBone, { width: frameWidth }]} />
       </View>
-    ) : null;
+    </View>
+  ) : gallery.length > 0 ? (
+    <Shelf
+      title="Screenshots & trailers"
+      data={gallery}
+      keyExtractor={(frame) => frame.key}
+      renderItem={(frame) => (
+        <Pressable
+          onPress={() =>
+            frame.movie
+              ? setPlaying(frame.movie.id)
+              : setLightboxUri(frame.image)
+          }
+          accessibilityRole="button"
+          accessibilityLabel={
+            frame.movie
+              ? `Play the trailer ${frame.movie.name}`
+              : 'Open this image full size'
+          }
+          style={[styles.frame, { width: frameWidth }]}
+        >
+          <Image
+            source={{ uri: mediaUri(frame.image, 640) }}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            transition={DURATION.base}
+          />
+          {frame.movie ? (
+            <>
+              <View style={styles.posterPlay}>
+                <Ionicons name="play" size={22} color={COLORS.navy} />
+              </View>
+              {/* Named, because the poster frame is usually black and a
+                  black box with a play glyph could be a broken image.
+                  The name says it is a film, and which. */}
+              <Text style={styles.frameCaption} numberOfLines={1}>
+                {frame.movie.name}
+              </Text>
+            </>
+          ) : null}
+        </Pressable>
+      )}
+    />
+  ) : null;
 
   const fileGetIt = hasLinks ? (
     <View style={fileSection}>
@@ -2229,7 +2256,7 @@ export default function GameInfoScreen() {
   const fileTags =
     game.tags && game.tags.length > 0 ? (
       <View style={styles.tags}>
-        {game.tags.slice(0, isExpanded ? 24 : 10).map((tag) => (
+        {game.tags.slice(0, isExpanded ? 14 : 10).map((tag) => (
           <Chip key={tag.id} title={tag.name} quiet />
         ))}
       </View>
@@ -2279,28 +2306,23 @@ export default function GameInfoScreen() {
     );
   };
 
+  /**
+   * The app's own answer, beside the decision it informs: how the game
+   * lands on the evenings the reader actually has. The desk never
+   * showed it - the one section that is this app rather than a database
+   * - and the phone puts it directly under the controls for the reason
+   * it sits here. Absent for a game of unknown length, and then the
+   * slot is absent too.
+   */
+  const fileFit =
+    isExpanded && fit ? (
+      <View style={fileSection}>
+        <FitStrip fit={fit} now={openedAt} />
+      </View>
+    ) : null;
+
   const fileBox = (
     <View style={styles.block}>
-      {/* The cover crowns the rail — the move every store makes, and
-          the right one: this is the column about having the game, and
-          the box is the object you'd have. Full width, because a stamp
-          floating in a 340pt column reads as lost. */}
-      {isExpanded && boxArt ? (
-        <Image
-          source={{ uri: boxArt }}
-          style={styles.railCover}
-          contentFit="cover"
-          transition={DURATION.base}
-        />
-      ) : null}
-      {/* The plate stands while the box is asked for, so the rail has
-          its crown from the first frame and the box arrives on it,
-          rather than the controls jumping down when it lands. */}
-      {isExpanded && boxArt === undefined ? (
-        <View style={[styles.railCover, styles.coverPlate]}>
-          <Textured fill />
-        </View>
-      ) : null}
       {/* On the phone the crate needs a name. On the wide page the
           rail's register is the micro label — GET IT, WHO ELSE HAS IT —
           and a heading above them was a second voice saying nothing
@@ -2312,7 +2334,9 @@ export default function GameInfoScreen() {
           file. */}
       {!isExpanded && <SectionHeader title="Details" />}
       {framed(
-        isExpanded ? [controls, fileGetIt, fileFacts] : [fileGetIt, fileDetails]
+        isExpanded
+          ? [controls, fileFit, fileGetIt, fileFacts]
+          : [fileGetIt, fileDetails]
       )}
     </View>
   );
@@ -2358,17 +2382,22 @@ export default function GameInfoScreen() {
               // forty-eight was still standing on the desk, where the
               // shore is wider and the emptiness reads longer.
               { paddingBottom: isExpanded ? SPACING.lg : SPACING.xs },
-              isExpanded && styles.deskPad,
             ]}
           >
             {isExpanded ? (
               <View style={styles.expandedInner}>
                 {deskHero}
                 <Animated.View style={[styles.twoColumn, { opacity }]}>
-                  <View style={styles.columnMain}>
-                    {stage ? null : titleBlock}
-                    {current?.movie ? titleBlock : null}
-                    {stage}
+                  <View
+                    style={styles.columnMain}
+                    onLayout={(event) =>
+                      setColumnWidth(event.nativeEvent.layout.width)
+                    }
+                  >
+                    {figuresWide}
+                    {/* The phone's order: the figures, the frames, then
+                        the prose - one design at two widths. */}
+                    {deskGallery}
                     {sketch ? (
                       bones
                     ) : (
@@ -2376,10 +2405,7 @@ export default function GameInfoScreen() {
                         {yourTake}
                         {about}
                         {/* After the prose they annotate, the same
-                            place the phone files them. They were in a
-                            full-width band below both columns, which
-                            put the description's index two screens
-                            below the description it indexes. */}
+                            place the phone files them. */}
                         {game.tags && game.tags.length > 0 ? (
                           <View style={styles.block}>{fileTags}</View>
                         ) : null}
@@ -2400,7 +2426,9 @@ export default function GameInfoScreen() {
                   </Animated.View>
                 </Animated.View>
                 {/* media escapes the column: full-bleed rails, gutter-aligned */}
-                <Animated.View style={{ opacity }}>{mediaTail}</Animated.View>
+                <Animated.View style={[styles.deskTail, { opacity }]}>
+                  {mediaTail}
+                </Animated.View>
               </View>
             ) : (
               <>
@@ -2497,7 +2525,6 @@ const styles = StyleSheet.create({
   /** The shell's padding, inside the scroller: the atmosphere behind
       the head of the page reaches the sheet's edges instead of being
       cut at the scroll box. */
-  deskPad: { paddingHorizontal: SPACING.xl, paddingTop: SPACING.lg },
   /**
    * A plate, because this one floats over a page that scrolls under it.
    *
@@ -2536,13 +2563,6 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     height: '55%',
-  },
-  deskGrain: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: '70%',
   },
   controls: {
     paddingHorizontal: SPACING.md,
@@ -2756,6 +2776,130 @@ const styles = StyleSheet.create({
     color: COLORS.mediumGrey,
     letterSpacing: 1.2,
   },
+
+  /** The frame the phone's trailer and the lightbox's player sit in. */
+  video: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: RADIUS.lg,
+    overflow: 'hidden',
+    backgroundColor: COLORS.navy,
+  },
+
+  // desktop masthead
+  /**
+   * The band, at the hero's own 3.1:1 between a floor and a ceiling.
+   * Yoga takes the height from the width and then lets the ceiling win,
+   * so a tall monitor gets a capped band that crops top and bottom and
+   * a narrow window gets the floor, which crops the left - the side the
+   * publisher left empty for a mark. No ground of its own: the Melt
+   * takes the picture out at the foot and whatever is behind it shows
+   * through, so it has to be the page - navy here was a darker strip
+   * the band dissolved into, and then a step up to the page under it.
+   */
+  deskMasthead: {
+    width: '100%',
+    aspectRatio: DESK_BAND.ratio,
+    minHeight: DESK_BAND.floor,
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
+  },
+  /** The lockup stands on the columns' grid: same cap, same gutter. */
+  deskLockup: {
+    width: '100%',
+    maxWidth: PAGE_MAX,
+    alignSelf: 'center',
+    alignItems: 'flex-start',
+    paddingHorizontal: DESK_GUTTER,
+    paddingBottom: SPACING.xl,
+    gap: SPACING.md,
+  },
+  /** The typed name where no mark exists: the one display size the scale
+      does not carry, sized for a band and not a card. */
+  deskTitle: {
+    ...TYPE.display,
+    ...OVER_IMAGE.heading,
+    fontSize: 48,
+    lineHeight: 54,
+    color: COLORS.white,
+  },
+  /** Who made it, when, what kind - the band's one line, in light on the
+      quietened side of the picture. */
+  deskIdentity: {
+    ...TYPE.labelSmall,
+    ...OVER_IMAGE.body,
+    color: COLORS.lightGrey,
+    letterSpacing: 0.2,
+  },
+  deskIdentityLink: { color: COLORS.white },
+  /**
+   * The head of the column: the figure on the left, the split on the
+   * right, bottoms level, a rule under both. `space-between`, so the
+   * two read as the ends of one line and not as a figure with a table
+   * tacked on.
+   */
+  deskFigures: {
+    flexDirection: 'row',
+    // Wraps rather than squeezes. At 1024 the column is 490 wide and
+    // the two together want 640; shrunk, the figure's label broke onto
+    // a second line and the pencil floated off between them. The lead
+    // holds a floor and the split drops under it instead.
+    flexWrap: 'wrap',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: SPACING.xl,
+    paddingBottom: SPACING.lg,
+    marginBottom: SPACING.xl,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.stroke,
+  },
+  deskFiguresLead: { flexGrow: 1, flexBasis: 340, minWidth: 0 },
+  /** Left-aligned, so it sits square under the figure when it wraps. */
+  splitBlock: { alignItems: 'flex-start', gap: SPACING.xs },
+  /** The phone's strip cell, without its vertical padding: the rule
+      under the row is the row's, and the cells sit on it. */
+  splitCell: { paddingHorizontal: SPACING.lg, paddingVertical: 0 },
+  splitSource: {
+    ...TYPE.fine,
+    color: COLORS.mediumGrey,
+    paddingHorizontal: SPACING.lg,
+  },
+  /** No contact shadow on solid ground - see StatStrip's `onGround`. */
+  onGround: { textShadowColor: 'transparent', textShadowRadius: 0 },
+  /** A frame in the gallery: the screenshot's 16:9, one hairline. */
+  frame: {
+    aspectRatio: 16 / 9,
+    borderRadius: RADIUS.md,
+    overflow: 'hidden',
+    backgroundColor: COLORS.navy,
+    borderWidth: 1,
+    borderColor: COLORS.stroke,
+  },
+  frameBone: { aspectRatio: 16 / 9, borderRadius: RADIUS.md },
+  frameCaption: {
+    ...TYPE.labelSmall,
+    ...OVER_IMAGE.body,
+    color: COLORS.white,
+    position: 'absolute',
+    left: SPACING.md,
+    right: SPACING.md,
+    bottom: SPACING.sm + 2,
+  },
+  /** The shelf heading's bones, at the wide title's line height. */
+  frameHeading: { height: 33, width: 240 },
+  /**
+   * The tail's rows on the columns' grid. They ran the sheet's full
+   * width while the columns above stopped at the cap, so on a wide
+   * window "Watch someone play" started a hundred points left of the
+   * figure it followed. Same cap, same gutter: the rows' own 32 plus
+   * this 32 is the columns' 64.
+   */
+  deskTail: {
+    width: '100%',
+    maxWidth: PAGE_MAX,
+    alignSelf: 'center',
+    paddingHorizontal: DESK_GUTTER - SPACING.xl,
+  },
   // body
   expandedInner: { width: '100%' },
   twoColumn: {
@@ -2765,55 +2909,14 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: PAGE_MAX,
     alignSelf: 'center',
-    paddingHorizontal: SPACING.xl * 2,
-    // Clears the fixed immersive header: the job the masthead band was
-    // doing before it dissolved into the columns.
+    paddingHorizontal: DESK_GUTTER,
+    // The room between the band's foot and the figures.
     paddingTop: SPACING.lg,
   },
 
-  // desktop hero
-  /**
-   * Atmosphere only. The copy lives in the column now, so this is the
-   * blurred art and its veil as a fixed-height band behind the top of
-   * the page — tall enough to sit under the title and the head of the
-   * stage, gone before the prose starts.
-   */
-  deskHero: { width: '100%', height: 0 },
-  deskBackdrop: {
-    position: 'absolute',
-    // Past the sheet's padding to its edges: the colour is the page's
-    // weather, and weather stopping at a margin reads as a panel.
-    top: -SPACING.lg,
-    left: -SPACING.xl,
-    right: -SPACING.xl,
-    // 560, up from 430: at 430 the atmosphere died before the stage
-    // began, so the art's colour never reached the thing made from it.
-    height: 560,
-    overflow: 'hidden',
-  },
-  deskBackdropImage: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    opacity: 0.75,
-  },
   splitLegend: {
     ...TYPE.caption,
     color: COLORS.mediumGrey,
-  },
-  titleLockup: {
-    flexDirection: 'row',
-    gap: SPACING.lg,
-    alignItems: 'flex-start',
-  },
-  stageCopy: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    padding: SPACING.lg,
   },
   /** 3:4, at a stamp's size; hairline so dark covers keep an edge. */
   similarCard: { width: 132, gap: SPACING.xs },
@@ -2873,32 +2976,6 @@ const styles = StyleSheet.create({
   },
   similarName: { ...TYPE.caption, color: COLORS.lightGrey },
 
-  /** The rail's crown: full width, the cover's own 3:4, one hairline. */
-  coverPlate: { backgroundColor: COLORS.navy, overflow: 'hidden' },
-  railCover: {
-    width: '100%',
-    aspectRatio: 3 / 4,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.strokeStrong,
-    backgroundColor: COLORS.navy,
-    marginBottom: SPACING.md,
-  },
-  deskHeroCopy: {
-    flex: 1,
-    minWidth: 0,
-    gap: SPACING.sm + 2,
-    alignItems: 'stretch',
-  },
-  /** The one display size the scale does not carry: a desktop masthead. */
-  deskTitle: {
-    ...TYPE.display,
-    ...OVER_IMAGE.heading,
-    fontSize: 44,
-    lineHeight: 50,
-    color: COLORS.white,
-  },
-  deskTitleTight: { fontSize: 34, lineHeight: 38 },
   /**
    * Proportional, not one fixed track and one leftover.
    *
@@ -2911,63 +2988,6 @@ const styles = StyleSheet.create({
    */
   columnMain: { flex: 70, minWidth: 0, gap: SPACING.sm },
 
-  /**
-   * The lead frame and its strip, sized to the column rather than to
-   * the window. No shadow and no card: it is the first object in the
-   * column, so its edges are the column's and nothing needs to lift it
-   * off a plane it is already sitting on.
-   */
-  stage: { gap: SPACING.sm },
-  stageFrame: {
-    borderRadius: RADIUS.lg,
-    overflow: 'hidden',
-    // The frame holds composited children - the art carries a filter,
-    // the dwelt trailer is a video - and browsers do not clip those to
-    // a rounded corner on overflow alone: the box's square corners
-    // showed through at the foot. The mask makes the clip a real one.
-    ...(Platform.OS === 'web'
-      ? ({
-          WebkitMaskImage: '-webkit-radial-gradient(white, black)',
-          isolation: 'isolate',
-        } as unknown as ViewStyle)
-      : {}),
-  },
-  stageLead: {
-    width: '100%',
-    aspectRatio: 16 / 9,
-    borderRadius: RADIUS.lg,
-    overflow: 'hidden',
-    backgroundColor: COLORS.navy,
-  },
-  /** A hero's own proportions: the banner, not a crop of it. */
-  stageLeadHero: { aspectRatio: 1920 / 620 },
-  stageStrip: { flexDirection: 'row', gap: SPACING.sm },
-  /**
-   * Equal flex, so six frames and three both fill the column. The
-   * current one is marked by an amber hairline rather than by dimming
-   * the others — a strip of darkened thumbnails reads as five disabled
-   * controls next to one live one.
-   */
-  /**
-   * Fixed at a sixth of the column, so six fill it exactly and a
-   * seventh peeks — the peek is the overflow signal. The strip
-   * scrolls; the old slice(0, 6) silently dropped the rest of every
-   * real gallery.
-   */
-  stageThumb: {
-    aspectRatio: 16 / 9,
-    borderRadius: RADIUS.sm,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'transparent',
-    opacity: 0.65,
-  },
-  stageThumbHover: { opacity: 0.9 },
-  // White, not amber: selection is an indicator, and amber is reserved
-  // for time and the primary action. Same rule as the stage dots.
-  stageThumbOn: { borderColor: COLORS.white, opacity: 1 },
-  stageThumbImage: { width: '100%', height: '100%' },
-  stageThumbMovie: { opacity: 0.85, transform: [{ scale: 1.08 }] },
   /** Centred on the poster, in the app's amber, sized for a thumb. */
   posterPlay: {
     position: 'absolute',
@@ -3218,11 +3238,7 @@ const styles = StyleSheet.create({
     maxWidth: LAYOUT.maxContentWidth,
     alignSelf: 'center',
   },
-  skeletonShellWide: {
-    width: '100%',
-    paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.lg,
-  },
+  skeletonShellWide: { width: '100%' },
   lightbox: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.95)',

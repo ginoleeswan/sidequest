@@ -12,7 +12,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { TITLE_SLOT, bannerHeight } from '@/lib/detailHero';
+import {
+  DESK_BAND,
+  TITLE_SLOT,
+  bannerHeight,
+  deskBandCeiling,
+} from '@/lib/detailHero';
 import { STAGE_BOUNDS, stageHeight } from '@/lib/stage';
 import { HOME_SHELVES } from '@/constants/categories';
 import { DURATION, EASING } from '@/styles/motion';
@@ -350,39 +355,40 @@ function SkeletonBand({ inset }: { inset: number }) {
 }
 
 /**
- * Desktop detail silhouette: mirrors the expanded hero (title block beside
- * a framed 16:9 art card) and the two-column body, so the loaded page
- * lands exactly where the bones were.
- */
-/**
- * The desk game page's bones: the stage with its strip and the prose in
- * the main column, the poster and the two controls in the rail - the
- * same two tracks, at the same split and the same padding, as the page
- * that replaces them.
+ * The desk game page's bones: the band across the sheet with the mark's
+ * slot low on its left, then the two tracks - the figure and the
+ * gallery's frames in the main column, the label and the two controls
+ * in the rail - at the same split and the same gutter as the page that
+ * replaces them, so the swap is a dissolve rather than a jump.
  */
 export function SkeletonDetailExpanded() {
+  const { height } = useWindowDimensions();
   return (
-    <View style={styles.deskColumns}>
-      <View style={styles.deskMain}>
-        <Skeleton style={styles.deskStage} />
-        <View style={styles.row}>
-          {Array.from({ length: 6 }, (_, i) => (
-            <Skeleton key={i} style={styles.deskThumb} />
-          ))}
-        </View>
-        <View style={styles.deskProse}>
-          <Skeleton style={styles.detailLine} />
-          <Skeleton style={styles.detailLine} />
-          <Skeleton style={styles.detailLine} />
-          <Skeleton style={styles.detailLineShort} />
-          <Skeleton style={styles.detailReadMore} />
+    <View>
+      <View style={[styles.deskBand, { maxHeight: deskBandCeiling(height) }]}>
+        <Skeleton style={styles.detailHeroFill} />
+        <View style={styles.deskLockup}>
+          <Skeleton style={styles.deskMark} />
+          <Skeleton style={styles.deskIdentity} />
         </View>
       </View>
-      <View style={styles.deskRail}>
-        <Skeleton style={styles.deskPoster} />
-        <Skeleton style={styles.deskRailLabel} />
-        <Skeleton style={styles.deskRailControl} />
-        <Skeleton style={styles.deskRailControl} />
+      <View style={styles.deskColumns}>
+        <View style={styles.deskMain}>
+          <View style={styles.deskFigures}>
+            <Skeleton style={styles.deskFigure} />
+            <Skeleton style={styles.deskPace} />
+          </View>
+          <Skeleton style={styles.deskShelfTitle} />
+          <View style={styles.row}>
+            <Skeleton style={styles.deskFrame} />
+            <Skeleton style={styles.deskFrame} />
+          </View>
+        </View>
+        <View style={styles.deskRail}>
+          <Skeleton style={styles.deskRailLabel} />
+          <Skeleton style={styles.deskRailControl} />
+          <Skeleton style={styles.deskRailControl} />
+        </View>
       </View>
     </View>
   );
@@ -579,6 +585,25 @@ const styles = StyleSheet.create({
   detailStat: { height: 34, width: 64 },
   detailChip: { height: 26, width: 84, borderRadius: 14 },
   lineFull: { height: 12, width: '100%' },
+  /** The band at the hero's own proportions - see DESK_BAND. */
+  deskBand: {
+    width: '100%',
+    aspectRatio: DESK_BAND.ratio,
+    minHeight: DESK_BAND.floor,
+    overflow: 'hidden',
+    justifyContent: 'flex-end',
+  },
+  deskLockup: {
+    width: '100%',
+    maxWidth: DESK_PAGE_MAX,
+    alignSelf: 'center',
+    alignItems: 'flex-start',
+    paddingHorizontal: SPACING.xl * 2,
+    paddingBottom: SPACING.xl,
+    gap: SPACING.md,
+  },
+  deskMark: { height: 96, width: 300 },
+  deskIdentity: { height: 17, width: 260 },
   deskColumns: {
     flexDirection: 'row',
     gap: SPACING.xl + SPACING.sm,
@@ -589,20 +614,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xl * 2,
     paddingTop: SPACING.lg,
   },
-  deskMain: { flex: 70, minWidth: 0, gap: SPACING.sm },
-  deskStage: { width: '100%', aspectRatio: 16 / 9, borderRadius: RADIUS.lg },
-  deskThumb: { flex: 1, aspectRatio: 16 / 9, borderRadius: RADIUS.sm },
-  deskProse: { marginTop: SPACING.md, gap: 0 },
+  deskMain: { flex: 70, minWidth: 0, gap: SPACING.sm + 2 },
+  /** The figure and its pace line, over the rule the page draws there. */
+  deskFigures: {
+    gap: SPACING.sm + 2,
+    paddingBottom: SPACING.lg,
+    marginBottom: SPACING.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.08)',
+  },
+  deskFigure: { height: 60, width: 220 },
+  deskPace: { height: 17, width: 260 },
+  deskShelfTitle: { height: 33, width: 240 },
+  deskFrame: { flex: 1, aspectRatio: 16 / 9, borderRadius: RADIUS.md },
   deskRail: {
     flex: 30,
     maxWidth: DESK_RAIL,
     minWidth: 300,
     gap: SPACING.md,
-  },
-  deskPoster: {
-    width: '100%',
-    aspectRatio: LAYOUT.tileAspect,
-    borderRadius: RADIUS.lg,
   },
   deskRailLabel: { height: EYEBROW_H, width: 96, marginTop: SPACING.lg },
   deskRailControl: { height: 56, borderRadius: RADIUS.md },

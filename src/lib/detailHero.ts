@@ -88,3 +88,30 @@ export function bannerHeight(
   const wanted = windowHeight * BAND_SHARE;
   return top + Math.round(Math.min(tallest, Math.max(shortest, wanted)));
 }
+
+/**
+ * The desk's band: the hero at its own proportions, held to the window.
+ *
+ * A SteamGridDB hero is 1920 by 620, and on a desk there is room to
+ * show it whole - which is the one width where the crop the phone
+ * spends can be kept. The floor keeps a narrow window from turning the
+ * band into a strip; the share and the ceiling keep a tall monitor from
+ * spending half its height on a picture the reader has to scroll past
+ * before the page says anything.
+ */
+export const DESK_BAND = {
+  ratio: 1920 / 620,
+  floor: 360,
+  share: 0.58,
+  ceiling: 620,
+} as const;
+
+/** The tallest the desk's band may stand in this window. */
+export function deskBandCeiling(windowHeight: number): number {
+  return Math.round(
+    Math.min(
+      DESK_BAND.ceiling,
+      Math.max(DESK_BAND.floor, windowHeight * DESK_BAND.share)
+    )
+  );
+}

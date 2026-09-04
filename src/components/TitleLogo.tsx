@@ -19,6 +19,12 @@ interface Props {
   maxWidth: number;
   maxHeight: number;
   style?: StyleProp<ViewStyle>;
+  /**
+   * How the typed title sits against the mark's box while the mark is
+   * on its way: centred on it, as a phone masthead is, or sharing its
+   * left edge, as the desk's lockup does.
+   */
+  align?: 'center' | 'start';
   /** What to show until, or instead of, the logo: the typed title. */
   children: React.ReactNode;
 }
@@ -43,6 +49,7 @@ export function TitleLogo({
   maxWidth,
   maxHeight,
   style,
+  align = 'center',
   children,
 }: Props) {
   const [failed, setFailed] = useState<string | null>(null);
@@ -78,7 +85,20 @@ export function TitleLogo({
       testID="title-logo"
     >
       {shown ? null : (
-        <View style={styles.standIn} pointerEvents="none">
+        <View
+          style={[
+            styles.standIn,
+            /* The slot's full width, not the mark's. The box is
+               measured for the picture - for a tall mark it is 190
+               points wide - and words wrapped into it broke a name
+               that fits on one line into three, then cut it off. */
+            {
+              width: maxWidth,
+              left: align === 'center' ? (width - maxWidth) / 2 : 0,
+            },
+          ]}
+          pointerEvents="none"
+        >
           {children}
         </View>
       )}
@@ -108,5 +128,5 @@ const styles = StyleSheet.create({
    * the same left edge and baseline, so nothing moves when the mark
    * lands on top of it.
    */
-  standIn: { position: 'absolute', left: 0, bottom: 0 },
+  standIn: { position: 'absolute', bottom: 0 },
 });
