@@ -126,14 +126,22 @@ describe('buildStage', () => {
   });
 
   /**
-   * "Popular" is the weakest reason there is. It exists so the stage is
-   * never empty, not as a slide that elbows in beside a real one.
+   * "Popular" is the weakest reason there is, so it never leads a stage
+   * that has a stronger one - but it fills the tail, labelled as what
+   * it is, rather than leaving the carousel two slides long.
    */
-  it('only reaches for trending when nothing else has anything to say', () => {
-    const withReason = buildStage(
-      input({ fresh: [game(2, 'Brand New')], trending: [game(3, 'Popular')] })
+  it('puts trending behind every stronger reason, and fills the tail with it', () => {
+    const slides = buildStage(
+      input({
+        fresh: [game(2, 'Brand New')],
+        trending: [game(3, 'Popular'), game(4, 'Also')],
+      })
     );
-    expect(withReason.map((s) => s.kind)).toEqual(['fresh']);
+    expect(slides.map((s) => s.kind)).toEqual([
+      'fresh',
+      'trending',
+      'trending',
+    ]);
 
     const bare = buildStage(
       input({
@@ -144,6 +152,29 @@ describe('buildStage', () => {
       'trending',
       'trending',
       'trending',
+    ]);
+  });
+
+  /**
+   * Two of each reason that can supply two, and the repeats after the
+   * first of every argument: the stage still opens on three different
+   * reasons, and a reader who keeps going finds more of each.
+   */
+  it('gives each reason two picks, in rounds', () => {
+    const slides = buildStage(
+      input({
+        fresh: [game(1, 'New A'), game(2, 'New B'), game(3, 'New C')],
+        short: [game(4, 'Short A', 4), game(5, 'Short B', 5)],
+        trending: [game(6, 'Popular'), game(7, 'Also')],
+      })
+    );
+    expect(slides.map((s) => s.title)).toEqual([
+      'New A',
+      'Short A',
+      'New B',
+      'Short B',
+      'Popular',
+      'Also',
     ]);
   });
 

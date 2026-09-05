@@ -78,8 +78,20 @@ export interface StageInput {
   dateLabel: string;
 }
 
-/** Most slides a stage will ever show. Three reasons is plenty. */
-export const MAX_SLIDES = 3;
+/**
+ * Most slides a stage will ever show.
+ *
+ * Three was one per reason, and it read as a header with a couple of
+ * alternates: the reader had seen the whole stage before they had
+ * decided to look. Six is a carousel - two picks for each reason that
+ * can supply two, and what everyone is playing filling the tail - and
+ * still short enough that the dots stay countable and every slide is
+ * one somebody chose rather than a feed.
+ */
+export const MAX_SLIDES = 6;
+
+/** How many games one reason may put on the stage. */
+const PER_REASON = { fresh: 2, short: 2 } as const;
 
 /**
  * How tall the stage is, given the window.
@@ -132,14 +144,16 @@ const hoursPhrase = (hours: number): string =>
  * Build the stage.
  *
  * Order is by strength of claim: what your own library says beats what
- * came out today, which beats what is merely short, which beats what is
- * merely popular. Each game appears at most once — the same cover twice
+ * came out this week, which beats what is merely short, which beats
+ * what is merely popular. Each reason gets its picks in turn, so the
+ * first three slides are still three different arguments and the
+ * second of each comes after; popular fills whatever is left, labelled
+ * as what it is. Each game appears at most once — the same cover twice
  * in one carousel is how the old one looked accidental.
  */
 export function buildStage(input: StageInput): StageSlide[] {
   const slides: StageSlide[] = [];
   const used = new Set<number>();
-  let fellBack = false;
 
   const take = (games: Game[]): Game | undefined =>
     games.find((game) => game && !used.has(game.id));
@@ -160,49 +174,63 @@ export function buildStage(input: StageInput): StageSlide[] {
     });
   }
 
-  const fresh = take(input.fresh);
-  if (fresh) {
-    used.add(fresh.id);
-    const length = hoursPhrase(fresh.playtime);
-    slides.push({
-      key: `fresh-${fresh.id}`,
-      kind: 'fresh',
-      game: fresh,
-      eyebrow:
-        input.outToday > 0
-          ? input.outToday === 1
-            ? '1 game out today'
-            : `${input.outToday} games out today`
-          : 'Out this week',
-      title: fresh.name,
-      figure: length,
-      detail: 'It just landed — nobody has finished it yet either.',
-      action: 'Take a look',
-    });
+  const freshSlide = (fresh: Game): StageSlide => ({
+    key: `fresh-${fresh.id}`,
+    kind: 'fresh',
+    game: fresh,
+    eyebrow:
+      input.outToday > 0
+        ? input.outToday === 1
+          ? '1 game out today'
+          : `${input.outToday} games out today`
+        : 'Out this week',
+    title: fresh.name,
+    figure: hoursPhrase(fresh.playtime),
+    detail: 'It just landed — nobody has finished it yet either.',
+    action: 'Take a look',
+  });
+  const shortSlide = (short: Game): StageSlide => ({
+    key: `short-${short.id}`,
+    kind: 'short',
+    game: short,
+    eyebrow: 'Short enough to finish',
+    title: short.name,
+    figure: hoursPhrase(short.playtime),
+    detail: 'A weekend, not a second job.',
+    action: 'Take a look',
+  });
+
+  // Round by round, not reason by reason: the first fresh game, the
+  // first short one, then the second of each. The stage opens on three
+  // different arguments either way, and the repeats come after.
+  for (
+    let round = 0;
+    round < Math.max(PER_REASON.fresh, PER_REASON.short);
+    round++
+  ) {
+    if (round < PER_REASON.fresh) {
+      const fresh = take(input.fresh);
+      if (fresh && slides.length < MAX_SLIDES) {
+        used.add(fresh.id);
+        slides.push(freshSlide(fresh));
+      }
+    }
+    if (round < PER_REASON.short) {
+      const short = take(input.short);
+      if (short && slides.length < MAX_SLIDES) {
+        used.add(short.id);
+        slides.push(shortSlide(short));
+      }
+    }
   }
 
-  const short = take(input.short);
-  if (short && slides.length < MAX_SLIDES) {
-    used.add(short.id);
-    slides.push({
-      key: `short-${short.id}`,
-      kind: 'short',
-      game: short,
-      eyebrow: 'Short enough to finish',
-      title: short.name,
-      figure: hoursPhrase(short.playtime),
-      detail: 'A weekend, not a second job.',
-      action: 'Take a look',
-    });
-  }
-
-  // Only if nothing above had anything to say. A stage with no slides is
-  // worse than a popular game with an honest label — but "popular" is a
-  // weak enough reason that it never joins a stage that already has one.
-  while (slides.length === 0 || (fellBack && slides.length < MAX_SLIDES)) {
+  // Popular fills the tail. It is the weakest reason there is, so it
+  // never leads a stage that has a stronger one - but a stage with two
+  // slides and a shelf of what everyone is playing under it was holding
+  // the games back for no reason anyone could see.
+  while (slides.length < MAX_SLIDES) {
     const trending = take(input.trending);
     if (!trending) break;
-    fellBack = true;
     used.add(trending.id);
     slides.push({
       key: `trending-${trending.id}`,
