@@ -46,7 +46,14 @@
  * buys 45 more points and keeps 44% of a hero: still the right half,
  * still where the game is.
  */
-export const BAND_CROP = { tightest: 1.35, widest: 2.2 } as const;
+/**
+ * ...and 1.25, once the mark grew and the identity line joined it in
+ * the band. A lockup of 88 for the mark, its byline and the foot's
+ * padding is 133 points; on a 289-point band that put the mark's top
+ * at the picture's waist. 1.25 buys 23 more points and keeps 40% of a
+ * hero - still the right two fifths, still where the subject stands.
+ */
+export const BAND_CROP = { tightest: 1.25, widest: 2.2 } as const;
 
 /**
  * How much of the window the band asks for.
@@ -68,7 +75,14 @@ export const BAND_SHARE = 0.4;
  * replaces it when it lands: without a reserved height the masthead
  * would resize under the reader as the taller mark came in.
  */
-export const TITLE_SLOT = 64;
+/**
+ * 88, up from 64. At 64 the publisher's mark was a stamp on a band
+ * three hundred points tall - a fifth of the phone's masthead against
+ * a third of the desk's. The slot now takes the same share of its band
+ * the desk's mark does, and the identity line stands under it on the
+ * art, as it does there.
+ */
+export const TITLE_SLOT = 88;
 
 /**
  * The whole band, including the part behind the status bar.

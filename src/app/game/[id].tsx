@@ -1240,6 +1240,33 @@ export default function GameInfoScreen() {
             {game.name}
           </Text>
         </TitleLogo>
+        {/* Who made it, when, what kind - under the mark, on the art,
+            as the desk sets it. It stood on the ground below in grey,
+            a caption cut off from the thing it captions; here it is
+            the mark's byline, and the melt has taken most of the
+            picture out by the time the band reaches it. */}
+        {identity.length > 0 ? (
+          <Text style={styles.heroIdentity}>
+            {identity.map((bit, index) => (
+              <React.Fragment key={bit.key}>
+                {index > 0 ? ' · ' : null}
+                {bit.onPress ? (
+                  <Text
+                    onPress={bit.onPress}
+                    suppressHighlighting
+                    accessibilityRole="link"
+                    accessibilityLabel={`Browse ${bit.text} games`}
+                    style={styles.heroIdentityLink}
+                  >
+                    {bit.text}
+                  </Text>
+                ) : (
+                  bit.text
+                )}
+              </React.Fragment>
+            ))}
+          </Text>
+        ) : null}
       </View>
     </View>
   );
@@ -1263,33 +1290,6 @@ export default function GameInfoScreen() {
 
   const figures = (
     <View style={styles.figures}>
-      {/* Identity, and only identity: who made it, when, and what kind
-          of thing it is. It stands on the page rather than on the art —
-          the mark above owns the picture, and a grey line over a
-          photograph is the first thing to become unreadable. The genres
-          are the live parts; each is a door into its section. */}
-      {identity.length > 0 ? (
-        <Text style={styles.heroIdentity}>
-          {identity.map((bit, index) => (
-            <React.Fragment key={bit.key}>
-              {index > 0 ? ' · ' : null}
-              {bit.onPress ? (
-                <Text
-                  onPress={bit.onPress}
-                  suppressHighlighting
-                  accessibilityRole="link"
-                  accessibilityLabel={`Browse ${bit.text} games`}
-                  style={styles.heroIdentityLink}
-                >
-                  {bit.text}
-                </Text>
-              ) : (
-                bit.text
-              )}
-            </React.Fragment>
-          ))}
-        </Text>
-      ) : null}
       <InfoStrip game={game} onEditLength={() => setEditingLength(true)} />
       {/* Loose in the column rather than wrapped in a box of their own.
           Both of these decline to render for most games — a game not in
@@ -1643,7 +1643,7 @@ export default function GameInfoScreen() {
         <Skeleton style={{ width: shotWidth, height: shotHeight }} />
       </View>
     </View>
-  ) : frames.length <= 1 ? null : (
+  ) : gallery.length === 0 ? null : (
     /* No heading.
      *
      * "What it looks like" over a row of screenshots states what the
@@ -1662,25 +1662,22 @@ export default function GameInfoScreen() {
     <View
       style={mediaBlock}
       accessibilityRole="summary"
-      accessibilityLabel={`${frames.length - 1} screens and trailers`}
+      accessibilityLabel={`${gallery.length} screens and trailers`}
     >
+      {/* The desk's order and the desk's frames: the screenshots, then
+          the trailers as named posters that open in the lightbox. The
+          first trailer used to be a live player at the head of the
+          rail, which on a phone's browser is a black box wearing the
+          platform's own controls - a play bar, 0:00, a mute glyph -
+          until autoplay is allowed, and it is not always allowed. */}
       <Rail<(typeof frames)[number]>
-        data={frames.slice(1)}
+        data={gallery}
         keyExtractor={(item) => item.key}
         inset={railInset}
         gap={SPACING.sm}
         snapInterval={shotWidth + SPACING.sm}
-        renderItem={(item, index) =>
-          /* Only the frame that plays gets a player. The others are
-               poster frames until asked, which is what keeps a rail of
-               six trailers from mounting six video elements. */
-          item.movie && index === 0 ? (
-            <StageVideo
-              movie={item.movie}
-              autoPlay
-              style={{ width: shotWidth, height: shotHeight }}
-            />
-          ) : item.movie ? (
+        renderItem={(item) =>
+          item.movie ? (
             <Pressable
               onPress={() => setPlaying(item.movie?.id ?? null)}
               accessibilityRole="button"
@@ -1698,6 +1695,9 @@ export default function GameInfoScreen() {
               <View style={styles.posterPlay}>
                 <Ionicons name="play" size={22} color={COLORS.navy} />
               </View>
+              <Text style={styles.frameCaption} numberOfLines={1}>
+                {item.movie.name}
+              </Text>
             </Pressable>
           ) : (
             <Pressable onPress={() => setLightboxUri(item.image)}>
@@ -2556,6 +2556,7 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.lg,
     minHeight: TITLE_SLOT,
     justifyContent: 'flex-end',
+    gap: SPACING.sm + 2,
   },
   heroGrain: {
     position: 'absolute',
@@ -2652,12 +2653,15 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     textAlign: 'center',
   },
+  /** The mark's byline, on the art: light, with the contact shadow the
+      rest of the over-image type wears. */
   heroIdentity: {
     ...TYPE.labelSmall,
-    color: COLORS.mediumGrey,
+    ...OVER_IMAGE.body,
+    color: COLORS.lightGrey,
     textAlign: 'center',
   },
-  heroIdentityLink: { color: COLORS.lightGrey },
+  heroIdentityLink: { color: COLORS.white },
 
   /**
    * Stats sit on the artwork, so they carry their own contrast the way
@@ -2914,9 +2918,12 @@ const styles = StyleSheet.create({
     paddingTop: SPACING.lg,
   },
 
+  /** Centred: it annotates a centred strip, and left-aligned under it
+      the one line read as having slipped off the grid. */
   splitLegend: {
     ...TYPE.caption,
     color: COLORS.mediumGrey,
+    textAlign: 'center',
   },
   /** 3:4, at a stamp's size; hairline so dark covers keep an edge. */
   similarCard: { width: 132, gap: SPACING.xs },
