@@ -1,3 +1,7 @@
+import { Platform, type ViewStyle } from 'react-native';
+
+import { COLORS } from './colors';
+
 /** Design tokens. Prefer these over inline magic numbers. */
 
 /**
@@ -107,20 +111,85 @@ export const LAYOUT = {
  * Shadows are diffuse by design: blur must comfortably exceed offset or the
  * shadow renders as a crisp shifted copy of the card (visible corners below
  * the real ones) instead of soft depth.
+ *
+ * Two layers each, because one is not how a thing sits on a surface: a
+ * tight contact shadow where it touches, and a wide, pulled-in ambient
+ * one that says how far it stands off. A single blur does neither well
+ * — it is too soft to ground the card and too hard to lift it.
+ *
+ * `boxShadow`, not the `shadow*` props, and that is a fix rather than a
+ * preference. On iOS the old props are drawn on the view's own layer,
+ * so every card that also clips its artwork (`overflow: 'hidden'`, which
+ * every cover tile does) clipped its shadow with it, and the shelves had
+ * none. They also follow the fill's alpha, and the app's panels are
+ * three per cent white — a shadow cast by almost nothing. `boxShadow` is
+ * drawn outside the border box on both platforms whatever the fill is,
+ * and the web was already reading it as CSS.
  */
 export const SHADOW = {
   card: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.32,
-    shadowRadius: 20,
-    elevation: 8,
+    boxShadow:
+      '0 1px 2px rgba(9,12,19,0.30), 0 10px 24px -6px rgba(9,12,19,0.45)',
   },
   hero: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.4,
-    shadowRadius: 34,
-    elevation: 12,
+    boxShadow:
+      '0 2px 4px rgba(9,12,19,0.30), 0 18px 40px -10px rgba(9,12,19,0.55)',
   },
 } as const;
+
+/**
+ * The light along a surface's top edge.
+ *
+ * A dark UI with no highlights is lit from nowhere, and every card in
+ * it reads as a hole cut in the page or a sticker on it — never as an
+ * object. One pixel of light inside the top edge is the smallest thing
+ * that says "this is nearer the lamp than the ground is", which is all
+ * a raised surface is. An inset, so it rides inside the hairline and
+ * follows the radius without a view of its own.
+ */
+const EDGE_LIGHT = 'inset 0 1px 0 rgba(255,255,255,0.07)';
+
+/**
+ * The same light, falling across the face: a few per cent at the top,
+ * less at the foot. Native only — `experimental_backgroundImage` is not
+ * a property react-native-web knows, and on the desk the page's own
+ * grain and the hover states already give the panels a surface.
+ */
+const SHEEN =
+  'linear-gradient(180deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0) 70%)';
+
+/**
+ * Surfaces, as materials rather than as a colour and a border.
+ *
+ * The panels were `raised` + `stroke` + `SHADOW.card` spelled out in a
+ * dozen places, which is how the app ended up with one recipe that was
+ * right in the stylesheet and flat on the phone. These are the recipes,
+ * whole: spread one and a surface is lit, edged and lifted the same way
+ * as every other surface of its kind.
+ */
+export const MATERIAL = {
+  /** A panel on the page: the Plan's week, the library's backlog. */
+  plate: {
+    backgroundColor: COLORS.raised,
+    borderWidth: 1,
+    borderColor: COLORS.stroke,
+    boxShadow: `${EDGE_LIGHT}, ${SHADOW.card.boxShadow}`,
+    ...Platform.select<ViewStyle>({
+      web: {},
+      default: { experimental_backgroundImage: SHEEN },
+    }),
+  },
+  /**
+   * A row inside a list of rows. The edge, and only a contact shadow:
+   * ten cards each casting a wide shadow onto the next is a stack of
+   * smudges, not a list.
+   */
+  row: {
+    backgroundColor: COLORS.raised,
+    borderWidth: 1,
+    borderColor: COLORS.stroke,
+    boxShadow: `${EDGE_LIGHT}, 0 1px 2px rgba(9,12,19,0.28)`,
+  },
+  /** Just the lit edge, for a surface that already has its own depth. */
+  edge: { boxShadow: EDGE_LIGHT },
+} as const satisfies Record<string, ViewStyle>;

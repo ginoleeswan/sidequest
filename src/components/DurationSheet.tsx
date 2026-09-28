@@ -13,7 +13,7 @@ import {
 import { COLORS } from '@/styles/colors';
 import { formatHours, parseHours, type Duration } from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
-import { RADIUS, SPACING } from '@/styles/theme';
+import { MATERIAL, RADIUS, SHADOW, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 /** Lengths people actually reach for, so most corrections are one tap. */
@@ -156,6 +156,11 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
     padding: SPACING.lg,
     gap: SPACING.sm,
+    // The one surface that floats over everything, so it carries the
+    // deepest shadow the app has, and the lit edge every raised thing
+    // wears. Without either it was a flat slate on a flat dim — a
+    // rectangle, not something set down in front of the page.
+    boxShadow: `${MATERIAL.edge.boxShadow}, ${SHADOW.hero.boxShadow}`,
   },
   eyebrow: {
     ...TYPE.tag,

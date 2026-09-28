@@ -8,7 +8,7 @@ import { ScaleButton } from './ScaleButton';
 import type { Game } from '@/api/types';
 import { COLORS } from '@/styles/colors';
 import { OVER_IMAGE, TYPE } from '@/styles/typography';
-import { LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
+import { LAYOUT, MATERIAL, RADIUS, SHADOW, SPACING } from '@/styles/theme';
 import { useQueryClient } from '@tanstack/react-query';
 import { prefetchGame } from '@/api/gameDetail';
 
@@ -94,6 +94,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.xl,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
+    ...MATERIAL.edge,
   },
   titleBox: {
     position: 'absolute',

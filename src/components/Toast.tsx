@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { COLORS } from '@/styles/colors';
 import { DURATION, EASING, SPRING } from '@/styles/motion';
-import { RADIUS, SPACING } from '@/styles/theme';
+import { MATERIAL, RADIUS, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -122,11 +122,11 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg,
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.sm + 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.4,
-    shadowRadius: 24,
-    elevation: 12,
+    // Lit along the top like every raised surface, and one shadow
+    // string rather than the shadow props beside an inset: on the web
+    // both become `box-shadow` and whichever lands second erases the
+    // other.
+    boxShadow: `${MATERIAL.edge.boxShadow}, 0 10px 24px rgba(0,0,0,0.4)`,
     zIndex: 100,
   },
   text: {
