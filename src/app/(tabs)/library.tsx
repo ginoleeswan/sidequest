@@ -44,7 +44,7 @@ import {
   type LibrarySort,
 } from '@/lib/libraryStats';
 import { COLORS } from '@/styles/colors';
-import { GUTTER, LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
+import { GUTTER, LAYOUT, MATERIAL, RADIUS, SPACING } from '@/styles/theme';
 import { TYPE, WORDMARK } from '@/styles/typography';
 
 const TABS: LibraryStatus[] = ['wishlist', 'playing', 'finished'];
@@ -847,10 +847,7 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     padding: SPACING.lg,
     borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.stroke,
-    backgroundColor: COLORS.raised,
-    ...SHADOW.card,
+    ...MATERIAL.plate,
   },
   heroRule: {
     height: 1,

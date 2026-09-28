@@ -22,7 +22,7 @@ import { planColour } from '@/lib/planColours';
 import { decodePlan, sharedSummary, type SharedPlan } from '@/lib/planLink';
 import { planSchedule, type ScheduledItem } from '@/lib/scheduler';
 import { COLORS } from '@/styles/colors';
-import { GUTTER, LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
+import { GUTTER, LAYOUT, MATERIAL, RADIUS, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 /**
@@ -250,10 +250,7 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
     padding: SPACING.lg,
     borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.stroke,
-    backgroundColor: COLORS.raised,
-    ...SHADOW.card,
+    ...MATERIAL.plate,
   },
   monthRule: { height: 1, backgroundColor: COLORS.stroke },
 

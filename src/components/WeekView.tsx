@@ -10,7 +10,7 @@ import type { ScheduledItem } from '@/lib/scheduler';
 import { formatHours } from '@/lib/duration';
 import { eveningHours, eveningLabel, planWeek } from '@/lib/week';
 import { COLORS } from '@/styles/colors';
-import { RADIUS, SHADOW, SPACING } from '@/styles/theme';
+import { MATERIAL, RADIUS, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 /**
@@ -321,10 +321,7 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
     padding: SPACING.lg,
     borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.stroke,
-    backgroundColor: COLORS.raised,
-    ...SHADOW.card,
+    ...MATERIAL.plate,
   },
   weekBare: { gap: SPACING.md },
   rule: { height: 1, backgroundColor: COLORS.stroke },

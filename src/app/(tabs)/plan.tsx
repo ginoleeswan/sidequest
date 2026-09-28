@@ -48,7 +48,7 @@ import { hoursLeft, planItems } from '@/lib/planning';
 import { pickTonight, planSchedule, type ScheduledItem } from '@/lib/scheduler';
 import { COLORS } from '@/styles/colors';
 import { DURATION } from '@/styles/motion';
-import { GUTTER, LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
+import { GUTTER, LAYOUT, MATERIAL, RADIUS, SPACING } from '@/styles/theme';
 import { OVER_IMAGE, TYPE, WORDMARK } from '@/styles/typography';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -1200,13 +1200,10 @@ const styles = StyleSheet.create({
   dialItem: { flexGrow: 1, flexBasis: 360, minWidth: 340 },
   /** The one plate the right column stands on. */
   instrument: {
-    backgroundColor: COLORS.raised,
-    borderWidth: 1,
-    borderColor: COLORS.stroke,
+    ...MATERIAL.plate,
     borderRadius: RADIUS.md,
     padding: SPACING.lg,
     gap: SPACING.lg,
-    ...SHADOW.card,
   },
   /** A band after the first: parted from the one above by a hairline. */
   band: {
@@ -1291,9 +1288,7 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
     padding: SPACING.md,
     overflow: 'hidden',
-    backgroundColor: COLORS.raised,
-    borderWidth: 1,
-    borderColor: COLORS.stroke,
+    ...MATERIAL.plate,
     borderRadius: RADIUS.md,
   },
   // The strip pads itself; the body only spaces its lines, and yields
@@ -1368,19 +1363,14 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     paddingVertical: SPACING.sm,
     borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.stroke,
-    backgroundColor: COLORS.raised,
-    ...SHADOW.card,
+    ...MATERIAL.plate,
   },
   rows: { gap: SPACING.sm },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.md,
-    backgroundColor: COLORS.raised,
-    borderWidth: 1,
-    borderColor: COLORS.stroke,
+    ...MATERIAL.row,
     borderRadius: RADIUS.md,
     padding: SPACING.sm + 2,
   },

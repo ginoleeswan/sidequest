@@ -1,4 +1,6 @@
+import MaskedView from '@react-native-masked-view/masked-view';
 import { Asset } from 'expo-asset';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   ImageBackground,
   Platform,
@@ -7,8 +9,29 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
+
+import { COLORS } from '@/styles/colors';
 
 const NOISE = require('../../assets/images/noise.png');
+
+/**
+ * The phone's grain, drawn for the phone.
+ *
+ * `noise.png` is the web's tile, and on a phone it was two faults at
+ * once. It is a single density, so iOS drew each speck across three
+ * device pixels and smoothed it into a haze, and Android tiles at the
+ * bitmap's own pixels, which put a speck at a third of a point where
+ * nobody can see it. And it only lightens: mid-grey flecks at two per
+ * cent, which over the navy moved the page by four levels — a surface
+ * that measures as textured and reads as flat paint.
+ *
+ * `grain.png` ships at 1x, 2x and 3x so every screen draws the same
+ * 150pt tile with crisp specks, and it carries dark specks as well as
+ * light ones, so the ground has tooth rather than dust. Drawn by
+ * `scripts/make-grain.mjs`; rerun that rather than editing the files.
+ */
+const GRAIN = require('../../assets/images/grain.png');
 
 /**
  * How far the grain takes to reach full strength at the top of a page.
@@ -43,8 +66,18 @@ const TOP_FADE = `linear-gradient(to bottom, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 16
 const CHROME_BRIDGE =
   'linear-gradient(to bottom, #272F3F 0px, #272F3F 14px, rgba(39,47,63,0.6) 40%, rgba(39,47,63,0.25) 72%, rgba(39,47,63,0) 100%)';
 
+/** How far down the page the lamplight reaches before it is gone. */
+const LAMP_REACH = 460;
+
 const styles = StyleSheet.create({
   noInteraction: { pointerEvents: 'none' },
+  lamp: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: LAMP_REACH,
+  },
 });
 
 interface Props {
@@ -125,21 +158,97 @@ export function Textured({ children, style, fill = false }: Props) {
 
   return (
     <ImageBackground
-      source={NOISE}
+      source={GRAIN}
       resizeMode="repeat"
       style={[base, fill && styles.noInteraction]}
     >
+      {fill ? null : <Lamplight />}
       {children}
     </ImageBackground>
   );
 }
 
 /**
+ * The light the page is read by.
+ *
+ * A flat ground is lit from nowhere, and that is most of why a dark
+ * screen reads as a colour rather than as a place: nothing on it is
+ * nearer the light than anything else. Two pools at the top of every
+ * page fix that — amber from the left, the app's own lamp, and the
+ * evening's violet from the right — each a few per cent, gone well
+ * before the first fold. They sit under the scroller, so the page
+ * moves across the light rather than the light moving with the page.
+ *
+ * Native only. On the web the page's first rows have to match the
+ * browser's own chrome to the unit (see `CHROME_BRIDGE`), and a glow
+ * there would draw the line the bridge exists to remove.
+ */
+function Lamplight() {
+  return (
+    <View style={styles.lamp} pointerEvents="none">
+      <Svg width="100%" height="100%">
+        <Defs>
+          <RadialGradient
+            id="lamp-amber"
+            cx="12%"
+            cy="0%"
+            rx="80%"
+            ry="95%"
+            fx="12%"
+            fy="0%"
+          >
+            <Stop offset="0" stopColor={COLORS.accent} stopOpacity={0.085} />
+            <Stop offset="0.55" stopColor={COLORS.accent} stopOpacity={0.025} />
+            <Stop offset="1" stopColor={COLORS.accent} stopOpacity={0} />
+          </RadialGradient>
+          <RadialGradient
+            id="lamp-violet"
+            cx="100%"
+            cy="8%"
+            rx="70%"
+            ry="80%"
+            fx="100%"
+            fy="8%"
+          >
+            <Stop offset="0" stopColor={COLORS.violet} stopOpacity={0.07} />
+            <Stop offset="1" stopColor={COLORS.violet} stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        <Rect width="100%" height="100%" fill="url(#lamp-violet)" />
+        <Rect width="100%" height="100%" fill="url(#lamp-amber)" />
+      </Svg>
+    </View>
+  );
+}
+
+/** The fade that `GrainScrim` masks with, as colours for a native mask. */
+const NATIVE_FADES = {
+  bottom: {
+    colors: ['rgba(0,0,0,0)', 'rgba(0,0,0,1)', 'rgba(0,0,0,1)'],
+    locations: [0, 0.85, 1],
+  },
+  top: {
+    colors: ['rgba(0,0,0,1)', 'rgba(0,0,0,1)', 'rgba(0,0,0,0)'],
+    locations: [0, 0.25, 1],
+  },
+  band: {
+    colors: [
+      'rgba(0,0,0,0)',
+      'rgba(0,0,0,1)',
+      'rgba(0,0,0,1)',
+      'rgba(0,0,0,0)',
+    ],
+    locations: [0, 0.2, 0.62, 1],
+  },
+} as const;
+
+/**
  * Grain that fades in with a scrim. A smooth gradient melting into the
  * page's textured background gives itself away at the hand-off - the
  * gradient is clean while the page is grainy. Masking the same noise tile
  * with a fade dithers the blend so the texture arrives with the colour.
- * Web-only: the mask is CSS; native heroes keep their plain gradient.
+ * A CSS mask on the web, a layer mask on native — the same pair `Melt`
+ * uses, for the same reason.
  */
 export function GrainScrim({
   style,
@@ -153,7 +262,31 @@ export function GrainScrim({
    */
   solidAt?: 'top' | 'bottom' | 'band';
 }) {
-  if (Platform.OS !== 'web') return null;
+  if (Platform.OS !== 'web') {
+    // The same fade as a layer mask. Without it every native hero ended
+    // in a clean gradient laid on a grainy page, and the hand-off was
+    // the one place on the screen where the texture visibly stopped.
+    const fade = NATIVE_FADES[solidAt];
+    return (
+      <MaskedView
+        style={[style, styles.noInteraction]}
+        pointerEvents="none"
+        maskElement={
+          <LinearGradient
+            colors={fade.colors}
+            locations={fade.locations}
+            style={StyleSheet.absoluteFill}
+          />
+        }
+      >
+        <ImageBackground
+          source={GRAIN}
+          resizeMode="repeat"
+          style={StyleSheet.absoluteFill}
+        />
+      </MaskedView>
+    );
+  }
   const uri = Asset.fromModule(NOISE).uri;
   const fade =
     solidAt === 'bottom'

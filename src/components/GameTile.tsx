@@ -222,6 +222,10 @@ export function GameTile({
               />
             </>
           )}
+          {/* Light along the box's top edge, above the art. The tile's
+              own inset cannot do it: children paint over an inset
+              shadow, and the cover is a child. */}
+          <View style={styles.edgeLight} pointerEvents="none" />
           {badge ? (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{badge}</Text>
@@ -323,6 +327,15 @@ const styles = StyleSheet.create({
   },
 
   image: { width: '100%', height: '100%' },
+  edgeLight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: RADIUS.sm - 1,
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.14)',
+  },
   gradient: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   scoreCorner: { position: 'absolute', top: SPACING.sm, right: SPACING.sm },
   badge: {

@@ -252,16 +252,22 @@ const styles = StyleSheet.create({
   },
   glow: {
     position: 'absolute',
-    top: -6,
-    left: -6,
-    right: -6,
-    bottom: -6,
-    borderRadius: RADIUS.lg + 6,
-    backgroundColor: COLORS.accent,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: RADIUS.lg,
     // Wide and faint: the point is that the amber bleeds onto the dark
     // page around the button, not that the button gains a halo.
+    //
+    // A shadow with nothing casting it, rather than an amber slab with
+    // a blur on it. `filter: blur` is Android-only in React Native and
+    // react-native-web drops it, so on an iPhone and in the browser the
+    // lamp was a hard-edged amber plate six points proud of the cap,
+    // breathing in and out. An outset shadow is drawn only outside the
+    // box, so the cap and base cover nothing and the light is all bleed.
     opacity: 0,
-    filter: 'blur(14px)',
+    boxShadow: `0 2px 26px 6px ${COLORS.accent}8C`,
   },
   socket: {
     width: 28,
