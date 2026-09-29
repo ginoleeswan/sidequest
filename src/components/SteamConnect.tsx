@@ -1,32 +1,33 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { PrimaryButton } from './PrimaryButton';
 import { useToast } from './Toast';
+import { IconButton, Touchable } from './Touchable';
 import { connectSteam, steamLibrary, type SteamSnapshot } from '@/api/steam';
 import { useLibrary } from '@/lib/library';
 import { progressForLibrary } from '@/lib/steamMatch';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { COLORS } from '@/styles/colors';
-import { RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { ICON, RADIUS, SPACING, innerRadius } from '@/styles/theme';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
 
 interface Props {
   /** Called with the measured pace when the user applies it. */
   onUsePace: (hoursPerWeek: number) => void;
   /** Take me to the import screen. */
   onImport?: () => void;
+  /**
+   * Told the moment a profile connects, for a screen that holds its
+   * own copy of the snapshot — the persisted value is read once per
+   * mount, so a page waiting on it would not see this one land.
+   */
+  onConnected?: (snapshot: SteamSnapshot) => void;
 }
 
-export function SteamConnect({ onUsePace, onImport }: Props) {
+export function SteamConnect({ onUsePace, onImport, onConnected }: Props) {
   const toast = useToast();
   const { entries, setProgress } = useLibrary();
   const [snapshot, setSnapshot] = usePersistedState<SteamSnapshot | null>(
@@ -43,6 +44,7 @@ export function SteamConnect({ onUsePace, onImport }: Props) {
     try {
       const snap = await connectSteam(raw);
       setSnapshot(snap);
+      onConnected?.(snap);
       toast(`Connected as ${snap.name}`, 'logo-steam');
       // Progress for games already saved costs nothing extra: the whole
       // library is in the same response, and a name that matches is a
@@ -71,8 +73,14 @@ export function SteamConnect({ onUsePace, onImport }: Props) {
     return (
       <View style={styles.card}>
         <View style={styles.head}>
-          <Ionicons name="logo-steam" size={16} color={COLORS.mediumGrey} />
-          <Text style={TYPE.micro}>Measure your real pace</Text>
+          <Ionicons
+            name="logo-steam"
+            size={ICON.md}
+            color={COLORS.mediumGrey}
+          />
+          <Text style={TYPE.micro} maxFontSizeMultiplier={FONT_SCALE.label}>
+            Measure your real pace
+          </Text>
         </View>
         <Text style={styles.lede}>
           Connect Steam and the plan uses your actual hours instead of a guess.
@@ -89,20 +97,12 @@ export function SteamConnect({ onUsePace, onImport }: Props) {
             style={styles.input}
             onSubmitEditing={() => input.trim() && connect(input)}
           />
-          <Pressable
+          <PrimaryButton
+            label="Connect"
             onPress={() => connect(input)}
-            disabled={busy || input.trim() === ''}
-            style={[
-              styles.button,
-              (busy || input.trim() === '') && styles.buttonDisabled,
-            ]}
-          >
-            {busy ? (
-              <ActivityIndicator size="small" color={COLORS.darkGrey} />
-            ) : (
-              <Text style={styles.buttonText}>Connect</Text>
-            )}
-          </Pressable>
+            disabled={input.trim() === ''}
+            busy={busy}
+          />
         </View>
         {error ? <Text style={styles.error}>{error}</Text> : null}
       </View>
@@ -128,13 +128,13 @@ export function SteamConnect({ onUsePace, onImport }: Props) {
               : 'quiet fortnight on Steam'}
           </Text>
         </View>
-        <Pressable
+        <IconButton
+          icon="close"
+          size="md"
+          color={COLORS.mediumGrey}
           onPress={() => setSnapshot(null)}
-          hitSlop={8}
           accessibilityLabel="Disconnect Steam"
-        >
-          <Ionicons name="close" size={16} color={COLORS.mediumGrey} />
-        </Pressable>
+        />
       </View>
 
       {snapshot.recent.length > 0 && (
@@ -148,18 +148,24 @@ export function SteamConnect({ onUsePace, onImport }: Props) {
       )}
 
       {onImport && (
-        <Pressable
+        <Touchable
           onPress={onImport}
+          hitSlop="text"
           accessibilityRole="link"
           style={styles.importLink}
         >
-          <Ionicons name="download-outline" size={14} color={COLORS.accent} />
+          <Ionicons
+            name="download-outline"
+            size={ICON.sm}
+            color={COLORS.lightGrey}
+          />
           <Text style={styles.importText}>Bring my Steam library in</Text>
-        </Pressable>
+        </Touchable>
       )}
 
       {snapshot.hoursPerWeek > 0 && (
-        <Pressable
+        <PrimaryButton
+          label={`Use my measured pace — ${snapshot.hoursPerWeek}h/week`}
           onPress={() => {
             onUsePace(snapshot.hoursPerWeek);
             toast(
@@ -167,12 +173,8 @@ export function SteamConnect({ onUsePace, onImport }: Props) {
               'speedometer'
             );
           }}
-          style={styles.button}
-        >
-          <Text style={styles.buttonText}>
-            Use my measured pace — {snapshot.hoursPerWeek}h/week
-          </Text>
-        </Pressable>
+          block
+        />
       )}
     </View>
   );
@@ -185,7 +187,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.stroke,
     borderRadius: RADIUS.md,
     padding: SPACING.lg,
-    gap: SPACING.sm + 2,
+    gap: SPACING.sm2,
   },
   head: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   lede: {
@@ -199,32 +201,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.strokeStrong,
     borderRadius: RADIUS.sm,
+    minHeight: 48,
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm + 1,
     // See SearchInput: under 16px iOS zooms on focus.
     color: COLORS.lightGrey,
   },
-  button: {
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.sm,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm + 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonDisabled: { opacity: 0.45 },
-  buttonText: {
-    ...TYPE.labelSmall,
-    color: COLORS.darkGrey,
-  },
   error: {
     ...TYPE.caption,
-    color: '#FC8B7E',
+    color: COLORS.coralText,
   },
   profileRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
-  avatar: { width: 40, height: 40, borderRadius: 8 },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: innerRadius(RADIUS.md, SPACING.lg),
+  },
   avatarFallback: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: COLORS.raised,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -241,9 +234,15 @@ const styles = StyleSheet.create({
     ...TYPE.caption,
     color: COLORS.mediumGrey,
   },
-  importLink: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  importLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+  },
+  /** A way somewhere, not the primary act: amber is for that and for hours. */
   importText: {
     ...TYPE.labelSmall,
-    color: COLORS.accent,
+    color: COLORS.lightGrey,
   },
 });

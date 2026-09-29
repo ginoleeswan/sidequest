@@ -78,6 +78,13 @@ describe('the week', () => {
     expect(screen.queryByText(/this week/)).toBeNull();
   });
 
+  /** The empty Plan draws the week it will fill, not a glyph. */
+  it('draws seven free evenings when asked to, and offers nothing to file', async () => {
+    await renderApp(<WeekView scheduled={[]} now={MONDAY} drawEmpty />);
+    expect(screen.getAllByText('free evening')).toHaveLength(7);
+    expect(screen.queryByText('Put this week in my calendar')).toBeNull();
+  });
+
   /** The card above names tonight's game; this must not disagree. */
   it('starts on the game it was told leads', async () => {
     await renderApp(

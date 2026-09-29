@@ -4,10 +4,9 @@ import { Animated, StyleSheet, View } from 'react-native';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { MONTH_INITIALS } from '@/lib/memcard';
-import { COLORS } from '@/styles/colors';
+import { COLORS, alpha } from '@/styles/colors';
 import { DURATION, EASING } from '@/styles/motion';
-
-import { TYPE } from '@/styles/typography';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
 
 /** Four is as tall as a month gets before the card stops being readable. */
 const ROWS = 4;
@@ -121,7 +120,10 @@ export function YearBlocks({
               />
             );
           })}
-          <Animated.Text style={styles.month}>
+          <Animated.Text
+            style={styles.month}
+            maxFontSizeMultiplier={FONT_SCALE.figure}
+          >
             {MONTH_INITIALS[month]}
           </Animated.Text>
         </View>
@@ -137,13 +139,16 @@ const styles = StyleSheet.create({
     width: 12,
     height: 10,
     borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: alpha(COLORS.white, 0.07),
   },
-  filled: { backgroundColor: COLORS.accent },
+  /** A game seen to its end: finishing is mint, not the colour of hours. */
+  filled: { backgroundColor: COLORS.mint },
+  /**
+   * The smallest step on the scale, not a size below it: eight points
+   * was an initial nobody could read, under a block people are proud of.
+   */
   month: {
-    ...TYPE.fine,
-    fontSize: 8,
-    lineHeight: 12,
+    ...TYPE.micro,
     color: COLORS.mediumGrey,
   },
 });

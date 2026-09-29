@@ -1,17 +1,26 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { useToast } from '@/components/Toast';
+import { Touchable } from '@/components/Touchable';
 import { buildIcs, downloadIcs, planEvents } from '@/lib/ics';
 import { insertEvents } from '@/lib/nativeCalendar';
 import { planColour } from '@/lib/planColours';
 import { REMINDER_LEAD_MINUTES, scheduleEvenings } from '@/lib/reminders';
 import type { ScheduledItem } from '@/lib/scheduler';
 import { formatHours } from '@/lib/duration';
+import { celebrate } from '@/lib/haptics';
 import { eveningHours, eveningLabel, planWeek } from '@/lib/week';
 import { COLORS } from '@/styles/colors';
-import { MATERIAL, RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { ICON, MATERIAL, RADIUS, SPACING } from '@/styles/theme';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
+
+/**
+ * How far the chart's words may grow. They sit in a drawn track whose
+ * widths mean hours, so they grow a little and then the row grows
+ * instead of the words spilling out of their blocks.
+ */
+const CHART_SCALE = 1.25;
 
 /**
  * The next seven evenings, written as an agenda.
@@ -95,6 +104,7 @@ export function WeekView({
   leadId,
   readOnly = false,
   bare = false,
+  drawEmpty = false,
 }: {
   scheduled: ScheduledItem[];
   now: number;
@@ -110,11 +120,18 @@ export function WeekView({
    * holding — a friend's Thursday is not an appointment you have.
    */
   readOnly?: boolean;
+  /**
+   * Draw the week even with nothing in it: seven free evenings. The
+   * empty Plan's picture — the shape of what the plan will fill, rather
+   * than an icon saying there is nothing here.
+   */
+  drawEmpty?: boolean;
 }) {
   const toast = useToast();
   const week = planWeek(scheduled, now, 7, leadId);
+  const nothing = week.every((evening) => evening.games.length === 0);
 
-  if (week.every((evening) => evening.games.length === 0)) return null;
+  if (nothing && !drawEmpty) return null;
 
   /** Route position decides the colour, so the week and the month agree. */
   const colourOf = (id: number) =>
@@ -171,6 +188,7 @@ export function WeekView({
        * not mentioned, same as reminders that were declined.
        */
       const nudges = await scheduleEvenings(events).catch(() => 0);
+      celebrate();
       toast(
         (events.length === 1
           ? 'One evening, filed in your calendar'
@@ -213,10 +231,16 @@ export function WeekView({
               }
             >
               <View style={styles.dayCell}>
-                <Text style={[styles.dayName, index === 0 && styles.dayToday]}>
+                <Text
+                  style={[styles.dayName, index === 0 && styles.dayToday]}
+                  maxFontSizeMultiplier={CHART_SCALE}
+                >
                   {DAY_NAMES[evening.weekday]}
                 </Text>
-                <Text style={styles.dayDate}>
+                <Text
+                  style={styles.dayDate}
+                  maxFontSizeMultiplier={CHART_SCALE}
+                >
                   {new Date(evening.date).getDate()}
                 </Text>
               </View>
@@ -232,7 +256,12 @@ export function WeekView({
                       { width: `${(capacity / MAX_EVENING_HOURS) * 100}%` },
                     ]}
                   >
-                    <Text style={styles.freeText}>free evening</Text>
+                    <Text
+                      style={styles.freeText}
+                      maxFontSizeMultiplier={CHART_SCALE}
+                    >
+                      free evening
+                    </Text>
                   </View>
                 ) : (
                   <>
@@ -247,7 +276,11 @@ export function WeekView({
                           },
                         ]}
                       >
-                        <Text style={styles.blockText} numberOfLines={1}>
+                        <Text
+                          style={styles.blockText}
+                          numberOfLines={1}
+                          maxFontSizeMultiplier={CHART_SCALE}
+                        >
                           {game.named
                             ? `${game.name} · ${formatHours(game.hours)}`
                             : formatHours(game.hours)}
@@ -272,7 +305,13 @@ export function WeekView({
               {/* Reserved whether or not a flag lands, so rows align. */}
               <View style={styles.flagSlot}>
                 {credits ? (
-                  <Ionicons name="flag" size={12} color={COLORS.accent} />
+                  // Mint: the credits rolling is finishing, and
+                  // finishing is mint everywhere else in the app.
+                  <Ionicons
+                    name="flag"
+                    size={ICON.sm - 2}
+                    color={COLORS.mint}
+                  />
                 ) : null}
               </View>
             </View>
@@ -280,7 +319,7 @@ export function WeekView({
         })}
       </View>
 
-      {!readOnly && (
+      {!readOnly && !nothing && (
         <>
           <View style={styles.rule} />
 
@@ -289,21 +328,24 @@ export function WeekView({
               second filled control here would compete with the plan's
               own actions — and inside the panel rather than under it,
               because it acts on the week the panel is holding. */}
-          <Pressable
+          <Touchable
             onPress={putInCalendar}
+            hitSlop="text"
             style={styles.toCalendar}
-            accessibilityRole="button"
             accessibilityLabel="Add this week to your calendar"
           >
             <Ionicons
               name="calendar-outline"
-              size={14}
+              size={ICON.sm}
               color={COLORS.mediumGrey}
             />
-            <Text style={styles.toCalendarText}>
+            <Text
+              style={styles.toCalendarText}
+              maxFontSizeMultiplier={FONT_SCALE.label}
+            >
               Put this week in my calendar
             </Text>
-          </Pressable>
+          </Touchable>
         </>
       )}
     </View>
@@ -333,18 +375,27 @@ const styles = StyleSheet.create({
   eveningRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm + 2,
+    gap: SPACING.sm2,
   },
   /**
    * The date, because a calendar is a thing that names dates. Wide
-   * enough for "WED 30", fixed so the tracks share a left edge —
-   * without which the widths stop being comparable, which is the
-   * whole point of drawing them.
+   * enough for "WED 30", and a floor rather than a width so larger text
+   * pushes the tracks over together — they still share a left edge,
+   * without which the widths stop being comparable, which is the whole
+   * point of drawing them.
    */
-  dayCell: { width: 44, flexDirection: 'row', alignItems: 'baseline', gap: 4 },
+  dayCell: {
+    minWidth: 44,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: SPACING.xs,
+  },
   dayName: { ...TYPE.micro, color: COLORS.mediumGrey, letterSpacing: 0.5 },
-  /** Seven near-identical rows need one of them to be tonight. */
-  dayToday: { color: COLORS.accent },
+  /**
+   * Seven near-identical rows need one of them to be tonight, and
+   * tonight is the evening's colour — amber here said "hours".
+   */
+  dayToday: { color: COLORS.violetText },
   dayDate: { ...TYPE.labelSmall, color: COLORS.lightGrey },
 
   track: {
@@ -352,19 +403,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    height: 24,
+    // A floor, not a height: at a larger text size a fixed 24 clipped
+    // the names inside their blocks.
+    minHeight: 24,
   },
   block: {
-    height: '100%',
+    alignSelf: 'stretch',
     borderRadius: 6,
     justifyContent: 'center',
     paddingHorizontal: SPACING.sm,
     overflow: 'hidden',
   },
-  /** Dark on amber, violet and mint alike — the one ink all three take. */
+  /** Dark on amber and both greys alike — the one ink all three take. */
   blockText: { ...TYPE.labelTiny, color: COLORS.navy },
   freeBlock: {
-    height: '100%',
+    alignSelf: 'stretch',
+    minHeight: 24,
     borderRadius: 6,
     borderWidth: 1,
     borderStyle: 'dashed',

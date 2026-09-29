@@ -52,6 +52,31 @@ describe('the library screen', () => {
     expect(screen.getByText(/Nothing saved yet/i)).toBeTruthy();
   });
 
+  /**
+   * The first-run shelf is the figure at zero and the ways in — not
+   * three status filters over nothing.
+   */
+  it('opens empty on the shelf it will be, not on filters', async () => {
+    await renderApp(<LibraryScreen />);
+    expect(screen.getByText('0h')).toBeTruthy();
+    expect(screen.getByText('Find a game')).toBeTruthy();
+    expect(screen.queryByLabelText(/^Show: /)).toBeNull();
+  });
+
+  /** One choice of three, and each says how many it holds. */
+  it('counts what each state holds', async () => {
+    seed([
+      { game: game(1, 'Waiting', 12), status: 'wishlist' },
+      { game: game(2, 'Underway', 30), status: 'playing' },
+      { game: game(3, 'Also under way', 8), status: 'playing' },
+    ]);
+    await renderApp(<LibraryScreen />);
+    expect(screen.getByLabelText('Show: Playing 2')).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText('Show: Playing 2'));
+    expect(screen.getByText('Underway')).toBeTruthy();
+    expect(screen.queryByText('Waiting')).toBeNull();
+  });
+
   it('lists what you saved', async () => {
     seed([
       { game: game(1, 'Celeste', 12), status: 'wishlist' },

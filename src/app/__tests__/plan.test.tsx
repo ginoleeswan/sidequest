@@ -34,6 +34,14 @@ function seed(
 }
 
 /**
+ * The dials live in a sheet now, behind the one line under the verdict
+ * that says what they are set to. Anything that turns one opens it
+ * first, the way a reader does.
+ */
+const openDials = () =>
+  fireEvent.press(screen.getByLabelText(/^Adjust the plan/));
+
+/**
  * The plan is the product's answer to "what can I actually finish".
  * These pin the states it can be in, not the arithmetic — the scheduler
  * itself is covered separately in lib/__tests__/scheduler.
@@ -41,13 +49,17 @@ function seed(
 describe('the plan screen', () => {
   it('explains itself when there is nothing to plan', async () => {
     await renderApp(<PlanScreen />);
-    expect(screen.getByText('Nothing to plan yet')).toBeTruthy();
+    expect(screen.getByText(/Seven free evenings/)).toBeTruthy();
+    // The week it will fill, drawn rather than described.
+    expect(screen.getAllByText('free evening')).toHaveLength(7);
+    expect(screen.getByText('Find something short')).toBeTruthy();
+    expect(screen.getByText('Import')).toBeTruthy();
   });
 
   it('ignores finished games — a plan is about what is left', async () => {
     seed([{ game: game(1, 'Done', 8), status: 'finished' }]);
     await renderApp(<PlanScreen />);
-    expect(screen.getByText('Nothing to plan yet')).toBeTruthy();
+    expect(screen.getByText(/Seven free evenings/)).toBeTruthy();
   });
 
   it('plans what you saved', async () => {
@@ -58,6 +70,18 @@ describe('the plan screen', () => {
     await renderApp(<PlanScreen />);
     expect(screen.getByText('This week')).toBeTruthy();
     expect(screen.getAllByText('Celeste').length).toBeGreaterThan(0);
+  });
+
+  /**
+   * Tonight's control used to sit inside the strip's own button, where
+   * iOS folds it away: VoiceOver could open the game and never reach
+   * "I have". They are siblings now, and both can be found.
+   */
+  it('keeps tonight’s control reachable beside the game it opens', async () => {
+    seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
+    await renderApp(<PlanScreen />);
+    expect(screen.getByLabelText('Open Celeste')).toBeTruthy();
+    expect(screen.getAllByLabelText(/^I have: /).length).toBeGreaterThan(0);
   });
 
   it('lets you correct a length from the plan itself', async () => {
@@ -75,6 +99,12 @@ describe('the plan screen', () => {
   it('offers the pace and the deadline as things you can change', async () => {
     seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
     await renderApp(<PlanScreen />);
+    // Folded to one line that says what they are set to...
+    expect(
+      screen.getByLabelText('Adjust the plan: 6h a week, whenever')
+    ).toBeTruthy();
+    // ...which opens both, every option showing.
+    await openDials();
     expect(screen.getByLabelText('Hours a week: 6h')).toBeTruthy();
     expect(screen.getByLabelText('Finish them: whenever')).toBeTruthy();
   });
@@ -82,6 +112,7 @@ describe('the plan screen', () => {
   it('changes the pace in one tap, to the value you actually pressed', async () => {
     seed([{ game: game(1, 'Celeste', 12), status: 'wishlist' }]);
     await renderApp(<PlanScreen />);
+    await openDials();
     await fireEvent.press(screen.getByLabelText('Hours a week: 20h'));
     // Selected, not merely present — the control has to show which one.
     expect(
@@ -98,6 +129,7 @@ describe('the plan screen', () => {
     await renderApp(<PlanScreen />);
     // 6h a week against a "whenever" window still drops a 300h game only
     // when a deadline exists, so pick one: two weeks.
+    await openDials();
     await fireEvent.press(screen.getByLabelText('Finish them: 2 weeks'));
     // One section for everything that doesn't fit — window overflow and
     // missed dates alike — where there used to be two, with the same
@@ -111,7 +143,7 @@ describe('the plan screen', () => {
     seed([{ game: game(1, 'Obscure', 0), status: 'wishlist' }]);
     await renderApp(<PlanScreen />);
     expect(screen.getByText('Length unknown')).toBeTruthy();
-    expect(screen.getByText('Set how long it takes →')).toBeTruthy();
+    expect(screen.getByText('Set how long it takes')).toBeTruthy();
   });
 
   /**
@@ -148,6 +180,7 @@ describe('the plan screen', () => {
     await renderApp(<PlanScreen />);
     // 20h a week for two weeks is exactly 40 hours: room for the game
     // that was insisted on, or for both short ones, but not both.
+    await openDials();
     await fireEvent.press(screen.getByLabelText('Hours a week: 20h'));
     await fireEvent.press(screen.getByLabelText('Finish them: 2 weeks'));
     expect(screen.getByText(/costs you/)).toBeTruthy();
@@ -267,7 +300,10 @@ describe('a very large plan', () => {
   it('draws a readable route and says what is past it', async () => {
     seed(many);
     await renderApp(<PlanScreen />);
-    expect(screen.getAllByText('on track').length).toBe(12);
+    // Twelve rows, and none of them repeats "on track": the date is the
+    // projection, and only a row that will miss its own date says more.
+    expect(screen.getAllByLabelText(/^Open Game \d+, /).length).toBe(12);
+    expect(screen.queryByText('on track')).toBeNull();
     expect(screen.getByText(/28 more after these/)).toBeTruthy();
   });
 
@@ -383,6 +419,10 @@ describe('what the sessions know about your pace', () => {
     await renderApp(<PlanScreen />);
     // The dial is untouched until somebody presses the offer.
     await waitFor(() =>
+      expect(screen.getByText(/Use \d+h a week/)).toBeTruthy()
+    );
+    await openDials();
+    await waitFor(() =>
       expect(
         screen.getByLabelText('Hours a week: 6h').props.accessibilityState
           .selected
@@ -410,6 +450,7 @@ describe('the verdict, when a window is doing the excluding', () => {
   it('names the window rather than counting the failures', async () => {
     seed(many);
     await renderApp(<PlanScreen />);
+    await openDials();
     await fireEvent.press(screen.getByLabelText('Finish them: 2 weeks'));
     await waitFor(() =>
       expect(

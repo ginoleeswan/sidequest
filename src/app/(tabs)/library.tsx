@@ -4,9 +4,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
-  Modal,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -17,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Game } from '@/api/types';
 import { RouteError } from '@/components/RouteError';
 import { BackButton } from '@/components/BackButton';
+import { BottomSheet } from '@/components/BottomSheet';
 import { Chip } from '@/components/Chip';
 import { FadeInView } from '@/components/FadeInView';
 import { DesktopShell } from '@/components/DesktopShell';
@@ -24,11 +23,15 @@ import { SiteFooter } from '@/components/SiteFooter';
 import { GameTile } from '@/components/GameTile';
 import { Message } from '@/components/Message';
 import { Mark } from '@/components/Mark';
+import { PageHeading } from '@/components/PageHeading';
 import { PageTitle } from '@/components/PageTitle';
+import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen, useRefreshControl } from '@/components/Screen';
-import { SectionHeader } from '@/components/SectionHeader';
+import { Segmented } from '@/components/Segmented';
 import { Textured } from '@/components/Textured';
 import { useToast } from '@/components/Toast';
+import { IconButton, Touchable } from '@/components/Touchable';
+import type { Tone } from '@/components/Message';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useTopPad } from '@/hooks/useTopPad';
 import { importTitles } from '@/api/steamImport';
@@ -44,24 +47,46 @@ import {
   type LibrarySort,
 } from '@/lib/libraryStats';
 import { COLORS } from '@/styles/colors';
-import { GUTTER, LAYOUT, MATERIAL, RADIUS, SPACING } from '@/styles/theme';
-import { TYPE, WORDMARK } from '@/styles/typography';
+import {
+  GUTTER,
+  ICON,
+  LAYOUT,
+  MATERIAL,
+  RADIUS,
+  SPACING,
+  TOUCH,
+} from '@/styles/theme';
+import { FONT_SCALE, TYPE, WORDMARK } from '@/styles/typography';
 
 const TABS: LibraryStatus[] = ['wishlist', 'playing', 'finished'];
 
-const EMPTY_COPY: Record<LibraryStatus, { title: string; detail: string }> = {
+const EMPTY_COPY: Record<
+  LibraryStatus,
+  {
+    title: string;
+    detail: string;
+    icon: React.ComponentProps<typeof Ionicons>['name'];
+    tone: Tone;
+  }
+> = {
   wishlist: {
     title: 'Nothing saved yet',
     detail:
       'Tap the bookmark on any game — or “Want to play” on its page — and it lands here.',
+    icon: 'bookmark-outline',
+    tone: 'neutral',
   },
   playing: {
     title: 'Nothing in progress',
     detail: 'Mark a game as Playing and it will wait for you here.',
+    icon: 'moon',
+    tone: 'evening',
   },
   finished: {
     title: 'No credits rolled yet',
     detail: 'Finish something and give it a home on this shelf.',
+    icon: 'flag',
+    tone: 'finished',
   },
 };
 
@@ -94,27 +119,52 @@ function AddCell({
   onPress: () => void;
 }) {
   return (
-    <Pressable
+    <Touchable
       style={styles.addCell}
       onPress={onPress}
-      accessibilityRole="button"
+      feedback="scale"
       accessibilityLabel={hint}
     >
-      {({ pressed }) => (
-        <>
-          <View style={[styles.addArt, pressed && styles.addArtPressed]}>
-            <Ionicons name={icon} size={24} color={COLORS.mediumGrey} />
-          </View>
-          {/* Capped to a line like every tile caption: an uncapped
-              label reports its own text as the cell's minimum width,
-              which is how this cell ended up fifty points wider than
-              the artwork beside it. */}
-          <Text style={styles.addLabel} numberOfLines={1}>
-            {label}
-          </Text>
-        </>
-      )}
-    </Pressable>
+      <View style={styles.addArt}>
+        <Ionicons name={icon} size={ICON.lg} color={COLORS.mediumGrey} />
+      </View>
+      {/* Capped to a line like every tile caption: an uncapped
+          label reports its own text as the cell's minimum width,
+          which is how this cell ended up fifty points wider than
+          the artwork beside it. */}
+      <Text
+        style={styles.addLabel}
+        numberOfLines={1}
+        maxFontSizeMultiplier={FONT_SCALE.label}
+      >
+        {label}
+      </Text>
+    </Touchable>
+  );
+}
+
+/**
+ * The empty shelf, drawn as the shelf it will be: four dashed places
+ * where games go. A picture, not a control — the buttons beside it are
+ * the ways in — so it is hidden from VoiceOver.
+ */
+function EmptyShelf() {
+  return (
+    <View
+      style={styles.emptyShelf}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      {[0, 1].map((row) => (
+        <View key={row} style={styles.gridRow}>
+          {[0, 1].map((cell) => (
+            <View key={cell} style={styles.addCell}>
+              <View style={styles.addArt} />
+            </View>
+          ))}
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -361,6 +411,27 @@ export default function LibraryScreen() {
     </View>
   );
 
+  /**
+   * The three states as one single choice, each with its count.
+   *
+   * These were three chips, and the selected one was solid white — so
+   * the loudest thing at the top of the shelf was a filter, louder than
+   * the hours figure the page is about. A segmented control says "pick
+   * one of these" by its shape, and the counts answer the question a
+   * reader was tapping through the chips to ask.
+   */
+  const statusOptions = TABS.map((status) => {
+    const n = byStatus(status).length;
+    return {
+      value: status,
+      label:
+        n > 0 ? `${STATUS_META[status].label} ${n}` : STATUS_META[status].label,
+    };
+  });
+  const sortOptions = (Object.keys(SORT_LABELS) as LibrarySort[]).map(
+    (option) => ({ value: option, label: SORT_LABELS[option] })
+  );
+
   const head = (
     <FadeInView style={styles.container}>
       <View
@@ -373,235 +444,198 @@ export default function LibraryScreen() {
           },
         ]}
       >
-        <SectionHeader
-          title="My Library"
+        <PageHeading
           eyebrow={
-            count > 0 ? `${count} ${count === 1 ? 'game' : 'games'}` : undefined
+            count > 0
+              ? `${count} ${count === 1 ? 'game' : 'games'}`
+              : 'Your shelf'
           }
-          actionLabel={count > 0 ? 'Plan my backlog →' : undefined}
+          title="My Library"
+          tone="library"
+          actionLabel={count > 0 ? 'Plan my backlog' : undefined}
+          actionChevron
           onAction={count > 0 ? () => router.push('/plan') : undefined}
-          // The chrome row carries You on a compact web page; the
-          // eyebrow row keeps it only where there is no chrome row -
-          // native tab roots, and the desk.
-          onAccount={undefined}
         />
-        {/* The backlog and what you can do to it, as one object.
-            These were three loose lines and a row of chips sitting
-            directly on the page, so the top of the shelf had no
-            shape at all — the same flatness the Plan had before it
-            got a plane to sit on. Content, rule, actions: the shape
-            the week panel uses over there. */}
-        {count > 0 && (
-          <View style={styles.hero}>
-            {/* "ahead of you" put the debt in the largest numeral
-                in the app, on the page opened most — a hundred and
-                twenty-two hours you are BEHIND on. Every other
-                surface was rewritten to answer rather than accuse:
-                the Plan says what will get done, the misfits say
-                "and that's allowed", a free evening says "free".
-                The shelf was still keeping score.
 
-                Same number, and it earns its size — it is the raw
-                material the Plan runs on. What changed is what it
-                claims to be. "On your shelf" is an inventory;
-                "ahead of you" is a road you are late down, and
-                §2.1 says this app does not have that voice. */}
+        {count === 0 ? (
+          /* The first-run shelf. It was the status chips over a grey
+             disc and one outlined button — three filters for nothing,
+             and a template where the product should be. Now it is the
+             figure this page is built around, at zero, the two ways to
+             change that, and the shape the shelf will take. */
+          <View style={styles.firstRun}>
             <View style={styles.heroLine}>
-              <Text style={styles.heroValue}>
-                {formatHours(stats.hoursAhead)}
+              <Text
+                style={[styles.heroValue, styles.heroValueEmpty]}
+                maxFontSizeMultiplier={FONT_SCALE.figure}
+              >
+                0h
               </Text>
               <Text style={styles.heroLabel}>on your shelf</Text>
             </View>
-
-            {/* Bringing a library in is an action on this panel, and
-                it stays in fixed chrome for a reason: at the foot of
-                the shelf — where it and Copy library both started —
-                you would scroll past two hundred games to reach it.
-                As a lone outlined chip under a rule it read as an
-                orphan; in the corner of the thing it fills, it
-                reads as what it is.
-
-                `download-outline` because that is already this
-                app's word for importing — the row on You and the
-                action in the empty state below both use it, and a
-                third glyph for one idea is a third thing to learn.
-
-                Positioned rather than laid out. In the flow it sat
-                in a baseline-aligned row whose height is set by a
-                46pt numeral, so "centre" meant halfway down the
-                figure rather than in the corner. */}
-            <Pressable
-              onPress={() => setImportOpen(true)}
-              hitSlop={14}
-              style={styles.heroImport}
-              accessibilityRole="button"
-              accessibilityLabel="Import a library"
-            >
-              <Ionicons
-                name="download-outline"
-                size={20}
-                color={COLORS.mediumGrey}
-              />
-            </Pressable>
-
-            <BacklogBar hours={aheadHours} />
-
-            {longest && aheadHours.length > 1 && (
-              <Text style={styles.heroBarNote}>
-                Longest: {longest.name} · {formatHours(longest.hours)}
+            <View style={styles.firstRunWords}>
+              <Text style={styles.firstRunTitle} accessibilityRole="header">
+                {EMPTY_COPY.wishlist.title}
               </Text>
-            )}
-
-            {/* The supporting counts, quiet and on one line. They
-                were three stats the same size as each other, which
-                made the only meaningful one — the hours — no louder
-                than a zero. */}
-            {/* Credits first when there are any. This line read
-                "5 still to play · 2 finished · 16h of credits" —
-                the one achievement on the shelf, arriving last and
-                quietest after two counts of what is outstanding.
-                The app's whole thesis is finishing; where the shelf
-                has evidence of it, it goes first. */}
-            <Text style={styles.heroSub}>
-              {stats.finished > 0 &&
-                `${stats.finished} finished${
-                  stats.hoursFinished > 0
-                    ? ` · ${formatHours(stats.hoursFinished)} of credits`
-                    : ''
-                } · `}
-              {stats.waiting + stats.playing} still to play
-            </Text>
-
-            {/* Only what acts on the numbers above it. Import used
-                to sit here too and had nothing to do with them —
-                a lone outlined chip under a rule, which is what an
-                orphan looks like. It is at the foot of the shelf
-                now, beside the other way of filling one. */}
-            {(count > 3 || stats.finished > 0) && (
-              <>
-                <View style={styles.heroRule} />
-                <View style={styles.quickRow}>
-                  {count > 3 && (
-                    <Chip
-                      title="Backlog amnesty"
-                      iconName="sparkles"
-                      iconType="ionicon"
-                      onPress={() => router.push('/tidy')}
-                    />
-                  )}
-                  {stats.finished > 0 && (
-                    <Chip
-                      title="Your Memcard"
-                      iconName="albums"
-                      iconType="ionicon"
-                      onPress={() => router.push('/memcard')}
-                    />
-                  )}
-                </View>
-              </>
-            )}
-          </View>
-        )}
-
-        <View style={styles.tabs}>
-          {TABS.map((status) => (
-            <Chip
-              key={status}
-              title={STATUS_META[status].label}
-              selected={tab === status}
-              onPress={() => setTab(status)}
-            />
-          ))}
-        </View>
-
-        {tags.length > 0 && (
-          <View style={styles.shelfRow}>
-            <Chip
-              title="All shelves"
-              selected={shelf == null}
-              onPress={() => setShelf(null)}
-            />
-            {tags.map((tag) => (
-              <Chip
-                key={tag}
-                title={tag}
-                selected={shelf === tag}
-                onPress={() => setShelf(shelf === tag ? null : tag)}
+              <Text style={styles.firstRunDetail}>
+                {EMPTY_COPY.wishlist.detail}
+              </Text>
+            </View>
+            {/* Importing is the obvious other thing to do here, so it
+                is offered beside finding a game rather than hidden in a
+                footer. */}
+            <View style={styles.firstRunActions}>
+              <PrimaryButton
+                label="Find a game"
+                onPress={() => router.push('/')}
               />
-            ))}
-          </View>
-        )}
-
-        {/* The grid is two across, so six is the point at which a
-            shelf stops fitting on a screen and an order starts
-            mattering. Below that this was four more controls in
-            front of a list you could already see all of.
-            Gated on the whole library rather than the filtered view,
-            so narrowing to a status with three games in it does not
-            make the control vanish mid-use. */}
-        {count >= 6 && (
-          <View style={styles.sortRow}>
-            <Text style={styles.sortLabel}>Sort</Text>
-            {(Object.keys(SORT_LABELS) as LibrarySort[]).map((option) => (
-              <Pressable
-                key={option}
-                onPress={() => setSort(option)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: sort === option }}
-              >
-                <Text
-                  style={[
-                    styles.sortOption,
-                    sort === option && styles.sortOptionOn,
-                  ]}
-                >
-                  {SORT_LABELS[option]}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        )}
-
-        {games.length === 0 ? (
-          <View style={styles.emptyFrame}>
-            <Message
-              icon="library-outline"
-              title={EMPTY_COPY[tab].title}
-              detail={EMPTY_COPY[tab].detail}
-            />
-            {/* The one moment importing is the obvious next thing to
-                do, so it is offered as an action rather than as a
-                link in the footer. An empty screen is an invitation
-                to act; it was telling the reader there was nothing
-                here and hiding the fix below the fold. */}
-            {count === 0 && (
-              <Pressable
+              <PrimaryButton
+                label="Import a library"
+                variant="secondary"
+                icon="download-outline"
                 onPress={() => setImportOpen(true)}
-                style={styles.emptyAction}
-                accessibilityRole="button"
-                accessibilityLabel="Import a library"
-              >
-                <Ionicons
-                  name="download-outline"
-                  size={16}
-                  color={COLORS.white}
-                />
-                <Text style={styles.emptyActionText}>Import a library</Text>
-              </Pressable>
-            )}
+              />
+            </View>
+            <EmptyShelf />
           </View>
-        ) : /* The grid lives outside this column — see `rows` below —
-             so a long library is a virtualised list on native
-             rather than every cover mounted at once. */
-        null}
+        ) : (
+          <>
+            {/* The backlog and what you can do to it, as one object:
+                content, rule, actions — the shape the Plan's panel has. */}
+            <View style={styles.hero}>
+              {/* "On your shelf", not "ahead of you": the same number,
+                  said as an inventory rather than as a road you are late
+                  down. §2.1 says this app does not have that voice. */}
+              <View style={styles.heroLine}>
+                <Text
+                  style={styles.heroValue}
+                  maxFontSizeMultiplier={FONT_SCALE.figure}
+                >
+                  {formatHours(stats.hoursAhead)}
+                </Text>
+                <Text style={styles.heroLabel}>on your shelf</Text>
+              </View>
 
-        {/* Moving a library in or out is housekeeping, not the reason
-          anyone opened this page. */}
-        {/* No data actions down here any more.
-            "Copy library" sat at the foot of this page, which reads
-            as reasonable on a library of two and is unreachable on a
-            library of two hundred — you would scroll past every
-            game you own to find it. Exporting is a settings action
+              {/* Import, in the corner of the thing it fills: in fixed
+                  chrome, because at the foot of the shelf you would
+                  scroll past two hundred games to reach it. Positioned
+                  rather than laid out, so the figure keeps its line. */}
+              <IconButton
+                icon="download-outline"
+                size="md"
+                color={COLORS.mediumGrey}
+                onPress={() => setImportOpen(true)}
+                style={styles.heroImport}
+                accessibilityLabel="Import a library"
+              />
+
+              <BacklogBar hours={aheadHours} />
+
+              {longest && aheadHours.length > 1 && (
+                <Text style={styles.heroBarNote}>
+                  Longest: {longest.name} · {formatHours(longest.hours)}
+                </Text>
+              )}
+
+              {/* The supporting counts, quiet and on one line — credits
+                  first when there are any, because the app's thesis is
+                  finishing and where the shelf has evidence of it, it
+                  goes first. */}
+              <Text style={styles.heroSub}>
+                {stats.finished > 0 &&
+                  `${stats.finished} finished${
+                    stats.hoursFinished > 0
+                      ? ` · ${formatHours(stats.hoursFinished)} of credits`
+                      : ''
+                  } · `}
+                {stats.waiting + stats.playing} still to play
+              </Text>
+
+              {/* Only what acts on the numbers above it. */}
+              {(count > 3 || stats.finished > 0) && (
+                <>
+                  <View style={styles.heroRule} />
+                  <View style={styles.quickRow}>
+                    {count > 3 && (
+                      <Chip
+                        title="Backlog amnesty"
+                        iconName="sparkles"
+                        iconType="ionicon"
+                        onPress={() => router.push('/tidy')}
+                      />
+                    )}
+                    {stats.finished > 0 && (
+                      <Chip
+                        title="Your Memcard"
+                        iconName="albums"
+                        iconType="ionicon"
+                        onPress={() => router.push('/memcard')}
+                      />
+                    )}
+                  </View>
+                </>
+              )}
+            </View>
+
+            <Segmented
+              label="Show"
+              showLabel={false}
+              options={statusOptions}
+              value={tab}
+              onChange={setTab}
+            />
+
+            {tags.length > 0 && (
+              <View style={styles.shelfRow}>
+                <Chip
+                  title="All shelves"
+                  selected={shelf == null}
+                  onPress={() => setShelf(null)}
+                />
+                {tags.map((tag) => (
+                  <Chip
+                    key={tag}
+                    title={tag}
+                    selected={shelf === tag}
+                    onPress={() => setShelf(shelf === tag ? null : tag)}
+                  />
+                ))}
+              </View>
+            )}
+
+            {/* The grid is two across, so six is the point at which a
+                shelf stops fitting on a screen and an order starts
+                mattering. Gated on the whole library rather than the
+                filtered view, so narrowing to a status with three games
+                in it does not make the control vanish mid-use. It was
+                four 17pt text links; it is a control a thumb can hit. */}
+            {count >= 6 && (
+              <Segmented
+                label="Sort"
+                options={sortOptions}
+                value={sort}
+                onChange={setSort}
+              />
+            )}
+
+            {games.length === 0 ? (
+              <View style={styles.emptyFrame}>
+                <Message
+                  icon={EMPTY_COPY[tab].icon}
+                  tone={EMPTY_COPY[tab].tone}
+                  title={EMPTY_COPY[tab].title}
+                  detail={EMPTY_COPY[tab].detail}
+                  actionLabel="Find a game"
+                  onAction={() => router.push('/')}
+                />
+              </View>
+            ) : /* The grid lives outside this column — see `rows` below —
+                 so a long library is a virtualised list on native
+                 rather than every cover mounted at once. */
+            null}
+          </>
+        )}
+        {/* No data actions down here. Exporting is a settings action
             and lives on /you with the rest of them. */}
       </View>
     </FadeInView>
@@ -635,44 +669,38 @@ export default function LibraryScreen() {
               It used to sit a hundred points lower, in the section
               header's eyebrow row, which is where the page's title
               lives, not the app's identity. */}
-          <Pressable
+          <IconButton
+            icon="person-circle-outline"
+            color={COLORS.lightGrey}
             onPress={() => router.push('/you')}
-            style={[styles.youButton, { top: insets.top + SPACING.sm }]}
-            hitSlop={8}
-            accessibilityRole="button"
+            style={[styles.youButton, { top: insets.top + SPACING.xxs }]}
             accessibilityLabel="You"
-          >
-            <Ionicons
-              name="person-circle-outline"
-              size={23}
-              color={COLORS.lightGrey}
-            />
-          </Pressable>
+          />
         </>
       ) : (
         /* Native, compact: the wordmark row Home has, so the three tab
            roots open on the same chrome - the brand on the left, You on
-           the right, at one height - instead of You appearing lower in
-           the section header on two of them. */
+           the right, at one height. The wordmark steps down here: on a
+           tab root the page's own title is the loudest thing. */
         <View
-          style={[styles.nativeChrome, { paddingTop: insets.top + SPACING.sm }]}
+          style={[styles.nativeChrome, { paddingTop: insets.top + SPACING.xs }]}
         >
           <View style={styles.nativeBrand}>
-            <Mark size={20} />
-            <Text style={styles.nativeWordmark}>sidequest</Text>
+            <Mark size={18} />
+            <Text
+              style={styles.nativeWordmark}
+              maxFontSizeMultiplier={FONT_SCALE.display}
+            >
+              sidequest
+            </Text>
           </View>
-          <Pressable
+          <IconButton
+            icon="person-circle-outline"
+            color={COLORS.lightGrey}
             onPress={() => router.push('/you')}
-            hitSlop={8}
-            accessibilityRole="button"
+            style={styles.youNative}
             accessibilityLabel="You"
-          >
-            <Ionicons
-              name="person-circle-outline"
-              size={23}
-              color={COLORS.lightGrey}
-            />
-          </Pressable>
+          />
         </View>
       )}
 
@@ -723,59 +751,55 @@ export default function LibraryScreen() {
         />
       )}
 
-      <Modal
+      {/* A sheet from the bottom edge: this was a centred dialog with a
+          multiline field, and the keyboard rose straight over its
+          button. */}
+      <BottomSheet
         visible={importOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setImportOpen(false)}
+        onClose={() => setImportOpen(false)}
+        accessibilityLabel="Import a library"
       >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setImportOpen(false)}
-        >
-          <Pressable style={styles.modalCard} onPress={() => {}}>
-            <Text style={styles.modalTitle}>Import a library</Text>
-            {/* The list goes first now, because it is the thing most
-                people can actually do. The exports still work and are
-                still worth naming, but leading with them told the
-                reader without a Steam account to go and produce a
-                spreadsheet before the app would help — which is the
-                door shut on exactly the person this path exists for. */}
-            <Text style={styles.modalHint}>
-              Just type or paste your games, one a line — that is enough. A CSV
-              from Backloggd, HowLongToBeat or a spreadsheet works too, and
-              brings your hours and shelves with it. From another device:
-              Library → Copy library.
-            </Text>
-            <TextInput
-              value={importText}
-              onChangeText={setImportText}
-              multiline
-              placeholder={'Hades\nElden Ring\nOuter Wilds…'}
-              placeholderTextColor={COLORS.mediumGrey}
-              // A real label, not just the placeholder: the placeholder
-              // is an example now rather than an instruction, and a
-              // screen reader was only ever getting the instruction.
-              accessibilityLabel="Your games, one a line, or a CSV export"
-              style={styles.modalInput}
-            />
-            <Pressable
-              onPress={runImport}
-              disabled={importText.trim() === '' || importing != null}
-              style={[
-                styles.modalButton,
-                importText.trim() === '' && styles.modalButtonDisabled,
-              ]}
-            >
-              <Text style={styles.modalButtonText}>
-                {importing
-                  ? `Matching ${importing.done} of ${importing.total}…`
-                  : 'Merge into my library'}
-              </Text>
-            </Pressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
+        <View style={styles.sheet}>
+          <Text
+            style={styles.modalTitle}
+            accessibilityRole="header"
+            maxFontSizeMultiplier={FONT_SCALE.display}
+          >
+            Import a library
+          </Text>
+          {/* The list goes first, because it is the thing most people
+              can actually do; leading with the exports told the reader
+              without one to go and produce a spreadsheet first. */}
+          <Text style={styles.modalHint}>
+            Just type or paste your games, one a line — that is enough. A CSV
+            from Backloggd, HowLongToBeat or a spreadsheet works too, and brings
+            your hours and shelves with it. From another device: You → Copy
+            library.
+          </Text>
+          <TextInput
+            value={importText}
+            onChangeText={setImportText}
+            multiline
+            placeholder={'Hades\nElden Ring\nOuter Wilds…'}
+            placeholderTextColor={COLORS.mediumGrey}
+            // A real label, not just the placeholder: the placeholder
+            // is an example now rather than an instruction, and a
+            // screen reader was only ever getting the instruction.
+            accessibilityLabel="Your games, one a line, or a CSV export"
+            style={styles.modalInput}
+          />
+          <PrimaryButton
+            label={
+              importing
+                ? `Matching ${importing.done} of ${importing.total}…`
+                : 'Merge into my library'
+            }
+            onPress={runImport}
+            disabled={importText.trim() === '' || importing != null}
+            block
+          />
+        </View>
+      </BottomSheet>
     </>
   );
   return isExpanded ? (
@@ -797,18 +821,15 @@ const styles = StyleSheet.create({
     // this box, and at 48 the box was shorter than its own padding on a
     // notched phone, so the wordmark rendered below it and the list
     // scrolled over the top of the brand.
-    minHeight: 40 + SPACING.sm,
+    minHeight: TOUCH.min + SPACING.xs,
   },
   nativeBrand: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  nativeWordmark: { ...WORDMARK },
+  /** The brand, a step below the page's own title on a tab root. */
+  nativeWordmark: { ...WORDMARK, fontSize: 17, lineHeight: 21 },
+  /** The glyph lines up with the gutter; its 44pt target reaches past it. */
+  youNative: { marginRight: -SPACING.sm2 },
   innerDesk: { paddingHorizontal: 0 },
-  youButton: {
-    position: 'absolute',
-    right: SPACING.lg,
-    zIndex: 30,
-    height: 40,
-    justifyContent: 'center',
-  },
+  youButton: { position: 'absolute', right: SPACING.sm2, zIndex: 30 },
   container: {},
   inner: {
     width: '100%',
@@ -820,21 +841,7 @@ const styles = StyleSheet.create({
     // its, unless there is no grid and this column is the last thing.
     paddingBottom: SPACING.md,
   },
-  innerLast: { paddingBottom: SPACING.xl * 1.5 },
-  tabs: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  /**
-   * Two by two, deliberately.
-   *
-   * Four stats on one row do not fit a phone, so they wrapped three and
-   * one — which reads as a row that broke rather than a grid that was
-   * meant. Fixed halves make the wrap the layout.
-   */
-  /**
-   * The hero: the hours, then what they are made of.
-   *
-   * This block was four stats of identical weight, which made the only
-   * number worth reading no louder than a zero.
-   */
+  innerLast: { paddingBottom: SPACING.xxl },
   /**
    * The backlog, on a plane of its own.
    *
@@ -857,28 +864,25 @@ const styles = StyleSheet.create({
   heroBarNote: { ...TYPE.fine, color: COLORS.mediumGrey },
   heroLine: { flexDirection: 'row', alignItems: 'baseline', gap: SPACING.sm },
   /**
-   * Inset by sixteen against the panel's twenty.
-   *
-   * A glyph carries less visual mass than its box, so setting it on the
-   * padding line leaves it looking adrift of the corner; four points
-   * tighter reads as aligned. The row it used to sit in is untouched,
-   * which keeps the figure and its label on their shared baseline.
+   * The glyph sits sixteen in from the corner against the panel's
+   * twenty — a glyph carries less mass than its box, so four points
+   * tighter reads as aligned — and its 44pt target reaches past it.
    */
   heroImport: {
     position: 'absolute',
-    top: SPACING.md,
-    right: SPACING.md,
-    padding: 2,
+    top: SPACING.md - (TOUCH.min - ICON.md) / 2,
+    right: SPACING.md - (TOUCH.min - ICON.md) / 2,
   },
+  /**
+   * The page's one hero number. Amber, because it is hours — the
+   * biggest time statement in the app.
+   */
   heroValue: {
-    fontFamily: 'Geom-ExtraBold',
-    fontSize: 46,
-    lineHeight: 50,
-    // Amber marks time everywhere else the app states an hour figure -
-    // the game page's masthead, every tile caption. The shelf total is
-    // the biggest time statement in the app and was the one in white.
+    ...TYPE.hero,
     color: COLORS.accent,
   },
+  /** At zero it is a place to start, not a sum: no colour to claim yet. */
+  heroValueEmpty: { color: COLORS.mediumGrey },
   heroLabel: { ...TYPE.body, color: COLORS.mediumGrey },
   heroSub: { ...TYPE.caption, color: COLORS.mediumGrey },
 
@@ -898,21 +902,6 @@ const styles = StyleSheet.create({
    * each, three a third each, and lets four wrap to a tidy pair of rows.
    */
   shelfRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  sortRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: SPACING.md,
-  },
-  sortLabel: {
-    ...TYPE.micro,
-    color: COLORS.mediumGrey,
-  },
-  sortOption: {
-    ...TYPE.labelSmall,
-    color: COLORS.mediumGrey,
-  },
-  sortOptionOn: { color: COLORS.white },
   gridRow: { flexDirection: 'row', gap: LAYOUT.gridGap },
   /** The grid's column, on the web: the page's own width and gutter. */
   gridWrap: {
@@ -921,7 +910,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     paddingHorizontal: GUTTER,
     gap: LAYOUT.gridGap,
-    paddingBottom: SPACING.xl * 1.5,
+    paddingBottom: SPACING.xxl,
   },
   /** One row of the native list, in the same column. */
   gridRowNative: {
@@ -931,21 +920,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: GUTTER,
   },
   rowGap: { height: LAYOUT.gridGap },
-  gridFoot: { height: SPACING.xl * 1.5 },
+  gridFoot: { height: SPACING.xxl },
   gridSpacer: { flex: 1 },
   fill: { flex: 1 },
-  emptyFrame: { minHeight: 320, alignItems: 'center', gap: SPACING.lg },
-  emptyAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    borderRadius: RADIUS.xl,
-    borderWidth: 1,
-    borderColor: COLORS.strokeStrong,
-  },
-  emptyActionText: { ...TYPE.body, color: COLORS.white },
+  emptyFrame: { minHeight: 320 },
+  /** The first-run shelf: the figure at zero, the words, the ways in. */
+  firstRun: { gap: SPACING.lg },
+  firstRunWords: { gap: SPACING.xs },
+  firstRunTitle: { ...TYPE.h2, color: COLORS.white },
+  firstRunDetail: { ...TYPE.body, color: COLORS.mediumGrey, maxWidth: 420 },
+  firstRunActions: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm2 },
+  /** Two by two, at the grid's own measure, so it is the shelf to come. */
+  emptyShelf: { gap: LAYOUT.gridGap, marginTop: SPACING.sm, maxWidth: 400 },
   quickRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -961,7 +947,7 @@ const styles = StyleSheet.create({
    * matches GameTile's aspect exactly, or the last row of the grid
    * would sit a few points out of true.
    */
-  addCell: { flex: 1, flexBasis: 0, minWidth: 0, gap: SPACING.xs + 1 },
+  addCell: { flex: 1, flexBasis: 0, minWidth: 0, gap: SPACING.xs },
   addArt: {
     width: '100%',
     aspectRatio: LAYOUT.tileAspect,
@@ -972,28 +958,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  addArtPressed: { backgroundColor: COLORS.raised },
   addLabel: { ...TYPE.label, color: COLORS.mediumGrey },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 19, 28, 0.82)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: SPACING.lg,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 420,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.stroke,
-    borderRadius: SPACING.md,
-    padding: SPACING.lg,
-    gap: SPACING.md,
-  },
+  sheet: { gap: SPACING.md },
   modalTitle: {
     ...TYPE.h2,
-    color: COLORS.lightGrey,
+    color: COLORS.white,
   },
   modalHint: {
     ...TYPE.p,
@@ -1004,26 +973,11 @@ const styles = StyleSheet.create({
     minHeight: 96,
     borderWidth: 1,
     borderColor: COLORS.strokeStrong,
-    borderRadius: SPACING.sm,
-    padding: SPACING.sm + 2,
+    borderRadius: RADIUS.sm,
+    padding: SPACING.sm2,
     // See SearchInput: under 16px iOS zooms on focus.
     color: COLORS.lightGrey,
     textAlignVertical: 'top',
-  },
-  modalButton: {
-    // The primary action in a sheet, so it wears the app's primary
-    // colour rather than the blue that belonged to nothing.
-    backgroundColor: COLORS.accent,
-    borderRadius: SPACING.md,
-    paddingVertical: SPACING.sm + 3,
-    alignItems: 'center',
-  },
-  modalButtonDisabled: { opacity: 0.45 },
-  modalButtonText: {
-    ...TYPE.label,
-    // Navy, not white: white on the amber face is about 1.9:1 and
-    // fails AA outright. The amber is light, so its label is dark.
-    color: COLORS.navy,
   },
 });
 

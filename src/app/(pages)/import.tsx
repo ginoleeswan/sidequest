@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -16,24 +15,28 @@ import { importSteamGames } from '@/api/steamImport';
 import { steamLibrary, type SteamSnapshot } from '@/api/steam';
 import { AppHeader } from '@/components/AppHeader';
 import { BackButton } from '@/components/BackButton';
-import { Chip } from '@/components/Chip';
 import { Message } from '@/components/Message';
+import { PageHeading } from '@/components/PageHeading';
 import { PageTitle } from '@/components/PageTitle';
+import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import { RouteError } from '@/components/RouteError';
 import { SectionHeader } from '@/components/SectionHeader';
+import { Segmented } from '@/components/Segmented';
 import { SiteFooter } from '@/components/SiteFooter';
+import { SteamConnect } from '@/components/SteamConnect';
 import { Textured } from '@/components/Textured';
 import { useToast } from '@/components/Toast';
+import { Touchable } from '@/components/Touchable';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useTopPad } from '@/hooks/useTopPad';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { useLibrary } from '@/lib/library';
 import { formatHours } from '@/lib/duration';
 import { hoursOf, importOrder, type SteamGame } from '@/lib/steamMatch';
-import { COLORS } from '@/styles/colors';
-import { GUTTER, LAYOUT, RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { COLORS, alpha } from '@/styles/colors';
+import { GUTTER, ICON, LAYOUT, RADIUS, SPACING } from '@/styles/theme';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
 
 /**
  * How many games one import may bring in.
@@ -48,10 +51,10 @@ const MAX_PICKS = 60;
 /** Steam counts a game as "recently played" over the last fortnight. */
 type Filter = 'recent' | 'unplayed' | 'all';
 
-const FILTERS: { key: Filter; label: string }[] = [
-  { key: 'recent', label: 'Played lately' },
-  { key: 'unplayed', label: 'Never started' },
-  { key: 'all', label: 'Everything' },
+const FILTERS: { value: Filter; label: string }[] = [
+  { value: 'recent', label: 'Played lately' },
+  { value: 'unplayed', label: 'Never started' },
+  { value: 'all', label: 'Everything' },
 ];
 
 function matches(game: SteamGame, filter: Filter): boolean {
@@ -71,8 +74,10 @@ function GameRow({
 }) {
   const played = hoursOf(game.minutesForever);
   return (
-    <Pressable
+    <Touchable
       onPress={onToggle}
+      feedback="tint"
+      haptic="tap"
       style={[styles.row, picked && styles.rowPicked]}
       accessibilityRole="checkbox"
       accessibilityState={{ checked: picked }}
@@ -82,10 +87,14 @@ function GameRow({
     >
       <View style={[styles.box, picked && styles.boxOn]}>
         {picked && (
-          <Ionicons name="checkmark" size={13} color={COLORS.darkGrey} />
+          <Ionicons name="checkmark" size={ICON.sm} color={COLORS.navy} />
         )}
       </View>
-      <Text style={styles.rowTitle} numberOfLines={1}>
+      <Text
+        style={styles.rowTitle}
+        numberOfLines={1}
+        maxFontSizeMultiplier={FONT_SCALE.label}
+      >
         {game.name}
       </Text>
       <Text style={styles.rowMeta}>
@@ -95,7 +104,7 @@ function GameRow({
             ? `${formatHours(played)} played`
             : 'never started'}
       </Text>
-    </Pressable>
+    </Touchable>
   );
 }
 
@@ -117,10 +126,16 @@ export default function ImportScreen() {
   const { addGames } = useLibrary();
   const toast = useToast();
 
-  const [snapshot] = usePersistedState<SteamSnapshot | null>(
+  const [stored] = usePersistedState<SteamSnapshot | null>(
     'sidequest.steam.v1',
     null
   );
+  /** A profile connected on this page, before the stored copy knows. */
+  const [connected, setConnected] = useState<SteamSnapshot | null>(null);
+  const snapshot = connected ?? stored;
+  const [, setPlanPace] = usePersistedState('sidequest.plan.pace', 6);
+  /** Bumped by "Try again", which is what re-reads the library. */
+  const [attempt, setAttempt] = useState(0);
   const [games, setGames] = useState<SteamGame[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('recent');
@@ -135,6 +150,8 @@ export default function ImportScreen() {
   useEffect(() => {
     if (!steamid) return;
     let alive = true;
+    // `attempt` is only here to run this again on "Try again".
+    void attempt;
     steamLibrary(steamid)
       .then((list) => alive && setGames(importOrder(list)))
       .catch(
@@ -147,7 +164,7 @@ export default function ImportScreen() {
     return () => {
       alive = false;
     };
-  }, [steamid]);
+  }, [steamid, attempt]);
 
   const shown = useMemo(
     () => (games ?? []).filter((game) => matches(game, filter)),
@@ -204,15 +221,23 @@ export default function ImportScreen() {
   };
 
   const body = () => {
+    /*
+     * Connected here, not somewhere else. This sent you to The Plan to
+     * find a Steam link under its dials, and from there back to this
+     * page — a circle, walked by exactly the person who had just asked
+     * to bring a library in.
+     */
     if (!snapshot)
       return (
-        <Message
-          icon="logo-steam"
-          title="Connect Steam first"
-          detail="The Plan can measure your pace from Steam — connect there, then come back and bring your library in."
-          actionLabel="Go to The Plan"
-          onAction={() => router.push('/plan')}
-        />
+        <View style={styles.connect}>
+          <Text style={styles.connectTitle} accessibilityRole="header">
+            Connect Steam first
+          </Text>
+          <SteamConnect
+            onConnected={setConnected}
+            onUsePace={(hours) => setPlanPace(hours)}
+          />
+        </View>
       );
 
     if (loadError)
@@ -221,6 +246,11 @@ export default function ImportScreen() {
           icon="cloud-offline-outline"
           title="Couldn’t read your Steam library"
           detail={loadError}
+          actionLabel="Try again"
+          onAction={() => {
+            setLoadError(null);
+            setAttempt((n) => n + 1);
+          }}
         />
       );
 
@@ -234,31 +264,29 @@ export default function ImportScreen() {
 
     return (
       <>
-        <View style={styles.filters}>
-          {FILTERS.map((option) => (
-            <Chip
-              key={option.key}
-              title={option.label}
-              selected={filter === option.key}
-              onPress={() => setFilter(option.key)}
-            />
-          ))}
-        </View>
+        <Segmented
+          label="Show"
+          showLabel={false}
+          options={FILTERS}
+          value={filter}
+          onChange={setFilter}
+        />
 
         <View style={styles.selectRow}>
           <Text style={styles.selectCount}>
             {picked.size} of {MAX_PICKS} chosen
           </Text>
-          <Pressable onPress={pickAllShown} accessibilityRole="button">
+          <Touchable onPress={pickAllShown} hitSlop="text" haptic="tap">
             <Text style={styles.selectAll}>Choose all shown</Text>
-          </Pressable>
+          </Touchable>
           {picked.size > 0 && (
-            <Pressable
+            <Touchable
               onPress={() => setPicked(new Set())}
-              accessibilityRole="button"
+              hitSlop="text"
+              haptic="tap"
             >
               <Text style={styles.selectAll}>Clear</Text>
-            </Pressable>
+            </Touchable>
           )}
         </View>
 
@@ -315,22 +343,17 @@ export default function ImportScreen() {
           { paddingBottom: insets.bottom + SPACING.md },
         ]}
       >
-        <Pressable
+        <PrimaryButton
+          label={
+            progress
+              ? `Matching ${progress.done} of ${progress.total}…`
+              : `Import ${picked.size} ${picked.size === 1 ? 'game' : 'games'}`
+          }
           onPress={runImport}
           disabled={progress != null}
-          style={[styles.import, progress != null && styles.importBusy]}
-          accessibilityRole="button"
-        >
-          {progress ? (
-            <Text style={styles.importText}>
-              Matching {progress.done} of {progress.total}…
-            </Text>
-          ) : (
-            <Text style={styles.importText}>
-              Import {picked.size} {picked.size === 1 ? 'game' : 'games'}
-            </Text>
-          )}
-        </Pressable>
+          block
+          style={styles.import}
+        />
       </View>
     ) : null;
 
@@ -354,12 +377,12 @@ export default function ImportScreen() {
             },
           ]}
         >
-          <SectionHeader
+          <PageHeading
             title="Your Steam library"
             eyebrow={
               snapshot
                 ? `${snapshot.gameCount.toLocaleString()} games · ${snapshot.name}`
-                : undefined
+                : 'Import'
             }
           />
           <Text style={styles.lede}>
@@ -387,6 +410,9 @@ export default function ImportScreen() {
 /** Where a bar can pin itself: the browser knows sticky, Yoga does not. */
 const STICKY = Platform.OS === 'web';
 
+/** A checkbox row a thumb can land on. */
+const TOUCH_ROW = 48;
+
 const styles = StyleSheet.create({
   background: { flexGrow: 1, backgroundColor: COLORS.darkGrey },
   backButton: { position: 'absolute', left: SPACING.lg, zIndex: 30 },
@@ -395,9 +421,11 @@ const styles = StyleSheet.create({
     maxWidth: LAYOUT.maxContentWidth,
     alignSelf: 'center',
     paddingHorizontal: GUTTER,
-    paddingBottom: SPACING.xl * 3,
+    paddingBottom: SPACING.xxxl + SPACING.xl,
     gap: SPACING.md,
   },
+  connect: { gap: SPACING.md, marginTop: SPACING.sm },
+  connectTitle: { ...TYPE.h2, color: COLORS.white },
   lede: {
     ...TYPE.p,
     color: COLORS.mediumGrey,
@@ -412,7 +440,6 @@ const styles = StyleSheet.create({
     ...TYPE.caption,
     color: COLORS.mediumGrey,
   },
-  filters: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
   selectRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
   selectCount: {
     ...TYPE.caption,
@@ -420,28 +447,32 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   selectAll: {
-    ...TYPE.labelTiny,
-    color: COLORS.accent,
+    ...TYPE.labelSmall,
+    color: COLORS.lightGrey,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.md,
-    paddingVertical: SPACING.sm + 2,
+    minHeight: TOUCH_ROW,
     paddingHorizontal: SPACING.sm,
     borderRadius: RADIUS.sm,
   },
-  rowPicked: { backgroundColor: 'rgba(255,255,255,0.04)' },
+  rowPicked: { backgroundColor: alpha(COLORS.white, 0.04) },
   box: {
-    width: 20,
-    height: 20,
-    borderRadius: 5,
+    width: 22,
+    height: 22,
+    borderRadius: RADIUS.xs,
     borderWidth: 1,
     borderColor: COLORS.strokeStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  boxOn: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
+  /**
+   * Chosen to bring in: white, the neutral "yes". Amber said "hours"
+   * and the primary act, and this tick is neither.
+   */
+  boxOn: { backgroundColor: COLORS.white, borderColor: COLORS.white },
   rowTitle: {
     ...TYPE.label,
     color: COLORS.lightGrey,
@@ -477,18 +508,9 @@ const styles = StyleSheet.create({
   /** The height a floating bar covers, paid back under the list. */
   barRoom: { height: 112 },
   import: {
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
-    paddingVertical: SPACING.md,
-    alignItems: 'center',
     alignSelf: 'center',
     width: '100%',
     maxWidth: LAYOUT.maxContentWidth,
-  },
-  importBusy: { opacity: 0.6 },
-  importText: {
-    ...TYPE.label,
-    color: COLORS.darkGrey,
   },
 });
 
