@@ -35,7 +35,16 @@ export const DURATION = {
    * above the one where a still image reads as a screenshot.
    */
   drift: 14000,
+  /**
+   * Slow ambient loops that are not the drift: a lamp breathing, a
+   * mark being drawn. Longer than a pulse because they are meant to be
+   * noticed second, not first.
+   */
+  ambient: 2600,
 } as const;
+
+/** The gap between items arriving in sequence. */
+export const STAGGER = 70;
 
 /**
  * Easings.
@@ -69,4 +78,6 @@ export const EASING = {
 export const SPRING = {
   press: { tension: 60, friction: 6 },
   surface: { tension: 90, friction: 12 },
+  /** Something small arriving with a little life: a badge, a stamp. */
+  pop: { tension: 120, friction: 9 },
 } as const;

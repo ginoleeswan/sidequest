@@ -19,11 +19,22 @@ import { COLORS } from './colors';
  * every one of those almost-matches.
  */
 export const SPACING = {
+  /** Hairline air: a caption tucked under its figure. */
+  xxs: 2,
   xs: 4,
   sm: 8,
+  /**
+   * Ten was the most-used distance in the app with no name: written
+   * `SPACING.sm + 2` sixty-three times. A value spelled as arithmetic
+   * that often is a token the scale forgot.
+   */
+  sm2: 10,
   md: 16,
   lg: 20,
   xl: 32,
+  /** Between chapters of a long page, where xl is only between rows. */
+  xxl: 48,
+  xxxl: 64,
 } as const;
 
 /**
@@ -43,11 +54,55 @@ export const SPACING = {
 export const GUTTER = 20;
 
 export const RADIUS = {
+  /** Thumbnails and tags inside a row. */
+  xs: 4,
   sm: 10,
+  /**
+   * A card up to about 130pt tall. Twenty-two on a short card reads as
+   * a pill; this is the radius a card that size wants.
+   */
+  card: 14,
   md: 22,
   lg: 30,
   xl: 40,
+  /** Fully round ends, whatever the height. */
+  pill: 999,
 } as const;
+
+/**
+ * The radius a child needs to sit concentric inside its parent: the
+ * parent's radius less the distance between their edges. A row with the
+ * same radius as the panel it sits in draws corners that bulge.
+ */
+export function innerRadius(outer: number, inset: number): number {
+  return Math.max(outer - inset, 2);
+}
+
+/** Icon sizes. Sixteen sizes had grown; four do every job. */
+export const ICON = {
+  sm: 14,
+  md: 18,
+  lg: 22,
+  xl: 28,
+} as const;
+
+/**
+ * The smallest thing a finger can reliably hit: 44pt, Apple's number
+ * and near enough Android's 48dp. Controls drawn smaller make up the
+ * difference with hit slop rather than growing.
+ */
+export const TOUCH = { min: 44 } as const;
+
+/** Hit slop, for a control whose drawing is smaller than `TOUCH.min`. */
+export const HIT_SLOP = {
+  sm: { top: 8, bottom: 8, left: 8, right: 8 },
+  md: { top: 12, bottom: 12, left: 12, right: 12 },
+  /** Text links in a line: grow up and down, never into the next word. */
+  text: { top: 14, bottom: 14, left: 4, right: 4 },
+} as const;
+
+/** The dim a pressed text or icon control takes. */
+export const PRESSED_OPACITY = 0.6;
 
 /**
  * Vertical room a shadow needs to render without being clipped by a
@@ -134,6 +189,11 @@ export const SHADOW = {
   hero: {
     boxShadow:
       '0 2px 4px rgba(9,12,19,0.30), 0 18px 40px -10px rgba(9,12,19,0.55)',
+  },
+  /** Things that float over the page: toasts, sheets, menus. */
+  float: {
+    boxShadow:
+      '0 2px 6px rgba(9,12,19,0.35), 0 16px 36px -8px rgba(9,12,19,0.6)',
   },
 } as const;
 

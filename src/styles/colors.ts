@@ -58,4 +58,42 @@ export const COLORS = {
    * film.
    */
   grade: 'rgba(39,47,63,0.14)',
+
+  /**
+   * The same meanings, set as text on the page ground.
+   *
+   * Violet and coral clear AA on navy but not on darkGrey, where most
+   * text sits: 4.05:1 and 3.92:1, below the 4.5 small type needs. Fills,
+   * strokes and marks keep the originals; words in those colours on the
+   * page use these, which are the same hue lifted until they read.
+   */
+  violetText: '#B0A5FF',
+  coralText: '#FF8F85',
+  /** A LIVE badge's fill: white on it is 4.6:1, white on coral was 2.8. */
+  live: '#D93A30',
+
+  /**
+   * The darks under the navy.
+   *
+   * Fourteen hand-mixed near-blacks had grown across the app — shadow
+   * colours, sheet fills, scrim stops — none of them named, so none of
+   * them agreed. Three steps cover every job they were doing.
+   */
+  /** Shadow and the deepest scrim: the colour depth is drawn in. */
+  ink: '#090C13',
+  /** A surface sunk below the navy. */
+  inkRaised: '#161C27',
+  /** Floating chrome: toasts, the sheet's backdrop plate. */
+  inkSurface: '#1D2431',
 } as const;
+
+/**
+ * A token at an opacity. `alpha(COLORS.navy, 0)` rather than a
+ * hand-typed `rgba(39,47,63,0)`, so a gradient stop cannot drift from
+ * the colour it is fading.
+ */
+export function alpha(hex: string, a: number): string {
+  const h = hex.replace('#', '');
+  const n = parseInt(h.length === 3 ? h.replace(/./g, '$&$&') : h, 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
