@@ -52,6 +52,41 @@ function drain() {
   next();
 }
 
+let screenReady = false;
+const readyWaiters: (() => void)[] = [];
+
+/**
+ * The first screen has laid itself out. Called by Home once its first
+ * mount has committed; any later call is a no-op.
+ */
+export function markScreenReady(): void {
+  if (screenReady) return;
+  screenReady = true;
+  for (const run of readyWaiters.splice(0)) run();
+}
+
+/**
+ * Run once the first screen is laid out, or after `limit` ms whatever
+ * happens — a deep link that opens a game never mounts Home at all.
+ * Returns a cancel.
+ */
+export function whenScreenReady(run: () => void, limit: number): () => void {
+  let done = false;
+  const once = () => {
+    if (done) return;
+    done = true;
+    clearTimeout(timer);
+    run();
+  };
+  const timer = setTimeout(once, limit);
+  if (screenReady) once();
+  else readyWaiters.push(once);
+  return () => {
+    done = true;
+    clearTimeout(timer);
+  };
+}
+
 /** Read once, outside React: is the curtain up right now? */
 export function isCurtainUp(): boolean {
   return curtainUp || draining;

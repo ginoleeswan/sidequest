@@ -12,7 +12,7 @@ import Svg, { Path } from 'react-native-svg';
 import { Mark } from './Mark';
 import { GLYPH_BOX, SEAM_GLYPHS } from './SeamGlyphs';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
-import { lowerCurtain, raiseCurtain } from '@/lib/launch';
+import { lowerCurtain, raiseCurtain, whenScreenReady } from '@/lib/launch';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import {
   backOut,
@@ -76,6 +76,9 @@ const WORDMARK_BOX_H = 32;
 
 /** The whole thing, start to gone. */
 const RUN = 1250;
+
+/** The longest the curtain holds its first frame waiting for a screen. */
+const HOLD_LIMIT = 900;
 
 /**
  * Windows of the run, as fractions.
@@ -273,8 +276,31 @@ export function SplashCurtain() {
   const run = useAnimatedValue(0);
   const [screen, setScreen] = useState({ w: 390, h: 844 });
 
+  /**
+   * The run starts once the first screen has mounted, not with it.
+   *
+   * The curtain is native-driven, but it shares the main thread with the
+   * screen mounting underneath it, and Home's first mount is the
+   * heaviest moment in the app's life. Started together, the wind-up
+   * and the first of the throw landed in the frames that mount was
+   * eating, and the choreography stuttered at exactly the point it is
+   * meant to snap. The curtain's first frame is the static splash, so
+   * holding it until the screen has laid out, and two frames more,
+   * costs nothing anyone can see — and the run then has the thread to
+   * itself.
+   */
+  const [go, setGo] = useState(false);
   useEffect(() => {
     if (!live) return;
+    return whenScreenReady(
+      () =>
+        requestAnimationFrame(() => requestAnimationFrame(() => setGo(true))),
+      HOLD_LIMIT
+    );
+  }, [live]);
+
+  useEffect(() => {
+    if (!live || !go) return;
     const animation = Animated.timing(run, {
       toValue: 1,
       // Reduced motion still gets the hand-off, just not the journey:
@@ -291,7 +317,7 @@ export function SplashCurtain() {
       lowerCurtain();
     });
     return () => animation.stop();
-  }, [live, reduced, run]);
+  }, [live, go, reduced, run]);
 
   if (!live) return null;
 
