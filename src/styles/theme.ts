@@ -1,6 +1,6 @@
 import { Platform, type ViewStyle } from 'react-native';
 
-import { COLORS } from './colors';
+import { alpha, COLORS } from './colors';
 
 /** Design tokens. Prefer these over inline magic numbers. */
 
@@ -237,10 +237,22 @@ const SHEEN =
  * whole: spread one and a surface is lit, edged and lifted the same way
  * as every other surface of its kind.
  */
+/**
+ * A raised surface's fill: the colour `raised` makes on the page ground
+ * (darkGrey lifted three per cent toward white), at two thirds opacity.
+ *
+ * `raised` alone is three per cent white and nothing else, so a panel
+ * carried the page's grain at full strength and read as a tinted window
+ * onto the floor. A surface nearer the light is smoother than the ground
+ * it stands on; this lets a third of the grain through — enough to stay
+ * the same material, quiet enough to read as lifted.
+ */
+const RAISED_FILL = alpha('#394356', 0.66);
+
 export const MATERIAL = {
   /** A panel on the page: the Plan's week, the library's backlog. */
   plate: {
-    backgroundColor: COLORS.raised,
+    backgroundColor: RAISED_FILL,
     borderWidth: 1,
     borderColor: COLORS.stroke,
     boxShadow: `${EDGE_LIGHT}, ${SHADOW.card.boxShadow}`,
@@ -255,7 +267,7 @@ export const MATERIAL = {
    * smudges, not a list.
    */
   row: {
-    backgroundColor: COLORS.raised,
+    backgroundColor: RAISED_FILL,
     borderWidth: 1,
     borderColor: COLORS.stroke,
     boxShadow: `${EDGE_LIGHT}, 0 1px 2px rgba(9,12,19,0.28)`,

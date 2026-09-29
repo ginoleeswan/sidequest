@@ -62,6 +62,7 @@ import {
   innerRadius,
 } from '@/styles/theme';
 import { FONT_SCALE, OVER_IMAGE, TYPE, WORDMARK } from '@/styles/typography';
+import { spokenName } from '@/lib/format';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -987,7 +988,7 @@ export default function PlanScreen() {
                             numberOfLines={2}
                             maxFontSizeMultiplier={FONT_SCALE.display}
                           >
-                            {tonightVerb} {tonightPick.name}
+                            {tonightVerb} {spokenName(tonightPick.name)}
                           </Text>
                           <Text style={styles.tonightWhy}>
                             {tonight.finishable

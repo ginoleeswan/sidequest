@@ -9,6 +9,7 @@ import { planColour } from '@/lib/planColours';
 import { REMINDER_LEAD_MINUTES, scheduleEvenings } from '@/lib/reminders';
 import type { ScheduledItem } from '@/lib/scheduler';
 import { formatHours } from '@/lib/duration';
+import { spokenName } from '@/lib/format';
 import { celebrate } from '@/lib/haptics';
 import { eveningHours, eveningLabel, planWeek } from '@/lib/week';
 import { COLORS } from '@/styles/colors';
@@ -282,7 +283,7 @@ export function WeekView({
                           maxFontSizeMultiplier={CHART_SCALE}
                         >
                           {game.named
-                            ? `${game.name} · ${formatHours(game.hours)}`
+                            ? `${spokenName(game.name)} · ${formatHours(game.hours)}`
                             : formatHours(game.hours)}
                         </Text>
                       </View>
