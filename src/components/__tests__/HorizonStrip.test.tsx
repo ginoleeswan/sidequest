@@ -90,6 +90,22 @@ describe('the horizon', () => {
     expect(screen.getByText(/Oct 26/)).toBeTruthy();
   });
 
+  /** Where the route under the strip counts its own rest, it says it once. */
+  it('leaves the counting to the list when told to', async () => {
+    await renderApp(
+      <HorizonStrip
+        scheduled={Array.from({ length: 7 }, (_, i) =>
+          lands(i + 1, `Game ${i + 1}`, NOW + (i + 1) * 10 * DAY)
+        )}
+        now={NOW}
+        countBeyond={false}
+      />
+    );
+    expect(screen.queryByText(/more after that/)).toBeNull();
+    // Still spoken: the picture's label is the whole story.
+    expect(screen.getByLabelText(/3 more after that/)).toBeTruthy();
+  });
+
   it('says nothing about a beyond that isn’t there', async () => {
     await renderApp(
       <HorizonStrip scheduled={[lands(1, 'Hades', NOW + 5 * DAY)]} now={NOW} />

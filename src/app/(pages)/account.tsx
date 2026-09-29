@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppHeader } from '@/components/AppHeader';
@@ -7,6 +7,7 @@ import { BackButton } from '@/components/BackButton';
 import { FadeInView } from '@/components/FadeInView';
 import { Message } from '@/components/Message';
 import { PageTitle } from '@/components/PageTitle';
+import { PrimaryButton } from '@/components/PrimaryButton';
 import { RouteError } from '@/components/RouteError';
 import { Screen } from '@/components/Screen';
 import { SignInRows } from '@/components/SignInRows';
@@ -19,7 +20,7 @@ import { useLibrary } from '@/lib/library';
 import { useSync, type SyncStatus } from '@/lib/sync/SyncProvider';
 import { COLORS } from '@/styles/colors';
 import { GUTTER, LAYOUT, RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
 
 /**
  * The account, as a screen of its own.
@@ -145,10 +146,15 @@ export default function AccountScreen() {
                     styles.eyebrow,
                     status.state === 'failed' && styles.eyebrowOff,
                   ]}
+                  maxFontSizeMultiplier={FONT_SCALE.label}
                 >
                   {session ? EYEBROW[status.state] : 'OPTIONAL'}
                 </Text>
-                <Text style={styles.title}>
+                <Text
+                  style={styles.title}
+                  accessibilityRole="header"
+                  maxFontSizeMultiplier={FONT_SCALE.display}
+                >
                   {session
                     ? (email ?? 'Signed in')
                     : 'Use Sidequest on another device'}
@@ -176,13 +182,13 @@ export default function AccountScreen() {
                   </View>
                 )}
                 {session && status.state !== 'syncing' && (
-                  <Pressable
+                  <PrimaryButton
+                    label="Sync now"
+                    icon="sync"
+                    variant="secondary"
                     onPress={syncNow}
-                    accessibilityRole="button"
                     style={styles.retry}
-                  >
-                    <Text style={styles.retryText}>Sync now</Text>
-                  </Pressable>
+                  />
                 )}
 
                 {/* SignInRows draws its own spinner while the stored
@@ -257,24 +263,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: GUTTER,
     paddingBottom: SPACING.xl,
   },
-  eyebrow: { ...TYPE.micro, color: COLORS.accent },
+  /**
+   * The account's state, in grey: amber is hours and the primary act,
+   * and "signed in" is neither.
+   */
+  eyebrow: { ...TYPE.micro, color: COLORS.lightGrey },
   eyebrowOff: { color: COLORS.mediumGrey },
-  title: { ...TYPE.title, color: COLORS.white, marginTop: SPACING.xs },
+  /** Every page's title: display type, white. It was 26 here, 32 on You. */
+  title: { ...TYPE.display, color: COLORS.white, marginTop: SPACING.xxs },
   blurb: {
     ...TYPE.body,
     color: COLORS.mediumGrey,
     marginTop: SPACING.sm,
   },
-  retry: {
-    marginTop: SPACING.md,
-    alignSelf: 'flex-start',
-    ...Platform.select({ web: { cursor: 'pointer' } }),
-  },
-  retryText: {
-    ...TYPE.caption,
-    color: COLORS.lightGrey,
-    textDecorationLine: 'underline',
-  },
+  retry: { marginTop: SPACING.md },
   stuck: {
     marginTop: SPACING.md,
     padding: SPACING.md,
@@ -299,7 +301,7 @@ const styles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: 3,
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.lightGrey,
     // Nudged onto the first line's optical centre rather than its top.
     marginTop: 8,
   },

@@ -1,11 +1,18 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { DynamicIcon, type IconType } from './DynamicIcon';
+import { Touchable } from './Touchable';
 import type { BrowseFilters } from '@/api/rawg';
-import { COLORS } from '@/styles/colors';
-import { RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { COLORS, alpha } from '@/styles/colors';
+import { ICON, RADIUS, SPACING } from '@/styles/theme';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
+
+/**
+ * Every control in the bar is drawn at 36 and made up to 44 with slop:
+ * the row scrolls sideways, so the slop grows up and down only.
+ */
+const SLOP = { top: 4, bottom: 4, left: 0, right: 0 };
 
 const SORTS: {
   label: string;
@@ -82,21 +89,25 @@ function Segment({
   onPress: () => void;
 }) {
   return (
-    <Pressable
+    <Touchable
       onPress={onPress}
-      accessibilityRole="button"
+      haptic={selected ? undefined : 'tap'}
+      hitSlop={SLOP}
       accessibilityState={{ selected }}
       style={[styles.segment, selected && styles.segmentOn]}
     >
       <Ionicons
         name={icon}
-        size={14}
+        size={ICON.sm}
         color={selected ? COLORS.darkGrey : COLORS.mediumGrey}
       />
-      <Text style={[styles.segmentText, selected && styles.segmentTextOn]}>
+      <Text
+        style={[styles.segmentText, selected && styles.segmentTextOn]}
+        maxFontSizeMultiplier={FONT_SCALE.label}
+      >
         {label}
       </Text>
-    </Pressable>
+    </Touchable>
   );
 }
 
@@ -116,23 +127,27 @@ function Toggle({
   selected: boolean;
   onPress: () => void;
 }) {
-  const tint = selected ? COLORS.darkGrey : COLORS.lightGrey;
+  const tint = selected ? COLORS.white : COLORS.lightGrey;
   return (
-    <Pressable
+    <Touchable
       onPress={onPress}
-      accessibilityRole="button"
+      haptic="tap"
+      hitSlop={SLOP}
       accessibilityState={{ selected }}
       style={[styles.toggle, selected && styles.toggleOn]}
     >
       {ionicon ? (
-        <Ionicons name={ionicon} size={14} color={tint} />
+        <Ionicons name={ionicon} size={ICON.sm} color={tint} />
       ) : icon && iconType ? (
-        <DynamicIcon type={iconType} name={icon} size={15} color={tint} />
+        <DynamicIcon type={iconType} name={icon} size={ICON.sm} color={tint} />
       ) : null}
-      <Text style={[styles.toggleText, selected && styles.toggleTextOn]}>
+      <Text
+        style={[styles.toggleText, selected && styles.toggleTextOn]}
+        maxFontSizeMultiplier={FONT_SCALE.label}
+      >
         {label}
       </Text>
-    </Pressable>
+    </Touchable>
   );
 }
 
@@ -223,15 +238,21 @@ export function FilterBar({
       />
 
       {active > 0 && (
-        <Pressable
+        <Touchable
           onPress={() => onChange(DEFAULT_REFINEMENTS)}
-          accessibilityRole="button"
+          haptic="tap"
+          hitSlop={SLOP}
           accessibilityLabel={`Clear ${active} filters`}
           style={styles.clear}
         >
-          <Ionicons name="close" size={14} color={COLORS.accent} />
-          <Text style={styles.clearText}>Clear {active}</Text>
-        </Pressable>
+          <Ionicons name="close" size={ICON.sm} color={COLORS.accent} />
+          <Text
+            style={styles.clearText}
+            maxFontSizeMultiplier={FONT_SCALE.label}
+          >
+            Clear {active}
+          </Text>
+        </Touchable>
       )}
     </ScrollView>
   );
@@ -252,8 +273,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 2,
     padding: 3,
-    borderRadius: RADIUS.lg,
-    backgroundColor: 'rgba(0,0,0,0.22)',
+    borderRadius: RADIUS.pill,
+    backgroundColor: alpha(COLORS.ink, 0.22),
     borderWidth: 1,
     borderColor: COLORS.stroke,
   },
@@ -262,8 +283,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: SPACING.md - 2,
-    paddingVertical: SPACING.sm - 1,
-    borderRadius: RADIUS.lg,
+    minHeight: 30,
+    borderRadius: RADIUS.pill,
   },
   segmentOn: { backgroundColor: COLORS.white },
   segmentText: {
@@ -280,29 +301,35 @@ const styles = StyleSheet.create({
   },
 
   // filters: independent switches
+  /**
+   * A switch you can stack: the same lifted fill and the same ring as a
+   * picked Chip, because they are the same kind of choice. White was
+   * the single-choice dial's look, and two looks for one idea is how a
+   * reader stops trusting either.
+   */
   toggle: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.lg,
+    minHeight: 36,
+    borderRadius: RADIUS.pill,
     borderWidth: 1,
     borderColor: COLORS.strokeStrong,
   },
-  toggleOn: { backgroundColor: COLORS.white, borderColor: COLORS.white },
+  toggleOn: { backgroundColor: alpha(COLORS.white, 0.12) },
   toggleText: {
     ...TYPE.labelSmall,
     color: COLORS.lightGrey,
   },
-  toggleTextOn: { color: COLORS.darkGrey },
+  toggleTextOn: { color: COLORS.white },
 
   clear: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
     paddingHorizontal: SPACING.md - 2,
-    paddingVertical: SPACING.sm,
+    minHeight: 36,
   },
   clearText: {
     ...TYPE.labelSmall,

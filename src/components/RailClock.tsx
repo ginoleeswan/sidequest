@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
+import { Touchable } from '@/components/Touchable';
 import { useTonightPick } from '@/hooks/useTonightPick';
 import { formatHours } from '@/lib/duration';
 import { sessionMinutesFor } from '@/lib/sessions';
@@ -31,20 +32,22 @@ export function RailClock({ collapsed }: { collapsed: boolean }) {
 
   if (collapsed) {
     return (
-      <Pressable
+      <Touchable
         onPress={() => router.push('/plan')}
+        hitSlop="sm"
         style={styles.compact}
         accessibilityRole="link"
         accessibilityLabel={`Tonight: ${hours}. Open the plan`}
       >
         <Text style={styles.compactHours}>{hours}</Text>
-      </Pressable>
+      </Touchable>
     );
   }
 
   return (
-    <Pressable
+    <Touchable
       onPress={() => router.push('/plan')}
+      feedback="tint"
       style={styles.clock}
       accessibilityRole="link"
       accessibilityLabel={`Tonight, ${hours} free${pick ? `: ${verb} ${pick.name}` : ''}. Open the plan`}
@@ -58,7 +61,7 @@ export function RailClock({ collapsed }: { collapsed: boolean }) {
           ? `${verb} ${pick.name}`
           : 'Save a game and the plan fills this in.'}
       </Text>
-    </Pressable>
+    </Touchable>
   );
 }
 
@@ -78,14 +81,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: SPACING.sm,
   },
-  eyebrow: { ...TYPE.micro, color: COLORS.mediumGrey, flexShrink: 1 },
+  /** Tonight is the evening, and the evening is violet. */
+  eyebrow: { ...TYPE.micro, color: COLORS.violetText, flexShrink: 1 },
   hours: { ...TYPE.label, color: COLORS.accent },
   line: { ...TYPE.labelSmall, color: COLORS.lightGrey },
   compact: {
     marginTop: SPACING.md,
     alignSelf: 'center',
     paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.sm + 2,
+    paddingHorizontal: SPACING.sm2,
     borderRadius: RADIUS.sm,
     backgroundColor: COLORS.raised,
   },

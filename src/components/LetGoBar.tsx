@@ -1,10 +1,12 @@
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { PrimaryButton } from './PrimaryButton';
+import { Touchable } from './Touchable';
 import { DROP_REASONS, type DropReason } from '@/lib/drops';
 import { COLORS } from '@/styles/colors';
-import { RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { SPACING } from '@/styles/theme';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
 
 /**
  * The question that opens the act of letting something go.
@@ -21,15 +23,24 @@ import { TYPE } from '@/styles/typography';
  * product exists for — PRODUCT.md §6.4 calls that one "the honest
  * one". Two copies of this bar would have been two copies of a
  * question about somebody's guilt, drifting apart.
+ *
+ * Every answer still completes the drop — but asking is not deciding,
+ * and a bar whose every button removed the game left a mis-tap on "Let
+ * it go" with no way back but leaving the screen. "Keep it" is the way
+ * back, and the drop itself is felt: the one warning haptic the app
+ * has, because this is the one act here that takes something away.
  */
 export function LetGoBar({
   /** How many are being let go, so the question can be plural or not. */
   count,
   onLetGo,
+  onCancel,
   floating = false,
 }: {
   count: number;
   onLetGo: (reason?: DropReason) => void;
+  /** Changed my mind: close the question and let nothing go. */
+  onCancel?: () => void;
   /**
    * Pinned to the foot of the screen, over the scroller.
    *
@@ -52,28 +63,42 @@ export function LetGoBar({
         { paddingBottom: insets.bottom + SPACING.md },
       ]}
     >
-      <Text style={styles.barCount}>
+      <Text style={styles.barCount} maxFontSizeMultiplier={FONT_SCALE.label}>
         Why {count === 1 ? 'this one' : 'these'}? Optional.
       </Text>
       <View style={styles.barActions}>
         {DROP_REASONS.map((reason) => (
-          <Pressable
+          <PrimaryButton
             key={reason.key}
+            label={reason.label}
             onPress={() => onLetGo(reason.key)}
-            style={styles.secondary}
-            accessibilityRole="button"
-          >
-            <Text style={styles.secondaryText}>{reason.label}</Text>
-          </Pressable>
+            variant="secondary"
+            haptic="warn"
+          />
         ))}
-        <Pressable
+        <PrimaryButton
+          label="Rather not say"
           onPress={() => onLetGo()}
-          style={styles.primary}
-          accessibilityRole="button"
-        >
-          <Text style={styles.primaryText}>Rather not say</Text>
-        </Pressable>
+          variant="danger"
+          haptic="warn"
+        />
       </View>
+      {onCancel ? (
+        <Touchable
+          onPress={onCancel}
+          hitSlop="text"
+          haptic="tap"
+          style={styles.keep}
+          accessibilityLabel={count === 1 ? 'Keep it' : 'Keep them'}
+        >
+          <Text
+            style={styles.keepText}
+            maxFontSizeMultiplier={FONT_SCALE.label}
+          >
+            {count === 1 ? 'Keep it' : 'Keep them'}
+          </Text>
+        </Touchable>
+      ) : null}
     </View>
   );
 }
@@ -98,8 +123,9 @@ const styles = StyleSheet.create({
   barCount: {
     ...TYPE.tag,
     // Letting go has its own colour in this app; the question that
-    // opens the act should be asked in it.
-    color: COLORS.coral,
+    // opens the act should be asked in it — the text tone, which reads
+    // on the page ground where the fill tone does not.
+    color: COLORS.coralText,
     textAlign: 'center',
   },
   barActions: {
@@ -108,25 +134,12 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     justifyContent: 'center',
   },
-  primary: {
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
+  /** The way back: quiet, because it is the choice that changes nothing. */
+  keep: {
+    alignSelf: 'center',
+    minHeight: 32,
+    justifyContent: 'center',
+    paddingHorizontal: SPACING.md,
   },
-  primaryText: {
-    ...TYPE.label,
-    color: COLORS.darkGrey,
-  },
-  secondary: {
-    borderWidth: 1,
-    borderColor: COLORS.strokeStrong,
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
-  },
-  secondaryText: {
-    ...TYPE.label,
-    color: COLORS.lightGrey,
-  },
+  keepText: { ...TYPE.label, color: COLORS.lightGrey },
 });

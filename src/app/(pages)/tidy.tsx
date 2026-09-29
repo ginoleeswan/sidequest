@@ -1,14 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import {
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  Platform,
-} from 'react-native';
+import { FlatList, StyleSheet, Text, View, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppHeader } from '@/components/AppHeader';
@@ -16,13 +9,15 @@ import { BackButton } from '@/components/BackButton';
 import { Chip } from '@/components/Chip';
 import { CoverImage } from '@/components/CoverImage';
 import { Message } from '@/components/Message';
+import { PageHeading } from '@/components/PageHeading';
 import { PageTitle } from '@/components/PageTitle';
+import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import { RouteError } from '@/components/RouteError';
-import { SectionHeader } from '@/components/SectionHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import { Textured } from '@/components/Textured';
 import { useToast } from '@/components/Toast';
+import { Touchable } from '@/components/Touchable';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useTopPad } from '@/hooks/useTopPad';
 import { recordDrop, type DropReason } from '@/lib/drops';
@@ -35,9 +30,9 @@ import {
   type LibraryStatus,
 } from '@/lib/library';
 import { LetGoBar } from '@/components/LetGoBar';
-import { COLORS } from '@/styles/colors';
-import { GUTTER, LAYOUT, RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { COLORS, alpha } from '@/styles/colors';
+import { GUTTER, ICON, LAYOUT, RADIUS, SPACING } from '@/styles/theme';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
 
 /**
  * Backlog amnesty.
@@ -72,7 +67,7 @@ export default function TidyScreen() {
   const insets = useSafeAreaInsets();
   const topPad = useTopPad(true);
   const { isExpanded } = useBreakpoint();
-  const { entries, removeMany, moveMany } = useLibrary();
+  const { entries, removeMany, moveMany, importJson } = useLibrary();
   const { durationOf } = useDurations();
   const toast = useToast();
 
@@ -108,8 +103,18 @@ export default function TidyScreen() {
 
   const chosen = () => [...picked];
 
+  /**
+   * Let them go, and hold the door open behind them: the entries are
+   * kept whole first, so Undo puts back exactly what was there — status,
+   * dates, notes — and takes the reason back with them.
+   */
   const letGo = (reason?: DropReason) => {
     const ids = asking ?? chosen();
+    const kept = Object.fromEntries(
+      ids
+        .map((id) => [String(id), entries[String(id)]] as const)
+        .filter(([, entry]) => entry != null)
+    );
     const count = removeMany(ids);
     if (reason) recordDrop(reason, count);
     setPicked(new Set());
@@ -118,7 +123,16 @@ export default function TidyScreen() {
       count === 1
         ? 'One let go. Nothing owed.'
         : `${count} let go. Nothing owed.`,
-      'checkmark-circle'
+      'checkmark-circle',
+      count > 0
+        ? {
+            label: 'Undo',
+            onPress: () => {
+              importJson(JSON.stringify(kept));
+              if (reason) recordDrop(reason, -count);
+            },
+          }
+        : undefined
     );
   };
 
@@ -135,7 +149,12 @@ export default function TidyScreen() {
   const bars = (
     <>
       {asking && (
-        <LetGoBar count={asking.length} onLetGo={letGo} floating={!STICKY} />
+        <LetGoBar
+          count={asking.length}
+          onLetGo={letGo}
+          onCancel={() => setAsking(null)}
+          floating={!STICKY}
+        />
       )}
 
       {picked.size > 0 && !asking && (
@@ -146,25 +165,26 @@ export default function TidyScreen() {
             { paddingBottom: insets.bottom + SPACING.md },
           ]}
         >
-          <Text style={styles.barCount}>
+          <Text
+            style={styles.barCount}
+            maxFontSizeMultiplier={FONT_SCALE.label}
+          >
             {picked.size} chosen
             {hours > 0 ? ` · ${formatHours(hours)} back` : ''}
           </Text>
           <View style={styles.barActions}>
-            <Pressable
+            <PrimaryButton
+              label="Actually finished"
+              variant="secondary"
+              haptic="celebrate"
               onPress={() => move('finished')}
-              style={styles.secondary}
-              accessibilityRole="button"
-            >
-              <Text style={styles.secondaryText}>Actually finished</Text>
-            </Pressable>
-            <Pressable
+            />
+            <PrimaryButton
+              label="Let these go"
+              variant="danger"
+              haptic="tap"
               onPress={() => setAsking(chosen())}
-              style={styles.primary}
-              accessibilityRole="button"
-            >
-              <Text style={styles.primaryText}>Let these go</Text>
-            </Pressable>
+            />
           </View>
         </View>
       )}
@@ -191,10 +211,10 @@ export default function TidyScreen() {
             },
           ]}
         >
-          <SectionHeader
+          <PageHeading
             title="Backlog amnesty"
             eyebrow={
-              shown.length > 0 ? `${shown.length} unfinished` : undefined
+              shown.length > 0 ? `${shown.length} unfinished` : 'Amnesty'
             }
           />
           <Text style={styles.lede}>
@@ -217,6 +237,7 @@ export default function TidyScreen() {
           {shown.length === 0 ? (
             <Message
               icon="sparkles-outline"
+              tone="finished"
               title="Nothing to let go of"
               detail="Your library is either empty or entirely honest. Both are fine."
               actionLabel="Back to the library"
@@ -232,8 +253,10 @@ export default function TidyScreen() {
                 const checked = picked.has(item.game.id);
                 const duration = durationOf(item.game);
                 return (
-                  <Pressable
+                  <Touchable
                     onPress={() => toggle(item.game.id)}
+                    feedback="tint"
+                    haptic="tap"
                     style={[styles.row, checked && styles.rowPicked]}
                     accessibilityRole="checkbox"
                     accessibilityState={{ checked }}
@@ -247,8 +270,8 @@ export default function TidyScreen() {
                       {checked && (
                         <Ionicons
                           name="checkmark"
-                          size={13}
-                          color={COLORS.darkGrey}
+                          size={ICON.sm}
+                          color={COLORS.navy}
                         />
                       )}
                     </View>
@@ -256,10 +279,14 @@ export default function TidyScreen() {
                       uri={item.game.background_image}
                       style={styles.thumb}
                       size="thumb"
-                      iconSize={14}
+                      iconSize={ICON.md}
                     />
                     <View style={styles.body}>
-                      <Text style={styles.title} numberOfLines={1}>
+                      <Text
+                        style={styles.title}
+                        numberOfLines={1}
+                        maxFontSizeMultiplier={FONT_SCALE.label}
+                      >
                         {item.game.name}
                       </Text>
                       <Text style={styles.meta}>
@@ -269,7 +296,7 @@ export default function TidyScreen() {
                           : ''}
                       </Text>
                     </View>
-                  </Pressable>
+                  </Touchable>
                 );
               }}
             />
@@ -280,7 +307,11 @@ export default function TidyScreen() {
             document. Native has no sticky — see `floating` below — so
             there they are siblings of the scroller and this is only
             the room they need at the foot of the list. */}
-        {STICKY ? bars : hasBar ? <View style={styles.barRoom} /> : null}
+        {STICKY ? (
+          bars
+        ) : hasBar ? (
+          <View style={[styles.barRoom, asking && styles.barRoomAsking]} />
+        ) : null}
         <SiteFooter />
       </Screen>
       {STICKY ? null : bars}
@@ -299,7 +330,7 @@ const styles = StyleSheet.create({
     maxWidth: LAYOUT.maxContentWidth,
     alignSelf: 'center',
     paddingHorizontal: GUTTER,
-    paddingBottom: SPACING.xl * 3,
+    paddingBottom: SPACING.xxxl + SPACING.xl,
     gap: SPACING.md,
   },
   lede: {
@@ -312,23 +343,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.md,
+    minHeight: 56,
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.sm,
     borderRadius: RADIUS.sm,
   },
-  rowPicked: { backgroundColor: 'rgba(255,255,255,0.04)' },
+  /** Chosen to go: a breath of the colour letting go is. */
+  rowPicked: { backgroundColor: alpha(COLORS.coral, 0.08) },
   box: {
-    width: 20,
-    height: 20,
-    borderRadius: 5,
+    width: 22,
+    height: 22,
+    borderRadius: RADIUS.xs,
     borderWidth: 1,
     borderColor: COLORS.strokeStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  boxOn: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
-  thumb: { width: 52, height: 33, borderRadius: 5 },
-  body: { flex: 1, gap: 1 },
+  /**
+   * Coral, because what a tick here means is "let this go". Amber said
+   * "hours", about a choice that is not one.
+   */
+  boxOn: { backgroundColor: COLORS.coral, borderColor: COLORS.coral },
+  /** The one row's art: a 40pt square at the thumbnail radius. */
+  thumb: { width: 40, height: 40, borderRadius: RADIUS.xs },
+  body: { flex: 1, gap: SPACING.xxs },
   title: {
     ...TYPE.label,
     color: COLORS.lightGrey,
@@ -352,13 +390,17 @@ const styles = StyleSheet.create({
     borderTopColor: COLORS.stroke,
   },
   barFloating: { position: 'absolute', bottom: 0 },
-  /** The height a floating bar covers, paid back under the list. */
+  /**
+   * The height a floating bar covers, paid back under the list. The
+   * question bar is the taller of the two — five answers and a way back.
+   */
   barRoom: { height: 148 },
+  barRoomAsking: { height: 280 },
   barCount: {
     ...TYPE.tag,
     // Letting go has its own colour in this app; the question that
     // opens the act should be asked in it.
-    color: COLORS.coral,
+    color: COLORS.coralText,
     textAlign: 'center',
   },
   barActions: {
@@ -366,27 +408,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: SPACING.sm,
     justifyContent: 'center',
-  },
-  primary: {
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
-  },
-  primaryText: {
-    ...TYPE.label,
-    color: COLORS.darkGrey,
-  },
-  secondary: {
-    borderWidth: 1,
-    borderColor: COLORS.strokeStrong,
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
-  },
-  secondaryText: {
-    ...TYPE.label,
-    color: COLORS.lightGrey,
   },
 });
 

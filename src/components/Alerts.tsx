@@ -1,18 +1,19 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { CoverImage } from './CoverImage';
 import { LetGoBar } from './LetGoBar';
 import { useToast } from './Toast';
+import { Touchable } from './Touchable';
 import type { Alert } from '@/lib/alerts';
 import { recordDrop, type DropReason } from '@/lib/drops';
 import { useLibrary } from '@/lib/library';
 import type { Game } from '@/api/types';
 import { COLORS } from '@/styles/colors';
-import { RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { ICON, RADIUS, SPACING } from '@/styles/theme';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
 
 /**
  * What doesn't fit — one calm place instead of two loud ones.
@@ -80,7 +81,7 @@ export function Alerts({
   gamesById?: Map<number, Game>;
 }) {
   const router = useRouter();
-  const { setDeadline, removeMany } = useLibrary();
+  const { entries, setDeadline, removeMany, importJson } = useLibrary();
   const toast = useToast();
 
   /**
@@ -89,12 +90,35 @@ export function Alerts({
    */
   const [letting, setLetting] = useState<number | null>(null);
 
+  /**
+   * Let it go, and hold the door open behind it.
+   *
+   * The entry is kept whole before it goes — status, date, note, the
+   * hours already played — so Undo puts back exactly what was there
+   * rather than a fresh save of the same game. The reason it was given
+   * is taken back too: a drop that was undone taught the shelves
+   * nothing.
+   */
   const letGo = (reason?: DropReason) => {
     if (letting == null) return;
+    const kept = entries[String(letting)];
     const count = removeMany([letting]);
     if (reason && count > 0) recordDrop(reason);
     setLetting(null);
-    if (count > 0) toast('Let go. Nothing owed.', 'checkmark-circle');
+    if (count === 0) return;
+    toast(
+      'Let go. Nothing owed.',
+      'checkmark-circle',
+      kept
+        ? {
+            label: 'Undo',
+            onPress: () => {
+              importJson(JSON.stringify({ [String(kept.game.id)]: kept }));
+              if (reason) recordDrop(reason, -1);
+            },
+          }
+        : undefined
+    );
   };
 
   const atRisk = alerts.filter((alert) => alert.kind === 'at-risk');
@@ -135,14 +159,22 @@ export function Alerts({
         uri={gamesById?.get(id)?.background_image}
         style={styles.thumb}
         size="thumb"
-        iconSize={16}
+        iconSize={ICON.md}
       />
       <View style={styles.body}>
         <View style={styles.titleRow}>
           {warm && (
-            <Ionicons name="alert-circle" size={13} color={COLORS.accent} />
+            <Ionicons
+              name="alert-circle"
+              size={ICON.sm}
+              color={COLORS.accent}
+            />
           )}
-          <Text style={styles.title} numberOfLines={1}>
+          <Text
+            style={styles.title}
+            numberOfLines={1}
+            maxFontSizeMultiplier={FONT_SCALE.label}
+          >
             {name}
           </Text>
         </View>
@@ -160,18 +192,28 @@ export function Alerts({
     tone: 'accent' | 'coral' | 'muted' = 'accent',
     accessibilityLabel?: string
   ) => (
-    <Pressable
+    <Touchable
       key={label}
       onPress={onPress}
-      accessibilityRole="button"
+      hitSlop="text"
+      style={styles.actionTarget}
       accessibilityLabel={accessibilityLabel ?? label}
     >
-      <Text style={[styles.action, styles[tone]]}>{label}</Text>
-    </Pressable>
+      <Text
+        style={[styles.action, styles[tone]]}
+        maxFontSizeMultiplier={FONT_SCALE.label}
+      >
+        {label}
+      </Text>
+    </Touchable>
   );
 
   return (
-    <View style={styles.list}>
+    // No panel of its own. This sits inside the Plan's one plate, and a
+    // bordered box inside a bordered box started its text sixty-two
+    // points in from the screen's edge; the rows now share the plate's
+    // edge with every other row on it.
+    <View>
       {atRisk.map((alert, index) =>
         row(
           alert.gameId,
@@ -236,33 +278,38 @@ export function Alerts({
       )}
 
       {rest > 0 && (
-        <Pressable
+        <Touchable
           style={styles.rest}
           onPress={() => router.push('/tidy')}
-          accessibilityRole="button"
           accessibilityLabel={`${rest} more games do not fit — open backlog amnesty`}
         >
           <Text style={styles.restText}>
             {rest} more {rest === 1 ? 'game' : 'games'} the window has no room
             for. Nothing to do about them one at a time —{' '}
-            <Text style={styles.restLink}>let a few go together →</Text>
+            <Text style={styles.restLink}>
+              let a few go together{' '}
+              <Ionicons
+                name="chevron-forward"
+                size={ICON.sm - 2}
+                color={COLORS.coralText}
+              />
+            </Text>
           </Text>
-        </Pressable>
+        </Touchable>
       )}
 
-      {letting != null && <LetGoBar count={1} onLetGo={letGo} />}
+      {letting != null && (
+        <LetGoBar count={1} onLetGo={letGo} onCancel={() => setLetting(null)} />
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  list: {
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.stroke,
-    backgroundColor: COLORS.raised,
-    paddingHorizontal: SPACING.lg,
-  },
+  /**
+   * The one row: a 40pt square of art, a title, one line of fact, the
+   * ways out, and a hairline to the next.
+   */
   row: {
     flexDirection: 'row',
     gap: SPACING.md,
@@ -272,21 +319,22 @@ const styles = StyleSheet.create({
   },
   rowLast: { borderBottomWidth: 0 },
   thumb: {
-    width: 44,
-    height: 44,
-    borderRadius: RADIUS.sm,
+    width: 40,
+    height: 40,
+    borderRadius: RADIUS.xs,
     backgroundColor: COLORS.navy,
   },
-  body: { flex: 1, gap: 3 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  body: { flex: 1, gap: SPACING.xxs },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
   title: { ...TYPE.label, color: COLORS.white, flexShrink: 1 },
   fact: { ...TYPE.caption, color: COLORS.mediumGrey },
   actions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: SPACING.md,
-    marginTop: 3,
+    gap: SPACING.lg,
+    marginTop: SPACING.xs,
   },
+  actionTarget: { minHeight: 20, justifyContent: 'center' },
   /**
    * The line that replaces eight hundred rows. Bordered off the last
    * row rather than styled as one, because it is a sentence about the
@@ -298,11 +346,12 @@ const styles = StyleSheet.create({
     borderTopColor: COLORS.stroke,
   },
   restText: { ...TYPE.caption, color: COLORS.mediumGrey },
-  restLink: { color: COLORS.accent },
+  /** It leads to letting go, so it speaks in that colour. */
+  restLink: { color: COLORS.coralText },
 
-  action: { ...TYPE.labelTiny },
+  action: { ...TYPE.labelSmall },
   accent: { color: COLORS.accent },
   /** Letting go is coral everywhere in this app; it is coral here. */
-  coral: { color: COLORS.coral },
+  coral: { color: COLORS.coralText },
   muted: { color: COLORS.mediumGrey },
 });

@@ -1,9 +1,10 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 
 import { DynamicIcon, type IconType } from './DynamicIcon';
-import { COLORS } from '@/styles/colors';
-import { RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { Touchable } from './Touchable';
+import { COLORS, alpha } from '@/styles/colors';
+import { ICON, RADIUS, SPACING, TOUCH } from '@/styles/theme';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
 
 interface Props {
   title: string;
@@ -32,6 +33,20 @@ interface Props {
   bare?: boolean;
 }
 
+/** Drawn at 36 and made up to a thumb's 44 with slop. */
+const DRAWN = 36;
+const SLOP = (TOUCH.min - DRAWN) / 2;
+
+/**
+ * A choice you can stack.
+ *
+ * Selected used to be solid white with no border beside an outline chip
+ * with a hairline, so a chip shrank by two points as you picked it, and
+ * two white pills on the Library shouted over the page's one amber
+ * number. Picked is now a lifted fill and white type inside the
+ * same one-point ring: the state reads, the size holds, and nothing that
+ * is merely a filter outranks the figures the page is about.
+ */
 export function Chip({
   title,
   selected = false,
@@ -42,29 +57,33 @@ export function Chip({
   onImage = false,
   bare = false,
 }: Props) {
+  const tint = selected ? COLORS.white : COLORS.lightGrey;
   return (
-    <Pressable
+    <Touchable
       onPress={onPress}
       disabled={!onPress}
+      haptic="tap"
+      hitSlop={
+        quiet ? undefined : { top: SLOP, bottom: SLOP, left: 2, right: 2 }
+      }
+      accessibilityRole={onPress ? 'button' : 'text'}
+      accessibilityState={onPress ? { selected } : undefined}
       style={[
         styles.chip,
         quiet
           ? styles.quiet
-          : selected
-            ? styles.solid
-            : bare
-              ? styles.bare
-              : onImage
-                ? styles.onImage
-                : styles.outline,
+          : [
+              bare ? styles.bare : onImage ? styles.onImage : styles.outline,
+              selected && (onImage || bare ? styles.onImageOn : styles.on),
+            ],
       ]}
     >
       {iconName && iconType ? (
         <DynamicIcon
           type={iconType}
           name={iconName}
-          size={16}
-          color={selected ? COLORS.darkGrey : COLORS.lightGrey}
+          size={ICON.md - 2}
+          color={tint}
         />
       ) : null}
       <Text
@@ -73,10 +92,11 @@ export function Chip({
           quiet && styles.quietTitle,
           selected && styles.selectedTitle,
         ]}
+        maxFontSizeMultiplier={FONT_SCALE.label}
       >
         {title}
       </Text>
-    </Pressable>
+    </Touchable>
   );
 }
 
@@ -85,15 +105,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.xs + 2,
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.pill,
+    minHeight: DRAWN,
     paddingHorizontal: 14,
-    paddingVertical: SPACING.sm,
+    // Every state carries the same ring, coloured or clear, so choosing
+    // a chip never changes its size.
+    borderWidth: 1,
+    borderColor: 'transparent',
     overflow: 'hidden',
   },
-  solid: { backgroundColor: COLORS.white },
-  outline: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
+  outline: { borderColor: COLORS.strokeStrong },
+  /** Picked, on the page: a lifted fill inside the same ring. */
+  on: {
+    backgroundColor: alpha(COLORS.white, 0.12),
     borderColor: COLORS.strokeStrong,
   },
   onImage: {
@@ -107,21 +131,24 @@ const styles = StyleSheet.create({
      * far better than that.
      */
     backgroundColor: COLORS.plate,
-    borderWidth: 1,
     borderColor: COLORS.strokeOnImage,
   },
+  /**
+   * Picked, over artwork: the plate stays — a 12% lift is invisible
+   * over a bright frame — and the ring goes white.
+   */
+  onImageOn: { borderColor: COLORS.white },
   bare: { backgroundColor: COLORS.plate },
   quiet: {
-    backgroundColor: 'transparent',
     borderColor: COLORS.stroke,
-    borderWidth: 1,
-    paddingHorizontal: 10,
+    minHeight: 0,
+    paddingHorizontal: SPACING.sm2,
     paddingVertical: 5,
   },
   title: {
     ...TYPE.labelSmall,
     color: COLORS.lightGrey,
   },
-  selectedTitle: { color: COLORS.darkGrey },
-  quietTitle: { fontSize: 11, color: COLORS.mediumGrey },
+  selectedTitle: { color: COLORS.white },
+  quietTitle: { ...TYPE.labelTiny, color: COLORS.mediumGrey },
 });

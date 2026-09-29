@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { planColour } from '@/lib/planColours';
@@ -72,6 +73,23 @@ export interface Landed {
   finishedAt: number;
 }
 
+/**
+ * A flag's label box, and the room it needs from its neighbour.
+ *
+ * Staggering used to kick in when two flags stood under 24% of the
+ * strip apart — about 61pt on a phone — while each label is 84pt wide,
+ * so neighbours between 61 and 84pt apart printed through each other.
+ * The threshold is now the label's own width measured against the
+ * strip's real one.
+ */
+const LABEL_WIDTH = 84;
+const LABEL_GAP = 4;
+/** Until the strip has measured itself: a small phone's column. */
+const ASSUMED_WIDTH = 320;
+
+/** The labels sit in a drawn chart; they grow a little, then stop. */
+const CHART_SCALE = 1.25;
+
 const dateLabel = (ms: number) =>
   new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
@@ -84,13 +102,14 @@ const dateLabel = (ms: number) =>
  */
 function layFlags(
   marks: { key: number; date: number }[],
-  at: (t: number) => number
+  at: (t: number) => number,
+  clear: number
 ) {
   let lastNear = -100;
   let lastFar = -100;
   return marks.map(({ key, date }) => {
     const pct = at(date);
-    const far = pct - lastNear < 24 && pct - lastFar >= 24;
+    const far = pct - lastNear < clear && pct - lastFar >= clear;
     if (far) lastFar = pct;
     else lastNear = pct;
     return { key, pct, far };
@@ -101,14 +120,16 @@ function layFlags(
 function layAll(
   landed: Landed[],
   near: ScheduledItem[],
-  at: (t: number) => number
+  at: (t: number) => number,
+  clear: number
 ) {
   const rows = layFlags(
     [
       ...landed.map((item) => ({ key: item.id, date: item.finishedAt })),
       ...near.map((item) => ({ key: item.id, date: item.finishAt })),
     ],
-    at
+    at,
+    clear
   );
   return {
     landed: landed.map((item, index) => ({ item, ...rows[index] })),
@@ -125,6 +146,7 @@ export function HorizonStrip({
   now,
   troubled = [],
   landed = [],
+  countBeyond = true,
 }: {
   scheduled: ScheduledItem[];
   now: number;
@@ -135,8 +157,18 @@ export function HorizonStrip({
    * much past a month is allowed to carry.
    */
   landed?: Landed[];
+  /**
+   * Say how many landings the strip could not draw. Off where a list
+   * right under the strip already names them and counts its own rest —
+   * two "+N more" lines on one card, with two different Ns, was the
+   * card contradicting itself.
+   */
+  countBeyond?: boolean;
 }) {
+  const [width, setWidth] = useState(0);
   if (scheduled.length === 0) return null;
+  /** How far apart, in percent of the strip, two labels must stand. */
+  const clear = ((LABEL_WIDTH + LABEL_GAP) / (width || ASSUMED_WIDTH)) * 100;
 
   const recent = landed
     .filter(
@@ -175,7 +207,7 @@ export function HorizonStrip({
   /** TODAY's label reads rightwards from its tick, so it needs no room. */
   const todayAt = Math.min(88, Math.max(0, ((now - start) / span) * 100));
 
-  const marks = layAll(recent, near, at);
+  const marks = layAll(recent, near, at, clear);
 
   /** What the strip could not draw, said rather than dropped. */
   const rest = beyond.length
@@ -200,13 +232,18 @@ export function HorizonStrip({
 
   return (
     <View accessible accessibilityRole="image" accessibilityLabel={summary}>
-      <View style={styles.strip}>
+      <View
+        style={styles.strip}
+        onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
+      >
         {/* TODAY, standing on the spine rather than floating at the
             left — with stamps behind it, the left edge is three weeks
             ago and labelling it today would be the one outright lie
             the picture could tell. */}
         <View style={[styles.today, { left: `${todayAt}%` }]}>
-          <Text style={styles.todayText}>TODAY</Text>
+          <Text style={styles.todayText} maxFontSizeMultiplier={CHART_SCALE}>
+            TODAY
+          </Text>
           <View style={styles.todayTick} />
         </View>
 
@@ -220,7 +257,11 @@ export function HorizonStrip({
           >
             <View style={styles.troubleMark}>
               <View style={styles.troubleDiamond} />
-              <Text style={styles.troubleDate} numberOfLines={1}>
+              <Text
+                style={styles.troubleDate}
+                numberOfLines={1}
+                maxFontSizeMultiplier={CHART_SCALE}
+              >
                 {dateLabel(t.deadline)}
               </Text>
             </View>
@@ -259,10 +300,18 @@ export function HorizonStrip({
               <Ionicons name="checkmark" size={11} color={COLORS.navy} />
             </View>
             <View style={[styles.stem, far && styles.stemFar]} />
-            <Text style={styles.flagDate} numberOfLines={1}>
+            <Text
+              style={styles.flagDate}
+              numberOfLines={1}
+              maxFontSizeMultiplier={CHART_SCALE}
+            >
               {dateLabel(item.finishedAt)}
             </Text>
-            <Text style={styles.flagName} numberOfLines={1}>
+            <Text
+              style={styles.flagName}
+              numberOfLines={1}
+              maxFontSizeMultiplier={CHART_SCALE}
+            >
               {item.name}
             </Text>
           </View>
@@ -275,17 +324,25 @@ export function HorizonStrip({
               <View style={styles.slotNotch} />
             </View>
             <View style={[styles.stem, far && styles.stemFar]} />
-            <Text style={styles.flagDate} numberOfLines={1}>
+            <Text
+              style={styles.flagDate}
+              numberOfLines={1}
+              maxFontSizeMultiplier={CHART_SCALE}
+            >
               {dateLabel(item.finishAt)}
             </Text>
-            <Text style={styles.flagName} numberOfLines={1}>
+            <Text
+              style={styles.flagName}
+              numberOfLines={1}
+              maxFontSizeMultiplier={CHART_SCALE}
+            >
               {item.name}
             </Text>
           </View>
         ))}
       </View>
 
-      {beyond.length > 0 && (
+      {countBeyond && beyond.length > 0 && (
         <Text style={styles.beyond}>
           + {beyond.length} more after that, the last around{' '}
           {dateLabel(scheduled[scheduled.length - 1].finishAt)}
@@ -298,9 +355,10 @@ export function HorizonStrip({
 const styles = StyleSheet.create({
   /**
    * Absolute geography: the spine at a fixed height, everything else
-   * hung off it by percentage. Tall enough for the far label line.
+   * hung off it by percentage. Tall enough for the far label line with
+   * its words at the most they are allowed to grow.
    */
-  strip: { height: 108, position: 'relative' },
+  strip: { height: 116, position: 'relative' },
   /** Anchored on its tick, reading rightwards — see `trouble`. */
   today: { position: 'absolute', top: 8, width: 80, marginLeft: -1 },
   todayText: { ...TYPE.micro, color: COLORS.accent, letterSpacing: 1 },
@@ -369,15 +427,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 2,
   },
+  /** A game's name, said as a name: sentence case, not tracked caps. */
   flagName: {
-    ...TYPE.micro,
+    ...TYPE.fine,
     color: COLORS.mediumGrey,
     textAlign: 'center',
   },
 
   trouble: { position: 'absolute', top: 16, width: 120, marginLeft: -6 },
   troubleMark: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  troubleDate: { ...TYPE.micro, color: COLORS.coral },
+  troubleDate: { ...TYPE.micro, color: COLORS.coralText },
   troubleDiamond: {
     width: 8,
     height: 8,
@@ -399,5 +458,5 @@ const styles = StyleSheet.create({
    * a sentence printed through a game's name is worse than no
    * sentence.
    */
-  beyond: { ...TYPE.micro, color: COLORS.mediumGrey, marginTop: SPACING.sm },
+  beyond: { ...TYPE.caption, color: COLORS.mediumGrey, marginTop: SPACING.sm },
 });
