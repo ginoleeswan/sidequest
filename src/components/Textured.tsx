@@ -1,7 +1,6 @@
-import MaskedView from '@react-native-masked-view/masked-view';
 import { Asset } from 'expo-asset';
-import { LinearGradient } from 'expo-linear-gradient';
 import {
+  Image,
   ImageBackground,
   Platform,
   StyleSheet,
@@ -9,9 +8,6 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
-
-import { COLORS } from '@/styles/colors';
 
 const NOISE = require('../../assets/images/noise.png');
 
@@ -32,6 +28,7 @@ const NOISE = require('../../assets/images/noise.png');
  * `scripts/make-grain.mjs`; rerun that rather than editing the files.
  */
 const GRAIN = require('../../assets/images/grain.png');
+const LAMP = require('../../assets/images/lamp.png');
 
 /**
  * How far the grain takes to reach full strength at the top of a page.
@@ -179,76 +176,38 @@ export function Textured({ children, style, fill = false }: Props) {
  * before the first fold. They sit under the scroller, so the page
  * moves across the light rather than the light moving with the page.
  *
+ * A picture, not SVG: radial gradients are painted on the main thread
+ * each time a page mounts, which on a phone is during the splash and
+ * during every push. Drawn by `scripts/make-lamp.mjs`.
+ *
  * Native only. On the web the page's first rows have to match the
  * browser's own chrome to the unit (see `CHROME_BRIDGE`), and a glow
  * there would draw the line the bridge exists to remove.
  */
 function Lamplight() {
   return (
-    <View style={styles.lamp} pointerEvents="none">
-      <Svg width="100%" height="100%">
-        <Defs>
-          <RadialGradient
-            id="lamp-amber"
-            cx="12%"
-            cy="0%"
-            rx="80%"
-            ry="95%"
-            fx="12%"
-            fy="0%"
-          >
-            <Stop offset="0" stopColor={COLORS.accent} stopOpacity={0.085} />
-            <Stop offset="0.55" stopColor={COLORS.accent} stopOpacity={0.025} />
-            <Stop offset="1" stopColor={COLORS.accent} stopOpacity={0} />
-          </RadialGradient>
-          <RadialGradient
-            id="lamp-violet"
-            cx="100%"
-            cy="8%"
-            rx="70%"
-            ry="80%"
-            fx="100%"
-            fy="8%"
-          >
-            <Stop offset="0" stopColor={COLORS.violet} stopOpacity={0.07} />
-            <Stop offset="1" stopColor={COLORS.violet} stopOpacity={0} />
-          </RadialGradient>
-        </Defs>
-        <Rect width="100%" height="100%" fill="url(#lamp-violet)" />
-        <Rect width="100%" height="100%" fill="url(#lamp-amber)" />
-      </Svg>
+    <View
+      style={styles.lamp}
+      pointerEvents="none"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <Image
+        source={LAMP}
+        style={StyleSheet.absoluteFill}
+        resizeMode="stretch"
+      />
     </View>
   );
 }
-
-/** The fade that `GrainScrim` masks with, as colours for a native mask. */
-const NATIVE_FADES = {
-  bottom: {
-    colors: ['rgba(0,0,0,0)', 'rgba(0,0,0,1)', 'rgba(0,0,0,1)'],
-    locations: [0, 0.85, 1],
-  },
-  top: {
-    colors: ['rgba(0,0,0,1)', 'rgba(0,0,0,1)', 'rgba(0,0,0,0)'],
-    locations: [0, 0.25, 1],
-  },
-  band: {
-    colors: [
-      'rgba(0,0,0,0)',
-      'rgba(0,0,0,1)',
-      'rgba(0,0,0,1)',
-      'rgba(0,0,0,0)',
-    ],
-    locations: [0, 0.2, 0.62, 1],
-  },
-} as const;
 
 /**
  * Grain that fades in with a scrim. A smooth gradient melting into the
  * page's textured background gives itself away at the hand-off - the
  * gradient is clean while the page is grainy. Masking the same noise tile
  * with a fade dithers the blend so the texture arrives with the colour.
- * A CSS mask on the web, a layer mask on native — the same pair `Melt`
- * uses, for the same reason.
+ * Web-only: the mask is CSS, and on native the page's grain shows
+ * through the dissolve without the cost of a layer mask per frame.
  */
 export function GrainScrim({
   style,
@@ -262,31 +221,12 @@ export function GrainScrim({
    */
   solidAt?: 'top' | 'bottom' | 'band';
 }) {
-  if (Platform.OS !== 'web') {
-    // The same fade as a layer mask. Without it every native hero ended
-    // in a clean gradient laid on a grainy page, and the hand-off was
-    // the one place on the screen where the texture visibly stopped.
-    const fade = NATIVE_FADES[solidAt];
-    return (
-      <MaskedView
-        style={[style, styles.noInteraction]}
-        pointerEvents="none"
-        maskElement={
-          <LinearGradient
-            colors={fade.colors}
-            locations={fade.locations}
-            style={StyleSheet.absoluteFill}
-          />
-        }
-      >
-        <ImageBackground
-          source={GRAIN}
-          resizeMode="repeat"
-          style={StyleSheet.absoluteFill}
-        />
-      </MaskedView>
-    );
-  }
+  // Web only. On native this was a layer mask, and a masked layer is
+  // re-rendered offscreen on every frame anything around it moves — the
+  // game page's masthead, the prompt band and every category hero paid
+  // it on each scroll frame, for a dither the page's own grain showing
+  // through the dissolve already gives.
+  if (Platform.OS !== 'web') return null;
   const uri = Asset.fromModule(NOISE).uri;
   const fade =
     solidAt === 'bottom'

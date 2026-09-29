@@ -120,8 +120,10 @@ export function CoverImage({
     mediaUri(fallbackUri, SLOT_WIDTH[size]),
   ].filter((candidate): candidate is string => Boolean(candidate));
   const src = candidates.find((candidate) => !failed.has(candidate)) ?? null;
-  // A thumbnail is already the small cut; a preview of it is itself.
-  const preview = src && size !== 'thumb' ? previewUri(src) : null;
+  // Only for the big frames. On a shelf of tiles a preview doubled every
+  // request and every decode for a picture that small; a hero is where
+  // the wait is long enough to be seen.
+  const preview = src && size === 'hero' ? previewUri(src) : null;
 
   if (!src) {
     return (

@@ -23,11 +23,42 @@ const KEY = 'sidequest.query-cache.v1';
 export const MAX_AGE = 24 * 60 * 60 * 1000;
 
 /**
- * Roughly a megabyte of JSON. Comfortably inside every browser's quota
- * alongside a large library, and enough for the shelves someone actually
- * scrolls.
+ * A third of a megabyte of JSON: the small, valuable queries fit easily,
+ * and the synchronous write stays short enough not to be felt.
  */
-const MAX_BYTES = 1_000_000;
+const MAX_BYTES = 350_000;
+
+/**
+ * What is worth carrying across a launch at all.
+ *
+ * Everything was, and that was the cost the whole app paid: the cache
+ * is written to SQLite synchronously on the JS thread, every couple of
+ * seconds while anything loads, and read back and parsed before the
+ * first screen. A megabyte of it meant a stall every two seconds and a
+ * heavier launch under the splash — the app felt slow everywhere. The
+ * things worth restoring are small: the artwork answers that let a
+ * masthead open on its logo, the records a tapped game opens with, the
+ * shelves Home paints first. Infinite browse pages, search results,
+ * screenshots, streams and trailers refetch cheaply and are left out.
+ */
+const PERSISTED = new Set([
+  'art',
+  'game',
+  'shelf',
+  'personal',
+  'stage-week',
+  'out-today',
+  'creators',
+]);
+
+export const dehydrateOptions = {
+  shouldDehydrateQuery: (query: {
+    queryKey: readonly unknown[];
+    state: { status: string };
+  }) =>
+    query.state.status === 'success' &&
+    PERSISTED.has(String(query.queryKey[0])),
+};
 
 /**
  * What is worth keeping when not everything fits, best first.
@@ -91,7 +122,9 @@ export const persister = createSyncStoragePersister({
    */
   storage: kv,
   key: KEY,
-  throttleTime: 2000,
+  // Every write is synchronous on the JS thread; fewer of them is the
+  // difference between a cache and a metronome of dropped frames.
+  throttleTime: 5000,
   serialize: (client: PersistedClient) => fitWithin(client, MAX_BYTES),
   deserialize: (cached: string) =>
     cached ? (JSON.parse(cached) as PersistedClient) : (undefined as never),

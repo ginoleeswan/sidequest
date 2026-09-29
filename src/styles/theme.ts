@@ -192,9 +192,11 @@ export const LAYOUT = {
  * and the web was already reading it as CSS.
  */
 export const SHADOW = {
+  // One layer, not a contact shadow and an ambient one. Every outset box
+  // shadow on iOS is its own masked layer, re-rendered offscreen when
+  // anything above it moves; two per card doubled that on every scroll.
   card: {
-    boxShadow:
-      '0 1px 2px rgba(9,12,19,0.30), 0 10px 24px -6px rgba(9,12,19,0.45)',
+    boxShadow: '0 8px 20px -6px rgba(9,12,19,0.5)',
   },
   hero: {
     boxShadow:
@@ -218,6 +220,14 @@ export const SHADOW = {
  * follows the radius without a view of its own.
  */
 const EDGE_LIGHT = 'inset 0 1px 0 rgba(255,255,255,0.07)';
+
+/**
+ * The same light as a border colour, for surfaces that repeat. An inset
+ * shadow is drawn as an image per view; a brighter top border is a
+ * colour on a layer the view already has. Lists and panels use this;
+ * the handful of floating surfaces keep the inset.
+ */
+const TOP_EDGE = 'rgba(255,255,255,0.13)';
 
 /**
  * The same light, falling across the face: a few per cent at the top,
@@ -255,7 +265,8 @@ export const MATERIAL = {
     backgroundColor: RAISED_FILL,
     borderWidth: 1,
     borderColor: COLORS.stroke,
-    boxShadow: `${EDGE_LIGHT}, ${SHADOW.card.boxShadow}`,
+    borderTopColor: TOP_EDGE,
+    boxShadow: SHADOW.card.boxShadow,
     ...Platform.select<ViewStyle>({
       web: {},
       default: { experimental_backgroundImage: SHEEN },
@@ -270,7 +281,7 @@ export const MATERIAL = {
     backgroundColor: RAISED_FILL,
     borderWidth: 1,
     borderColor: COLORS.stroke,
-    boxShadow: `${EDGE_LIGHT}, 0 1px 2px rgba(9,12,19,0.28)`,
+    borderTopColor: TOP_EDGE,
   },
   /** Just the lit edge, for a surface that already has its own depth. */
   edge: { boxShadow: EDGE_LIGHT },
