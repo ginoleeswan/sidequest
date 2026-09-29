@@ -10,7 +10,6 @@ import {
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import {
   DESK_BAND,
@@ -66,27 +65,32 @@ const DESK_RAIL = 340;
 const PULSE_STEP = 1200;
 const PULSE_LOW = 0.55;
 
-/** Pulsing placeholder block — the atom every skeleton is built from. */
-export function Skeleton({
-  style,
-}: {
-  style?: ViewStyle | (ViewStyle | undefined)[];
-}) {
-  const opacity = useAnimatedValue(PULSE_LOW);
-  const reduced = useReducedMotion();
+/**
+ * One breath for every bone on screen.
+ *
+ * Each bone used to run its own loop: a home page loading was sixty
+ * animations started in the same frame the splash curtain was trying
+ * to leave in, and sixty clocks that drifted out of phase within a few
+ * seconds, so the page shimmered unevenly instead of breathing. One
+ * value, one loop, read by all of them — started by the first bone to
+ * mount and stopped when the last one goes.
+ */
+const pulse = new Animated.Value(PULSE_LOW);
+let breathing: Animated.CompositeAnimation | null = null;
+let bones = 0;
 
-  useEffect(() => {
-    // A pulse is decorative: without it the bones still say "loading".
-    if (reduced) return;
-    const loop = Animated.loop(
+function holdBreath(): () => void {
+  bones += 1;
+  if (!breathing) {
+    breathing = Animated.loop(
       Animated.sequence([
-        Animated.timing(opacity, {
+        Animated.timing(pulse, {
           toValue: 1,
           duration: PULSE_STEP,
           easing: EASING.standard,
           useNativeDriver: true,
         }),
-        Animated.timing(opacity, {
+        Animated.timing(pulse, {
           toValue: PULSE_LOW,
           duration: PULSE_STEP,
           easing: EASING.standard,
@@ -94,11 +98,34 @@ export function Skeleton({
         }),
       ])
     );
-    loop.start();
-    return () => loop.stop();
-  }, [opacity, reduced]);
+    breathing.start();
+  }
+  return () => {
+    bones -= 1;
+    if (bones === 0 && breathing) {
+      breathing.stop();
+      breathing = null;
+      pulse.setValue(PULSE_LOW);
+    }
+  };
+}
 
-  return <Animated.View style={[styles.block, style, { opacity }]} />;
+/** Pulsing placeholder block — the atom every skeleton is built from. */
+export function Skeleton({
+  style,
+}: {
+  style?: ViewStyle | (ViewStyle | undefined)[];
+}) {
+  const reduced = useReducedMotion();
+
+  // A pulse is decorative: without it the bones still say "loading".
+  useEffect(() => (reduced ? undefined : holdBreath()), [reduced]);
+
+  return (
+    <Animated.View
+      style={[styles.block, style, { opacity: reduced ? PULSE_LOW : pulse }]}
+    />
+  );
 }
 
 /**

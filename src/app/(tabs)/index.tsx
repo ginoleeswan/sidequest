@@ -1162,7 +1162,15 @@ export default function HomeScreen({
               locations={searchOpen ? [0, 0.72, 1] : [0, 0.3, 0.52, 0.78, 1]}
               style={StyleSheet.absoluteFill}
             />
-            <GrainScrim style={StyleSheet.absoluteFill} solidAt="band" />
+            {/* Web only here. On a phone this band sits over the stage's
+                drifting artwork, and a masked layer over moving content
+                is re-rendered offscreen on every frame — the header was
+                paying that for the whole of the splash curtain's exit
+                and every second after. The page's own grain shows
+                through the dissolve instead. */}
+            {Platform.OS === 'web' ? (
+              <GrainScrim style={StyleSheet.absoluteFill} solidAt="band" />
+            ) : null}
           </Animated.View>
           <Animated.View
             style={[
