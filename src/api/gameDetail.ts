@@ -1,4 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query';
+import { Image } from 'expo-image';
+import { Dimensions } from 'react-native';
 
 import {
   getGame,
@@ -7,9 +9,11 @@ import {
   getScreenshots,
   getStoreLinks,
 } from './rawg';
-import { artQuery } from './art';
+import { artQuery, type ArtAsset } from './art';
 import { queryKeys } from './queryClient';
 import type { Game, GameDetail, Movie, Screenshot, StoreLink } from './types';
+import { TITLE_SLOT } from '@/lib/detailHero';
+import { LAYOUT, SPACING } from '@/styles/theme';
 
 /**
  * A game's detail is near-static. Five minutes was the app-wide default,
@@ -159,8 +163,32 @@ export function prefetchGame(queryClient: QueryClient, game: Game): void {
   void queryClient.prefetchQuery(gameQuery(game.id));
   void queryClient.prefetchQuery(gameMediaQuery(game.id));
   // The artwork too: it is edge-cached JSON, and the logo in it is the
-  // first thing the masthead wants to draw.
-  if (game.slug) void queryClient.prefetchQuery(artQuery(game));
+  // first thing the masthead wants to draw. And the logo's file with
+  // it: knowing a mark exists is not having it, and the masthead would
+  // otherwise start the download only once the page was open.
+  if (game.slug)
+    void queryClient
+      .fetchQuery(artQuery(game))
+      .then((art) => {
+        if (art.logo) void Image.prefetch(mastheadLogoUri(art.logo));
+      })
+      .catch(() => {});
+}
+
+/**
+ * The cut of a logo the phone masthead will ask for, worked out the
+ * way the masthead works it out: the mark fitted into the title slot
+ * across the page's column, and the small file when that is enough.
+ * Mirrors `TitleLogo` and the game page; a guess that is wrong only
+ * costs a prefetch the page does not use.
+ */
+function mastheadLogoUri(logo: ArtAsset): string {
+  const column =
+    Math.min(Dimensions.get('window').width, LAYOUT.maxContentWidth) -
+    SPACING.lg * 2;
+  const aspect = logo.width / logo.height;
+  const width = Math.min(TITLE_SLOT * aspect, column);
+  return width * 2 <= 480 ? logo.thumb : logo.url;
 }
 
 /**

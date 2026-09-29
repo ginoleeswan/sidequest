@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
 import { TitleLogo } from '../TitleLogo';
@@ -44,25 +44,45 @@ describe('the title treatment', () => {
   });
 
   /**
-   * Knowing a mark exists and having it are half a second to several
-   * seconds apart: the manifest is edge-cached JSON, the mark is a
-   * transparent PNG from a third-party CDN. Dropping the words the
-   * moment the JSON landed left the game page's title slot empty for
-   * that whole window — it opened, said the game's name, and then
-   * unsaid it.
+   * The typed title and the publisher's mark are two shapes for the
+   * same word, and swapping one for the other read on a device as the
+   * page changing its mind. So while the lookup is out the slot waits,
+   * quietly, and the name is only set if the wait runs long.
    */
-  it('keeps the typed name up until the mark has actually arrived', async () => {
+  it('holds the slot quiet while the lookup is out, then sets the name', async () => {
+    jest.useFakeTimers();
+    try {
+      await render(
+        <TitleLogo logo={undefined} name="Hades" maxWidth={300} maxHeight={80}>
+          <Text>Hades</Text>
+        </TitleLogo>
+      );
+      expect(screen.getByText('Hades')).not.toBeVisible();
+      // The wait runs out, then the name fades up.
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      await act(async () => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(screen.getByText('Hades')).toBeVisible();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('shows the mark without ever typing the name when it arrives in time', async () => {
     await render(
       <TitleLogo logo={logo} name="Hades" maxWidth={300} maxHeight={80}>
         <Text>Hades</Text>
       </TitleLogo>
     );
-    // The manifest has landed — there IS a logo — and the file has not.
-    expect(screen.getByText('Hades')).toBeTruthy();
-
-    const image = image_of();
-    await fireEvent(image as never, 'load', { nativeEvent: { source: {} } });
-    expect(screen.queryByText('Hades')).toBeNull();
+    expect(screen.getByText('Hades')).not.toBeVisible();
+    await fireEvent(image_of(), 'load', { nativeEvent: { source: {} } });
+    expect(screen.getByText('Hades')).not.toBeVisible();
+    expect(screen.getByTestId('title-logo').props.accessibilityLabel).toBe(
+      'Hades'
+    );
   });
 
   it('goes back to the typed name if the file will not load', async () => {
@@ -71,17 +91,13 @@ describe('the title treatment', () => {
         <Text>Hades</Text>
       </TitleLogo>
     );
-    await fireEvent(image_of() as never, 'error', {
-      nativeEvent: { error: 'x' },
-    });
-    expect(screen.getByText('Hades')).toBeTruthy();
+    await fireEvent(image_of(), 'error', { nativeEvent: { error: 'x' } });
+    expect(screen.getByText('Hades')).toBeVisible();
     expect(screen.queryByTestId('title-logo')).toBeNull();
   });
 });
 
-/** The mark itself, whichever child of the box it happens to be. */
-function image_of() {
-  const box = screen.getByTestId('title-logo');
-  const kids = box.children as never[];
-  return kids[kids.length - 1];
+/** The mark itself. */
+function image_of(): never {
+  return screen.getByTestId('title-logo-image') as never;
 }

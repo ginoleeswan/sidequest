@@ -86,7 +86,11 @@ export function artQuery(
   return {
     queryKey: ['art', game.slug] as const,
     queryFn: () => fetchArt(game, steam),
-    // Artwork changes about never.
+    // Artwork changes about never. Kept as long as it is fresh, too:
+    // under the default half-hour collection a logo seen this morning
+    // was gone from the persisted cache by the evening, and the
+    // masthead had to look it up — and type the name — all over again.
     staleTime: 7 * 24 * 60 * 60 * 1000,
+    gcTime: 7 * 24 * 60 * 60 * 1000,
   };
 }
