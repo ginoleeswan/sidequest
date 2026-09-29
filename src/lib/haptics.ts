@@ -26,3 +26,37 @@ export function tap(): void {
     .then((haptics) => haptics.selectionAsync())
     .catch(() => {});
 }
+
+/**
+ * The small bump of something landing: a save, a cap bottoming out, a
+ * duration committed. Lighter than `celebrate` because it happens often.
+ */
+export function impact(): void {
+  if (Platform.OS === 'web') return;
+  import('expo-haptics')
+    .then((haptics) => haptics.impactAsync(haptics.ImpactFeedbackStyle.Light))
+    .catch(() => {});
+}
+
+/**
+ * The one feedback that asks for attention: an act that removes
+ * something. Letting a game go is allowed to be felt.
+ */
+export function warn(): void {
+  if (Platform.OS === 'web') return;
+  import('expo-haptics')
+    .then((haptics) =>
+      haptics.notificationAsync(haptics.NotificationFeedbackType.Warning)
+    )
+    .catch(() => {});
+}
+
+export type Haptic = 'tap' | 'impact' | 'celebrate' | 'warn';
+
+/** Fire a haptic by name, for primitives that take one as a prop. */
+export function haptic(kind: Haptic | undefined): void {
+  if (kind === 'tap') tap();
+  else if (kind === 'impact') impact();
+  else if (kind === 'celebrate') celebrate();
+  else if (kind === 'warn') warn();
+}
