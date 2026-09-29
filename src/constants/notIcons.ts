@@ -29,4 +29,11 @@ export const NOT_ICONS = [
   // window.location, stubbed in the supabase client's tests. There is
   // no map in this app and never has been.
   'location',
+  // Touchable's props: `feedback="scale"` and `hitSlop="text"` name a
+  // kind of press and a kind of slop, not the scale or text glyphs.
+  'scale',
+  'text',
+  // A tile's custom accessibility action, read by VoiceOver as "Save".
+  // The drawn save control is the bookmark glyph.
+  'save',
 ] as const;
