@@ -117,7 +117,12 @@ const PER_REASON = { fresh: 2, short: 2 } as const;
 export const STAGE_BOUNDS = {
   min: 380,
   max: 620,
-  ratio: 0.66,
+  /**
+   * Six tenths of a phone. At two thirds the stage and the row of doors
+   * under it filled the first screen, and the row this app exists for —
+   * games that fit the evening — started under the tab bar.
+   */
+  ratio: 0.6,
   /**
    * Taller on a desk than it was. At 0.52 of a 900px window the stage
    * was a 2.6:1 letterbox - the art's subject cropped out top and

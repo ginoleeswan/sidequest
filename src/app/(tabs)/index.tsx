@@ -87,7 +87,7 @@ import {
 import { useHydrated } from '@/hooks/useHydrated';
 import { useStage } from '@/hooks/useStage';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
-import { STAGE_BOUNDS, stageHeight as stageHeightFor } from '@/lib/stage';
+import { stageHeight as stageHeightFor } from '@/lib/stage';
 import { useOnline } from '@/lib/network';
 import { useDurations } from '@/lib/durations';
 import { useLibrary } from '@/lib/library';
@@ -136,17 +136,6 @@ const LIST_TUNING =
       };
 
 const FEATURED_COUNT = 5;
-
-/**
- * The phone's stage, as a share of the screen.
- *
- * Two thirds made the first screen one picture and nothing else: the
- * row the app exists for — "Finish it this weekend" — started about
- * 716 points down, under the tab bar. Six tenths leaves the picture a
- * picture and puts that row's header and its first frames above the
- * fold, which is what says there is more here.
- */
-const COMPACT_STAGE_RATIO = 0.6;
 
 /** Sentinel filling an incomplete final grid row so tiles keep their width. */
 const SPACER = { spacer: true } as const;
@@ -421,14 +410,7 @@ export default function HomeScreen({
     short: quickWins,
     enabled: isHome,
   });
-  const stageHeight = isExpanded
-    ? stageHeightFor(windowHeight, true)
-    : Math.round(
-        Math.min(
-          Math.max(windowHeight * COMPACT_STAGE_RATIO, STAGE_BOUNDS.min),
-          STAGE_BOUNDS.max
-        )
-      );
+  const stageHeight = stageHeightFor(windowHeight, isExpanded);
 
   /** No extra request: the right-length games out of what is loaded. */
   const lengthShelf = useMemo(

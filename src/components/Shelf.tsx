@@ -14,7 +14,7 @@ const shortDate = (iso: string | null | undefined) =>
   iso ? calendarDate(iso, 'short').toUpperCase() : undefined;
 
 /** A phone's wide tile: 16:9 at a width that still lets the next one peek. */
-const COMPACT_WIDE = 244;
+const COMPACT_WIDE = LAYOUT.shelfTileWideCompact;
 
 interface Props {
   section: Section;
