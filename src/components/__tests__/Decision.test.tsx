@@ -36,9 +36,32 @@ describe('the decision', () => {
 
   it('becomes the state control once the game is saved', async () => {
     await renderApp(<Decision game={game} />);
-    await fireEvent.press(screen.getByLabelText('Add Celeste to your backlog'));
+    await fireEvent.press(screen.getByLabelText('Want to play'));
     expect(screen.getByLabelText('Remove from Want to play')).toBeTruthy();
     expect(screen.getByText('Start a session')).toBeTruthy();
+  });
+
+  /**
+   * Voice Control acts on the words a reader can see, so the button
+   * must be named by them; the longer sentence is the hint.
+   */
+  it('names its primary by the words on it', async () => {
+    await renderApp(<Decision game={game} />);
+    expect(screen.getByLabelText('Want to play')).toBeTruthy();
+    expect(screen.getByLabelText('Playing it now')).toBeTruthy();
+    expect(screen.getByLabelText('Already finished')).toBeTruthy();
+  });
+
+  /**
+   * Finishing a game that was never saved turns the fresh decision into
+   * a saved one in the same render. The moment has to survive that.
+   */
+  it('celebrates a game marked finished straight from fresh', async () => {
+    await renderApp(<Decision game={game} />);
+    await fireEvent.press(screen.getByLabelText('Already finished'));
+    expect(screen.getByText('CREDITS ROLLED')).toBeTruthy();
+    // Before the count-up's frames outlive the test.
+    screen.unmount();
   });
 
   it('opens on the state control for a game already on the shelf', async () => {

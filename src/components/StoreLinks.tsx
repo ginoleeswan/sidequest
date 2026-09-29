@@ -1,11 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, StyleSheet, Text, View } from 'react-native';
 
+import { Touchable } from './Touchable';
 import type { StoreLink as StoreLinkT, StoreRef } from '@/api/types';
-import { COLORS } from '@/styles/colors';
-import { RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { COLORS, alpha } from '@/styles/colors';
+import { ICON, RADIUS, SPACING, TOUCH } from '@/styles/theme';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
 
 interface Props {
   stores?: StoreRef[];
@@ -48,10 +49,13 @@ export function LinkPill({
 }) {
   const [hovered, setHovered] = useState(false);
   return (
-    <Pressable
+    <Touchable
       onPress={() => openSafely(url)}
       onHoverIn={() => setHovered(true)}
       onHoverOut={() => setHovered(false)}
+      accessibilityRole="link"
+      accessibilityLabel={label}
+      accessibilityHint="Opens in your browser"
       style={[styles.pill, hovered && styles.pillHovered]}
     >
       {/* The mark leads and the arrow is gone. Every pill in this block
@@ -61,13 +65,16 @@ export function LinkPill({
           of an icon on a button. */}
       <Ionicons
         name={icon}
-        size={14}
+        size={ICON.sm}
         color={hovered ? COLORS.white : COLORS.lightGrey}
       />
-      <Text style={[styles.label, hovered && styles.labelHovered]}>
+      <Text
+        style={[styles.label, hovered && styles.labelHovered]}
+        maxFontSizeMultiplier={FONT_SCALE.label}
+      >
         {label}
       </Text>
-    </Pressable>
+    </Touchable>
   );
 }
 
@@ -102,15 +109,19 @@ function LinkRow({
 }) {
   const [hovered, setHovered] = useState(false);
   return (
-    <Pressable
+    <Touchable
       onPress={() => openSafely(url)}
       onHoverIn={() => setHovered(true)}
       onHoverOut={() => setHovered(false)}
+      feedback="tint"
+      accessibilityRole="link"
+      accessibilityLabel={label}
+      accessibilityHint="Opens in your browser"
       style={[styles.rowItem, hovered && styles.rowItemHovered]}
     >
       <Ionicons
         name={icon}
-        size={16}
+        size={ICON.md}
         color={hovered ? COLORS.white : COLORS.lightGrey}
       />
       <Text style={[styles.rowLabel, hovered && styles.labelHovered]}>
@@ -118,10 +129,10 @@ function LinkRow({
       </Text>
       <Ionicons
         name="open-outline"
-        size={13}
+        size={ICON.sm}
         color={hovered ? COLORS.white : COLORS.mediumGrey}
       />
-    </Pressable>
+    </Touchable>
   );
 }
 
@@ -180,11 +191,11 @@ const styles = StyleSheet.create({
   rowItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm + 2,
-    paddingVertical: SPACING.sm + 1,
+    gap: SPACING.sm2,
+    minHeight: TOUCH.min,
     borderRadius: RADIUS.sm,
   },
-  rowItemHovered: { backgroundColor: 'rgba(255,255,255,0.04)' },
+  rowItemHovered: { backgroundColor: alpha(COLORS.white, 0.04) },
   rowLabel: { ...TYPE.body, color: COLORS.lightGrey, flex: 1 },
   pill: {
     flexDirection: 'row',
@@ -192,11 +203,13 @@ const styles = StyleSheet.create({
     gap: 6,
     borderWidth: 1,
     borderColor: COLORS.strokeStrong,
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.pill,
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+    // A thumb's height, drawn: at 33pt these were the smallest targets
+    // on the page, and they are the ones that leave the app.
+    minHeight: TOUCH.min,
   },
-  pillHovered: { backgroundColor: 'rgba(255,255,255,0.08)' },
+  pillHovered: { backgroundColor: alpha(COLORS.white, 0.08) },
   label: {
     ...TYPE.labelTiny,
     color: COLORS.lightGrey,

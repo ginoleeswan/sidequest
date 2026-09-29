@@ -5,7 +5,7 @@ import { Platform, StyleSheet, Text } from 'react-native';
 import { Mark } from './Mark';
 import { ScaleButton } from './ScaleButton';
 import { COLORS } from '@/styles/colors';
-import { SPACING } from '@/styles/theme';
+import { SPACING, TOUCH } from '@/styles/theme';
 import { OVER_IMAGE, WORDMARK } from '@/styles/typography';
 
 /**
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.sm,
-    height: 40,
+    height: TOUCH.min,
   },
   /**
    * The home page's exact lockup — Mark at 20, wordmark at h1 in
@@ -115,14 +115,14 @@ const styles = StyleSheet.create({
    */
   brandMark: { ...WORDMARK },
   button: {
-    width: 40,
-    height: 40,
+    width: TOUCH.min,
+    height: TOUCH.min,
     alignItems: 'center',
     justifyContent: 'center',
     // The pill, moved in from the page wrappers: a floating chevron
     // needs a ground to read as a control, and it is the only branch
     // of this component that does.
-    borderRadius: 20,
+    borderRadius: TOUCH.min / 2,
     backgroundColor: COLORS.plate,
     borderWidth: 1,
     borderColor: COLORS.strokeOnImage,
