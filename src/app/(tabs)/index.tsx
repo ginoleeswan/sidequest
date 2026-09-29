@@ -109,6 +109,7 @@ import {
   withinLength,
   withoutOwned,
 } from '@/lib/homeFeed';
+import { markScreenReady } from '@/lib/launch';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useDebounced } from '@/hooks/useDebounced';
 import { alpha, COLORS } from '@/styles/colors';
@@ -962,7 +963,8 @@ export default function HomeScreen({
   return (
     <Textured style={styles.background}>
       <PageTitle>{pageTitle}</PageTitle>
-      <View style={styles.compactShell}>
+      {/* Its first layout is the launch curtain's cue: see lib/launch. */}
+      <View style={styles.compactShell} onLayout={markScreenReady}>
         <Reveal
           // The landing has nothing to load: its rows are on the device
           // and its rail is what the storefront already fetched.

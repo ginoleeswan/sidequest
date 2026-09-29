@@ -55,4 +55,21 @@ describe('the launch curtain queue', () => {
     jest.advanceTimersByTime(100);
     expect(run).not.toHaveBeenCalled();
   });
+
+  it('starts the run once the first screen is laid out', () => {
+    const { markScreenReady, whenScreenReady } = load();
+    const start = jest.fn();
+    whenScreenReady(start, 900);
+    expect(start).not.toHaveBeenCalled();
+    markScreenReady();
+    expect(start).toHaveBeenCalledTimes(1);
+  });
+
+  it('starts it anyway if no screen reports — a deep link skips Home', () => {
+    const { whenScreenReady } = load();
+    const start = jest.fn();
+    whenScreenReady(start, 900);
+    jest.advanceTimersByTime(900);
+    expect(start).toHaveBeenCalledTimes(1);
+  });
 });
