@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { CoverImage } from './CoverImage';
 import { PlatformIcons } from './PlatformIcons';
@@ -418,7 +418,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.stroke,
     marginBottom: SPACING.xs,
-    ...SHADOW.card,
+    /*
+     * A cast shadow on the web only. On iOS an outset box shadow is a
+     * masked layer, and masked layers are re-rendered offscreen on every
+     * frame anything above them moves — thirty tiles, two layers each,
+     * under the splash curtain as it scaled away and under every scroll.
+     * That was the stutter. On the navy ground a tile's shadow was all
+     * but invisible anyway; its edge light carries the lift.
+     */
+    ...(Platform.OS === 'web' ? SHADOW.card : null),
   },
   artWide: { aspectRatio: LAYOUT.tileAspectWide },
   artHovered: { borderColor: COLORS.strokeStrong },
@@ -434,14 +442,19 @@ const styles = StyleSheet.create({
   },
 
   image: { width: '100%', height: '100%' },
+  /**
+   * The box's lit top edge: one hairline across the top, stopping short
+   * of the corners the way light catches a rounded edge. A plain view,
+   * not an inset shadow — that drew an image per tile, and this is a
+   * layer with a colour.
+   */
   edgeLight: {
     position: 'absolute',
     top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: RADIUS.sm - 1,
-    boxShadow: `inset 0 1px 0 ${alpha(COLORS.white, 0.14)}`,
+    left: RADIUS.sm,
+    right: RADIUS.sm,
+    height: StyleSheet.hairlineWidth * 2,
+    backgroundColor: alpha(COLORS.white, 0.16),
   },
   gradient: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   scoreCorner: { position: 'absolute', top: SPACING.sm, right: SPACING.sm },

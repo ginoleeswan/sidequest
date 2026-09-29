@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   type NativeScrollEvent,
@@ -22,8 +22,8 @@ import { Melt } from './Melt';
 import { ScaleButton } from './ScaleButton';
 import { StageTrailer } from './StageTrailer';
 import { gameQuery, seedGame } from '@/api/gameDetail';
-import { artQuery } from '@/api/art';
-import { TitleLogo } from './TitleLogo';
+import { artQuery, type ArtAsset } from '@/api/art';
+import { logoUri, TitleLogo } from './TitleLogo';
 import { Touchable } from './Touchable';
 import { getMovies, mediaUri } from '@/api/rawg';
 import type { Game, Movie } from '@/api/types';
@@ -132,6 +132,29 @@ export function HomeStage({
     seedGame(currentGame);
     void queryClient.prefetchQuery(gameQuery(currentGame.id));
   }, [currentGame, queryClient]);
+
+  /**
+   * The marks for the slide on show and the next one, warmed as soon as
+   * the stage knows its games — the curtain is still up at launch, and
+   * that second of it is when the first title should be fetched, not
+   * after the copy has mounted and started waiting for it. The next
+   * slide's too, so a swipe lands on a title that is already here.
+   */
+  const { isExpanded: wideStage } = useBreakpoint();
+  useEffect(() => {
+    for (const slide of slides.slice(index, index + 2)) {
+      if (!slide.game.slug) continue;
+      void queryClient
+        .fetchQuery(artQuery(slide.game))
+        .then((art) => {
+          if (art.logo)
+            void Image.prefetch(
+              stageLogoUri(art.logo, slide.title, width, inset, wideStage)
+            );
+        })
+        .catch(() => {});
+    }
+  }, [slides, index, width, inset, wideStage, queryClient]);
 
   const { data: trailer } = useQuery({
     queryKey: ['stage-trailer', currentGame?.id],
@@ -495,6 +518,53 @@ function SlideArt({
 }
 
 /**
+ * The headline's size and the box the publisher's mark must fit, for a
+ * slide at a given stage width. One function because two places need
+ * the same answer: the copy that draws the mark, and the prefetch that
+ * fetches the file it will ask for — a guess that differed would warm a
+ * file the stage never shows.
+ */
+function stageTitle(
+  title: string,
+  width: number,
+  inset: number,
+  isExpanded: boolean,
+  logo: ArtAsset | null | undefined
+) {
+  const length = title.length;
+  const fit = length > 32 ? 0.76 : length > 22 ? 0.88 : 1;
+  const cap = isExpanded ? 48 : 52;
+  const fontSize = Math.round(Math.min(Math.max(width * 0.094 * fit, 26), cap));
+  const maxWidth = Math.max(
+    (isExpanded ? Math.min(width * 0.5, 560) : width - inset * 2) - 24,
+    0
+  );
+  const maxHeight = Math.round(
+    fontSize * (logo && logo.width / logo.height < 2 ? 3.1 : 2.1)
+  );
+  return { fontSize, maxWidth, maxHeight };
+}
+
+/** The file the stage will ask for, for a mark fitted to its box. */
+function stageLogoUri(
+  logo: ArtAsset,
+  title: string,
+  width: number,
+  inset: number,
+  isExpanded: boolean
+): string {
+  const { maxWidth, maxHeight } = stageTitle(
+    title,
+    width,
+    inset,
+    isExpanded,
+    logo
+  );
+  const aspect = logo.width / logo.height;
+  return logoUri(logo, Math.min(maxHeight * aspect, maxWidth));
+}
+
+/**
  * The words over the stage, and the controls that drive it.
  *
  * Mounted once and re-keyed on the slide, so changing page replays the
@@ -563,8 +633,7 @@ function StageCopy({
    * words in print for exactly this reason: the longer the title, the
    * smaller it is set, so the block it makes stays the same shape.
    */
-  const length = slide.title.length;
-  const fit = length > 32 ? 0.76 : length > 22 ? 0.88 : 1;
+
   /**
    * Capped lower on a desk than the width alone would allow. At 56 in
    * a 640 column "Continue Grand Theft Auto V" broke to leave "V" on a
@@ -579,8 +648,11 @@ function StageCopy({
    * a frame rather than to fit its sentence. 48 across the wider desk
    * column holds a 27-character title on one line.
    */
-  const cap = isExpanded ? 48 : 52;
-  const fontSize = Math.round(Math.min(Math.max(width * 0.094 * fit, 26), cap));
+  const {
+    fontSize,
+    maxWidth: markWidth,
+    maxHeight: markHeight,
+  } = stageTitle(slide.title, width, inset, isExpanded, logo);
   const display = {
     fontSize,
     lineHeight: Math.round(fontSize * 1.02),
@@ -599,16 +671,32 @@ function StageCopy({
     paddingBottom: Math.ceil(fontSize * 0.16),
   };
 
+  /**
+   * The entrance waits for the title.
+   *
+   * Everything else on the slide is known at once; the title is the
+   * publisher's mark, which may still be on its way. Played without it
+   * the sequence had a hole — eyebrow, nothing, sentence, buttons — and
+   * the mark then arrived on its own clock, which is what made the
+   * stage feel choppy after the splash. So the lines hold until the
+   * title is decided (the mark is here, there is none, or TitleLogo's
+   * short wait ran out) and then arrive together, in their order.
+   */
+  const [titleReady, setTitleReady] = useState(false);
+  const settle = useCallback(() => setTitleReady(true), []);
+
   useEffect(() => {
-    if (reduced) return;
+    if (reduced || !titleReady) return;
     enter.setValue(0);
-    Animated.timing(enter, {
+    const animation = Animated.timing(enter, {
       toValue: 1,
       duration: DURATION.entrance,
       easing: EASING.standard,
       useNativeDriver: true,
-    }).start();
-  }, [enter, reduced]);
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [enter, reduced, titleReady]);
 
   /**
    * Out on the way across, in on the way down.
@@ -694,19 +782,14 @@ function StageCopy({
             name={slide.game.name}
             // The copy column's own width, and no taller than the two
             // lines of headline the mark stands in for.
-            maxWidth={Math.max(
-              (isExpanded ? Math.min(width * 0.5, 560) : width - inset * 2) -
-                24,
-              0
-            )}
+            maxWidth={markWidth}
             // A wide wordmark is bound by the column and never reaches
             // this; a tall or square emblem is bound by it and came out
             // a stamp — a mark a third the height of the sentence below
             // it, with its own transparent margins eating more. Marks
             // shaped like that get half again the height.
-            maxHeight={Math.round(
-              fontSize * (logo && logo.width / logo.height < 2 ? 3.1 : 2.1)
-            )}
+            maxHeight={markHeight}
+            onSettle={settle}
             style={styles.logo}
           >
             <Text

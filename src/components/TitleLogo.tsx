@@ -35,6 +35,13 @@ interface Props {
   align?: 'center' | 'start';
   /** What to show until, or instead of, the logo: the typed title. */
   children: React.ReactNode;
+  /**
+   * Called once the title is decided — the mark is on screen, there is
+   * definitely none, or the wait ran out and the name was set. A parent
+   * that stages an entrance around the title waits for this, so the
+   * title arrives in its place in the sequence instead of after it.
+   */
+  onSettle?: () => void;
 }
 
 /**
@@ -81,6 +88,7 @@ export function TitleLogo({
   style,
   align = 'center',
   children,
+  onSettle,
 }: Props) {
   const reduced = useReducedMotion();
   const [failed, setFailed] = useState<string | null>(null);
@@ -109,6 +117,11 @@ export function TitleLogo({
   // The words are wanted when there is definitely no mark, or when the
   // mark has kept the reader waiting long enough.
   const wantWords = !shown && (!waiting || overdue);
+  const settled = shown || wantWords;
+  useEffect(() => {
+    if (settled) onSettle?.();
+  }, [settled, onSettle]);
+
   // Where the words' fade last came to rest. Rendered as a plain style
   // once it has, so the settled page carries no animated props at all.
   const [wordsAt, setWordsAt] = useState<0 | 1 | null>(null);
