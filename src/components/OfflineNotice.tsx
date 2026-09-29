@@ -23,7 +23,7 @@ export function OfflineNotice() {
   if (online) return null;
   return (
     <View
-      style={[styles.wrap, { top: insets.top + SPACING.sm + 2 }]}
+      style={[styles.wrap, { top: insets.top + SPACING.sm2 }]}
       pointerEvents="none"
       accessibilityLiveRegion="polite"
       accessibilityRole="alert"

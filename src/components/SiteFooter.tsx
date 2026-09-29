@@ -392,8 +392,8 @@ const styles = StyleSheet.create({
     rowGap: SPACING.xl,
     columnGap: SPACING.xl * 2,
   },
-  brand: { gap: SPACING.sm + 2, maxWidth: 380 },
-  lockup: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm + 2 },
+  brand: { gap: SPACING.sm2, maxWidth: 380 },
+  lockup: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm2 },
   wordmark: { ...WORDMARK, fontSize: 20, lineHeight: 24, color: COLORS.white },
   tagline: {
     fontFamily: 'Geom-ExtraBold',

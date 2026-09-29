@@ -1,4 +1,5 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import { Platform } from 'react-native';
 
 import { COLORS } from '@/styles/colors';
 
@@ -35,7 +36,15 @@ export default function TabLayout() {
   return (
     <NativeTabs
       tintColor={COLORS.accent}
-      backgroundColor={COLORS.navy}
+      // Material, not paint, on iOS. A solid navy here is an opaque
+      // appearance: below iOS 26 it made the bar a slab the shelves
+      // stopped dead against, and on 26 it tints the Liquid Glass the
+      // comment above chose this component for. The chrome material
+      // lets the artwork pass under the bar, blurred, the way every
+      // stock app's does. Android has no such material and keeps the
+      // page's navy.
+      backgroundColor={Platform.OS === 'ios' ? undefined : COLORS.navy}
+      blurEffect="systemChromeMaterialDark"
       // Gets out of the way as you read a shelf, and comes back the
       // moment you scroll up — the behaviour every stock iOS app has and
       // the one a fixed custom bar could never have.
