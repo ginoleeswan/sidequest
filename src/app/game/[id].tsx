@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -11,9 +11,12 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   type StyleProp,
   type ViewStyle,
   useWindowDimensions,
@@ -30,7 +33,7 @@ import {
 import { artQuery, steamIdFrom } from '@/api/art';
 import { queryKeys } from '@/api/queryClient';
 import { fetchIgdbExtras, igdbCoverUri } from '@/api/igdb';
-import { friendlyError, mediaUri } from '@/api/rawg';
+import { mediaUri } from '@/api/rawg';
 import type { Game, GameDetail, Movie, Named } from '@/api/types';
 import { RouteError } from '@/components/RouteError';
 import { DesktopShell } from '@/components/DesktopShell';
@@ -39,6 +42,7 @@ import { Chip } from '@/components/Chip';
 import { CommunityStats } from '@/components/CommunityStats';
 import { ChromeWeld } from '@/components/ChromeWeld';
 import { Decision } from '@/components/Decision';
+import { ACTION_BAR_HEIGHT, GameActionBar } from '@/components/GameActionBar';
 import { FitStrip } from '@/components/FitStrip';
 import { fitFrom } from '@/lib/fit';
 import { pickTrailer } from '@/lib/stage';
@@ -47,7 +51,9 @@ import { GameTile } from '@/components/GameTile';
 import { Message } from '@/components/Message';
 import { Commitment } from '@/components/Commitment';
 import { PageTitle } from '@/components/PageTitle';
-import { Screen } from '@/components/Screen';
+import { Screen, useRefreshControl } from '@/components/Screen';
+import { ScaleButton } from '@/components/ScaleButton';
+import { IconButton, Touchable } from '@/components/Touchable';
 import { PersonalNote, usePersonalNote } from '@/components/PersonalNote';
 import { SessionTimer } from '@/components/SessionTimer';
 import { rememberGame } from '@/lib/recent';
@@ -87,10 +93,10 @@ import { useDurations } from '@/lib/durations';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { usePlanStanding } from '@/hooks/usePlanStanding';
 import { findSection } from '@/constants/categories';
-import { COLORS } from '@/styles/colors';
+import { COLORS, alpha } from '@/styles/colors';
 import { DURATION, EASING } from '@/styles/motion';
-import { LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
-import { OVER_IMAGE, TYPE } from '@/styles/typography';
+import { ICON, LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
+import { FONT_SCALE, OVER_IMAGE, TYPE } from '@/styles/typography';
 
 const HTML_TAGS = /(<([^>]+)>)/gi;
 
@@ -124,6 +130,9 @@ const RAIL = 340;
 
 /** How far the chrome join reaches below the safe area. */
 const WELD_HEIGHT = 190;
+
+/** The native navigation bar's height under the status bar, on iOS. */
+const NAV_BAR = 44;
 
 /** RAWG descriptions arrive as HTML: after stripping tags, unescape the
     handful of entities that actually occur in them. */
@@ -273,17 +282,17 @@ function Shelf<T>({
               ['chevron-forward', 1],
             ] as const
           ).map(([icon, direction]) => (
-            <Pressable
+            <Touchable
               key={icon}
               onPress={() => page(direction)}
+              hitSlop="sm"
               style={styles.shelfChevron}
-              accessibilityRole="button"
               accessibilityLabel={
                 direction === 1 ? 'Show more' : 'Show previous'
               }
             >
-              <Ionicons name={icon} size={16} color={COLORS.lightGrey} />
-            </Pressable>
+              <Ionicons name={icon} size={ICON.sm} color={COLORS.lightGrey} />
+            </Touchable>
           ))}
         </View>
       </View>
@@ -299,7 +308,7 @@ function Shelf<T>({
           renderItem={renderItem}
         />
         <LinearGradient
-          colors={['#333D5100', COLORS.darkGrey]}
+          colors={[alpha(COLORS.darkGrey, 0), COLORS.darkGrey]}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}
           style={styles.shelfFade}
@@ -320,21 +329,21 @@ function Shelf<T>({
  * the rail as trivia: of the people who have it, this many reached the
  * credits.
  *
- * Coloured on the app's own semantics rather than a curve — mint is
- * time well spent, amber is a maybe, coral is a shelf. And it is only
- * claimed where the sample can carry it: under a few hundred owners
- * the ratio is noise wearing a percentage.
+ * Always mint, whatever the share: mint is the colour this app gives
+ * to reaching the credits, and that is what the figure counts. It was
+ * a traffic light — mint, amber, coral by threshold — which borrowed
+ * time's colour and letting go's to say "so-so" and "poor", meanings
+ * neither has anywhere else. And it is only claimed where the sample
+ * can carry it: under a few hundred owners the ratio is noise wearing
+ * a percentage.
  */
-function finishRateOf(game: GameDetail): { pct: number; tint: string } | null {
+function finishRateOf(game: GameDetail): { pct: number } | null {
   const st = game.added_by_status;
   if (!st) return null;
   const owned = st.owned ?? 0;
   const beaten = st.beaten ?? 0;
   if (owned < 300) return null;
-  const pct = Math.round((beaten / owned) * 100);
-  const tint =
-    pct >= 45 ? COLORS.mint : pct >= 20 ? COLORS.accent : COLORS.coral;
-  return { pct, tint };
+  return { pct: Math.round((beaten / owned) * 100) };
 }
 
 /**
@@ -378,8 +387,10 @@ function PlanLine({
         {new Date(standing.finishAt).toLocaleDateString('en-US', {
           month: 'short',
           day: 'numeric',
-        })}
-        <Text style={styles.statArrow}> →</Text>
+        })}{' '}
+        {/* An icon, not U+2192: Noah has the arrow and Geom does not,
+            and one link drawn two ways is two links. */}
+        <Ionicons name="arrow-forward" size={ICON.sm} />
       </Text>
     );
   }
@@ -396,8 +407,8 @@ function PlanLine({
         accessibilityRole="link"
         accessibilityLabel="Open your plan"
       >
-        More than your window holds. It’ll still be here.
-        <Text style={styles.statArrow}> →</Text>
+        More than your window holds. It’ll still be here.{' '}
+        <Ionicons name="arrow-forward" size={ICON.sm} />
       </Text>
     );
   }
@@ -454,9 +465,8 @@ function StatStrip({
 
   return (
     <View style={[styles.statBlock, styles.statBlockWide]}>
-      <Pressable
+      <Touchable
         onPress={onEditLength}
-        accessibilityRole="button"
         accessibilityLabel={`Change how long ${game.name} takes`}
       >
         <View style={styles.hoursLine}>
@@ -486,12 +496,12 @@ function StatStrip({
               rendering as a smudge beside a 76pt number. */}
           <Ionicons
             name="pencil"
-            size={15}
+            size={ICON.sm}
             color={COLORS.mediumGrey}
             style={styles.statPencil}
           />
         </View>
-      </Pressable>
+      </Touchable>
       {/* On the wide page the byline and the pace share one line —
           identity on the left, the plan's arithmetic on the right —
           because the pace sentence alone was an orphan: a tiny grey
@@ -517,10 +527,15 @@ function StatStrip({
  *
  * The store pages this app borrows from solve it the same way: the art
  * carries identity and nothing else, and the numbers sit in one strip
- * beneath it — equal cells, a figure over a small label, hairlines
- * between. The strip is the page's second line; the hours lead it in
- * amber, and the rest fall in behind at the same size in the app's
- * greys, so the eye ranks them by colour and not by hunting.
+ * beneath it — cells, a figure over a small label, hairlines between.
+ *
+ * Two sizes, not one. The strip's two figures are the page's answer —
+ * how long, and whether people who start it finish — so they stand at
+ * the figure step, in the colours that mean time and finishing. The
+ * players' score and the critics' follow at the small figure step in
+ * grey: context, not verdict. At one size for all four, 24pt, the hours
+ * were smaller than the verdict's figures three screens down, which is
+ * the product's one number whispered.
  */
 function InfoStrip({
   game,
@@ -532,6 +547,14 @@ function InfoStrip({
   const { durationOf } = useDurations();
   const duration = durationOf(game);
   const finish = finishRateOf(game);
+  /*
+   * Reader-sized text wins over the row. At the largest settings four
+   * cells in a line cut "12.5h" to "12…", which is the one figure the
+   * page cannot afford to lose; past a third larger the strip becomes a
+   * two-by-two, where every figure has half the width to itself.
+   */
+  const { fontScale } = useWindowDimensions();
+  const grid = fontScale > 1.3;
 
   /*
    * A length nobody has reported is not a figure.
@@ -552,12 +575,14 @@ function InfoStrip({
 
   const cells: {
     key: string;
-    value: string;
+    value: React.ReactNode;
     label: string;
+    /** The answer's figures lead; the scores follow a step smaller. */
+    lead?: boolean;
     tint?: string;
     labelTint?: string;
     onPress?: () => void;
-    accessibilityLabel?: string;
+    accessibilityLabel: string;
     edit?: boolean;
   }[] = [
     {
@@ -568,6 +593,7 @@ function InfoStrip({
           ? `${hoursLabelFor(duration)} · est.`
           : hoursLabelFor(duration)
         : 'how long?',
+      lead: true,
       tint: known ? COLORS.accent : COLORS.mediumGrey,
       labelTint: known ? undefined : COLORS.accent,
       onPress: onEditLength,
@@ -577,30 +603,43 @@ function InfoStrip({
       edit: true,
     },
   ];
-  if (game.rating > 0)
-    cells.push({
-      key: 'rating',
-      value: `★ ${game.rating.toFixed(1)}`,
-      label: 'players',
-    });
-  if (game.metacritic != null)
-    cells.push({
-      key: 'metacritic',
-      value: String(game.metacritic),
-      label: 'Metacritic',
-      tint:
-        game.metacritic >= 75
-          ? COLORS.mint
-          : game.metacritic >= 50
-            ? COLORS.accent
-            : COLORS.coral,
-    });
+  /* The one place the page gives how many people finish it. It was
+     here and in the verdict, and counted a third time in the community
+     line; the strip is where the question is asked, so it answers
+     here. Mint, because it counts credits. */
   if (finish)
     cells.push({
       key: 'finish',
       value: `${finish.pct}%`,
       label: 'finished it',
-      tint: finish.tint,
+      lead: true,
+      tint: COLORS.mint,
+      accessibilityLabel: `${finish.pct}% of owners finished it`,
+    });
+  if (game.rating > 0)
+    cells.push({
+      key: 'rating',
+      // An icon, not U+2605: neither face the app ships has the star,
+      // so it fell through to the system font at its weight and on
+      // its baseline, in the loudest row on the page.
+      value: (
+        <>
+          <Ionicons name="star" size={ICON.md} color={COLORS.starGold} />{' '}
+          {game.rating.toFixed(1)}
+        </>
+      ),
+      label: 'players',
+      accessibilityLabel: `Rated ${game.rating.toFixed(1)} of 5 by players`,
+    });
+  /* Grey, whatever the score. Mint, amber and coral by threshold made a
+     critic's number speak in the words for finishing, time and letting
+     go — none of which it is. */
+  if (game.metacritic != null)
+    cells.push({
+      key: 'metacritic',
+      value: String(game.metacritic),
+      label: 'Metacritic',
+      accessibilityLabel: `Metacritic score ${game.metacritic}`,
     });
 
   /*
@@ -609,53 +648,142 @@ function InfoStrip({
    * An unreleased game has no score, no finishing rate and no length,
    * so the strip comes down to a length to set and a star rating —
    * and at a quarter of the width each they sat marooned in their own
-   * halves with a rule stranded between them. Equal cells are right
-   * where there are enough of them to read as a row; below that the
-   * group closes up and centres, which is a set of two facts rather
-   * than a table with holes in it.
+   * halves with a rule stranded between them. Cells that share the
+   * row are right where there are enough of them to read as a row;
+   * below that the group closes up and centres, which is a set of two
+   * facts rather than a table with holes in it.
    */
-  const spread = cells.length > 2;
+  const spread = cells.length > 2 || grid;
 
   return (
-    <View style={[styles.strip, !spread && styles.stripTight]}>
-      {cells.map((cell, index) => (
-        <Pressable
-          key={cell.key}
-          onPress={cell.onPress}
-          disabled={!cell.onPress}
-          accessibilityRole={cell.onPress ? 'button' : undefined}
-          accessibilityLabel={cell.accessibilityLabel}
-          style={[
-            styles.stripCell,
-            spread ? styles.stripCellSpread : styles.stripCellTight,
-            index > 0 && styles.stripCellRule,
-          ]}
-        >
-          <Text
-            style={[styles.stripValue, cell.tint ? { color: cell.tint } : null]}
-            numberOfLines={1}
-          >
-            {cell.value}
-          </Text>
-          <View style={styles.stripLabelRow}>
+    <View
+      style={[
+        styles.strip,
+        !spread && styles.stripTight,
+        grid && styles.stripGrid,
+      ]}
+    >
+      {cells.map((cell, index) => {
+        const body = (
+          <>
             <Text
               style={[
-                styles.stripLabel,
-                cell.labelTint ? { color: cell.labelTint } : null,
+                cell.lead ? styles.stripValue : styles.stripValueSmall,
+                cell.tint ? { color: cell.tint } : null,
               ]}
               numberOfLines={1}
+              // A last resort for "112.5h" in a quarter of a phone:
+              // shrink a little rather than clip the figure.
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
+              maxFontSizeMultiplier={FONT_SCALE.figure}
             >
-              {cell.label}
+              {cell.value}
             </Text>
-            {cell.edit ? (
-              <Ionicons
-                name="pencil"
-                size={10}
-                color={cell.labelTint ?? COLORS.mediumGrey}
-              />
-            ) : null}
+            <View style={styles.stripLabelRow}>
+              <Text
+                style={[
+                  styles.stripLabel,
+                  cell.labelTint ? { color: cell.labelTint } : null,
+                ]}
+                numberOfLines={1}
+                maxFontSizeMultiplier={FONT_SCALE.label}
+              >
+                {cell.label}
+              </Text>
+              {cell.edit ? (
+                <Ionicons
+                  name="pencil"
+                  size={11}
+                  color={cell.labelTint ?? COLORS.mediumGrey}
+                />
+              ) : null}
+            </View>
+          </>
+        );
+        const style = [
+          styles.stripCell,
+          grid
+            ? styles.stripCellGrid
+            : spread
+              ? cell.lead
+                ? styles.stripCellLead
+                : styles.stripCellSpread
+              : styles.stripCellTight,
+          (grid ? index % 2 === 1 : index > 0) && styles.stripCellRule,
+        ];
+        return cell.onPress ? (
+          <Touchable
+            key={cell.key}
+            onPress={cell.onPress}
+            accessibilityLabel={cell.accessibilityLabel}
+            style={style}
+          >
+            {body}
+          </Touchable>
+        ) : (
+          <View
+            key={cell.key}
+            accessible
+            accessibilityLabel={cell.accessibilityLabel}
+            style={style}
+          >
+            {body}
           </View>
-        </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/**
+ * The split HowLongToBeat built a site on, as three labelled cells.
+ *
+ * It was one centred caption — "Rushing it 8h · Most people 12h · 100%
+ * 20h" — which is three figures set as a sentence, so the eye had to
+ * read it to find the numbers. As cells it reads across like the strip
+ * above it: the same 74 hours is visibly a different promise to
+ * someone who mainlines than to a completionist.
+ */
+function SplitTicks({
+  times,
+}: {
+  times: {
+    hastily?: number | null;
+    normally?: number | null;
+    completely?: number | null;
+  };
+}) {
+  const ticks = [
+    { label: 'rushing it', hours: times.hastily ?? 0 },
+    { label: 'most people', hours: times.normally ?? 0 },
+    { label: '100%', hours: times.completely ?? 0 },
+  ].filter((tick) => tick.hours > 0);
+  return (
+    <View style={styles.split}>
+      {ticks.map((tick, index) => (
+        <View
+          key={tick.label}
+          accessible
+          // Whole hours: 119.3 promises a precision a few dozen
+          // submissions cannot keep.
+          accessibilityLabel={`${tick.label}, ${Math.round(tick.hours)} hours`}
+          style={[styles.splitTick, index > 0 && styles.stripCellRule]}
+        >
+          <Text
+            style={styles.splitValue}
+            maxFontSizeMultiplier={FONT_SCALE.label}
+          >
+            {Math.round(tick.hours)}h
+          </Text>
+          <Text
+            style={styles.splitLabel}
+            numberOfLines={1}
+            maxFontSizeMultiplier={FONT_SCALE.label}
+          >
+            {tick.label}
+          </Text>
+        </View>
       ))}
     </View>
   );
@@ -712,8 +840,11 @@ function MetaRow({ label, items }: { label: string; items?: Named[] }) {
   );
 }
 
+/** A frame of the gallery: a still, or a trailer standing on a poster. */
+type Frame = { key: string; image: string; movie?: Movie };
+
 /**
- * Full screen, for a picture or a trailer.
+ * Full screen, for a picture or a trailer — and then the next one.
  *
  * The trailer needed somewhere to go. It cannot play inside the
  * masthead gallery: the title, the figure and the byline sit over the
@@ -721,46 +852,223 @@ function MetaRow({ label, items }: { label: string; items?: Named[] }) {
  * same place — two sets of type fighting for one strip. Full screen it
  * has the room, the controls have nothing to collide with, and the
  * gesture is the one people already use on a picture here.
+ *
+ * Paged, not single. It opened one picture and nothing else, so seeing
+ * the gallery full size was open, close, scroll, open — twelve round
+ * trips for twelve screenshots. It opens on the frame that was tapped
+ * and swipes to the rest, with a count so the reader knows how many.
+ * A trailer plays the moment its page is the one showing — pressing
+ * "play" and then pressing play again was one press too many — unless
+ * Reduce Motion is on, when it waits for the platform's own button.
  */
 function Lightbox({
-  uri,
-  movie,
+  frames,
+  start,
   onClose,
 }: {
-  uri: string | null;
-  movie: Movie | null;
+  frames: Frame[];
+  /** The frame it opens on; null while closed. */
+  start: number | null;
   onClose: () => void;
 }) {
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const reduced = useReducedMotion();
+  const [current, setCurrent] = useState(start ?? 0);
+  // Adopted during render, as PersonalNote adopts a stored note: an
+  // effect would paint the previous count for a frame first.
+  const [opened, setOpened] = useState(start);
+  if (opened !== start) {
+    setOpened(start);
+    if (start != null) setCurrent(start);
+  }
+  const open = start != null && frames.length > 0;
+
   return (
     <Modal
-      visible={uri != null || movie != null}
+      visible={open}
       transparent
       animationType="fade"
+      statusBarTranslucent
       onRequestClose={onClose}
     >
-      <Pressable style={styles.lightbox} onPress={onClose}>
-        {movie ? (
-          <StageVideo movie={movie} style={styles.lightboxImage} />
-        ) : uri ? (
-          <Image
-            source={{ uri: mediaUri(uri, 1280) }}
-            style={styles.lightboxImage}
-            contentFit="contain"
+      <View style={styles.lightbox}>
+        {open ? (
+          <FlatList
+            data={frames}
+            horizontal
+            pagingEnabled
+            initialScrollIndex={start}
+            getItemLayout={(_, index) => ({
+              length: width,
+              offset: width * index,
+              index,
+            })}
+            keyExtractor={(frame) => frame.key}
+            // Which page is showing decides whether a trailer is a
+            // running player or its poster, so the rows depend on it.
+            extraData={current}
+            showsHorizontalScrollIndicator={false}
+            // onScroll rather than onMomentumScrollEnd: the web does not
+            // send momentum events, and the count must move there too.
+            scrollEventThrottle={32}
+            onScroll={(event) => {
+              const page = Math.round(
+                event.nativeEvent.contentOffset.x / Math.max(width, 1)
+              );
+              if (page !== current) setCurrent(page);
+            }}
+            renderItem={({ item, index }) =>
+              item.movie && index === current ? (
+                <View style={[styles.lightboxPage, { width }]}>
+                  <StageVideo
+                    movie={item.movie}
+                    style={styles.lightboxImage}
+                    autoPlay={!reduced}
+                  />
+                </View>
+              ) : (
+                /* Tap a still and it closes, as it always has; a
+                   trailer's page has the player's own controls to
+                   tap instead, so only the stills do. */
+                <Pressable
+                  style={[styles.lightboxPage, { width }]}
+                  onPress={onClose}
+                  accessible={false}
+                >
+                  <Image
+                    source={{ uri: mediaUri(item.image, 1280) }}
+                    style={styles.lightboxImage}
+                    contentFit="contain"
+                    accessibilityLabel={
+                      item.movie
+                        ? `Trailer: ${item.movie.name}`
+                        : `Screenshot ${index + 1} of ${frames.length}`
+                    }
+                  />
+                </Pressable>
+              )
+            }
           />
         ) : null}
-        {/* Tap-anywhere already closes; the X is for the reader who
-            does not know that. An escape hatch you can see is part of
-            what makes a full-screen takeover feel safe to enter. */}
-        <Pressable
-          onPress={onClose}
-          style={styles.lightboxClose}
-          accessibilityRole="button"
-          accessibilityLabel="Close"
+        {/* Below the island, not under it: the close sat at a fixed 48
+            points, which on a phone with a Dynamic Island is inside it.
+            An escape hatch you can see is part of what makes a
+            full-screen takeover feel safe to enter. */}
+        <View
+          style={[styles.lightboxBar, { top: insets.top + SPACING.sm }]}
+          pointerEvents="box-none"
         >
-          <Ionicons name="close" size={22} color={COLORS.white} />
-        </Pressable>
-      </Pressable>
+          {frames.length > 1 ? (
+            <Text
+              style={styles.lightboxCount}
+              accessibilityLabel={`${current + 1} of ${frames.length}`}
+              maxFontSizeMultiplier={FONT_SCALE.label}
+            >
+              {current + 1} / {frames.length}
+            </Text>
+          ) : (
+            <View />
+          )}
+          <IconButton
+            icon="close"
+            variant="plate"
+            accessibilityLabel="Close"
+            onPress={onClose}
+          />
+        </View>
+      </View>
     </Modal>
+  );
+}
+
+/**
+ * A game IGDB thinks is like this one, shelved the way the series is.
+ *
+ * The two rails of other games used to be two grammars: the series in
+ * `GameTile`, this one in a hand-built card with its own caption size
+ * and no pressed state. It cannot be a `GameTile` itself — IGDB's
+ * answer carries a slug, a name and a cover, and the tile's save
+ * control needs the store's id to save anything — so it is drawn to
+ * the tile's anatomy instead: the poster at the tile's ratio and
+ * radius, the lit top edge, the title in the tile's caption style, and
+ * the same give under the thumb.
+ */
+function SimilarTile({
+  item,
+  onPress,
+}: {
+  item: { slug: string; name: string; cover: string };
+  onPress: () => void;
+}) {
+  return (
+    <ScaleButton
+      onPress={onPress}
+      activeScale={0.97}
+      hoverScale={1.03}
+      accessibilityLabel={`Open ${item.name}`}
+      style={styles.similarCard}
+    >
+      <View style={styles.similarArt}>
+        <Image
+          source={{ uri: igdbCoverUri(item.cover) }}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          transition={DURATION.base}
+          accessible={false}
+        />
+        <View style={styles.similarEdge} pointerEvents="none" />
+      </View>
+      <Text style={styles.similarName} numberOfLines={1}>
+        {item.name}
+      </Text>
+    </ScaleButton>
+  );
+}
+
+/**
+ * The page's scroller, with the one thing `Screen` does not hand out:
+ * where the reader is.
+ *
+ * On native it is `Screen`'s own ScrollView — same refresh control,
+ * same home-indicator clearance — with a scroll listener, because the
+ * pinned title and the action bar both key off how far the masthead has
+ * gone. On the web the document scrolls and there is no native header
+ * to title, so it is `Screen` itself, untouched.
+ */
+function PageScroller({
+  children,
+  onRefresh,
+  onScroll,
+  bottomRoom = 0,
+}: {
+  children: React.ReactNode;
+  onRefresh: () => Promise<unknown>;
+  onScroll?: (y: number) => void;
+  /** Room under the footer for anything pinned over the foot. */
+  bottomRoom?: number;
+}) {
+  const insets = useSafeAreaInsets();
+  const refreshControl = useRefreshControl(onRefresh);
+  if (Platform.OS === 'web') {
+    return <Screen onRefresh={onRefresh}>{children}</Screen>;
+  }
+  return (
+    <ScrollView
+      style={styles.scroller}
+      contentContainerStyle={{ paddingBottom: insets.bottom + bottomRoom }}
+      showsVerticalScrollIndicator={false}
+      refreshControl={refreshControl}
+      scrollEventThrottle={16}
+      onScroll={
+        onScroll
+          ? (event: NativeSyntheticEvent<NativeScrollEvent>) =>
+              onScroll(event.nativeEvent.contentOffset.y)
+          : undefined
+      }
+    >
+      {children}
+    </ScrollView>
   );
 }
 
@@ -770,7 +1078,8 @@ export default function GameInfoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [lightboxUri, setLightboxUri] = useState<string | null>(null);
+  /** Which frame of the gallery is open full screen, if any. */
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [editingLength, setEditingLength] = useState(false);
   /**
    * When the page was opened.
@@ -784,14 +1093,16 @@ export default function GameInfoScreen() {
   /** The main column's measured width, so the gallery's frames divide it. */
   const [columnWidth, setColumnWidth] = useState(0);
   /**
-   * Which trailer the phone's carousel has been asked to play.
-   *
-   * A `VideoView` renders black until it is started, so a carousel that
-   * opens on one opens on a black box — and mounting a player for every
-   * trailer in the rail buys that for each of them. The poster frame
-   * stands in until somebody actually asks.
+   * Where the reader is, in the two terms the pinned chrome cares
+   * about: whether the masthead (and the name on it) has gone under the
+   * bar, and whether the decision has scrolled away. Crossings only —
+   * a state per scroll event would re-render the page sixty times a
+   * second for two booleans.
    */
-  const [playing, setPlaying] = useState<number | null>(null);
+  const [pastMasthead, setPastMasthead] = useState(false);
+  const [pastDecision, setPastDecision] = useState(false);
+  /** Where the decision block ends, measured, in scroll coordinates. */
+  const decisionFoot = useRef(0);
   const { durationOf, learnDurations } = useDurations();
 
   const { isExpanded, width } = useBreakpoint();
@@ -820,6 +1131,7 @@ export default function GameInfoScreen() {
     isPending,
     fetchStatus,
     isPlaceholderData: sketch,
+    refetch,
   } = useQuery({
     ...gameQuery(id),
     placeholderData: () => {
@@ -844,17 +1156,19 @@ export default function GameInfoScreen() {
    * opens, so the page has its composed picture first, and the trailer
    * arrives over it three seconds later, muted, under the same copy.
    * Keyed by frame, so a swap away and back starts the wait again.
+   * Never under Reduce Motion: footage nobody asked for is the motion
+   * that setting exists to stop, and the composed still is the page.
    */
   const dwellTrailer = game ? pickTrailer(trailers, game.name) : null;
   const [dwelt, setDwelt] = useState(false);
   useEffect(() => {
-    if (!dwellTrailer || !isExpanded) return;
+    if (!dwellTrailer || !isExpanded || reducedMotion) return;
     const timer = setTimeout(() => setDwelt(true), 3000);
     return () => {
       clearTimeout(timer);
       setDwelt(false);
     };
-  }, [dwellTrailer, isExpanded]);
+  }, [dwellTrailer, isExpanded, reducedMotion]);
 
   /**
    * IGDB's half of the page: box art, the critic aggregate, the
@@ -983,23 +1297,38 @@ export default function GameInfoScreen() {
   if (error || !game) {
     /* Offline and nothing saved: a different sentence from a failed
        request. The query is paused, not broken, and it will ask on its
-       own the moment the signal comes back. */
+       own the moment the signal comes back.
+
+       Never a dead end. It had no way on but back, stood outside the
+       scroller so pulling down did nothing, and named the vendor it
+       could not reach — a name that means nothing to the reader and
+       tells them nothing to do. Now: what happened in plain words, a
+       button that asks again, and the pull that asks again too. */
     const offline = !error && fetchStatus === 'paused';
+    const retry = () => refetch();
     return (
       <View style={styles.background}>
         <PageTitle>Sidequest</PageTitle>
         <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
           <BackButton onImage />
         </View>
-        <Message
-          icon="cloud-offline-outline"
-          title={offline ? "You're offline" : "Couldn't load this game"}
-          detail={
-            offline
-              ? 'This game isn’t saved on this device yet. It will load when you’re back online.'
-              : friendlyError(error)
-          }
-        />
+        <PageScroller onRefresh={retry}>
+          <View style={[styles.errorShell, { paddingTop: insets.top + 56 }]}>
+            <Message
+              icon={offline ? 'cloud-offline-outline' : 'alert-circle-outline'}
+              title={
+                offline ? "You're offline" : "Can't load this game right now"
+              }
+              detail={
+                offline
+                  ? 'This game isn’t saved on this device yet. It will load when you’re back online.'
+                  : 'Check your connection, then try again.'
+              }
+              actionLabel="Try again"
+              onAction={retry}
+            />
+          </View>
+        </PageScroller>
       </View>
     );
   }
@@ -1046,37 +1375,41 @@ export default function GameInfoScreen() {
   /* -------------------------------------------------------------- pieces */
 
   /**
-   * Key art, then the trailers, then the screenshots — identity first,
-   * motion second, detail last. The trailers were a rail at the foot of
-   * the page, below the fold of the thing they advertise; a trailer is
-   * the single best answer to "what is this like to play", so it
-   * belongs in the stage with everything else that answers that.
+   * The gallery: the lead trailer, the screenshots, then any other film.
+   *
+   * Trailers first because motion answers "what is this like to play"
+   * better than a still — but for a long time they sorted last, behind
+   * every screenshot, because RAWG's poster for a trailer is its first
+   * frame: a fade-up from black, so the shelf opened on a black box
+   * with a play glyph on it. The lead trailer now wears the key art as
+   * its poster — the picture the reader tapped to get here, already on
+   * the device — so it can lead without looking broken. A second
+   * trailer keeps its own poster and its name, after the stills, where
+   * a darker frame is not the first thing the page shows.
    */
-  const frames: { key: string; image: string; movie?: Movie }[] = [
-    ...(game.background_image
-      ? [{ key: 'art', image: game.background_image }]
+  const [leadTrailer, ...moreTrailers] = trailers.slice(0, 2);
+  const gallery: Frame[] = [
+    ...(leadTrailer
+      ? [
+          {
+            key: `movie-${leadTrailer.id}`,
+            image: game.background_image ?? leadTrailer.preview,
+            movie: leadTrailer,
+          },
+        ]
       : []),
-    ...trailers.slice(0, 2).map((movie) => ({
+    ...screenshots.map((shot) => ({ key: String(shot.id), image: shot.image })),
+    ...moreTrailers.map((movie) => ({
       key: `movie-${movie.id}`,
       image: movie.preview,
       movie,
     })),
-    ...screenshots.map((shot) => ({ key: String(shot.id), image: shot.image })),
   ];
-  /**
-   * The frames the band does not already show, screenshots first.
-   *
-   * The phone leads with the trailer because its first frame is a
-   * running player. Here a trailer is a poster until pressed, and
-   * RAWG's poster for a trailer is its first frame - a fade-up from
-   * black, so two trailers opened the shelf as two black boxes. The
-   * band above already plays the trailer for anyone who lingers; the
-   * shelf can afford to show the game first and file the films after.
-   */
-  const gallery = [
-    ...frames.filter((frame) => frame.key !== 'art' && !frame.movie),
-    ...frames.filter((frame) => frame.movie),
-  ];
+  /** How a frame names itself to assistive tech, and what opening it does. */
+  const frameLabel = (frame: Frame, index: number) =>
+    frame.movie
+      ? `Play the trailer ${frame.movie.name}`
+      : `Screenshot ${index + 1} of ${gallery.length}, open full size`;
 
   /** Who made it, when, and what kind of thing it is — the art's one line. */
   const identity: { key: string; text: string; onPress?: () => void }[] = [
@@ -1154,6 +1487,7 @@ export default function GameInfoScreen() {
       : banded.url
     : sharper;
 
+  const platforms = game.parent_platforms ?? [];
   const hero = (
     <View
       style={[
@@ -1214,7 +1548,7 @@ export default function GameInfoScreen() {
           'rgba(20,25,35,0.02)',
           'rgba(31,38,52,0.30)',
           'rgba(41,49,66,0.42)',
-          'rgba(51,61,81,0)',
+          alpha(COLORS.darkGrey, 0),
         ]}
         locations={[0, 0.28, 0.6, 0.88, 1]}
         style={StyleSheet.absoluteFill}
@@ -1236,6 +1570,7 @@ export default function GameInfoScreen() {
           <Text
             style={[styles.heroTitle, OVER_IMAGE.heading]}
             numberOfLines={2}
+            maxFontSizeMultiplier={FONT_SCALE.display}
           >
             {game.name}
           </Text>
@@ -1244,40 +1579,58 @@ export default function GameInfoScreen() {
             as the desk sets it. It stood on the ground below in grey,
             a caption cut off from the thing it captions; here it is
             the mark's byline, and the melt has taken most of the
-            picture out by the time the band reaches it. */}
-        {identity.length > 0 ? (
-          <Text style={styles.heroIdentity}>
+            picture out by the time the band reaches it.
+
+            A row of pieces rather than one run of text, so the genre
+            links can be real controls: a link inside a Text has no hit
+            slop, and "RPG" at 13pt was a 17pt target. The platforms
+            close the line, because "is it on my Switch?" is a yes-or-no
+            a reader brings to the page — it was filed in the details,
+            three screens down. */}
+        {identity.length > 0 || platforms.length > 0 ? (
+          <View style={styles.heroIdentityRow}>
             {identity.map((bit, index) => (
               <React.Fragment key={bit.key}>
-                {index > 0 ? ' · ' : null}
+                {index > 0 ? <Text style={styles.heroIdentity}>·</Text> : null}
                 {bit.onPress ? (
-                  <Text
+                  <Touchable
                     onPress={bit.onPress}
-                    suppressHighlighting
+                    hitSlop="text"
                     accessibilityRole="link"
                     accessibilityLabel={`Browse ${bit.text} games`}
-                    style={styles.heroIdentityLink}
                   >
-                    {bit.text}
-                  </Text>
+                    <Text
+                      style={[styles.heroIdentity, styles.heroIdentityLink]}
+                    >
+                      {bit.text}
+                    </Text>
+                  </Touchable>
                 ) : (
-                  bit.text
+                  <Text style={styles.heroIdentity}>{bit.text}</Text>
                 )}
               </React.Fragment>
             ))}
-          </Text>
+            {platforms.length > 0 ? (
+              <View
+                style={styles.heroPlatforms}
+                accessible
+                accessibilityLabel={`On ${platforms
+                  .map(({ platform }) => platform.name)
+                  .join(', ')}`}
+              >
+                <PlatformIcons
+                  platforms={platforms}
+                  size={ICON.sm}
+                  color={COLORS.lightGrey}
+                />
+              </View>
+            ) : null}
+          </View>
         ) : null}
       </View>
     </View>
   );
 
-  /**
-   * The phone's second line: the figures, then what the plan makes of
-   * them, then the split HowLongToBeat built a site on — the same 74
-   * hours is a different promise to someone who mainlines than to a
-   * completionist. Submitted times, so it only speaks when enough
-   * people have.
-   */
   /**
    * How this game lands on the evenings ahead, or nothing at all.
    *
@@ -1288,8 +1641,56 @@ export default function GameInfoScreen() {
    */
   const fit = fitFrom(durationOf(game).hours, openedAt);
 
+  /**
+   * The finishing rate — the verdict this app can give and no store can.
+   * See `finishRateOf`.
+   */
+  const finishRate = finishRateOf(game);
+  const hasRatings = (game.ratings?.length ?? 0) > 0;
+  const ratingCount = (game.ratings ?? []).reduce((sum, r) => sum + r.count, 0);
+  const liked = (game.ratings ?? [])
+    .filter((r) => r.title === 'exceptional' || r.title === 'recommended')
+    .reduce((sum, r) => sum + r.count, 0);
+  const likedShare =
+    ratingCount > 0 ? Math.round((liked / ratingCount) * 100) : 0;
+  /**
+   * The sum the page used to leave to the reader. Two shares side by
+   * side are two facts; what they mean together — loved and finished,
+   * or loved and put down — is the only thing anybody wants from them,
+   * and it is the one thing a histogram cannot say.
+   */
+  const said = verdictLine({
+    liked: hasRatings ? likedShare : null,
+    finished: finishRate?.pct ?? null,
+    hours: durationOf(game).hours,
+  });
+
+  /** The completion split, where enough people have submitted one. */
+  const split =
+    igdb?.times &&
+    igdb.times.submissions >= 5 &&
+    (igdb.times.hastily || igdb.times.completely)
+      ? igdb.times
+      : null;
+
+  /**
+   * The answer, first.
+   *
+   * The page is about one question — can I finish this, and is it worth
+   * it — and its answer used to arrive in pieces: the hours at 24pt in
+   * the second row, the verdict sentence and the finishing rate at 34pt
+   * three screens down, under the screenshots and the prose. Now the
+   * sentence opens the page under the masthead, the two figures it is
+   * drawn from stand under it at the figure step, and the split and the
+   * plan's arithmetic follow. What follows the answer is evidence for it.
+   */
   const figures = (
     <View style={styles.figures}>
+      {said ? (
+        <Text style={styles.said} maxFontSizeMultiplier={FONT_SCALE.label}>
+          {said}
+        </Text>
+      ) : null}
       <InfoStrip game={game} onEditLength={() => setEditingLength(true)} />
       {/* Loose in the column rather than wrapped in a box of their own.
           Both of these decline to render for most games — a game not in
@@ -1297,30 +1698,12 @@ export default function GameInfoScreen() {
           split — and a wrapper around two absent children is a gap the
           column pays for and nobody can see the cause of. Flex gaps
           count what is actually drawn. */}
+      {split ? <SplitTicks times={split} /> : null}
       <PlanLine
         game={game}
         onOpenPlan={() => router.push('/plan')}
         pace={false}
       />
-      {igdb?.times &&
-      igdb.times.submissions >= 5 &&
-      (igdb.times.hastily || igdb.times.completely) ? (
-        <Text style={styles.splitLegend}>
-          {[
-            igdb.times.hastily
-              ? `Rushing it ${Math.round(igdb.times.hastily)}h`
-              : null,
-            igdb.times.normally
-              ? `Most people ${Math.round(igdb.times.normally)}h`
-              : null,
-            igdb.times.completely
-              ? `100% ${Math.round(igdb.times.completely)}h`
-              : null,
-          ]
-            .filter(Boolean)
-            .join(' · ')}
-        </Text>
-      ) : null}
     </View>
   );
 
@@ -1524,12 +1907,6 @@ export default function GameInfoScreen() {
    * completionist. Under a rule, because this is the head of the page
    * and what follows is a different kind of thing.
    */
-  const split =
-    igdb?.times &&
-    igdb.times.submissions >= 5 &&
-    (igdb.times.hastily || igdb.times.completely)
-      ? igdb.times
-      : null;
   const splitCells: { label: string; hours: number }[] = split
     ? [
         { label: 'Rushing it', hours: split.hastily ?? 0 },
@@ -1581,6 +1958,24 @@ export default function GameInfoScreen() {
   ) : null;
 
   /**
+   * The chips, with no label and no padding of their own.
+   *
+   * No label, in either layout: they follow the prose on both, and
+   * there they are the description's index — a reader who has just
+   * read the sentence does not need a heading to be told that
+   * "Atmospheric" and "Story Rich" describe it. And no wrapper of
+   * their own: they sit inside the prose's block (see `about`).
+   */
+  const fileTags =
+    game.tags && game.tags.length > 0 ? (
+      <View style={styles.tags}>
+        {game.tags.slice(0, isExpanded ? 14 : 10).map((tag) => (
+          <Chip key={tag.id} title={tag.name} quiet />
+        ))}
+      </View>
+    ) : null;
+
+  /**
    * No heading. "About" was a label stating the obvious — the only
    * prose on a page about one game does not need to announce that it
    * is about the game, and Epic runs its description with no header
@@ -1590,23 +1985,34 @@ export default function GameInfoScreen() {
    * naming: the verdict, the series.
    */
   const prose = summary || igdb?.storyline?.trim() || '';
-  const about = prose ? (
-    <View style={styles.block}>
-      {/* At reading size. This is the only prose on the page and it was
-          set two steps below the app's body copy, so the one block
-          somebody actually reads was the smallest text on the screen. */}
-      <ReadMoreText
-        style={[
-          TYPE.body,
-          styles.aboutText,
-          isExpanded && styles.aboutTextWide,
-        ]}
-        numberOfLines={isExpanded ? 8 : 6}
-      >
-        {prose}
-      </ReadMoreText>
-    </View>
-  ) : null;
+  const hasTags = (game.tags?.length ?? 0) > 0;
+  /*
+   * The tags inside the block, ten points under the prose they index.
+   * As a block of their own they stood forty points off — the page's
+   * full section gap between a paragraph and its own keywords, so the
+   * two read as unrelated sections rather than a text and its index.
+   */
+  const about =
+    prose || hasTags ? (
+      <View style={styles.block}>
+        {/* At reading size. This is the only prose on the page and it was
+            set two steps below the app's body copy, so the one block
+            somebody actually reads was the smallest text on the screen. */}
+        {prose ? (
+          <ReadMoreText
+            style={[
+              TYPE.body,
+              styles.aboutText,
+              isExpanded && styles.aboutTextWide,
+            ]}
+            numberOfLines={isExpanded ? 8 : 6}
+          >
+            {prose}
+          </ReadMoreText>
+        ) : null}
+        {fileTags}
+      </View>
+    ) : null;
 
   /**
    * What shows you the game, and what comes after it.
@@ -1664,55 +2070,45 @@ export default function GameInfoScreen() {
       accessibilityRole="summary"
       accessibilityLabel={`${gallery.length} screens and trailers`}
     >
-      {/* The desk's order and the desk's frames: the screenshots, then
-          the trailers as named posters that open in the lightbox. The
-          first trailer used to be a live player at the head of the
-          rail, which on a phone's browser is a black box wearing the
+      {/* Posters, not players: the lead trailer wears the key art and
+          opens full screen already running. A live player at the head
+          of the rail was, on a phone's browser, a black box wearing the
           platform's own controls - a play bar, 0:00, a mute glyph -
           until autoplay is allowed, and it is not always allowed. */}
-      <Rail<(typeof frames)[number]>
+      <Rail<Frame>
         data={gallery}
         keyExtractor={(item) => item.key}
         inset={railInset}
         gap={SPACING.sm}
         snapInterval={shotWidth + SPACING.sm}
-        renderItem={(item) =>
-          item.movie ? (
-            <Pressable
-              onPress={() => setPlaying(item.movie?.id ?? null)}
-              accessibilityRole="button"
-              accessibilityLabel={`Play the trailer ${item.movie.name}`}
-            >
-              <Image
-                source={{ uri: mediaUri(item.image, 640) }}
-                style={[
-                  styles.screenshot,
-                  { width: shotWidth, height: shotHeight },
-                ]}
-                contentFit="cover"
-                transition={DURATION.base}
-              />
-              <View style={styles.posterPlay}>
-                <Ionicons name="play" size={22} color={COLORS.navy} />
-              </View>
-              <Text style={styles.frameCaption} numberOfLines={1}>
-                {item.movie.name}
-              </Text>
-            </Pressable>
-          ) : (
-            <Pressable onPress={() => setLightboxUri(item.image)}>
-              <Image
-                source={{ uri: mediaUri(item.image, 640) }}
-                style={[
-                  styles.screenshot,
-                  { width: shotWidth, height: shotHeight },
-                ]}
-                contentFit="cover"
-                transition={DURATION.base}
-              />
-            </Pressable>
-          )
-        }
+        renderItem={(item, index) => (
+          <Touchable
+            onPress={() => setLightboxIndex(index)}
+            feedback="scale"
+            accessibilityRole={item.movie ? 'button' : 'imagebutton'}
+            accessibilityLabel={frameLabel(item, index)}
+          >
+            <Image
+              source={{ uri: mediaUri(item.image, 640) }}
+              style={[
+                styles.screenshot,
+                { width: shotWidth, height: shotHeight },
+              ]}
+              contentFit="cover"
+              transition={DURATION.base}
+            />
+            {item.movie ? (
+              <>
+                <View style={styles.posterPlay}>
+                  <Ionicons name="play" size={ICON.lg} color={COLORS.navy} />
+                </View>
+                <Text style={styles.frameCaption} numberOfLines={1}>
+                  {item.movie.name}
+                </Text>
+              </>
+            ) : null}
+          </Touchable>
+        )}
       />
     </View>
   );
@@ -1738,22 +2134,10 @@ export default function GameInfoScreen() {
               data={igdb!.similar}
               keyExtractor={(item) => item.slug}
               renderItem={(item) => (
-                <Pressable
+                <SimilarTile
+                  item={item}
                   onPress={() => router.push(`/game/${item.slug}`)}
-                  accessibilityRole="link"
-                  accessibilityLabel={`Open ${item.name}`}
-                  style={styles.similarCard}
-                >
-                  <Image
-                    source={{ uri: igdbCoverUri(item.cover) }}
-                    style={styles.similarCover}
-                    contentFit="cover"
-                    transition={DURATION.base}
-                  />
-                  <Text style={styles.similarName} numberOfLines={2}>
-                    {item.name}
-                  </Text>
-                </Pressable>
+                />
               )}
             />
           </View>
@@ -1768,22 +2152,10 @@ export default function GameInfoScreen() {
               keyExtractor={(item) => item.slug}
               inset={railInset}
               renderItem={(item) => (
-                <Pressable
+                <SimilarTile
+                  item={item}
                   onPress={() => router.push(`/game/${item.slug}`)}
-                  accessibilityRole="link"
-                  accessibilityLabel={`Open ${item.name}`}
-                  style={styles.similarCard}
-                >
-                  <Image
-                    source={{ uri: igdbCoverUri(item.cover) }}
-                    style={styles.similarCover}
-                    contentFit="cover"
-                    transition={DURATION.base}
-                  />
-                  <Text style={styles.similarName} numberOfLines={2}>
-                    {item.name}
-                  </Text>
-                </Pressable>
+                />
               )}
             />
           </View>
@@ -1797,9 +2169,10 @@ export default function GameInfoScreen() {
               data={series}
               keyExtractor={(item) => String(item.id)}
               renderItem={(item) => (
-                <Pressable
+                <ScaleButton
                   onPress={() => router.push(`/game/${item.id}`)}
-                  accessibilityRole="link"
+                  activeScale={0.97}
+                  hoverScale={1.03}
                   accessibilityLabel={`Open ${item.name}`}
                   style={styles.seriesCard}
                 >
@@ -1813,14 +2186,20 @@ export default function GameInfoScreen() {
                     {item.name}
                   </Text>
                   <Text style={styles.seriesMeta}>
-                    {[
-                      item.released?.slice(0, 4),
-                      item.rating > 0 ? `★ ${item.rating.toFixed(1)}` : null,
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
+                    {item.released?.slice(0, 4)}
+                    {item.released && item.rating > 0 ? ' · ' : null}
+                    {item.rating > 0 ? (
+                      <>
+                        <Ionicons
+                          name="star"
+                          size={10}
+                          color={COLORS.starGold}
+                        />{' '}
+                        {item.rating.toFixed(1)}
+                      </>
+                    ) : null}
                   </Text>
-                </Pressable>
+                </ScaleButton>
               )}
             />
           ) : (
@@ -1847,42 +2226,6 @@ export default function GameInfoScreen() {
   );
 
   /**
-   * The finding, then the evidence.
-   *
-   * Four bars and a count is data; it leaves the reader to work out
-   * what it says. The heading's eyebrow now carries the conclusion —
-   * the way the Plan's does — so the section can be read at a glance
-   * and studied only if you want to.
-   */
-  /**
-   * The community counts, filed under the verdict rather than the rail.
-   *
-   * "Who else has it" is not something you act on — it is evidence for
-   * what the players concluded, and it sat in the actions column only
-   * because the phone's crate holds everything. Beside the verdict the
-   * two say one thing: this is what people did with it, and this is
-   * what they thought. The rail keeps to its purpose: decide, acquire.
-   */
-  /**
-   * The finishing rate — the verdict this app can give and no store can.
-   *
-   * "92% recommended" is RAWG's opinion of the game. It says nothing
-   * about the thing this whole app is built on, which is whether a
-   * game is a good use of the hours it asks for. Beaten against owned
-   * is exactly that, out of the same payload that was already sitting
-   * in the rail as trivia: of the people who have it, this many
-   * reached the credits.
-   *
-   * Coloured on the app's own semantics rather than a curve — mint is
-   * time well spent, amber is a maybe, coral is a shelf. And it is
-   * only claimed where the sample can carry it: under a few hundred
-   * owners the ratio is noise wearing a percentage.
-   */
-  const finishRate = finishRateOf(game);
-
-  const hasRatings = (game.ratings?.length ?? 0) > 0;
-
-  /**
    * The community counts, filed under the verdict on every width.
    *
    * On the phone they lived in the crate, three screens below the
@@ -1898,9 +2241,15 @@ export default function GameInfoScreen() {
     </View>
   ) : null;
 
+  /* The desk's second witness. The desk keeps it here because its
+     figures head the column with the hours and the split, not with
+     this; the phone asks it in the answer at the top instead. */
   const finish = finishRate ? (
     <View style={styles.finishRow}>
-      <Text style={[styles.finishFigure, { color: finishRate.tint }]}>
+      <Text
+        style={styles.finishFigure}
+        maxFontSizeMultiplier={FONT_SCALE.figure}
+      >
         {finishRate.pct}%
       </Text>
       <Text style={styles.finishLabel}>
@@ -1917,29 +2266,17 @@ export default function GameInfoScreen() {
     </>
   );
 
-  const ratingCount = (game.ratings ?? []).reduce((sum, r) => sum + r.count, 0);
   /**
-   * The phone's verdict: two figures, the shape, one line of counts.
+   * The phone's verdict: what people thought, its shape, one line of
+   * counts.
    *
-   * The share who recommend it and the share who finished it are the
-   * two numbers this section exists for - what people thought, and
-   * whether they stayed - so they stand side by side at the same size,
-   * each in its own colour. The bars under them are the shape of the
-   * first figure. The community counts, which were a two-by-two grid of
-   * icons taking a third of a screen, are one sentence: they are
-   * context for the figures, not figures of their own.
+   * The sentence and the finishing rate went up to the answer under the
+   * masthead, which is where the question is asked; what is left here
+   * is the evidence for the first half of that sentence — the share who
+   * recommend it, in neutral grey, and the bars that are its shape. The
+   * community counts, which were a two-by-two grid of icons taking a
+   * third of a screen, are one sentence: context, not figures.
    */
-  const liked = (game.ratings ?? [])
-    .filter((r) => r.title === 'exceptional' || r.title === 'recommended')
-    .reduce((sum, r) => sum + r.count, 0);
-  const likedShare =
-    ratingCount > 0 ? Math.round((liked / ratingCount) * 100) : 0;
-  const likedTint =
-    likedShare >= 70
-      ? COLORS.mint
-      : likedShare >= 45
-        ? COLORS.accent
-        : COLORS.coral;
   const community = game.added_by_status
     ? (
         [
@@ -1957,44 +2294,9 @@ export default function GameInfoScreen() {
         )
         .join(' · ')
     : '';
-  const said = verdictLine({
-    liked: hasRatings ? likedShare : null,
-    finished: finishRate?.pct ?? null,
-    hours: durationOf(game).hours,
-  });
   const verdictCompact = (
     <>
-      {/* The sum the page used to leave to the reader. Two shares side
-          by side are two facts; what they mean together — loved and
-          finished, or loved and put down — is the only thing anybody
-          wants from this section, and it is the one thing a histogram
-          cannot say. */}
-      {said ? <Text style={styles.said}>{said}</Text> : null}
-      {hasRatings || finishRate ? (
-        <View style={styles.verdictFigures}>
-          {hasRatings ? (
-            <View style={styles.verdictCell}>
-              <Text style={[styles.verdictFigure, { color: likedTint }]}>
-                {likedShare}%
-              </Text>
-              <Text style={styles.verdictLabel}>recommend it</Text>
-            </View>
-          ) : null}
-          {finishRate ? (
-            <View
-              style={[styles.verdictCell, hasRatings && styles.verdictCellRule]}
-            >
-              <Text style={[styles.verdictFigure, { color: finishRate.tint }]}>
-                {finishRate.pct}%
-              </Text>
-              <Text style={styles.verdictLabel}>reached the credits</Text>
-            </View>
-          ) : null}
-        </View>
-      ) : null}
-      {hasRatings ? (
-        <RatingsBreakdown ratings={game.ratings!} lead={false} />
-      ) : null}
+      {hasRatings ? <RatingsBreakdown ratings={game.ratings!} /> : null}
       {community ? <Text style={styles.community}>{community}</Text> : null}
     </>
   );
@@ -2081,19 +2383,12 @@ export default function GameInfoScreen() {
       title="Screenshots & trailers"
       data={gallery}
       keyExtractor={(frame) => frame.key}
-      renderItem={(frame) => (
-        <Pressable
-          onPress={() =>
-            frame.movie
-              ? setPlaying(frame.movie.id)
-              : setLightboxUri(frame.image)
-          }
-          accessibilityRole="button"
-          accessibilityLabel={
-            frame.movie
-              ? `Play the trailer ${frame.movie.name}`
-              : 'Open this image full size'
-          }
+      renderItem={(frame, index) => (
+        <Touchable
+          onPress={() => setLightboxIndex(index)}
+          feedback="scale"
+          accessibilityRole={frame.movie ? 'button' : 'imagebutton'}
+          accessibilityLabel={frameLabel(frame, index)}
           style={[styles.frame, { width: frameWidth }]}
         >
           <Image
@@ -2105,17 +2400,17 @@ export default function GameInfoScreen() {
           {frame.movie ? (
             <>
               <View style={styles.posterPlay}>
-                <Ionicons name="play" size={22} color={COLORS.navy} />
+                <Ionicons name="play" size={ICON.lg} color={COLORS.navy} />
               </View>
-              {/* Named, because the poster frame is usually black and a
-                  black box with a play glyph could be a broken image.
-                  The name says it is a film, and which. */}
+              {/* Named, because a trailer's own poster is usually black
+                  and a black box with a play glyph could be a broken
+                  image. The name says it is a film, and which. */}
               <Text style={styles.frameCaption} numberOfLines={1}>
                 {frame.movie.name}
               </Text>
             </>
           ) : null}
-        </Pressable>
+        </Touchable>
       )}
     />
   ) : null;
@@ -2213,7 +2508,13 @@ export default function GameInfoScreen() {
             </Text>
           ))}
           {game.rating > 0 ? (
-            <Text style={styles.metaValue}>★ {game.rating.toFixed(1)}</Text>
+            <Text
+              style={styles.metaValue}
+              accessibilityLabel={`Rated ${game.rating.toFixed(1)} of 5 by players`}
+            >
+              <Ionicons name="star" size={ICON.sm} color={COLORS.starGold} />{' '}
+              {game.rating.toFixed(1)}
+            </Text>
           ) : null}
           {game.metacritic != null ? (
             <ScorePill score={game.metacritic} />
@@ -2240,27 +2541,6 @@ export default function GameInfoScreen() {
       ) : null}
     </View>
   ) : null;
-
-  /**
-   * The chips, with no label and no padding of their own.
-   *
-   * No label, in either layout: they follow the prose on both, and
-   * there they are the description's index — a reader who has just
-   * read the sentence does not need a heading to be told that
-   * "Atmospheric" and "Story Rich" describe it. And no `fileSection`
-   * wrapper any more: that padding is what separates the crate's
-   * sections from each other, and out here it was twenty points the
-   * block's own margin had already paid for, so the tags sat looser
-   * from the prose than any two blocks on the page.
-   */
-  const fileTags =
-    game.tags && game.tags.length > 0 ? (
-      <View style={styles.tags}>
-        {game.tags.slice(0, isExpanded ? 14 : 10).map((tag) => (
-          <Chip key={tag.id} title={tag.name} quiet />
-        ))}
-      </View>
-    ) : null;
 
   /**
    * The rule between sections belongs to the join, not to the section,
@@ -2363,9 +2643,63 @@ export default function GameInfoScreen() {
 
   /* -------------------------------------------------------------- layout */
 
+  /**
+   * Context that stays when the masthead goes.
+   *
+   * The page runs to about 3,500 points and pinned nothing, so from the
+   * screenshots down there was no name on screen and no way to act
+   * without scrolling back. Past the masthead the native bar takes the
+   * game's name on the system's own material; past the decision a bar
+   * rises from the foot with the hours and the next step. Near the top
+   * both go again, because there the real ones are on screen.
+   *
+   * The phone app only. The desk pins its rail already, and a browser
+   * has no navigation bar to title and a tab bar of its own at the foot.
+   */
+  const pinned = Platform.OS !== 'web' && !isExpanded;
+  /** Where the typed name passes under the bar: the band's foot, less it. */
+  const titleLine =
+    bannerHeight(width, insets.top, windowHeight) - insets.top - NAV_BAR;
+  const onScroll = pinned
+    ? (y: number) => {
+        const masthead = y > titleLine;
+        if (masthead !== pastMasthead) setPastMasthead(masthead);
+        const decision =
+          decisionFoot.current > 0 &&
+          y > decisionFoot.current - insets.top - NAV_BAR;
+        if (decision !== pastDecision) setPastDecision(decision);
+      }
+    : undefined;
+
   const page = (
     <>
       <PageTitle>{`${game.name} — Sidequest`}</PageTitle>
+      {pinned ? (
+        <Stack.Screen
+          options={{
+            headerTitle: pastMasthead ? game.name : '',
+            headerTitleStyle: {
+              fontFamily: 'Noah-Bold',
+              fontSize: TYPE.h3.fontSize,
+              color: COLORS.white,
+            },
+            // Still transparent — the masthead runs under the status
+            // bar — so the material is iOS's blur, switched on only once
+            // there is a title for it to hold up. Android has no blur
+            // here; it gets the navy the tab bar stands on.
+            headerBlurEffect: pastMasthead
+              ? 'systemChromeMaterialDark'
+              : 'none',
+            ...(Platform.OS === 'android'
+              ? {
+                  headerStyle: {
+                    backgroundColor: pastMasthead ? COLORS.navy : 'transparent',
+                  },
+                }
+              : null),
+          }}
+        />
+      ) : null}
       <View style={styles.container}>
         {isExpanded ? null : (
           <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
@@ -2373,7 +2707,11 @@ export default function GameInfoScreen() {
           </View>
         )}
 
-        <Screen onRefresh={refresh}>
+        <PageScroller
+          onRefresh={refresh}
+          onScroll={onScroll}
+          bottomRoom={pinned ? ACTION_BAR_HEIGHT : 0}
+        >
           <View
             style={[
               // The last block already leaves its own margin, so this
@@ -2403,12 +2741,9 @@ export default function GameInfoScreen() {
                     ) : (
                       <>
                         {yourTake}
+                        {/* The prose, and the tags after it that index
+                            it — the same place the phone files them. */}
                         {about}
-                        {/* After the prose they annotate, the same
-                            place the phone files them. */}
-                        {game.tags && game.tags.length > 0 ? (
-                          <View style={styles.block}>{fileTags}</View>
-                        ) : null}
                         {ratingsBreakdown}
                       </>
                     )}
@@ -2432,9 +2767,18 @@ export default function GameInfoScreen() {
               </View>
             ) : (
               <>
+                {/* Masthead, then the answer, then what to do about
+                    it: the thesis first, and the evidence after. */}
                 {hero}
                 {figures}
-                {controls}
+                <View
+                  onLayout={(event) => {
+                    const { y, height } = event.nativeEvent.layout;
+                    decisionFoot.current = y + height;
+                  }}
+                >
+                  {controls}
+                </View>
                 {/* The app's own answer, and the reason this page is
                     not a database entry: how the game lands on the
                     evenings the reader actually has. Absent for a game
@@ -2458,14 +2802,10 @@ export default function GameInfoScreen() {
                     bones
                   ) : (
                     <>
+                      {/* The prose with its tags inside it, as Steam
+                          files them: they are the description's index,
+                          not archive material. */}
                       {about}
-                      {/* Tags right after the prose, as Steam files
-                          them: they are the description's index, not
-                          archive material — and they were three
-                          screens deep in the crate. */}
-                      {game.tags && game.tags.length > 0 ? (
-                        <View style={styles.block}>{fileTags}</View>
-                      ) : null}
                       {ratingsBreakdown}
                       {yourTake}
                       {/* The file, on a band of its own. The page has
@@ -2492,19 +2832,17 @@ export default function GameInfoScreen() {
           </View>
 
           <SiteFooter />
-        </Screen>
+        </PageScroller>
+        {pinned ? <GameActionBar game={game} visible={pastDecision} /> : null}
         <DurationSheet
           game={editingLength ? game : null}
           duration={editingLength ? durationOf(game) : null}
           onClose={() => setEditingLength(false)}
         />
         <Lightbox
-          uri={lightboxUri}
-          movie={trailers.find((t) => t.id === playing) ?? null}
-          onClose={() => {
-            setLightboxUri(null);
-            setPlaying(null);
-          }}
+          frames={gallery}
+          start={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
         />
       </View>
     </>
@@ -2556,7 +2894,7 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.lg,
     minHeight: TITLE_SLOT,
     justifyContent: 'flex-end',
-    gap: SPACING.sm + 2,
+    gap: SPACING.sm2,
   },
   heroGrain: {
     position: 'absolute',
@@ -2568,7 +2906,7 @@ const styles = StyleSheet.create({
   controls: {
     paddingHorizontal: SPACING.md,
     paddingTop: SPACING.lg,
-    gap: SPACING.sm + 2,
+    gap: SPACING.sm2,
     width: '100%',
     maxWidth: LAYOUT.maxContentWidth,
     alignSelf: 'center',
@@ -2589,7 +2927,7 @@ const styles = StyleSheet.create({
   figures: {
     paddingHorizontal: SPACING.md,
     paddingTop: SPACING.md,
-    gap: SPACING.sm + 2,
+    gap: SPACING.sm2,
     width: '100%',
     maxWidth: LAYOUT.maxContentWidth,
     alignSelf: 'center',
@@ -2599,6 +2937,8 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
   },
   stripTight: { justifyContent: 'center' },
+  /** Past a third larger text: two by two, each figure with half the row. */
+  stripGrid: { flexWrap: 'wrap', rowGap: SPACING.sm },
   /*
    * Two styles that never meet, rather than one overriding the other.
    *
@@ -2618,32 +2958,39 @@ const styles = StyleSheet.create({
    * cell does not and is never told to.
    */
   stripCellSpread: { flex: 1, paddingHorizontal: SPACING.xs },
+  /**
+   * The answer's two figures take a larger share of the row: at 34pt
+   * "12.5h" needs about ninety points, which a quarter of a phone is
+   * not.
+   */
+  stripCellLead: { flex: 1.35, paddingHorizontal: SPACING.xs },
+  stripCellGrid: { width: '50%', paddingHorizontal: SPACING.xs },
   stripCellTight: { paddingHorizontal: SPACING.xl },
+  /** Labels on one line whatever the figure's size: cells sit on the foot. */
   stripCell: {
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 3,
+    justifyContent: 'flex-end',
+    gap: SPACING.xxs,
     paddingVertical: SPACING.sm,
   },
   stripCellRule: { borderLeftWidth: 1, borderLeftColor: COLORS.strokeStrong },
-  stripValue: {
-    fontFamily: 'Geom-ExtraBold',
-    fontSize: 24,
-    lineHeight: 28,
-    letterSpacing: -0.4,
-    color: COLORS.lightGrey,
+  stripValue: { ...TYPE.figure, color: COLORS.lightGrey },
+  stripValueSmall: { ...TYPE.figureSmall, color: COLORS.lightGrey },
+  stripLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
   },
-  stripLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  stripLabel: {
-    ...TYPE.tag,
-    fontSize: 10,
-    letterSpacing: 0.8,
-    color: COLORS.mediumGrey,
-  },
-  /** The fit strip stands in the page's own column, under the decision. */
+  stripLabel: { ...TYPE.fine, color: COLORS.mediumGrey },
+  /**
+   * The fit strip stands in the page's own column, under the decision,
+   * with a full section's air under it before the pictures: at sixteen
+   * the strip's legend read as the screenshots' caption.
+   */
   fitSlot: {
     paddingHorizontal: SPACING.md,
     paddingTop: SPACING.xl,
+    paddingBottom: SPACING.xl - SPACING.md,
     width: '100%',
     maxWidth: LAYOUT.maxContentWidth,
     alignSelf: 'center',
@@ -2662,6 +3009,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   heroIdentityLink: { color: COLORS.white },
+  heroIdentityRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+    columnGap: SPACING.xs + SPACING.xxs,
+    rowGap: SPACING.xxs,
+  },
+  heroPlatforms: { marginLeft: SPACING.xs },
 
   /**
    * Stats sit on the artwork, so they carry their own contrast the way
@@ -2684,15 +3040,14 @@ const styles = StyleSheet.create({
    * things. 10 between lines is still one block, now legible as
    * title, figure, byline, rule.
    */
-  statBlockWide: { alignSelf: 'stretch', gap: SPACING.sm + 2 },
+  statBlockWide: { alignSelf: 'stretch', gap: SPACING.sm2 },
   /**
-   * The plan's own answer, and a way into it. Amber because it is a
-   * link and every link in this app is amber — and because it is the
-   * one line on the page that is about the reader rather than the
-   * game.
+   * The plan's own answer, and a way into it, in the plan's colour.
+   * It was amber, on the grounds that links are — but amber is time and
+   * the page's one primary action, and "#2 in your plan" is neither: it
+   * is the evening, the plan, which is what violet is for.
    */
-  statPlan: { color: COLORS.accent },
-  statArrow: { ...TYPE.labelTiny },
+  statPlan: { color: COLORS.violetText },
   /** The hours, at the size the Library sets the hours ahead of you. */
   hoursLine: { flexDirection: 'row', alignItems: 'baseline', gap: SPACING.sm },
   /**
@@ -2708,10 +3063,7 @@ const styles = StyleSheet.create({
    * bright frame does not apply where the copy actually lands.
    */
   hoursValue: {
-    fontFamily: 'Geom-ExtraBold',
-    fontSize: 34,
-    lineHeight: 38,
-    letterSpacing: -0.6,
+    ...TYPE.figure,
     // The shadow from OVER_IMAGE, but not its white: the spread has to
     // come first or it takes the colour back.
     ...OVER_IMAGE.heading,
@@ -2767,7 +3119,6 @@ const styles = StyleSheet.create({
     ...OVER_IMAGE.body,
     color: COLORS.lightGrey,
   },
-  statFlag: { color: COLORS.accent },
   statPencil: { opacity: 0.9 },
   /**
    * The middle of the type scale, which the page did not have: 76 for
@@ -2785,7 +3136,7 @@ const styles = StyleSheet.create({
   video: {
     width: '100%',
     aspectRatio: 16 / 9,
-    borderRadius: RADIUS.lg,
+    borderRadius: RADIUS.sm,
     overflow: 'hidden',
     backgroundColor: COLORS.navy,
   },
@@ -2870,16 +3221,21 @@ const styles = StyleSheet.create({
   },
   /** No contact shadow on solid ground - see StatStrip's `onGround`. */
   onGround: { textShadowColor: 'transparent', textShadowRadius: 0 },
-  /** A frame in the gallery: the screenshot's 16:9, one hairline. */
+  /**
+   * A frame in the gallery: the screenshot's 16:9, one hairline, and
+   * the page's one media radius — the tiles', the phone's screenshots',
+   * the streams'. Four radii for four kinds of picture read as four
+   * components.
+   */
   frame: {
     aspectRatio: 16 / 9,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.sm,
     overflow: 'hidden',
     backgroundColor: COLORS.navy,
     borderWidth: 1,
     borderColor: COLORS.stroke,
   },
-  frameBone: { aspectRatio: 16 / 9, borderRadius: RADIUS.md },
+  frameBone: { aspectRatio: 16 / 9, borderRadius: RADIUS.sm },
   frameCaption: {
     ...TYPE.labelSmall,
     ...OVER_IMAGE.body,
@@ -2887,7 +3243,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: SPACING.md,
     right: SPACING.md,
-    bottom: SPACING.sm + 2,
+    bottom: SPACING.sm2,
   },
   /** The shelf heading's bones, at the wide title's line height. */
   frameHeading: { height: 33, width: 240 },
@@ -2918,15 +3274,17 @@ const styles = StyleSheet.create({
     paddingTop: SPACING.lg,
   },
 
-  /** Centred: it annotates a centred strip, and left-aligned under it
-      the one line read as having slipped off the grid. */
-  splitLegend: {
-    ...TYPE.caption,
-    color: COLORS.mediumGrey,
-    textAlign: 'center',
+  /** The split: three cells under the strip, centred with it. */
+  split: { flexDirection: 'row', justifyContent: 'center' },
+  splitTick: {
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    gap: SPACING.xxs,
   },
-  /** 3:4, at a stamp's size; hairline so dark covers keep an edge. */
-  similarCard: { width: 132, gap: SPACING.xs },
+  splitValue: { ...TYPE.label, color: COLORS.lightGrey },
+  splitLabel: { ...TYPE.fine, color: COLORS.mediumGrey },
+  /** The series tile's width and its caption rhythm. */
+  similarCard: { width: 132, gap: SPACING.xs + 1 },
   seriesCard: { width: 210, gap: SPACING.xs },
   seriesCover: {
     width: 210,
@@ -2973,15 +3331,28 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: 56,
   },
-  similarCover: {
-    width: 132,
-    aspectRatio: 3 / 4,
+  /** GameTile's poster: 3:4, the media radius, a hairline, its shadow. */
+  similarArt: {
+    width: '100%',
+    aspectRatio: LAYOUT.tileAspect,
     borderRadius: RADIUS.sm,
+    overflow: 'hidden',
     borderWidth: 1,
     borderColor: COLORS.stroke,
     backgroundColor: COLORS.navy,
+    ...SHADOW.card,
   },
-  similarName: { ...TYPE.caption, color: COLORS.lightGrey },
+  /** The tile's lit top edge, painted over the cover as the tile does. */
+  similarEdge: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: RADIUS.sm - 1,
+    boxShadow: `inset 0 1px 0 ${alpha(COLORS.white, 0.14)}`,
+  },
+  similarName: { ...TYPE.labelSmall, color: COLORS.lightGrey, marginTop: 2 },
 
   /**
    * Proportional, not one fixed track and one leftover.
@@ -2995,7 +3366,11 @@ const styles = StyleSheet.create({
    */
   columnMain: { flex: 70, minWidth: 0, gap: SPACING.sm },
 
-  /** Centred on the poster, in the app's amber, sized for a thumb. */
+  /**
+   * Centred on the poster and sized for a thumb, in white: amber is the
+   * page's primary action, and a play button on every poster in the row
+   * was that action said four times.
+   */
   posterPlay: {
     position: 'absolute',
     alignSelf: 'center',
@@ -3004,23 +3379,10 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: COLORS.accent,
+    backgroundColor: alpha(COLORS.white, 0.92),
     alignItems: 'center',
     justifyContent: 'center',
     paddingLeft: 3,
-  },
-  /** Small, solid, bottom-left: says "this one moves" without painting
-      a control over the whole thumb. */
-  stagePlayBadge: {
-    position: 'absolute',
-    left: 4,
-    bottom: 4,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: 'rgba(18,24,36,0.8)',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   /**
    * Pinned, the same move the Plan's rail makes and for the same
@@ -3050,11 +3412,6 @@ const styles = StyleSheet.create({
         }
       : null),
   },
-  railCard: {
-    backgroundColor: COLORS.navy,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-  },
   compactBody: {
     paddingHorizontal: SPACING.md,
     paddingTop: SPACING.md,
@@ -3073,46 +3430,32 @@ const styles = StyleSheet.create({
    * and the Library now use, so a reader crossing between the three
    * meets one rhythm rather than three.
    */
-  block: { gap: SPACING.sm + 2, marginBottom: SPACING.xl },
+  block: { gap: SPACING.sm2, marginBottom: SPACING.xl },
 
   fileSection: {
     paddingVertical: SPACING.lg,
     gap: SPACING.sm,
   },
-  fileSectionCompact: { paddingVertical: SPACING.sm + 2 },
+  fileSectionCompact: { paddingVertical: SPACING.sm2 },
   factGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   factCell: {
     width: '50%',
-    paddingVertical: SPACING.sm + 2,
-    gap: 3,
+    paddingVertical: SPACING.sm2,
+    gap: SPACING.xxs,
     paddingRight: SPACING.md,
   },
   factCellWide: { width: '100%' },
 
   // the phone's verdict
-  verdictFigures: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
-    marginBottom: SPACING.sm,
-  },
-  verdictCell: { flex: 1, gap: 2, paddingVertical: SPACING.xs },
-  verdictCellRule: {
-    borderLeftWidth: 1,
-    borderLeftColor: COLORS.strokeStrong,
-    paddingLeft: SPACING.md,
-  },
-  verdictFigure: {
-    fontFamily: 'Geom-ExtraBold',
-    fontSize: 34,
-    lineHeight: 38,
-    letterSpacing: -0.6,
-  },
-  verdictLabel: { ...TYPE.caption, color: COLORS.mediumGrey },
-  /** The verdict in words, ahead of the figures it is drawn from. */
+  /**
+   * The verdict in words, ahead of the figures it is drawn from —
+   * centred, because the strip under it is.
+   */
   said: {
     ...TYPE.h3,
     color: COLORS.white,
-    marginBottom: SPACING.sm + 2,
+    textAlign: 'center',
+    paddingHorizontal: SPACING.sm,
   },
   community: {
     ...TYPE.caption,
@@ -3156,12 +3499,7 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     marginTop: SPACING.md,
   },
-  finishFigure: {
-    fontFamily: 'Geom-ExtraBold',
-    fontSize: 34,
-    lineHeight: 38,
-    letterSpacing: -0.6,
-  },
+  finishFigure: { ...TYPE.figure, color: COLORS.mint },
   finishLabel: { ...TYPE.body, color: COLORS.lightGrey, flexShrink: 1 },
 
   /** Ruled off from the bars above it: same finding, second witness. */
@@ -3248,21 +3586,23 @@ const styles = StyleSheet.create({
   skeletonShellWide: { width: '100%' },
   lightbox: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.95)',
-    justifyContent: 'center',
+    backgroundColor: alpha(COLORS.ink, 0.96),
   },
+  lightboxPage: { height: '100%', justifyContent: 'center' },
   lightboxImage: { width: '100%', height: '80%' },
-  lightboxClose: {
+  /** The count on the left, the close on the right, under the island. */
+  lightboxBar: {
     position: 'absolute',
-    top: SPACING.xl + SPACING.md,
-    right: SPACING.lg,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    left: SPACING.lg,
+    right: SPACING.md,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    justifyContent: 'space-between',
   },
+  lightboxCount: { ...TYPE.labelSmall, color: COLORS.white },
+  scroller: { flex: 1 },
+  /** The error state, in the scroller so pulling down asks again. */
+  errorShell: { flexGrow: 1, minHeight: 480 },
 });
 
 /**

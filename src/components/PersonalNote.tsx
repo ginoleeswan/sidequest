@@ -1,17 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
-import {
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { Touchable } from './Touchable';
+import { impact } from '@/lib/haptics';
 import { useLibrary } from '@/lib/library';
 import { COLORS } from '@/styles/colors';
-import { RADIUS, SPACING } from '@/styles/theme';
+import { ICON, RADIUS, SPACING, TOUCH } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 /**
@@ -65,12 +60,15 @@ export function PersonalNote({ gameId }: { gameId: number }) {
       <View style={styles.head}>
         <Text style={TYPE.micro}>YOUR TAKE</Text>
         <View style={styles.stars}>
+          {/* Each star is a whole thumb wide. At 18pt with four points
+              of slop they were 26pt targets packed edge to edge, so a
+              reader aiming for four got three as often as not. */}
           {[1, 2, 3, 4, 5].map((star) => (
-            <Pressable
+            <Touchable
               key={star}
               onPress={() => setRating(gameId, rating === star ? 0 : star)}
-              hitSlop={4}
-              accessibilityRole="button"
+              haptic="tap"
+              style={styles.star}
               accessibilityState={{ selected: star <= rating }}
               accessibilityLabel={
                 rating === star
@@ -78,12 +76,15 @@ export function PersonalNote({ gameId }: { gameId: number }) {
                   : `Rate ${star} out of 5`
               }
             >
+              {/* The rating's gold, not the accent: a score is not time,
+                  and amber on these made the reader's own stars read as
+                  the page's primary action. */}
               <Ionicons
                 name={star <= rating ? 'star' : 'star-outline'}
-                size={18}
-                color={star <= rating ? COLORS.accent : COLORS.mediumGrey}
+                size={ICON.md}
+                color={star <= rating ? COLORS.starGold : COLORS.mediumGrey}
               />
-            </Pressable>
+            </Touchable>
           ))}
         </View>
       </View>
@@ -92,7 +93,10 @@ export function PersonalNote({ gameId }: { gameId: number }) {
         value={draft}
         onChangeText={setDraft}
         onBlur={() => setNote(gameId, draft)}
-        onSubmitEditing={() => setNote(gameId, draft)}
+        onSubmitEditing={() => {
+          impact();
+          setNote(gameId, draft);
+        }}
         placeholder="Where you got to, why you bounced, who to lend it to…"
         placeholderTextColor={COLORS.mediumGrey}
         multiline
@@ -102,21 +106,22 @@ export function PersonalNote({ gameId }: { gameId: number }) {
 
       <View style={styles.tags}>
         {(entry.tags ?? []).map((tag) => (
-          <Pressable
+          <Touchable
             key={tag}
             onPress={() => removeTag(gameId, tag)}
+            hitSlop="sm"
             style={styles.tag}
-            accessibilityRole="button"
             accessibilityLabel={`Remove the ${tag} shelf`}
           >
             <Text style={styles.tagText}>{tag}</Text>
             <Ionicons name="close" size={11} color={COLORS.mediumGrey} />
-          </Pressable>
+          </Touchable>
         ))}
         <TextInput
           value={tagDraft}
           onChangeText={setTagDraft}
           onSubmitEditing={() => {
+            impact();
             addTag(gameId, tagDraft);
             setTagDraft('');
           }}
@@ -137,26 +142,27 @@ export function PersonalNote({ gameId }: { gameId: number }) {
               .filter((tag) => !(entry.tags ?? []).includes(tag))
               .slice(0, 6)
               .map((tag) => (
-                <Pressable
+                <Touchable
                   key={tag}
                   onPress={() => addTag(gameId, tag)}
-                  accessibilityRole="button"
+                  haptic="impact"
+                  hitSlop="text"
                   accessibilityLabel={`Add to ${tag}`}
                 >
                   <Text style={styles.suggestion}>+ {tag}</Text>
-                </Pressable>
+                </Touchable>
               ))}
           </View>
         )}
 
       {draft !== stored && (
-        <Pressable
+        <Touchable
           onPress={() => setNote(gameId, draft)}
-          accessibilityRole="button"
+          haptic="impact"
           style={styles.save}
         >
           <Text style={styles.saveText}>Save note</Text>
-        </Pressable>
+        </Touchable>
       )}
     </View>
   );
@@ -179,7 +185,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  stars: { flexDirection: 'row', gap: 4 },
+  /**
+   * Flush, with the last target's spare width given back so the fifth
+   * glyph still lines up with the card's edge.
+   */
+  stars: {
+    flexDirection: 'row',
+    marginVertical: -(TOUCH.min - ICON.md) / 2,
+    marginRight: -(TOUCH.min - ICON.md) / 2,
+  },
+  star: {
+    width: TOUCH.min,
+    height: TOUCH.min,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   input: {
     ...TYPE.body,
     color: COLORS.lightGrey,
@@ -209,9 +229,9 @@ const styles = StyleSheet.create({
     gap: 5,
     borderWidth: 1,
     borderColor: COLORS.strokeStrong,
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.sm + 2,
-    paddingVertical: 4,
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: SPACING.sm2,
+    paddingVertical: SPACING.xs,
   },
   tagText: {
     ...TYPE.labelTiny,
@@ -221,7 +241,7 @@ const styles = StyleSheet.create({
     ...TYPE.labelTiny,
     color: COLORS.lightGrey,
     minWidth: 90,
-    paddingVertical: 4,
+    paddingVertical: SPACING.xs,
     outlineWidth: 0,
   },
   suggestions: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.md },
@@ -229,7 +249,12 @@ const styles = StyleSheet.create({
     ...TYPE.fine,
     color: COLORS.mediumGrey,
   },
-  save: { alignSelf: 'flex-start' },
+  /** A line of text, at a thumb's height. */
+  save: {
+    alignSelf: 'flex-start',
+    minHeight: TOUCH.min,
+    justifyContent: 'center',
+  },
   saveText: {
     ...TYPE.labelTiny,
     color: COLORS.accent,

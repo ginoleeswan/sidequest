@@ -1,4 +1,3 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -13,6 +12,8 @@ import {
 
 import { CoverImage } from './CoverImage';
 import { Mark } from './Mark';
+import { PrimaryButton } from './PrimaryButton';
+import { Touchable } from './Touchable';
 import { YearBlocks } from './YearBlocks';
 import type { Game } from '@/api/types';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
@@ -24,10 +25,10 @@ import { celebrate } from '@/lib/haptics';
 import { useLibrary } from '@/lib/library';
 import { libraryStats } from '@/lib/libraryStats';
 import { blocksByMonth, buildMemcard } from '@/lib/memcard';
-import { COLORS } from '@/styles/colors';
+import { COLORS, alpha } from '@/styles/colors';
 import { SPRING } from '@/styles/motion';
-import { RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { RADIUS, SPACING, TOUCH } from '@/styles/theme';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
 
 /**
  * The moment a game is finished.
@@ -154,9 +155,9 @@ export function FinishCelebration({
               />
               <LinearGradient
                 colors={[
-                  'rgba(9,12,19,0)',
-                  'rgba(9,12,19,0.5)',
-                  'rgba(9,12,19,0.92)',
+                  alpha(COLORS.ink, 0),
+                  alpha(COLORS.ink, 0.5),
+                  alpha(COLORS.ink, 0.92),
                 ]}
                 locations={[0, 0.5, 1]}
                 style={styles.stageVeil}
@@ -189,7 +190,12 @@ export function FinishCelebration({
                 ]}
                 pointerEvents="none"
               >
-                <Text style={styles.stampWord}>FINISHED</Text>
+                <Text
+                  style={styles.stampWord}
+                  maxFontSizeMultiplier={FONT_SCALE.display}
+                >
+                  FINISHED
+                </Text>
               </Animated.View>
             </View>
 
@@ -209,6 +215,10 @@ export function FinishCelebration({
                 : 'One more off the pile.'}
             </Text>
 
+            {/* Mint, like the stamp above them: these are the counts of
+                things finished, and this screen is the one place in
+                the app that is entirely about finishing. They were
+                amber, which is time still to spend. */}
             <View style={styles.stats}>
               <View style={styles.stat}>
                 <Text style={styles.statValue}>{Math.round(finished)}</Text>
@@ -224,23 +234,22 @@ export function FinishCelebration({
               </View>
             </View>
 
-            <Pressable
+            {/* The app's one primary, not a white pill of its own: the
+                way on from here is the same kind of act as every other
+                amber button, and should look like one. */}
+            <PrimaryButton
+              label="What’s next"
+              icon="arrow-forward"
+              haptic="tap"
+              block
               onPress={() => {
                 onClose();
                 router.push('/plan');
               }}
-              style={styles.primary}
-            >
-              <Text style={styles.primaryText}>What’s next</Text>
-              <Ionicons
-                name="arrow-forward"
-                size={15}
-                color={COLORS.darkGrey}
-              />
-            </Pressable>
-            <Pressable onPress={onClose} style={styles.ghost}>
+            />
+            <Touchable onPress={onClose} style={styles.ghost}>
               <Text style={styles.ghostText}>Keep browsing</Text>
-            </Pressable>
+            </Touchable>
           </Pressable>
         </Animated.View>
       </Pressable>
@@ -251,7 +260,7 @@ export function FinishCelebration({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(13,17,25,0.86)',
+    backgroundColor: alpha(COLORS.ink, 0.86),
     alignItems: 'center',
     justifyContent: 'center',
     padding: SPACING.lg,
@@ -301,14 +310,14 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     borderWidth: 4,
     borderColor: COLORS.mint,
-    borderRadius: 10,
+    borderRadius: RADIUS.sm,
     paddingVertical: 7,
-    paddingHorizontal: 16,
-    backgroundColor: 'rgba(20,25,35,0.55)',
+    paddingHorizontal: SPACING.md,
+    backgroundColor: alpha(COLORS.ink, 0.55),
   },
+  /** The title step, tracked wide the way a rubber stamp is cut. */
   stampWord: {
-    fontFamily: 'Geom-ExtraBold',
-    fontSize: 26,
+    ...TYPE.title,
     letterSpacing: 4,
     color: COLORS.mint,
   },
@@ -340,7 +349,7 @@ const styles = StyleSheet.create({
   stat: { alignItems: 'center', gap: 2, flex: 1 },
   statValue: {
     ...TYPE.h2,
-    color: COLORS.accent,
+    color: COLORS.mint,
   },
   statValueQuiet: {
     ...TYPE.h2,
@@ -350,20 +359,11 @@ const styles = StyleSheet.create({
     ...TYPE.micro,
     color: COLORS.mediumGrey,
   },
-  primary: {
-    flexDirection: 'row',
+  ghost: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: SPACING.sm,
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
-    paddingVertical: SPACING.md,
+    minHeight: TOUCH.min,
   },
-  primaryText: {
-    ...TYPE.h4,
-    color: COLORS.darkGrey,
-  },
-  ghost: { alignItems: 'center', paddingVertical: SPACING.sm },
   ghostText: {
     ...TYPE.labelSmall,
     color: COLORS.mediumGrey,

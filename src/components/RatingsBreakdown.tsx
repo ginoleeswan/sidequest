@@ -2,9 +2,9 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import type { RatingBucket } from '@/api/types';
 import { compact } from '@/lib/format';
-import { COLORS } from '@/styles/colors';
+import { COLORS, alpha } from '@/styles/colors';
 import { SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
 
 const LABELS: Record<string, string> = {
   exceptional: 'Exceptional',
@@ -24,18 +24,21 @@ const LABELS: Record<string, string> = {
 const ORDER = ['exceptional', 'recommended', 'meh', 'skip'];
 
 /**
- * The app's own palette, not the four-colour set this arrived with.
+ * One grey, at three strengths, and coral on the one bar that means it.
  *
  * Blue, yellow, green and red made the loudest thing on a game page a
- * third-party rating widget, in colours that appear nowhere else in the
- * product. These are the semantics the rest of the app already speaks:
- * mint is finishing something, amber is worth your time, coral is
- * letting go, and grey is a shrug.
+ * third-party rating widget. The fix after that borrowed the app's own
+ * colours as a traffic light — mint for exceptional, amber for
+ * recommended — which spent the words this app speaks in on somebody
+ * else's opinion: mint is finishing, amber is time, and a rating is
+ * neither. A ramp says what the rows are, a scale from more to less,
+ * and leaves the colours their meanings. "Skip" is the one bucket that
+ * is a verdict of letting go, so it alone is coral.
  */
 const BAR_COLORS: Record<string, string> = {
-  exceptional: COLORS.mint,
-  recommended: COLORS.accent,
-  meh: COLORS.mediumGrey,
+  exceptional: COLORS.lightGrey,
+  recommended: alpha(COLORS.lightGrey, 0.7),
+  meh: alpha(COLORS.lightGrey, 0.4),
   skip: COLORS.coral,
 };
 
@@ -71,17 +74,21 @@ export function RatingsBreakdown({
     .filter((r) => r.title === 'exceptional' || r.title === 'recommended')
     .reduce((sum, r) => sum + r.count, 0);
   const share = Math.round((liked / total) * 100);
-  /* The app's own semantics: mint is a good use of your time, amber is
-     a maybe, coral is letting it go. */
-  const shareColor =
-    share >= 70 ? COLORS.mint : share >= 45 ? COLORS.accent : COLORS.coral;
 
   return (
     <View style={styles.container}>
       {lead ? (
         <>
           <View style={styles.lead}>
-            <Text style={[styles.share, { color: shareColor }]}>{share}%</Text>
+            {/* Neutral, whatever the number. A share coloured by how
+                good it is was a traffic light in the app's semantic
+                colours; the figure's size already says it matters. */}
+            <Text
+              style={styles.share}
+              maxFontSizeMultiplier={FONT_SCALE.figure}
+            >
+              {share}%
+            </Text>
             <Text style={styles.shareLabel}>
               rated it recommended or better
             </Text>
@@ -116,19 +123,14 @@ export function RatingsBreakdown({
 const styles = StyleSheet.create({
   container: { gap: SPACING.sm },
   lead: { flexDirection: 'row', alignItems: 'baseline', gap: SPACING.sm },
-  share: {
-    fontFamily: 'Geom-ExtraBold',
-    fontSize: 34,
-    lineHeight: 38,
-    letterSpacing: -0.6,
-  },
+  share: { ...TYPE.figure, color: COLORS.lightGrey },
   shareLabel: { ...TYPE.body, color: COLORS.lightGrey, flexShrink: 1 },
   rule: {
     height: 1,
     backgroundColor: COLORS.stroke,
     marginVertical: SPACING.sm,
   },
-  row: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm + 2 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm2 },
   label: {
     ...TYPE.labelTiny,
     color: COLORS.lightGrey,
@@ -138,7 +140,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: COLORS.stroke,
     overflow: 'hidden',
   },
   fill: { height: '100%', borderRadius: 3 },

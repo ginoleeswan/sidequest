@@ -1,12 +1,13 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { useToast } from './Toast';
+import { Touchable } from './Touchable';
 import { useLibrary } from '@/lib/library';
 import { COLORS } from '@/styles/colors';
-import { SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { ICON, SPACING } from '@/styles/theme';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
 
 /**
  * The two things a person knows about a game that the arithmetic cannot:
@@ -65,7 +66,7 @@ export function Commitment({ gameId }: { gameId: number }) {
 
   return (
     <View style={styles.row}>
-      <Pressable
+      <Touchable
         onPress={() => {
           setWant(gameId, must ? 2 : 3);
           toast(
@@ -73,8 +74,11 @@ export function Commitment({ gameId }: { gameId: number }) {
             must ? 'star-outline' : 'star'
           );
         }}
-        style={[styles.chip, must && styles.chipOn]}
-        accessibilityRole="button"
+        // A commitment made is felt landing; 25pt of text grows to a
+        // thumb's height without growing into the next word.
+        haptic="impact"
+        hitSlop="text"
+        style={styles.chip}
         accessibilityState={{ selected: must }}
         accessibilityLabel={
           must ? 'Stop insisting on this game' : 'Insist on playing this game'
@@ -82,15 +86,18 @@ export function Commitment({ gameId }: { gameId: number }) {
       >
         <Ionicons
           name={must ? 'star' : 'star-outline'}
-          size={14}
-          color={must ? COLORS.accent : COLORS.mediumGrey}
+          size={ICON.sm}
+          color={must ? COLORS.violetText : COLORS.mediumGrey}
         />
-        <Text style={[styles.chipText, must && styles.chipTextOn]}>
+        <Text
+          style={[styles.chipText, must && styles.chipTextOn]}
+          maxFontSizeMultiplier={FONT_SCALE.label}
+        >
           Must play
         </Text>
-      </Pressable>
+      </Touchable>
 
-      <Pressable
+      <Touchable
         onPress={() => {
           setDeadline(gameId, next.days == null ? null : now + next.days * DAY);
           toast(
@@ -100,21 +107,23 @@ export function Commitment({ gameId }: { gameId: number }) {
             'calendar'
           );
         }}
-        style={[styles.chip, entry.deadline != null && styles.chipOn]}
-        accessibilityRole="button"
+        haptic="impact"
+        hitSlop="text"
+        style={styles.chip}
         accessibilityLabel={`${phrase}. Tap to change.`}
       >
         <Ionicons
           name="calendar-outline"
-          size={14}
-          color={entry.deadline != null ? COLORS.accent : COLORS.mediumGrey}
+          size={ICON.sm}
+          color={entry.deadline != null ? COLORS.violetText : COLORS.mediumGrey}
         />
         <Text
           style={[styles.chipText, entry.deadline != null && styles.chipTextOn]}
+          maxFontSizeMultiplier={FONT_SCALE.label}
         >
           {phrase}
         </Text>
-      </Pressable>
+      </Touchable>
     </View>
   );
 }
@@ -125,8 +134,11 @@ const styles = StyleSheet.create({
    *
    * These were two more outlined pills in a page already full of them,
    * floating under the status control with nothing to sit on. Inside
-   * the decision panel they are icon-and-label, and the accent — the
-   * app's one selection colour — says which are on.
+   * the decision panel they are icon-and-label, and violet says which
+   * are on: both are instructions to the plan ("the plan will keep
+   * it", "the plan will schedule it first"), and violet is the plan's
+   * colour. Amber here made a commitment look like the status control
+   * above it, which is the page's primary action.
    */
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.lg },
   chip: {
@@ -135,10 +147,9 @@ const styles = StyleSheet.create({
     gap: 7,
     paddingVertical: SPACING.xs,
   },
-  chipOn: {},
   chipText: {
     ...TYPE.labelSmall,
     color: COLORS.lightGrey,
   },
-  chipTextOn: { color: COLORS.accent },
+  chipTextOn: { color: COLORS.violetText },
 });
