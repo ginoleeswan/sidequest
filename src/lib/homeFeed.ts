@@ -1,6 +1,7 @@
 import type { Game } from '@/api/types';
 import type { LibraryEntry } from './library';
 import type { Section } from '@/constants/categories';
+import { spokenName } from './format';
 
 /**
  * What the home page shows today.
@@ -139,28 +140,14 @@ function pending(entries: LibraryEntry[]): LibraryEntry[] {
 }
 
 /**
- * A game's name as a person says it in a sentence.
- *
- * "More action, like The Legend of Zelda: Breath of the Wild" wrapped
- * a row's title onto two lines under its own eyebrow and a chapter
- * heading — four lines of heading over one row of tiles. Nobody says
- * the franchise half aloud: after a colon, the subtitle is the name,
- * as long as it is a name (two words or more) and not a number.
- */
-export function spokenName(name: string): string {
-  const at = name.indexOf(': ');
-  if (at < 0) return name;
-  const rest = name.slice(at + 2).trim();
-  return rest.split(/\s+/).length >= 2 ? rest : name;
-}
-
-/**
  * "Because you saved Hades" — the genre of the last thing they saved.
  *
  * Deliberately the most recent rather than the most common: a backlog
  * accumulated over years describes who someone used to be, and the game
  * saved on Tuesday describes what they are in the mood for.
  */
+export { spokenName };
+
 export function becauseYouSaved(entries: LibraryEntry[]): PersonalShelf | null {
   for (const entry of pending(entries)) {
     const genre = entry.game.genres?.[0];

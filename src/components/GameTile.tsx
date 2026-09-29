@@ -531,12 +531,13 @@ const styles = StyleSheet.create({
     ...TYPE.labelSmall,
     color: COLORS.lightGrey,
   },
+  // Two lines at most, and only the lines it needs. Holding two open
+  // kept the facts on one baseline across a row, but under every short
+  // name it left a blank line between the title and its own genre —
+  // on a phone the gap read as something missing, not as alignment.
   title: {
     ...TYPE.labelSmall,
     color: COLORS.lightGrey,
-    // Two lines held open, so a row of long and short names keeps one
-    // baseline for the fact beneath them.
-    minHeight: TYPE.labelSmall.lineHeight * 2,
   },
   titleHovered: { color: COLORS.white },
   meta: {

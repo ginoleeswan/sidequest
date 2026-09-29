@@ -17,11 +17,17 @@ const { PNG } = require('pngjs');
 /** The tile's size in points; every density draws the same 150pt. */
 const POINTS = 150;
 
-/** Share of pixels that carry a speck, and how hard each kind lands. */
-const LIGHT = { share: 0.2, alpha: [8, 18] };
-const DARK = { share: 0.26, alpha: [14, 30] };
+/**
+ * Share of pixels that carry a speck, and how hard each kind lands.
+ *
+ * A third softer than the first cut. On a phone at arm's length the
+ * first read as sandpaper across the flat stretches of a page — grain
+ * should be felt as a surface, not seen as a pattern.
+ */
+const LIGHT = { share: 0.2, alpha: [6, 12] };
+const DARK = { share: 0.26, alpha: [9, 20] };
 /** A rarer, brighter fleck — the dust that says the grain is physical. */
-const FLECK = { share: 0.004, alpha: [34, 48] };
+const FLECK = { share: 0.003, alpha: [24, 34] };
 
 function rng(seed) {
   let s = seed >>> 0;

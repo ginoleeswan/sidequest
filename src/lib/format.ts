@@ -33,3 +33,19 @@ export function calendarDate(
 export function countOf(n: number, noun: string, plural = `${noun}s`): string {
   return `${n.toLocaleString()} ${n === 1 ? noun : plural}`;
 }
+
+/**
+ * A game's name as a person says it in a sentence.
+ *
+ * "More action, like The Legend of Zelda: Breath of the Wild" wrapped
+ * a row's title onto two lines under its own eyebrow and a chapter
+ * heading — four lines of heading over one row of tiles. Nobody says
+ * the franchise half aloud: after a colon, the subtitle is the name,
+ * as long as it is a name (two words or more) and not a number.
+ */
+export function spokenName(name: string): string {
+  const at = name.indexOf(': ');
+  if (at < 0) return name;
+  const rest = name.slice(at + 2).trim();
+  return rest.split(/\s+/).length >= 2 ? rest : name;
+}

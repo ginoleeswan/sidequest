@@ -587,9 +587,19 @@ export default function HomeScreen({
     // A home scroller that remounts starts at the top; so must the header.
     if (!scrollAware) scrollY.setValue(0);
   }, [scrollAware, scrollY]);
+  /*
+   * Two handovers in sequence, never a crossfade.
+   *
+   * The fog and the bar used to trade places over the same 32 points,
+   * so halfway through both were at half strength and the header went
+   * see-through — the stutter that made the change feel unfinished. The
+   * bar now comes up first, over a longer run, on top of the fog; only
+   * once it is whole does the fog underneath let go, and nothing is
+   * ever uncovered.
+   */
   const solidAt =
     stage.length > 0 ? Math.max(stageHeight - headerHeight, 1) : SPACING.xl;
-  const solidFrom = Math.max(solidAt - SPACING.xl, 0);
+  const solidFrom = Math.max(solidAt - SPACING.xxl, 0);
   const solid = scrollAware
     ? scrollY.interpolate({
         inputRange: [solidFrom, solidAt],
@@ -599,7 +609,7 @@ export default function HomeScreen({
     : 0;
   const fog = scrollAware
     ? scrollY.interpolate({
-        inputRange: [solidFrom, solidAt],
+        inputRange: [solidAt, solidAt + SPACING.md],
         outputRange: [1, 0],
         extrapolate: 'clamp',
       })
@@ -1181,7 +1191,17 @@ export default function HomeScreen({
               },
             ]}
             pointerEvents="none"
-          />
+          >
+            {/* The page's own grain, so the bar reads as the page
+                continuing over the shelves rather than a slab laid on
+                them; and under it a short shadow instead of a rule, so
+                what slides beneath goes under an edge, not a cut. */}
+            <Textured fill />
+            <LinearGradient
+              colors={[alpha(COLORS.ink, 0.28), alpha(COLORS.ink, 0)]}
+              style={styles.headerSolidShade}
+            />
+          </Animated.View>
           {/* Search is a mode, not a field wedged between the wordmark
               and the icons: tapping the glass hands the whole row over to
               the query, and dismissing gives the row back. */}
@@ -1414,15 +1434,27 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.xl,
   },
   headerFloatSearch: { paddingBottom: SPACING.sm },
-  /** The header once the stage has gone: navy, a hairline, row height. */
+  /**
+   * The header once the stage has gone: the page's own ground at row
+   * height, not navy. Navy was a band a shade darker than everything
+   * under it — a slab across the top of the screen that looked stuck
+   * on rather than part of the page.
+   */
   headerSolid: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    backgroundColor: COLORS.navy,
+    backgroundColor: alpha(COLORS.darkGrey, 0.96),
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.strokeStrong,
+    borderBottomColor: COLORS.stroke,
+  },
+  headerSolidShade: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    height: SPACING.md,
   },
   brand: {
     flexDirection: 'row',
