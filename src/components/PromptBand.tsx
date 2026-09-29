@@ -13,8 +13,8 @@ import { useDurations } from '@/lib/durations';
 import { useLibrary } from '@/lib/library';
 import { buildPrompt } from '@/lib/prompt';
 import { COLORS } from '@/styles/colors';
-import { GUTTER, RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { GUTTER, ICON, RADIUS, SPACING } from '@/styles/theme';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
 
 /**
  * The page, halfway down, in its own voice.
@@ -64,7 +64,7 @@ export function PromptBand({ inset = GUTTER }: { inset?: number }) {
         <LinearGradient
           // Top to bottom, so the crest above is navy the whole way
           // across and the foot dissolves into the page's ground.
-          colors={[COLORS.navy, '#2A3348', COLORS.darkGrey]}
+          colors={[COLORS.navy, COLORS.surface, COLORS.darkGrey]}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
           style={StyleSheet.absoluteFill}
@@ -72,8 +72,15 @@ export function PromptBand({ inset = GUTTER }: { inset?: number }) {
         />
         <GrainScrim style={StyleSheet.absoluteFill} />
         <View style={[styles.copy, { paddingHorizontal: inset }]}>
-          <Text style={styles.eyebrow}>{prompt.eyebrow.toUpperCase()}</Text>
-          <Text style={styles.headline}>{prompt.headline}</Text>
+          <Text style={styles.eyebrow} maxFontSizeMultiplier={FONT_SCALE.label}>
+            {prompt.eyebrow.toUpperCase()}
+          </Text>
+          <Text
+            style={styles.headline}
+            maxFontSizeMultiplier={FONT_SCALE.display}
+          >
+            {prompt.headline}
+          </Text>
           <Text style={styles.detail}>{prompt.detail}</Text>
           <ScaleButton
             onPress={() => router.push(prompt.href)}
@@ -83,7 +90,11 @@ export function PromptBand({ inset = GUTTER }: { inset?: number }) {
             accessibilityLabel={prompt.action}
           >
             <Text style={styles.actionLabel}>{prompt.action}</Text>
-            <Ionicons name="arrow-forward" size={14} color={COLORS.accent} />
+            <Ionicons
+              name="arrow-forward"
+              size={ICON.sm}
+              color={COLORS.accent}
+            />
           </ScaleButton>
         </View>
       </View>
@@ -101,14 +112,16 @@ const styles = StyleSheet.create({
     gap: SPACING.xs,
     maxWidth: 560,
   },
+  // Grey, not amber: "your library" is not a length, and amber is
+  // spoken for by the action below it.
   eyebrow: {
     ...TYPE.tag,
-    color: COLORS.accent,
+    color: COLORS.lightGrey,
   },
   headline: {
     ...TYPE.title,
     color: COLORS.white,
-    marginTop: 2,
+    marginTop: SPACING.xxs,
   },
   detail: {
     ...TYPE.body,

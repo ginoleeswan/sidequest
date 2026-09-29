@@ -6,9 +6,16 @@ import { StyleSheet, Text, View } from 'react-native';
 import { CoverImage } from './CoverImage';
 import { ScaleButton } from './ScaleButton';
 import type { Game } from '@/api/types';
-import { COLORS } from '@/styles/colors';
-import { OVER_IMAGE, TYPE } from '@/styles/typography';
-import { LAYOUT, MATERIAL, RADIUS, SHADOW, SPACING } from '@/styles/theme';
+import { alpha, COLORS } from '@/styles/colors';
+import { FONT_SCALE, OVER_IMAGE, TYPE } from '@/styles/typography';
+import {
+  ICON,
+  LAYOUT,
+  MATERIAL,
+  RADIUS,
+  SHADOW,
+  SPACING,
+} from '@/styles/theme';
 import { useQueryClient } from '@tanstack/react-query';
 import { prefetchGame } from '@/api/gameDetail';
 
@@ -43,18 +50,26 @@ export function GameCard({ game, wide = false }: Props) {
           // Three gentle stops: enough to hold the text, but the artwork
           // stays visible at the bottom - a hard black slab reads as a
           // separate plate with its own corners against the page.
-          colors={['#00000000', '#00000066', '#000000cf']}
+          colors={[
+            alpha(COLORS.ink, 0),
+            alpha(COLORS.ink, 0.4),
+            alpha(COLORS.ink, 0.81),
+          ]}
           locations={[0.4, 0.7, 1]}
           style={styles.gradient}
           pointerEvents="none"
         />
         <View style={styles.ring} pointerEvents="none" />
         <View style={styles.titleBox}>
-          <Text style={styles.title} numberOfLines={2}>
+          <Text
+            style={styles.title}
+            numberOfLines={2}
+            maxFontSizeMultiplier={FONT_SCALE.label}
+          >
             {game.name}
           </Text>
           <View style={styles.metaRow}>
-            <Ionicons name="star" size={12} color={COLORS.starGold} />
+            <Ionicons name="star" size={ICON.sm} color={COLORS.starGold} />
             <Text style={styles.meta}>{game.rating.toFixed(1)}</Text>
             {year ? <Text style={styles.meta}>· {year}</Text> : null}
           </View>
@@ -93,7 +108,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     borderRadius: RADIUS.xl,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: COLORS.stroke,
     ...MATERIAL.edge,
   },
   titleBox: {
@@ -107,7 +122,7 @@ const styles = StyleSheet.create({
     gap: SPACING.xs,
   },
   title: {
-    ...TYPE.h4,
+    ...TYPE.label,
     ...OVER_IMAGE.heading,
     color: COLORS.white,
     textAlign: 'center',

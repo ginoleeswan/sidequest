@@ -1,22 +1,16 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import {
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Chip } from './Chip';
 import { GameTile } from './GameTile';
-import { Rail } from './Rail';
+import { COMPACT_RAIL, Rail } from './Rail';
 import { SectionHeader } from './SectionHeader';
+import { IconButton, Touchable } from './Touchable';
 import type { Game } from '@/api/types';
 import { DISCOVER, GENRES, type Section } from '@/constants/categories';
 import { COLORS } from '@/styles/colors';
-import { GUTTER, LAYOUT, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { GUTTER, ICON, RADIUS, SPACING, TOUCH } from '@/styles/theme';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
 
 /** The doors on offer before you type: the shop's own sections, then genres. */
 const DOORS: Section[] = [
@@ -79,30 +73,32 @@ export function SearchLanding({
           <View>
             {recent.map((term) => (
               <View key={term} style={styles.recentRow}>
-                <Pressable
+                <Touchable
                   onPress={() => onPick(term)}
+                  feedback="tint"
                   style={styles.recentPress}
-                  accessibilityRole="button"
                   accessibilityLabel={`Search again for ${term}`}
                 >
                   <Ionicons
                     name="time-outline"
-                    size={18}
+                    size={ICON.md}
                     color={COLORS.mediumGrey}
                   />
-                  <Text style={styles.recentTerm} numberOfLines={1}>
+                  <Text
+                    style={styles.recentTerm}
+                    numberOfLines={1}
+                    maxFontSizeMultiplier={FONT_SCALE.body}
+                  >
                     {term}
                   </Text>
-                </Pressable>
-                <Pressable
+                </Touchable>
+                <IconButton
+                  icon="close"
+                  size="md"
+                  color={COLORS.mediumGrey}
                   onPress={() => onForget(term)}
-                  hitSlop={10}
-                  style={styles.forget}
-                  accessibilityRole="button"
                   accessibilityLabel={`Forget ${term}`}
-                >
-                  <Ionicons name="close" size={16} color={COLORS.mediumGrey} />
-                </Pressable>
+                />
               </View>
             ))}
           </View>
@@ -133,7 +129,7 @@ export function SearchLanding({
             keyExtractor={(game) => String(game.id)}
             inset={GUTTER}
             renderItem={(game) => (
-              <GameTile game={game} width={LAYOUT.shelfTileWidth * 0.8} />
+              <GameTile game={game} width={COMPACT_RAIL.tileWidth} />
             )}
           />
         </View>
@@ -156,19 +152,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: SPACING.sm,
   },
+  // The row's own height is the target: a word you tap on, grown to a
+  // thumb and lit while pressed.
   recentPress: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.md,
-    paddingVertical: SPACING.sm + 2,
+    minHeight: TOUCH.min,
+    paddingVertical: SPACING.sm2,
+    borderRadius: RADIUS.sm,
   },
   recentTerm: {
     ...TYPE.body,
     color: COLORS.lightGrey,
     flex: 1,
   },
-  forget: { padding: SPACING.xs },
   doors: {
     flexDirection: 'row',
     flexWrap: 'wrap',

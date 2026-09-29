@@ -1,15 +1,39 @@
 import { useState } from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
+import type { Tone } from './Message';
+import { Touchable } from './Touchable';
 import { COLORS } from '@/styles/colors';
-import { SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { ICON, SPACING } from '@/styles/theme';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
+
+/**
+ * The eyebrow's colour, from the palette's meanings.
+ *
+ * Every eyebrow on Home was the same grey, so the page never once used
+ * violet, mint or coral: "you saw the credits" and "under 8 hours" were
+ * set in the same voice as "the last seven days". A row that is about
+ * finishing, or about time, can now say so in the colour the rest of the
+ * app gives that idea.
+ */
+const EYEBROW: Record<Tone, string> = {
+  neutral: COLORS.mediumGrey,
+  time: COLORS.accent,
+  evening: COLORS.violetText,
+  finished: COLORS.mint,
+  letGo: COLORS.coralText,
+};
+
+/** A typed arrow at the end of a label: Geom and Noah have no glyph for it. */
+const TRAILING_ARROW = /\s*→\s*$/;
 
 interface Props {
   title: string;
   /** Small muted line above the title, e.g. a count. */
   eyebrow?: string;
+  /** What the eyebrow is about, in the palette's terms. */
+  tone?: Tone;
   /**
    * A step up, for a page wide enough to need one.
    *
@@ -21,15 +45,25 @@ interface Props {
    * rail wants the small size whatever the window is doing.
    */
   wide?: boolean;
+  /**
+   * The head of a chapter: a group of rows rather than one row.
+   *
+   * A long page where every row wears the same 19pt heading scrolls as
+   * one texture; the rows that are about you and the rows that are a
+   * shop read as the same kind of thing. A chapter heading is a step
+   * louder and in the display face, so the page has somewhere to turn.
+   */
+  chapter?: boolean;
   actionLabel?: string;
   /**
    * What a screen reader should say instead of the visible label.
    *
-   * These labels carry a trailing arrow — "Share →", "Plan my backlog →"
-   * — which VoiceOver reads out as the glyph. Where the visible text is
-   * also shorthand, the spoken version can say the whole thing.
+   * Where the visible text is shorthand — "View all" — the spoken
+   * version can say the whole thing: "View all Trending now".
    */
   actionAccessibilityLabel?: string;
+  /** A chevron after the action, for an action that goes somewhere. */
+  actionChevron?: boolean;
   onAction?: () => void;
   /**
    * The way to You, on a screen that has a section header.
@@ -47,32 +81,49 @@ interface Props {
 export function SectionHeader({
   title,
   eyebrow,
+  tone = 'neutral',
   wide = false,
+  chapter = false,
   actionLabel,
   actionAccessibilityLabel,
+  actionChevron = false,
   onAction,
   onAccount,
 }: Props) {
   const [hovered, setHovered] = useState(false);
+  /**
+   * "Share →" and "Plan my backlog →" were typed arrows, which neither
+   * face carries — the glyph fell back to the system font at its own
+   * weight and baseline, and VoiceOver read it out as "right arrow".
+   * The arrow is drawn as a chevron icon instead, whoever asked for it.
+   */
+  const arrowed = actionLabel ? TRAILING_ARROW.test(actionLabel) : false;
+  const label = actionLabel?.replace(TRAILING_ARROW, '');
+  const chevron = actionChevron || arrowed;
+  const actionColor = hovered ? COLORS.accent : COLORS.mediumGrey;
 
   return (
     <View style={styles.header}>
       {eyebrow || onAccount ? (
         <View style={styles.topRow}>
-          <Text style={styles.eyebrow}>{eyebrow ?? ''}</Text>
+          <Text
+            style={[styles.eyebrow, { color: EYEBROW[tone] }]}
+            maxFontSizeMultiplier={FONT_SCALE.label}
+          >
+            {eyebrow ?? ''}
+          </Text>
           {onAccount ? (
-            <Pressable
+            <Touchable
               onPress={onAccount}
-              hitSlop={10}
-              accessibilityRole="button"
+              hitSlop="md"
               accessibilityLabel="You"
             >
               <Ionicons
                 name="person-circle-outline"
-                size={23}
+                size={ICON.lg}
                 color={COLORS.mediumGrey}
               />
-            </Pressable>
+            </Touchable>
           ) : null}
         </View>
       ) : null}
@@ -85,20 +136,42 @@ export function SectionHeader({
           this line now, so both are single lines and can genuinely
           share a baseline. */}
       <View style={styles.row}>
-        <Text style={[styles.title, wide && styles.titleWide]}>{title}</Text>
-        {actionLabel && onAction ? (
-          <Pressable
+        <Text
+          style={[
+            styles.title,
+            wide && styles.titleWide,
+            chapter && styles.titleChapter,
+          ]}
+          accessibilityRole="header"
+          maxFontSizeMultiplier={
+            wide || chapter ? FONT_SCALE.display : FONT_SCALE.label
+          }
+        >
+          {title}
+        </Text>
+        {label && onAction ? (
+          <Touchable
             onPress={onAction}
             onHoverIn={() => setHovered(true)}
             onHoverOut={() => setHovered(false)}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={actionAccessibilityLabel ?? actionLabel}
+            hitSlop="text"
+            style={styles.action}
+            accessibilityLabel={actionAccessibilityLabel ?? label}
           >
-            <Text style={[styles.action, hovered && styles.actionHovered]}>
-              {actionLabel}
+            <Text
+              style={[styles.actionText, { color: actionColor }]}
+              maxFontSizeMultiplier={FONT_SCALE.label}
+            >
+              {label}
             </Text>
-          </Pressable>
+            {chevron ? (
+              <Ionicons
+                name="chevron-forward"
+                size={ICON.sm}
+                color={actionColor}
+              />
+            ) : null}
+          </Touchable>
         ) : null}
       </View>
     </View>
@@ -111,7 +184,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  header: { gap: 2 },
+  header: { gap: SPACING.xxs },
   row: {
     flexDirection: 'row',
     // A shared baseline, not flush bottoms. Two texts at different
@@ -127,15 +200,19 @@ const styles = StyleSheet.create({
     ...TYPE.micro,
     color: COLORS.mediumGrey,
   },
-  titleWide: { fontSize: 28, lineHeight: 33, color: COLORS.white },
+  titleWide: { ...TYPE.title, color: COLORS.white },
+  titleChapter: { ...TYPE.h1, color: COLORS.white },
   title: {
     ...TYPE.h2,
     color: COLORS.lightGrey,
     flexShrink: 1,
   },
   action: {
-    ...TYPE.labelTiny,
-    color: COLORS.mediumGrey,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xxs,
   },
-  actionHovered: { color: COLORS.accent },
+  actionText: {
+    ...TYPE.labelTiny,
+  },
 });

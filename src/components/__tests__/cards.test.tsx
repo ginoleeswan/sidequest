@@ -32,7 +32,12 @@ describe('the game cards', () => {
 
   it('reads the facts off a search result in one line', async () => {
     await renderApp(<SearchResult game={game} />);
-    expect(screen.getByText('2018 · Platformer · ★ 4.5')).toBeTruthy();
+    expect(screen.getByText(/^2018 · Platformer · /)).toBeTruthy();
+    // The star is an icon, so the sentence VoiceOver hears carries it.
+    expect(
+      screen.getByLabelText('Celeste, 2018 · Platformer, rated 4.5 of 5')
+    ).toBeTruthy();
+    expect(screen.queryByText(/★/)).toBeNull();
     expect(screen.getByText('91')).toBeTruthy();
   });
 

@@ -8,7 +8,6 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   FlatList,
-  Pressable,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -25,6 +24,7 @@ import { StageTrailer } from './StageTrailer';
 import { gameQuery, seedGame } from '@/api/gameDetail';
 import { artQuery } from '@/api/art';
 import { TitleLogo } from './TitleLogo';
+import { Touchable } from './Touchable';
 import { getMovies, mediaUri } from '@/api/rawg';
 import type { Game, Movie } from '@/api/types';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
@@ -32,10 +32,10 @@ import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { PARALLAX_RATE, useStageParallax } from '@/hooks/useStageParallax';
 import { pickTrailer, type StageSlide } from '@/lib/stage';
-import { COLORS } from '@/styles/colors';
+import { alpha, COLORS } from '@/styles/colors';
 import { DURATION, EASING } from '@/styles/motion';
-import { RADIUS, SPACING } from '@/styles/theme';
-import { OVER_IMAGE, TYPE } from '@/styles/typography';
+import { ICON, RADIUS, SPACING, TOUCH } from '@/styles/theme';
+import { FONT_SCALE, OVER_IMAGE, TYPE } from '@/styles/typography';
 
 /**
  * The top of the home page: one full-bleed picture with an argument on
@@ -249,7 +249,11 @@ export function HomeStage({
             alt=""
           />
           <LinearGradient
-            colors={['rgba(51,61,81,0)', 'rgba(51,61,81,0)', COLORS.darkGrey]}
+            colors={[
+              alpha(COLORS.darkGrey, 0),
+              alpha(COLORS.darkGrey, 0),
+              COLORS.darkGrey,
+            ]}
             locations={[0, 0.55, 1]}
             style={StyleSheet.absoluteFill}
           />
@@ -434,9 +438,9 @@ function SlideArt({
       {isExpanded ? (
         <LinearGradient
           colors={[
-            'rgba(39,47,63,0.82)',
-            'rgba(39,47,63,0.45)',
-            'rgba(39,47,63,0)',
+            alpha(COLORS.navy, 0.82),
+            alpha(COLORS.navy, 0.45),
+            alpha(COLORS.navy, 0),
           ]}
           locations={[0, 0.34, 0.62]}
           start={{ x: 0, y: 0.5 }}
@@ -450,9 +454,9 @@ function SlideArt({
           rather than on whatever the artwork happened to be. */}
       <LinearGradient
         colors={[
-          'rgba(39,47,63,0.32)',
-          'rgba(39,47,63,0.15)',
-          'rgba(39,47,63,0)',
+          alpha(COLORS.navy, 0.32),
+          alpha(COLORS.navy, 0.15),
+          alpha(COLORS.navy, 0),
         ]}
         locations={[0, 0.45, 1]}
         /**
@@ -476,11 +480,11 @@ function SlideArt({
           at the foot is the page. */}
       <LinearGradient
         colors={[
-          'rgba(51,61,81,0)',
-          'rgba(51,61,81,0.5)',
-          'rgba(51,61,81,0.55)',
-          'rgba(51,61,81,0.25)',
-          'rgba(51,61,81,0)',
+          alpha(COLORS.darkGrey, 0),
+          alpha(COLORS.darkGrey, 0.5),
+          alpha(COLORS.darkGrey, 0.55),
+          alpha(COLORS.darkGrey, 0.25),
+          alpha(COLORS.darkGrey, 0),
         ]}
         locations={[0, 0.45, 0.8, 0.93, 1]}
         style={styles.scrim}
@@ -668,7 +672,17 @@ function StageCopy({
             full ("THURSDAY, SEPTEMBER 3 · TONIGHT"), which put thirty
             characters of tracked caps in front of the one word that
             says why this game is on the screen. */}
-        <Animated.Text style={[styles.eyebrow, step(0, 0.4)]} numberOfLines={1}>
+        {/* Tonight is the evening's slide, and says so in the evening's
+            colour; every other reason stays white. */}
+        <Animated.Text
+          style={[
+            styles.eyebrow,
+            slide.kind === 'tonight' && styles.eyebrowTonight,
+            step(0, 0.4),
+          ]}
+          numberOfLines={1}
+          maxFontSizeMultiplier={FONT_SCALE.label}
+        >
           {slide.eyebrow.toUpperCase()}
           {slide.date ? (
             <Text style={styles.eyebrowDate}>{`  ${slide.date}`}</Text>
@@ -695,7 +709,11 @@ function StageCopy({
             )}
             style={styles.logo}
           >
-            <Text style={[styles.title, display]} numberOfLines={3}>
+            <Text
+              style={[styles.title, display]}
+              numberOfLines={3}
+              maxFontSizeMultiplier={FONT_SCALE.display}
+            >
               {slide.title}
             </Text>
           </TitleLogo>
@@ -722,6 +740,7 @@ function StageCopy({
         <Animated.Text
           style={[styles.detail, step(0.22, 0.75)]}
           numberOfLines={2}
+          maxFontSizeMultiplier={FONT_SCALE.label}
         >
           {slide.figure ? (
             <>
@@ -739,18 +758,32 @@ function StageCopy({
             hoverScale={1.04}
             accessibilityLabel={`${slide.action}: ${slide.game.name}`}
           >
-            <Text style={styles.primaryLabel}>{slide.action}</Text>
-            <Ionicons name="arrow-forward" size={15} color={COLORS.navy} />
+            <Text
+              style={styles.primaryLabel}
+              maxFontSizeMultiplier={FONT_SCALE.label}
+            >
+              {slide.action}
+            </Text>
+            <Ionicons name="arrow-forward" size={ICON.sm} color={COLORS.navy} />
           </ScaleButton>
-          <Pressable
+          <Touchable
             onPress={onSurprise}
+            feedback="scale"
             style={styles.ghost}
-            accessibilityRole="button"
             accessibilityLabel="Open a random game"
           >
-            <Ionicons name="dice-outline" size={16} color={COLORS.lightGrey} />
-            <Text style={styles.ghostLabel}>Surprise me</Text>
-          </Pressable>
+            <Ionicons
+              name="dice-outline"
+              size={ICON.md}
+              color={COLORS.lightGrey}
+            />
+            <Text
+              style={styles.ghostLabel}
+              maxFontSizeMultiplier={FONT_SCALE.label}
+            >
+              Surprise me
+            </Text>
+          </Touchable>
           {/* On a wide stage they ride the end of the action row
               instead of stranding themselves against the far edge. */}
           {count > 1 && !isExpanded && (
@@ -801,8 +834,10 @@ function StageCopy({
  * way to the other slides was to guess that the picture could be
  * dragged. A row of marks that says "there are three of these" and
  * does nothing when pressed is a control that has been drawn but not
- * wired. The marks stay six points; the press target around each one
- * is the full row height, which is what a thumb needs.
+ * wired. The marks stay six points; each sits in a press target a
+ * thumb's height tall and exactly as wide as its own share of the row,
+ * so no two targets overlap — a slop that reached into the next dot's
+ * box made a tap between them land on whichever React measured first.
  */
 function Dots({
   count,
@@ -816,16 +851,16 @@ function Dots({
   return (
     <View style={styles.dots}>
       {Array.from({ length: count }, (_, i) => (
-        <Pressable
+        <Touchable
           key={i}
           onPress={() => onGoTo(i)}
-          hitSlop={{ top: 14, bottom: 14, left: 5, right: 5 }}
-          accessibilityRole="button"
+          haptic="tap"
+          style={styles.dotTarget}
           accessibilityState={{ selected: i === index }}
           accessibilityLabel={`Slide ${i + 1} of ${count}`}
         >
           <View style={[styles.dot, i === index && styles.dotOn]} />
-        </Pressable>
+        </Touchable>
       ))}
     </View>
   );
@@ -849,23 +884,26 @@ function Chevron({
   onPress: () => void;
 }) {
   return (
-    <Pressable
+    <Touchable
       onPress={onPress}
+      hitSlop={(TOUCH.min - CHEVRON) / 2}
       style={[
         styles.chevron,
         side === 'left' ? { left: inset } : { right: inset },
       ]}
-      accessibilityRole="button"
       accessibilityLabel={side === 'left' ? 'Previous slide' : 'Next slide'}
     >
       <Ionicons
         name={side === 'left' ? 'chevron-back' : 'chevron-forward'}
-        size={20}
+        size={ICON.lg}
         color={COLORS.white}
       />
-    </Pressable>
+    </Touchable>
   );
 }
+
+/** The desk's paging disc: drawn at 40, pressed at 44. */
+const CHEVRON = 40;
 
 const styles = StyleSheet.create({
   /**
@@ -927,12 +965,12 @@ const styles = StyleSheet.create({
    * block reads as placed in the picture rather than resting on the
    * shelf below it; and the column widens to hold a full title.
    */
-  copyWide: { bottom: SPACING.xl * 1.5, maxWidth: 720 },
+  copyWide: { bottom: SPACING.xxl, maxWidth: 720 },
   dotsCorner: {
     position: 'absolute',
     // The action row's centre line: copy bottom (48) plus half a 40pt
-    // button, less half a dot. Measured, not eyeballed.
-    bottom: SPACING.xl * 1.5 + 20 - 2,
+    // button, less half the dots' 44pt target. Measured, not eyeballed.
+    bottom: SPACING.xxl + 20 - TOUCH.min / 2,
   },
   /**
    * A plate, not a bare glyph. It sits over whatever the artwork
@@ -943,13 +981,13 @@ const styles = StyleSheet.create({
   chevron: {
     position: 'absolute',
     top: '50%',
-    marginTop: -20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    marginTop: -CHEVRON / 2,
+    width: CHEVRON,
+    height: CHEVRON,
+    borderRadius: RADIUS.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(20,25,35,0.55)',
+    backgroundColor: COLORS.plate,
   },
 
   /**
@@ -971,10 +1009,11 @@ const styles = StyleSheet.create({
     ...TYPE.tag,
     ...OVER_IMAGE.body,
     color: COLORS.white,
-    marginBottom: 2,
+    marginBottom: SPACING.xxs,
   },
+  eyebrowTonight: { color: COLORS.violetText },
   /** Proof the page is today's, at the volume proof deserves. */
-  eyebrowDate: { color: 'rgba(216,218,228,0.62)' },
+  eyebrowDate: { color: alpha(COLORS.lightGrey, 0.62) },
   /** The mark's own breathing room, where the headline's leading was. */
   logo: { marginVertical: 6 },
   title: {
@@ -1006,7 +1045,7 @@ const styles = StyleSheet.create({
   track: {
     height: 3,
     borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: COLORS.strokeOnImage,
     overflow: 'hidden',
     marginTop: 12,
     marginBottom: 6,
@@ -1034,7 +1073,7 @@ const styles = StyleSheet.create({
   ghost: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: SPACING.sm,
     paddingVertical: 13,
     paddingHorizontal: SPACING.md,
     borderRadius: RADIUS.lg,
@@ -1051,7 +1090,16 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+  },
+  /**
+   * A thumb tall, and wide by the mark plus half the gap either side:
+   * the targets tile the row without touching one another's marks.
+   */
+  dotTarget: {
+    height: TOUCH.min,
+    paddingHorizontal: SPACING.xxs,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   /**
    * Six points, not five, and half-lit rather than a third. Over a
@@ -1063,7 +1111,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.5)',
+    backgroundColor: alpha(COLORS.white, 0.5),
   },
   dotOn: { width: 18, backgroundColor: COLORS.white },
 });

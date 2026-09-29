@@ -1,6 +1,7 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { CoverImage } from './CoverImage';
@@ -10,9 +11,10 @@ import type { Game } from '@/api/types';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { formatHours } from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
-import { COLORS } from '@/styles/colors';
+import { billboardReason } from '@/lib/homeFeed';
+import { alpha, COLORS } from '@/styles/colors';
 import { GUTTER, RADIUS, SHADOW, SPACING } from '@/styles/theme';
-import { OVER_IMAGE, TYPE } from '@/styles/typography';
+import { FONT_SCALE, OVER_IMAGE, TYPE } from '@/styles/typography';
 
 /**
  * The mid-feed break: one game, the whole width, a reason and an hour.
@@ -26,9 +28,10 @@ import { OVER_IMAGE, TYPE } from '@/styles/typography';
  */
 export function Billboard({
   game,
-  eyebrow = 'Worth the shelf space',
+  eyebrow: given,
 }: {
   game: Game;
+  /** Overrides the reason derived from the game's own facts. */
   eyebrow?: string;
 }) {
   const router = useRouter();
@@ -37,6 +40,8 @@ export function Billboard({
   const { durationOf } = useDurations();
   const { hours } = durationOf(game);
   const genre = game.genres?.[0]?.name;
+  const [now] = useState(() => Date.now());
+  const eyebrow = given ?? billboardReason(game, hours, now);
 
   return (
     <ScaleButton
@@ -45,7 +50,13 @@ export function Billboard({
       style={[styles.frame, isCompact && styles.frameCompact]}
       activeScale={0.99}
       hoverScale={1.005}
-      accessibilityLabel={`Have a look at ${game.name}`}
+      accessibilityLabel={[
+        `Have a look at ${game.name}`,
+        eyebrow,
+        hours > 0 ? `${formatHours(hours)} to finish` : null,
+      ]
+        .filter(Boolean)
+        .join(', ')}
     >
       <CoverImage
         uri={game.background_image}
@@ -55,26 +66,35 @@ export function Billboard({
       />
       <LinearGradient
         colors={[
-          'rgba(39,47,63,0)',
-          'rgba(39,47,63,0.55)',
-          'rgba(39,47,63,0.92)',
+          alpha(COLORS.navy, 0),
+          alpha(COLORS.navy, 0.55),
+          alpha(COLORS.navy, 0.92),
         ]}
         locations={[0.35, 0.72, 1]}
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
       <View style={[styles.copy, isCompact && styles.copyCompact]}>
-        <Text style={[styles.eyebrow, OVER_IMAGE.body]} numberOfLines={1}>
+        <Text
+          style={[styles.eyebrow, OVER_IMAGE.body]}
+          numberOfLines={1}
+          maxFontSizeMultiplier={FONT_SCALE.label}
+        >
           {eyebrow.toUpperCase()}
         </Text>
         <Text
           style={[styles.name, OVER_IMAGE.heading]}
           numberOfLines={2}
           adjustsFontSizeToFit
+          maxFontSizeMultiplier={FONT_SCALE.display}
         >
           {game.name}
         </Text>
-        <Text style={[styles.meta, OVER_IMAGE.body]} numberOfLines={1}>
+        <Text
+          style={[styles.meta, OVER_IMAGE.body]}
+          numberOfLines={1}
+          maxFontSizeMultiplier={FONT_SCALE.label}
+        >
           {hours > 0 ? (
             <Text style={styles.hours}>{formatHours(hours)}</Text>
           ) : null}
@@ -121,10 +141,7 @@ const styles = StyleSheet.create({
   },
   eyebrow: { ...TYPE.tag, color: COLORS.lightGrey },
   name: {
-    fontFamily: 'Geom-ExtraBold',
-    fontSize: 30,
-    lineHeight: 34,
-    letterSpacing: -0.5,
+    ...TYPE.title,
     color: COLORS.white,
   },
   meta: { ...TYPE.label, color: COLORS.lightGrey },

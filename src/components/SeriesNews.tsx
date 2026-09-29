@@ -2,9 +2,10 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { CoverImage } from './CoverImage';
+import { Touchable } from './Touchable';
 import { prefetchGame } from '@/api/gameDetail';
 import { getSeries } from '@/api/rawg';
 import type { Game, Paged } from '@/api/types';
@@ -12,8 +13,8 @@ import { useHydrated } from '@/hooks/useHydrated';
 import { useLibrary } from '@/lib/library';
 import { seriesCandidates, seriesNews } from '@/lib/series';
 import { COLORS } from '@/styles/colors';
-import { RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { ICON, RADIUS, SPACING } from '@/styles/theme';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
 
 /** Two is a row; more is a feed, and this is not a feed. */
 const MAX = 2;
@@ -24,8 +25,12 @@ const MAX = 2;
  * The only news the app can honestly deliver, because it is the only
  * news it can derive: what you finished, crossed with what is coming
  * out. Nothing here is curated by anyone.
+ *
+ * No padding of its own: the feed's column already pays the gutter, and
+ * a second one set these cards forty points in while every shelf around
+ * them stood at twenty.
  */
-export function SeriesNews({ inset = SPACING.md }: { inset?: number }) {
+export function SeriesNews() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const hydrated = useHydrated();
@@ -58,12 +63,13 @@ export function SeriesNews({ inset = SPACING.md }: { inset?: number }) {
   if (news.length === 0) return null;
 
   return (
-    <View style={[styles.block, { paddingHorizontal: inset }]}>
+    <View style={styles.block}>
       {news.map((item) => (
-        <Pressable
+        <Touchable
           key={item.game.id}
           onPress={() => router.push(`/game/${item.game.id}`)}
           onPressIn={() => prefetchGame(queryClient, item.game)}
+          feedback="scale"
           style={styles.card}
           accessibilityRole="link"
           accessibilityLabel={item.message}
@@ -72,53 +78,68 @@ export function SeriesNews({ inset = SPACING.md }: { inset?: number }) {
             uri={item.game.background_image}
             style={styles.art}
             size="thumb"
-            iconSize={18}
+            iconSize={ICON.md}
           />
           <View style={styles.body}>
+            {/* Mint, the credits' colour: this news exists because you
+                finished something. A release still to come is a date,
+                not a length, so it no longer borrows the time amber. */}
             <View style={styles.eyebrowRow}>
               <Ionicons
-                name={item.kind === 'out' ? 'sparkles' : 'time'}
-                size={12}
-                color={COLORS.accent}
+                name={item.kind === 'out' ? 'sparkles' : 'calendar-outline'}
+                size={ICON.sm}
+                color={item.kind === 'out' ? COLORS.mint : COLORS.mediumGrey}
               />
-              <Text style={styles.eyebrow}>
+              <Text
+                style={[
+                  styles.eyebrow,
+                  item.kind === 'out' && styles.eyebrowFinished,
+                ]}
+                maxFontSizeMultiplier={FONT_SCALE.label}
+              >
                 {item.kind === 'out' ? 'BECAUSE YOU FINISHED IT' : 'COMING'}
               </Text>
             </View>
-            <Text style={styles.message} numberOfLines={2}>
+            <Text
+              style={styles.message}
+              numberOfLines={2}
+              maxFontSizeMultiplier={FONT_SCALE.label}
+            >
               {item.message}
             </Text>
           </View>
           <Ionicons
             name="chevron-forward"
-            size={14}
+            size={ICON.sm}
             color={COLORS.mediumGrey}
           />
-        </Pressable>
+        </Touchable>
       ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  block: { gap: SPACING.sm },
+  // A row's own air beneath it, as every shelf keeps.
+  block: { gap: SPACING.sm, marginBottom: SPACING.xl },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.md,
-    padding: SPACING.sm + 2,
-    borderRadius: RADIUS.md,
+    padding: SPACING.sm2,
+    borderRadius: RADIUS.card,
     borderWidth: 1,
     borderColor: COLORS.stroke,
     backgroundColor: COLORS.raised,
   },
   art: { width: 72, height: 44, borderRadius: RADIUS.sm },
-  body: { flex: 1, gap: 2 },
-  eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  body: { flex: 1, gap: SPACING.xxs },
+  eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
   eyebrow: {
     ...TYPE.tag,
-    color: COLORS.accent,
+    color: COLORS.mediumGrey,
   },
+  eyebrowFinished: { color: COLORS.mint },
   message: {
     ...TYPE.labelSmall,
     color: COLORS.lightGrey,

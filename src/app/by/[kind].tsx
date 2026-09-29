@@ -19,8 +19,9 @@ import { Textured } from '@/components/Textured';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useTopPad } from '@/hooks/useTopPad';
 import { useHydrated } from '@/hooks/useHydrated';
+import { useOnline } from '@/lib/network';
 import { COLORS } from '@/styles/colors';
-import { LAYOUT, SPACING } from '@/styles/theme';
+import { GUTTER, LAYOUT, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
 /**
@@ -52,6 +53,7 @@ export default function ByCreatorScreen() {
    * commit. See hooks/useHydrated.
    */
   const hydrated = useHydrated();
+  const online = useOnline();
   const kind: Creator['kind'] =
     hydrated && params.kind === 'publisher' ? 'publisher' : 'developer';
   const id = hydrated ? (params.id ?? '') : '';
@@ -106,9 +108,11 @@ export default function ByCreatorScreen() {
 
           {list.error ? (
             <Message
-              icon="cloud-offline-outline"
+              icon={online ? 'alert-circle-outline' : 'cloud-offline-outline'}
               title="Couldn’t load that catalogue"
               detail={friendlyError(list.error)}
+              actionLabel="Try again"
+              onAction={() => list.refetch()}
             />
           ) : list.isPending ? (
             <SkeletonGrid columns={columns} />
@@ -116,7 +120,7 @@ export default function ByCreatorScreen() {
             <Message
               icon="game-controller-outline"
               title="Nothing here"
-              detail="RAWG has no games filed under this one."
+              detail="Nothing is filed under this one yet."
               actionLabel="Back to browsing"
               onAction={() => router.push('/')}
             />
@@ -154,8 +158,8 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: LAYOUT.maxExpandedWidth,
     alignSelf: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingBottom: SPACING.xl * 2,
+    paddingHorizontal: GUTTER,
+    paddingBottom: SPACING.xxxl,
     gap: SPACING.md,
   },
   count: {
