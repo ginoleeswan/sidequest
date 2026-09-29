@@ -520,16 +520,24 @@ export default function LibraryScreen() {
                   chrome, because at the foot of the shelf you would
                   scroll past two hundred games to reach it. Positioned
                   rather than laid out, so the figure keeps its line. */}
-              <IconButton
-                icon="download-outline"
-                size="md"
-                color={COLORS.mediumGrey}
+              <Touchable
                 onPress={() => setImportOpen(true)}
+                hitSlop="md"
                 style={styles.heroImport}
                 accessibilityLabel="Import a library"
-              />
+              >
+                <Ionicons
+                  name="download-outline"
+                  size={ICON.sm}
+                  color={COLORS.mediumGrey}
+                />
+                <Text style={styles.heroImportText}>Import</Text>
+              </Touchable>
 
-              <BacklogBar hours={aheadHours} />
+              {/* A bar is a comparison, and one game has nothing to be
+                  compared with: alone it was a full amber stripe that
+                  said only "100%". */}
+              {aheadHours.length > 1 && <BacklogBar hours={aheadHours} />}
 
               {longest && aheadHours.length > 1 && (
                 <Text style={styles.heroBarNote}>
@@ -868,11 +876,19 @@ const styles = StyleSheet.create({
    * twenty — a glyph carries less mass than its box, so four points
    * tighter reads as aligned — and its 44pt target reaches past it.
    */
+  /**
+   * Import, named. An unlabelled tray-and-arrow in the corner of the
+   * hero read as decoration; the word makes it the action it is.
+   */
   heroImport: {
     position: 'absolute',
-    top: SPACING.md - (TOUCH.min - ICON.md) / 2,
-    right: SPACING.md - (TOUCH.min - ICON.md) / 2,
+    top: SPACING.md,
+    right: SPACING.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
   },
+  heroImportText: { ...TYPE.labelSmall, color: COLORS.mediumGrey },
   /**
    * The page's one hero number. Amber, because it is hours — the
    * biggest time statement in the app.

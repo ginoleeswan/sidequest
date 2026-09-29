@@ -37,6 +37,7 @@ import { hoursOf, importOrder, type SteamGame } from '@/lib/steamMatch';
 import { COLORS, alpha } from '@/styles/colors';
 import { GUTTER, ICON, LAYOUT, RADIUS, SPACING } from '@/styles/theme';
 import { FONT_SCALE, TYPE } from '@/styles/typography';
+import { countOf } from '@/lib/format';
 
 /**
  * How many games one import may bring in.
@@ -316,7 +317,7 @@ export default function ImportScreen() {
           <View style={styles.unmatched}>
             <SectionHeader
               title="Couldn’t be matched"
-              eyebrow={`${unmatched.length} games`}
+              eyebrow={countOf(unmatched.length, 'game')}
             />
             <Text style={styles.unmatchedNote}>
               These are on Steam under a name the games database doesn’t use.
@@ -381,7 +382,7 @@ export default function ImportScreen() {
             title="Your Steam library"
             eyebrow={
               snapshot
-                ? `${snapshot.gameCount.toLocaleString()} games · ${snapshot.name}`
+                ? `${countOf(snapshot.gameCount, 'game')} · ${snapshot.name}`
                 : 'Import'
             }
           />

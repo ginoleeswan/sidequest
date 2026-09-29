@@ -172,7 +172,14 @@ export function buildStage(input: StageInput): StageSlide[] {
       game,
       eyebrow: 'Tonight',
       title: game.name,
-      figure: hours > 0 ? `${formatHours(hours)} left` : '',
+      // "Left" is only true of something begun: an unstarted 92-hour
+      // game had "92h left" over a button that said "Start it".
+      figure:
+        hours > 0
+          ? verb === 'Start'
+            ? hoursPhrase(hours)
+            : `${formatHours(hours)} left`
+          : '',
       detail: reason,
       progress,
       action: verb === 'Finish' ? 'Finish it' : `${verb} it`,

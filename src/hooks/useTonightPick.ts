@@ -85,7 +85,11 @@ export function useTonightPick(): TonightPick | null {
         ? 'You could see the credits before bed.'
         : tonight.continueGame
           ? 'Already under way — chip away at it.'
-          : 'The shortest thing you’ve saved.',
+          : entries.length === 1
+            ? // "Shortest" of one is not a comparison, and at 92 hours
+              // it read as a joke at the game's expense.
+              'The one game on your shelf.'
+            : 'The shortest thing you’ve saved.',
       progress,
     };
   }, [byStatus, durationOf, sessionMinutes]);

@@ -9,6 +9,7 @@ import type { Section } from '@/constants/categories';
 import { alpha, COLORS } from '@/styles/colors';
 import { RADIUS, SPACING } from '@/styles/theme';
 import { FONT_SCALE, OVER_IMAGE, TYPE } from '@/styles/typography';
+import { countOf } from '@/lib/format';
 
 interface Props {
   section: Section;
@@ -80,7 +81,7 @@ export function CategoryHero({
       >
         <Text style={styles.eyebrow} maxFontSizeMultiplier={FONT_SCALE.label}>
           {kind === 'genre' ? 'GENRE' : 'DISCOVER'}
-          {count ? `  ·  ${count.toLocaleString()} games` : ''}
+          {count ? `  ·  ${countOf(count, 'game')}` : ''}
         </Text>
         <Text
           style={styles.title}

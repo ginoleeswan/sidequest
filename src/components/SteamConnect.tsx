@@ -13,6 +13,7 @@ import { usePersistedState } from '@/hooks/usePersistedState';
 import { COLORS } from '@/styles/colors';
 import { ICON, RADIUS, SPACING, innerRadius } from '@/styles/theme';
 import { FONT_SCALE, TYPE } from '@/styles/typography';
+import { countOf } from '@/lib/format';
 
 interface Props {
   /** Called with the measured pace when the user applies it. */
@@ -122,7 +123,7 @@ export function SteamConnect({ onUsePace, onImport, onConnected }: Props) {
         <View style={styles.profileBody}>
           <Text style={styles.profileName}>{snapshot.name}</Text>
           <Text style={styles.profileMeta}>
-            {snapshot.gameCount.toLocaleString()} games ·{' '}
+            {countOf(snapshot.gameCount, 'game')} ·{' '}
             {snapshot.hoursPerWeek > 0
               ? `playing ${snapshot.hoursPerWeek}h a week`
               : 'quiet fortnight on Steam'}
