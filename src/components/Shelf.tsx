@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { GameTile } from './GameTile';
 import type { Tone } from './Message';
 import { COMPACT_RAIL, Rail } from './Rail';
+import { SkeletonShelf } from './Skeleton';
 import { SectionHeader } from './SectionHeader';
 import type { Game } from '@/api/types';
 import type { Section } from '@/constants/categories';
@@ -33,6 +34,12 @@ interface Props {
    * are only worth drawing if they are true.
    */
   rankOffset?: number;
+  /**
+   * The row's games are still on their way. It draws its own bones
+   * rather than nothing: a row that renders empty and then arrives
+   * shoves everything under it down the page while it is being read.
+   */
+  loading?: boolean;
 }
 
 /**
@@ -47,9 +54,22 @@ export function Shelf({
   inset = 0,
   tone,
   rankOffset = 0,
+  loading = false,
 }: Props) {
   const { isCompact } = useBreakpoint();
-  if (games.length === 0) return null;
+  if (games.length === 0)
+    return loading ? (
+      <SkeletonShelf
+        inset={inset}
+        eyebrow={section.variant === 'ranked' || !!section.eyebrow}
+        wide={section.variant === 'wide'}
+        tileWidth={
+          section.variant === 'wide' && isCompact
+            ? LAYOUT.shelfTileWideCompact
+            : undefined
+        }
+      />
+    ) : null;
 
   const variant = section.variant ?? 'default';
   const tileWidth = isCompact ? COMPACT_RAIL.tileWidth : LAYOUT.shelfTileWidth;

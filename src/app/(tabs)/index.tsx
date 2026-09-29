@@ -629,11 +629,13 @@ export default function HomeScreen({
    */
   const moodGames = withoutOwned(moodShelf.data ?? [], library);
   const finishedGames = withoutOwned(finishedShelf.data ?? [], library);
-  const showMood = personal.mood != null && moodGames.length > 0;
+  // A row whose answer is still coming holds its place with bones; one
+  // that came back empty is not drawn at all.
+  const showMood =
+    personal.mood != null && (moodGames.length > 0 || moodShelf.isLoading);
   const showFinished =
     personal.finished != null &&
-    (finishedShelf.data?.length ?? 0) > 0 &&
-    finishedGames.length > 0;
+    (finishedGames.length > 0 || finishedShelf.isLoading);
   const showLength = personal.length != null && lengthShelf.length > 0;
   const forYou = (inset: number) => {
     // A phone's rail is a dozen; a desk's pages by chevron through all.
@@ -654,6 +656,7 @@ export default function HomeScreen({
               variant: 'wide',
             }}
             games={moodGames.slice(0, cap)}
+            loading={moodShelf.isLoading}
             inset={inset}
           />
         ) : null}
@@ -667,6 +670,7 @@ export default function HomeScreen({
               variant: 'default',
             }}
             games={finishedGames.slice(0, cap)}
+            loading={finishedShelf.isLoading}
             tone="finished"
             inset={inset}
           />
@@ -1075,6 +1079,7 @@ export default function HomeScreen({
                       <Shelf
                         section={shelf}
                         games={(shelfGames[index] ?? []).slice(0, 12)}
+                        loading={shelves[index]?.isLoading}
                         onViewAll={selectSection}
                         inset={GUTTER}
                       />
