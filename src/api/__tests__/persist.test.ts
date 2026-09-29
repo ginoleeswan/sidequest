@@ -32,9 +32,9 @@ describe('the query cache persister', () => {
   });
   afterEach(() => jest.useRealTimers());
 
-  /** Writes are throttled by 2s, so a test has to let that elapse. */
+  /** Writes are throttled by 5s, so a test has to let that elapse. */
   const settle = async () => {
-    jest.advanceTimersByTime(2100);
+    jest.advanceTimersByTime(5100);
     await Promise.resolve();
   };
 

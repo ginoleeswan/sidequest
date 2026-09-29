@@ -12,6 +12,7 @@ import Svg, { Path } from 'react-native-svg';
 import { Mark } from './Mark';
 import { GLYPH_BOX, SEAM_GLYPHS } from './SeamGlyphs';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
+import { lowerCurtain, raiseCurtain } from '@/lib/launch';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import {
   backOut,
@@ -190,6 +191,10 @@ const SPARKS: Spark[] = [
  */
 const shouldRun = (): boolean => Platform.OS !== 'web';
 
+// Raised at import, before the first screen mounts under it, so what is
+// below the fold knows to wait. Lowered when the run finishes.
+if (shouldRun()) raiseCurtain();
+
 /**
  * The knock, as a table of stops rather than an easing.
  *
@@ -280,7 +285,11 @@ export function SplashCurtain() {
       easing: Easing.linear,
       useNativeDriver: true,
     });
-    animation.start(({ finished }) => finished && setLive(false));
+    animation.start(({ finished }) => {
+      if (!finished) return;
+      setLive(false);
+      lowerCurtain();
+    });
     return () => animation.stop();
   }, [live, reduced, run]);
 

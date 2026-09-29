@@ -7,7 +7,7 @@ import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { MAX_AGE, persister } from '@/api/persist';
+import { MAX_AGE, dehydrateOptions, persister } from '@/api/persist';
 import { queryClient } from '@/api/queryClient';
 import { CommandPalette } from '@/components/CommandPalette';
 import { OfflineNotice } from '@/components/OfflineNotice';
@@ -138,7 +138,7 @@ export default function RootLayout() {
   return (
     <PersistQueryClientProvider
       client={queryClient}
-      persistOptions={{ persister, maxAge: MAX_AGE }}
+      persistOptions={{ persister, maxAge: MAX_AGE, dehydrateOptions }}
     >
       <AuthProvider>
         <LibraryProvider>
