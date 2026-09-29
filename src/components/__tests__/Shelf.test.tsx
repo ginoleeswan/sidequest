@@ -91,11 +91,37 @@ describe('Shelf', () => {
 
   it('offers "view all" only where there is a page to open', async () => {
     await renderApp(<Shelf section={section()} games={games(3)} />);
-    expect(screen.queryByText('View all →')).toBeNull();
+    expect(screen.queryByText('View all')).toBeNull();
 
     await renderApp(
       <Shelf section={section()} games={games(3)} onViewAll={jest.fn()} />
     );
-    expect(screen.getByText('View all →')).toBeTruthy();
+    // The arrow is an icon now; the words say where it goes.
+    expect(screen.getByText('View all')).toBeTruthy();
+    expect(screen.getByLabelText('View all Trending now')).toBeTruthy();
+  });
+
+  /**
+   * A ranked row that starts after the stage's games numbers from there,
+   * and says so, rather than calling the sixth game "1".
+   */
+  it('numbers a ranked row from its true place', async () => {
+    await renderApp(
+      <Shelf
+        section={section({ variant: 'ranked' })}
+        games={games(12)}
+        rankOffset={5}
+      />
+    );
+    expect(screen.getByText('Nos. 6–15')).toBeTruthy();
+    expect(screen.getByText('6')).toBeTruthy();
+    expect(screen.queryByText('Top 10')).toBeNull();
+  });
+
+  it('renders the wide variant too', async () => {
+    await renderApp(
+      <Shelf section={section({ variant: 'wide' })} games={games(3)} />
+    );
+    expect(screen.getAllByText('Game 1').length).toBeGreaterThan(0);
   });
 });

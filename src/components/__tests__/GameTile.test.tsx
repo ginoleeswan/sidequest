@@ -31,7 +31,9 @@ describe('GameTile', () => {
   it('shows the game and what is worth knowing at a glance', async () => {
     await renderApp(<GameTile game={GAME} />);
     expect(screen.getByText('Hades II')).toBeTruthy();
-    expect(screen.getByText('Roguelike · 2024 · ★ 4.6')).toBeTruthy();
+    // One fact under the name, not three.
+    expect(screen.getByText('Roguelike')).toBeTruthy();
+    expect(screen.queryByText(/2024/)).toBeNull();
   });
 
   /**
@@ -40,13 +42,24 @@ describe('GameTile', () => {
    */
   it('leads with how long it takes, in place of a five-point rating', async () => {
     await renderApp(<GameTile game={{ ...GAME, playtime: 12 } as Game} />);
-    expect(screen.getByText(/12h/)).toBeTruthy();
-    expect(screen.queryByText(/★/)).toBeNull();
+    expect(screen.getByText('12h')).toBeTruthy();
+    expect(screen.queryByText(/4\.6/)).toBeNull();
+    expect(
+      screen.getByLabelText('Hades II, 12 hours to finish, Roguelike')
+    ).toBeTruthy();
   });
 
+  /**
+   * The star is an icon, not the typed ★: neither face carries the
+   * glyph, so it fell back to the system font at the wrong weight.
+   */
   it('falls back to the rating when no length is known', async () => {
     await renderApp(<GameTile game={GAME} />);
-    expect(screen.getByText('Roguelike · 2024 · ★ 4.6')).toBeTruthy();
+    expect(screen.getAllByText(/4\.6/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/★/)).toBeNull();
+    expect(
+      screen.getByLabelText('Hades II, rated 4.6 of 5, Roguelike')
+    ).toBeTruthy();
   });
 
   it('draws its place in a top ten', async () => {
@@ -103,7 +116,46 @@ describe('GameTile', () => {
     const sparse = { id: 7, name: 'Unknown', rating: 0 } as Game;
     await renderApp(<GameTile game={sparse} />);
     expect(screen.getByText('Unknown')).toBeTruthy();
-    expect(screen.queryByText(/★/)).toBeNull();
+    expect(screen.getByLabelText('Unknown')).toBeTruthy();
+  });
+
+  /**
+   * The save is a sibling of the tile, not inside it, so VoiceOver can
+   * reach it; and the tile offers it from the rotor as well.
+   */
+  it('offers the save as an action on the tile itself', async () => {
+    await renderApp(<GameTile game={GAME} />);
+    await act(async () =>
+      fireEvent(
+        screen.getByLabelText('Hades II, rated 4.6 of 5, Roguelike'),
+        'accessibilityAction',
+        { nativeEvent: { actionName: 'save' } }
+      )
+    );
+    expect(saved()['42'].status).toBe('wishlist');
+  });
+
+  it('takes a save back from the toast', async () => {
+    await renderApp(<GameTile game={GAME} />);
+    await act(async () =>
+      fireEvent.press(screen.getByLabelText('Save to library'))
+    );
+    expect(saved()['42'].status).toBe('wishlist');
+    await act(async () => fireEvent.press(screen.getByLabelText('Undo')));
+    expect(saved()['42']).toBeUndefined();
+  });
+
+  it('restores the status a removal took away', async () => {
+    store[KEY] = JSON.stringify({
+      '42': { addedAt: 1, status: 'playing', game: GAME },
+    });
+    await renderApp(<GameTile game={GAME} />);
+    await act(async () =>
+      fireEvent.press(screen.getByLabelText('Remove from library'))
+    );
+    expect(saved()['42']).toBeUndefined();
+    await act(async () => fireEvent.press(screen.getByLabelText('Undo')));
+    expect(saved()['42'].status).toBe('playing');
   });
 
   /**

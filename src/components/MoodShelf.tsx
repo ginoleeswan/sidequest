@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Rail } from './Rail';
@@ -6,8 +7,8 @@ import { SectionHeader } from './SectionHeader';
 import { Textured } from './Textured';
 import { GENRES, type Section } from '@/constants/categories';
 import { COLORS } from '@/styles/colors';
-import { RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { ICON, RADIUS, SPACING } from '@/styles/theme';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
 
 /**
  * Moods, not genres. "Strategy" is a taxonomy term; "an evening of
@@ -27,6 +28,12 @@ interface Mood {
   genre: string;
   /** The card's tint, over the plate. */
   tint: string;
+  /**
+   * A mark for the feeling. Without one the mood doors and the browse
+   * doors above them were the same tinted plate twice, and the page
+   * read as one row repeated.
+   */
+  icon: keyof typeof Ionicons.glyphMap;
 }
 
 const MOODS: Mood[] = [
@@ -36,6 +43,7 @@ const MOODS: Mood[] = [
     promise: 'Small worlds, soft edges',
     genre: 'indie',
     tint: 'rgba(126,166,140,0.16)',
+    icon: 'leaf-outline',
   },
   {
     key: 'loud',
@@ -43,6 +51,7 @@ const MOODS: Mood[] = [
     promise: 'The controller does the talking',
     genre: 'shooter',
     tint: 'rgba(214,105,86,0.16)',
+    icon: 'flame-outline',
   },
   {
     key: 'lost',
@@ -50,6 +59,7 @@ const MOODS: Mood[] = [
     promise: 'Worlds that swallow evenings',
     genre: 'role-playing-games-rpg',
     tint: 'rgba(122,138,196,0.18)',
+    icon: 'compass-outline',
   },
   {
     key: 'plot',
@@ -57,6 +67,7 @@ const MOODS: Mood[] = [
     promise: 'Turns, maps, one more go',
     genre: 'strategy',
     tint: 'rgba(196,168,110,0.16)',
+    icon: 'map-outline',
   },
   {
     key: 'story',
@@ -64,6 +75,7 @@ const MOODS: Mood[] = [
     promise: 'Places with people in them',
     genre: 'adventure',
     tint: 'rgba(158,122,180,0.16)',
+    icon: 'book-outline',
   },
   {
     key: 'fast',
@@ -71,6 +83,7 @@ const MOODS: Mood[] = [
     promise: 'Corners taken badly, then well',
     genre: 'racing',
     tint: 'rgba(110,170,196,0.16)',
+    icon: 'speedometer-outline',
   },
 ];
 
@@ -90,7 +103,13 @@ export function MoodShelf({
 
   return (
     <View style={styles.shelf}>
-      <SectionHeader title="What are you in the mood for?" />
+      {/* A mood is an evening's question, so it asks in the evening's
+          colour. */}
+      <SectionHeader
+        eyebrow="Tonight"
+        tone="evening"
+        title="What are you in the mood for?"
+      />
       <Rail
         data={doors}
         keyExtractor={(door) => door.mood.key}
@@ -107,8 +126,20 @@ export function MoodShelf({
             <View
               style={[StyleSheet.absoluteFill, { backgroundColor: mood.tint }]}
             />
-            <Text style={styles.name}>{mood.name}</Text>
-            <Text style={styles.promise} numberOfLines={1}>
+            <Ionicons
+              name={mood.icon}
+              size={ICON.lg}
+              color={COLORS.lightGrey}
+              style={styles.glyph}
+            />
+            <Text style={styles.name} maxFontSizeMultiplier={FONT_SCALE.label}>
+              {mood.name}
+            </Text>
+            <Text
+              style={styles.promise}
+              numberOfLines={1}
+              maxFontSizeMultiplier={FONT_SCALE.label}
+            >
               {mood.promise}
             </Text>
           </ScaleButton>
@@ -119,23 +150,23 @@ export function MoodShelf({
 }
 
 const styles = StyleSheet.create({
-  shelf: { gap: SPACING.sm + 2, marginBottom: SPACING.xl },
+  shelf: { gap: SPACING.sm2, marginBottom: SPACING.xl },
+  // A minimum, so a larger text size grows the card instead of clipping
+  // the promise off its foot.
   card: {
     width: 200,
-    height: 108,
-    borderRadius: RADIUS.md,
+    minHeight: 108,
+    borderRadius: RADIUS.card,
     borderWidth: 1,
     borderColor: COLORS.stroke,
     overflow: 'hidden',
     padding: SPACING.md,
     justifyContent: 'flex-end',
-    gap: 2,
+    gap: SPACING.xxs,
   },
+  glyph: { marginBottom: 'auto', paddingBottom: SPACING.sm },
   name: {
-    fontFamily: 'Geom-ExtraBold',
-    fontSize: 17,
-    lineHeight: 21,
-    letterSpacing: -0.2,
+    ...TYPE.h3,
     color: COLORS.white,
   },
   promise: { ...TYPE.fine, color: COLORS.mediumGrey },

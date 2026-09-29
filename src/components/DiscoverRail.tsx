@@ -3,22 +3,25 @@ import { StyleSheet, Text, View } from 'react-native';
 import { DynamicIcon } from './DynamicIcon';
 import { Rail } from './Rail';
 import { ScaleButton } from './ScaleButton';
+import { SectionHeader } from './SectionHeader';
 import { Textured } from './Textured';
 import { DISCOVER, type Section } from '@/constants/categories';
 import { COLORS } from '@/styles/colors';
-import { RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { ICON, RADIUS, SPACING } from '@/styles/theme';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
 
 /**
- * The discover sections as the feed's first row, not the chrome's last.
+ * The discover sections as doors into the shop.
  *
  * They used to float over the masthead's artwork - eight outlined,
- * iconed pills across the most expensive pixels on the page. Down
- * here they are doors, built from the brand's own material the way the
- * mood shelf's are: a textured plate, a tint, the section's glyph and
- * its name. Same language at a smaller scale, so the two rows of doors
- * read as one system rather than as a toolbar and then some cards.
- * The six editorial sections only; genres are the mood shelf's job.
+ * iconed pills across the most expensive pixels on the page - and then
+ * stood as the feed's first row, where they spent the space under the
+ * stage that "Finish it this weekend" needed. They sit under Trending
+ * now: the row that says "there is more of this" is followed by the
+ * doors to the rest of it. Built from the brand's own material, as the
+ * mood shelf's are, but smaller and in the furniture face, so the two
+ * rows of doors read as related rather than as one row twice. The six
+ * editorial sections only; genres are the mood shelf's job.
  */
 const TINTS: Record<string, string> = {
   trending: 'rgba(122,138,196,0.20)',
@@ -38,12 +41,12 @@ export function DiscoverRail({
 }) {
   return (
     <View style={styles.row}>
-      <Text style={styles.eyebrow}>Browse</Text>
+      <SectionHeader title="Browse the shop" />
       <Rail
         data={DISCOVER}
         keyExtractor={(section) => section.key}
         inset={inset}
-        gap={SPACING.sm + 2}
+        gap={SPACING.sm2}
         renderItem={(section) => (
           <ScaleButton
             onPress={() => onOpen(section)}
@@ -62,10 +65,14 @@ export function DiscoverRail({
             <DynamicIcon
               type={section.iconType}
               name={section.iconName}
-              size={18}
+              size={ICON.md}
               color={COLORS.lightGrey}
             />
-            <Text style={styles.name} numberOfLines={1}>
+            <Text
+              style={styles.name}
+              numberOfLines={1}
+              maxFontSizeMultiplier={FONT_SCALE.label}
+            >
               {section.title}
             </Text>
           </ScaleButton>
@@ -77,24 +84,23 @@ export function DiscoverRail({
 
 const styles = StyleSheet.create({
   // A row's own air beneath it, the same as every shelf keeps.
-  row: { marginBottom: SPACING.xl, gap: SPACING.sm + 2 },
-  eyebrow: { ...TYPE.micro, color: COLORS.mediumGrey },
+  row: { marginBottom: SPACING.xl, gap: SPACING.sm2 },
+  // A minimum, not a height: at a larger text size the name needs room
+  // to grow into rather than a box that clips it.
   door: {
     width: 148,
-    height: 84,
-    borderRadius: RADIUS.md,
+    minHeight: 84,
+    borderRadius: RADIUS.card,
     borderWidth: 1,
     borderColor: COLORS.stroke,
     overflow: 'hidden',
     backgroundColor: COLORS.navy,
-    padding: SPACING.md - 2,
+    padding: SPACING.sm + SPACING.xs,
+    gap: SPACING.sm,
     justifyContent: 'space-between',
   },
   name: {
-    fontFamily: 'Geom-ExtraBold',
-    fontSize: 15,
-    lineHeight: 19,
-    letterSpacing: -0.2,
+    ...TYPE.h3,
     color: COLORS.white,
   },
 });

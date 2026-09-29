@@ -1,7 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -10,9 +9,10 @@ import {
   type ViewStyle,
 } from 'react-native';
 
+import { Touchable } from './Touchable';
 import { COLORS } from '@/styles/colors';
-import { RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { ICON, RADIUS, SPACING } from '@/styles/theme';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
 
 interface Props {
   value: string;
@@ -38,7 +38,7 @@ export function SearchInput({
 }: Props) {
   return (
     <View style={[styles.container, style]}>
-      <Ionicons name="search" size={18} color={COLORS.mediumGrey} />
+      <Ionicons name="search" size={ICON.md} color={COLORS.mediumGrey} />
       <TextInput
         ref={inputRef}
         value={value}
@@ -50,17 +50,21 @@ export function SearchInput({
         autoCorrect={false}
         autoCapitalize="none"
         autoFocus={autoFocus}
+        maxFontSizeMultiplier={FONT_SCALE.label}
         onSubmitEditing={() => onSubmit?.(value)}
       />
       {value.length > 0 ? (
-        <Pressable
+        <Touchable
           onPress={() => onChangeText('')}
-          hitSlop={8}
-          accessibilityRole="button"
+          hitSlop="md"
           accessibilityLabel="Clear search"
         >
-          <Ionicons name="close-circle" size={18} color={COLORS.mediumGrey} />
-        </Pressable>
+          <Ionicons
+            name="close-circle"
+            size={ICON.md}
+            color={COLORS.mediumGrey}
+          />
+        </Touchable>
       ) : showShortcutHint && Platform.OS === 'web' ? (
         <View style={styles.kbd}>
           <Text style={styles.kbdText}>/</Text>
@@ -80,12 +84,14 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     flexShrink: 1,
     width: 200,
-    height: 42,
-    borderRadius: RADIUS.lg,
+    // A minimum: at a larger text size the field grows with its words
+    // instead of clipping them.
+    minHeight: 42,
+    borderRadius: RADIUS.pill,
     paddingHorizontal: SPACING.md,
     backgroundColor: COLORS.navy,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: COLORS.stroke,
   },
   input: {
     ...TYPE.body,
@@ -100,9 +106,9 @@ const styles = StyleSheet.create({
   },
   kbd: {
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-    borderRadius: 5,
-    paddingHorizontal: 6,
+    borderColor: COLORS.strokeStrong,
+    borderRadius: RADIUS.xs,
+    paddingHorizontal: SPACING.xs + SPACING.xxs,
     paddingVertical: 1,
   },
   kbdText: {

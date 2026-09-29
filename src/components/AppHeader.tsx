@@ -1,17 +1,11 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { usePathname, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import {
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  type ViewStyle,
-} from 'react-native';
+import { Platform, StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
 import { Mark } from './Mark';
-import { COLORS } from '@/styles/colors';
+import { Touchable } from './Touchable';
+import { alpha, COLORS } from '@/styles/colors';
 import { LAYOUT, SPACING } from '@/styles/theme';
 import { TYPE, WORDMARK } from '@/styles/typography';
 
@@ -71,9 +65,9 @@ export function AppHeader({ immersive = false, band }: Props) {
       {floating && (
         <LinearGradient
           colors={[
-            'rgba(9,12,19,0.62)',
-            'rgba(9,12,19,0.28)',
-            'rgba(9,12,19,0)',
+            alpha(COLORS.ink, 0.62),
+            alpha(COLORS.ink, 0.28),
+            alpha(COLORS.ink, 0),
           ]}
           locations={[0, 0.62, 1]}
           style={styles.scrim}
@@ -81,8 +75,9 @@ export function AppHeader({ immersive = false, band }: Props) {
         />
       )}
       <View style={[styles.inner, band ? { maxWidth: band } : null]}>
-        <Pressable
+        <Touchable
           onPress={() => router.push('/')}
+          hitSlop="text"
           accessibilityRole="link"
           accessibilityLabel="Sidequest home"
         >
@@ -90,20 +85,22 @@ export function AppHeader({ immersive = false, band }: Props) {
             <Mark size={18} />
             <Text style={styles.wordmark}>sidequest</Text>
           </View>
-        </Pressable>
+        </Touchable>
         <View style={styles.nav}>
           {NAV.map((link) => {
             const active = pathname === link.href;
             return (
-              <Pressable
+              <Touchable
                 key={link.href}
                 onPress={() => router.push(link.href)}
+                hitSlop="text"
                 accessibilityRole="link"
+                accessibilityState={{ selected: active }}
               >
                 <Text style={[styles.link, active && styles.linkActive]}>
                   {link.label}
                 </Text>
-              </Pressable>
+              </Touchable>
             );
           })}
         </View>
@@ -135,7 +132,7 @@ const FIXED =
 const styles = StyleSheet.create({
   bar: {
     zIndex: 50,
-    backgroundColor: 'rgba(39,47,63,0.96)',
+    backgroundColor: alpha(COLORS.navy, 0.96),
     borderBottomWidth: 1,
     borderBottomColor: COLORS.stroke,
   },

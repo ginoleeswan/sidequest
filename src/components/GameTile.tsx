@@ -3,13 +3,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { CoverImage } from './CoverImage';
 import { PlatformIcons } from './PlatformIcons';
 import { ScaleButton } from './ScaleButton';
 import { ScorePill } from './ScorePill';
 import { Textured } from './Textured';
+import { Touchable } from './Touchable';
 import { prefetchGame } from '@/api/gameDetail';
 import { useToast } from './Toast';
 import type { Game } from '@/api/types';
@@ -19,9 +20,9 @@ import { igdbCoverUri } from '@/api/igdb';
 import { formatHours } from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
 import { useLibrary } from '@/lib/library';
-import { COLORS } from '@/styles/colors';
-import { LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
-import { OVER_IMAGE, TYPE } from '@/styles/typography';
+import { alpha, COLORS } from '@/styles/colors';
+import { ICON, LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
+import { FONT_SCALE, OVER_IMAGE, TYPE } from '@/styles/typography';
 
 interface Props {
   game: Game;
@@ -37,13 +38,19 @@ interface Props {
    * screenshot rather than the cover because that is the shape it is.
    */
   shape?: 'poster' | 'wide';
+  /**
+   * The hours set as a figure rather than a label: for the row whose
+   * whole argument is how long its games take.
+   */
+  bigHours?: boolean;
 }
 
 /**
  * Cover-art tile. The art carries glanceable facts — Metacritic in the top
- * corner, platform glyphs along the bottom — and the caption carries
- * identity. On pointer hover the art cycles through the game's actual
- * screenshots, and a quick-save control appears.
+ * corner, and on a desk the platform glyphs along the bottom — and the
+ * caption carries the hours, then identity. On pointer hover the art
+ * cycles through the game's actual screenshots, and a quick-save control
+ * appears.
  */
 export function GameTile({
   game,
@@ -51,6 +58,7 @@ export function GameTile({
   badge,
   rank,
   shape = 'poster',
+  bigHours = false,
 }: Props) {
   const router = useRouter();
   const { statusOf, setStatus } = useLibrary();
@@ -131,24 +139,65 @@ export function GameTile({
   const year = game.released?.slice(0, 4);
   const genre = game.genres?.[0]?.name;
   /**
-   * How long it takes, first and in the accent colour.
+   * How long it takes, on a line of its own, before the name.
    *
    * Every tile on this page used to read "Adventure · 2026 · ★ 3.6" —
-   * RAWG's facts, the same three any games site would print. The one
-   * thing Sidequest exists to tell you was the one thing missing from
-   * the atom the whole page is built out of. A five-point community
-   * rating loses its place to it; where the length is genuinely unknown
-   * the rating comes back, because then it is the only signal there is.
+   * RAWG's facts, the same three any games site would print — and when
+   * the hours did arrive they were 11pt, second in line, behind the
+   * title. The number this app exists to tell you now leads the caption
+   * in the time colour. Where the length is genuinely unknown the
+   * rating takes the line instead, because then it is the only signal
+   * there is — in the neutral grey a rating deserves, not in amber.
    */
   const { hours } = durationOf(game);
   const length = hours > 0 ? formatHours(hours) : null;
-  const meta = [
+  const rating = !length && game.rating > 0 ? game.rating.toFixed(1) : null;
+  // One fact under the name, not three: the genre, or the year when
+  // there is no genre to give.
+  const fact = genre ?? year;
+
+  /**
+   * The platform glyphs are a desk's detail. On a phone tile they were
+   * four overlays on a 150pt frame and the reason for a 65% black
+   * gradient across the art; the game page answers "is it on my
+   * Switch?", and the tile keeps two overlays — save and score.
+   */
+  const platforms =
+    !isCompact && rank == null ? (game.parent_platforms ?? []) : [];
+  const heavyScrim = rank != null || platforms.length > 0;
+
+  const open = () => router.push(`/game/${game.id}`);
+  const toggleSave = () => {
+    const previous = statusOf(game.id);
+    setStatus(game, previous ? null : 'wishlist');
+    // A save is one tap on a control the size of a thumbnail, so it
+    // is one tap to take back — and taking back a removal restores the
+    // status it had, not a fresh "want to play".
+    toast(
+      previous ? 'Removed from library' : 'Saved — Want to play',
+      previous ? 'bookmark-outline' : 'bookmark',
+      {
+        label: 'Undo',
+        onPress: () => setStatus(game, previous),
+      }
+    );
+  };
+
+  /**
+   * One sentence for VoiceOver, in the order the tile is read: the name,
+   * how long it takes, what kind of thing it is.
+   */
+  const spoken = [
+    game.name,
+    length ? `${spokenHours(hours)} to finish` : null,
+    rating ? `rated ${rating} of 5` : null,
     genre,
-    year,
-    !length && game.rating > 0 ? `★ ${game.rating.toFixed(1)}` : null,
+    rank != null ? `number ${rank}` : null,
+    saved ? 'in your library' : null,
   ]
     .filter(Boolean)
-    .join(' · ');
+    .join(', ');
+  const saveLabel = saved ? 'Remove from library' : 'Save to library';
 
   return (
     <View
@@ -163,12 +212,27 @@ export function GameTile({
         setShot(0);
       }}
     >
+      {/* The tile is one control and the save is another, side by side.
+          The save used to sit inside the tile's button, and iOS folds
+          everything inside a button into one element — so VoiceOver
+          could open the game but never reach its save. Siblings are two
+          stops, and the tile also offers Save as an action from its own
+          rotor. */}
       <ScaleButton
-        onPress={() => router.push(`/game/${game.id}`)}
+        onPress={open}
         onPressIn={prefetch}
         style={styles.tile}
         activeScale={0.97}
         hoverScale={1.03}
+        accessibilityLabel={spoken}
+        accessibilityActions={[
+          { name: 'activate' },
+          { name: 'save', label: saved ? 'Remove from library' : 'Save' },
+        ]}
+        onAccessibilityAction={(event) => {
+          if (event.nativeEvent.actionName === 'save') toggleSave();
+          else if (event.nativeEvent.actionName === 'activate') open();
+        }}
       >
         <View
           style={[
@@ -196,6 +260,7 @@ export function GameTile({
                 <Text
                   style={styles.questName}
                   numberOfLines={3}
+                  maxFontSizeMultiplier={FONT_SCALE.display}
                   accessibilityElementsHidden
                   importantForAccessibility="no-hide-descendants"
                 >
@@ -214,8 +279,11 @@ export function GameTile({
                 fallbackUri={shot === 0 ? game.background_image : null}
                 style={styles.image}
               />
+              {/* Only as dark as what sits on it needs. The glyphs and
+                  the rank numeral want a real scrim; a bare cover wants
+                  just enough at the foot to sit on the page. */}
               <LinearGradient
-                colors={['#00000000', '#00000059', '#000000a6']}
+                colors={heavyScrim ? SCRIM_HEAVY : SCRIM_LIGHT}
                 locations={[0.55, 0.8, 1]}
                 style={styles.gradient}
                 pointerEvents="none"
@@ -228,7 +296,12 @@ export function GameTile({
           <View style={styles.edgeLight} pointerEvents="none" />
           {badge ? (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>{badge}</Text>
+              <Text
+                style={styles.badgeText}
+                maxFontSizeMultiplier={FONT_SCALE.label}
+              >
+                {badge}
+              </Text>
             </View>
           ) : (
             game.metacritic != null && (
@@ -237,69 +310,105 @@ export function GameTile({
               </View>
             )
           )}
-          {/* Phones can't hover - the save control must simply be there. */}
-          {(isCompact || hovered || saved) && (
-            <Pressable
-              onPress={() => {
-                setStatus(game, saved ? null : 'wishlist');
-                toast(
-                  saved ? 'Removed from library' : 'Saved — Want to play',
-                  saved ? 'bookmark-outline' : 'bookmark'
-                );
-              }}
-              hitSlop={6}
-              accessibilityLabel={
-                saved ? 'Remove from library' : 'Save to library'
-              }
-              style={styles.saveCorner}
-            >
-              <Ionicons
-                name={saved ? 'bookmark' : 'bookmark-outline'}
-                size={15}
-                color={saved ? COLORS.accent : COLORS.white}
-              />
-            </Pressable>
-          )}
           {/* The rank takes the bottom-left corner when there is one. As a
               watermark behind the tile it was clipped by the rail's edge
               on the first item and surfaced between tiles on the rest,
               which read as a rendering artifact rather than a top ten. */}
           {rank != null ? (
-            <Text style={styles.rank}>{rank}</Text>
-          ) : (
-            game.parent_platforms &&
-            game.parent_platforms.length > 0 && (
-              <View style={styles.platforms}>
-                <PlatformIcons
-                  platforms={game.parent_platforms.slice(0, 4)}
-                  size={12}
-                  color="rgba(255,255,255,0.85)"
-                />
-              </View>
-            )
-          )}
+            <Text style={styles.rank} maxFontSizeMultiplier={FONT_SCALE.figure}>
+              {rank}
+            </Text>
+          ) : platforms.length > 0 ? (
+            <View style={styles.platforms}>
+              <PlatformIcons
+                platforms={platforms.slice(0, 4)}
+                size={12}
+                color={alpha(COLORS.white, 0.85)}
+              />
+            </View>
+          ) : null}
         </View>
+        {/* Always drawn, so a row keeps one baseline: a tile whose
+            length has not arrived holds the line open rather than
+            lifting its name above its neighbours'. */}
+        <Text
+          style={[styles.lead, bigHours && styles.leadBig]}
+          numberOfLines={1}
+          maxFontSizeMultiplier={
+            bigHours ? FONT_SCALE.figure : FONT_SCALE.label
+          }
+        >
+          {length ?? (rating ? <Rating value={rating} /> : ' ')}
+        </Text>
         <Text
           style={[styles.title, hovered && styles.titleHovered]}
-          numberOfLines={1}
+          numberOfLines={2}
+          maxFontSizeMultiplier={FONT_SCALE.label}
         >
           {game.name}
         </Text>
-        {length || meta ? (
-          <Text style={styles.meta} numberOfLines={1}>
-            {length ? <Text style={styles.length}>{length}</Text> : null}
-            {length && meta ? ' · ' : ''}
-            {meta}
+        {fact ? (
+          <Text
+            style={styles.meta}
+            numberOfLines={1}
+            maxFontSizeMultiplier={FONT_SCALE.label}
+          >
+            {fact}
           </Text>
         ) : null}
       </ScaleButton>
+      {/* Phones can't hover - the save control must simply be there. */}
+      {isCompact || hovered || saved ? (
+        <Touchable
+          onPress={toggleSave}
+          haptic="impact"
+          hitSlop="sm"
+          accessibilityLabel={saveLabel}
+          style={styles.save}
+        >
+          {/* White and filled once saved. Amber is time, and a bookmark
+              is not a length. */}
+          <Ionicons
+            name={saved ? 'bookmark' : 'bookmark-outline'}
+            size={ICON.sm}
+            color={COLORS.white}
+          />
+        </Touchable>
+      ) : null}
     </View>
   );
 }
 
+/** The rating, with a star the fonts can draw: the faces have no ★. */
+function Rating({ value }: { value: string }) {
+  return (
+    <Text style={styles.rating}>
+      <Ionicons name="star" size={ICON.sm} color={COLORS.starGold} />
+      {` ${value}`}
+    </Text>
+  );
+}
+
+/** "2.5h" as it is said: "2.5 hours". */
+function spokenHours(hours: number): string {
+  const figure = formatHours(hours).replace(/h$/, '');
+  return `${figure} ${figure === '1' ? 'hour' : 'hours'}`;
+}
+
+const SCRIM_HEAVY = [
+  alpha(COLORS.ink, 0),
+  alpha(COLORS.ink, 0.35),
+  alpha(COLORS.ink, 0.65),
+] as const;
+const SCRIM_LIGHT = [
+  alpha(COLORS.ink, 0),
+  alpha(COLORS.ink, 0.08),
+  alpha(COLORS.ink, 0.25),
+] as const;
+
 const styles = StyleSheet.create({
   flexCell: { flex: 1 },
-  tile: { gap: SPACING.xs + 1 },
+  tile: { gap: SPACING.xxs },
   art: {
     width: '100%',
     aspectRatio: LAYOUT.tileAspect,
@@ -308,6 +417,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.navy,
     borderWidth: 1,
     borderColor: COLORS.stroke,
+    marginBottom: SPACING.xs,
     ...SHADOW.card,
   },
   artWide: { aspectRatio: LAYOUT.tileAspectWide },
@@ -319,10 +429,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   questName: {
-    ...TYPE.title,
-    fontSize: 19,
-    lineHeight: 23,
-    letterSpacing: -0.3,
+    ...TYPE.figureSmall,
     color: COLORS.lightGrey,
   },
 
@@ -334,7 +441,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     borderRadius: RADIUS.sm - 1,
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.14)',
+    boxShadow: `inset 0 1px 0 ${alpha(COLORS.white, 0.14)}`,
   },
   gradient: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   scoreCorner: { position: 'absolute', top: SPACING.sm, right: SPACING.sm },
@@ -343,38 +450,42 @@ const styles = StyleSheet.create({
     top: SPACING.sm,
     right: SPACING.sm,
     backgroundColor: COLORS.white,
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
+    borderRadius: RADIUS.xs,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xxs,
   },
   badgeText: {
-    ...TYPE.h4,
+    ...TYPE.label,
     color: COLORS.darkGrey,
   },
-  saveCorner: {
+  /**
+   * Over the art's top-left corner, as a sibling of the tile rather than
+   * a child of it. Twenty-eight points drawn, forty-four to the thumb.
+   */
+  save: {
     position: 'absolute',
     top: SPACING.sm,
     left: SPACING.sm,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 28,
+    height: 28,
+    borderRadius: RADIUS.pill,
     /**
      * Quieter than it was. A phone cannot hover, so this control is on
      * every tile all the time — at full strength that is six hard black
      * discs down one screen, and they read as the loudest thing on a
      * page made of artwork.
      */
-    backgroundColor: 'rgba(0,0,0,0.38)',
+    backgroundColor: alpha(COLORS.ink, 0.42),
     alignItems: 'center',
     justifyContent: 'center',
   },
   platforms: {
     position: 'absolute',
     bottom: SPACING.sm,
-    left: SPACING.sm + 2,
+    left: SPACING.sm2,
   },
   rank: {
-    ...TYPE.numeral,
+    ...TYPE.hero,
     position: 'absolute',
     /*
      * Inside the frame, which is the whole reason it was moved here.
@@ -388,26 +499,35 @@ const styles = StyleSheet.create({
      * That is what makes it read as a rendering fault rather than a
      * style. Two points up from the edge puts the whole glyph in.
      */
-    bottom: 2,
+    bottom: SPACING.xxs,
     left: SPACING.sm,
-    fontSize: 52,
-    lineHeight: 56,
     color: COLORS.white,
-    opacity: 0.92,
     ...OVER_IMAGE.heading,
+  },
+  /** The hours: the tile's lead, in the one colour kept for time. */
+  lead: {
+    ...TYPE.labelSmall,
+    color: COLORS.accent,
+  },
+  leadBig: {
+    ...TYPE.figureSmall,
+    color: COLORS.accent,
+  },
+  /** A rating standing in for unknown hours: a fact, not a verdict. */
+  rating: {
+    ...TYPE.labelSmall,
+    color: COLORS.lightGrey,
   },
   title: {
     ...TYPE.labelSmall,
     color: COLORS.lightGrey,
-    marginTop: 2,
+    // Two lines held open, so a row of long and short names keeps one
+    // baseline for the fact beneath them.
+    minHeight: TYPE.labelSmall.lineHeight * 2,
   },
   titleHovered: { color: COLORS.white },
   meta: {
     ...TYPE.fine,
     color: COLORS.mediumGrey,
-  },
-  length: {
-    ...TYPE.fine,
-    color: COLORS.accent,
   },
 });

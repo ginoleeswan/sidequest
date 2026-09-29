@@ -6,9 +6,9 @@ import { Seam } from './Seam';
 import { GrainScrim } from './Textured';
 import type { Game } from '@/api/types';
 import type { Section } from '@/constants/categories';
-import { COLORS } from '@/styles/colors';
+import { alpha, COLORS } from '@/styles/colors';
 import { RADIUS, SPACING } from '@/styles/theme';
-import { OVER_IMAGE, TYPE } from '@/styles/typography';
+import { FONT_SCALE, OVER_IMAGE, TYPE } from '@/styles/typography';
 
 interface Props {
   section: Section;
@@ -61,7 +61,11 @@ export function CategoryHero({
         </View>
       ) : null}
       <LinearGradient
-        colors={['rgba(23,29,41,0.42)', 'rgba(30,36,50,0.82)', '#2A3346']}
+        colors={[
+          alpha(COLORS.inkRaised, 0.42),
+          alpha(COLORS.inkSurface, 0.82),
+          COLORS.surface,
+        ]}
         locations={[0, 0.66, 1]}
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
@@ -74,11 +78,17 @@ export function CategoryHero({
           bleed && { paddingHorizontal: bleed.sides * 1.5 },
         ]}
       >
-        <Text style={styles.eyebrow}>
+        <Text style={styles.eyebrow} maxFontSizeMultiplier={FONT_SCALE.label}>
           {kind === 'genre' ? 'GENRE' : 'DISCOVER'}
           {count ? `  ·  ${count.toLocaleString()} games` : ''}
         </Text>
-        <Text style={styles.title}>{section.title}</Text>
+        <Text
+          style={styles.title}
+          accessibilityRole="header"
+          maxFontSizeMultiplier={FONT_SCALE.display}
+        >
+          {section.title}
+        </Text>
         {section.description ? (
           <Text style={styles.description}>{section.description}</Text>
         ) : null}
@@ -131,13 +141,13 @@ const styles = StyleSheet.create({
   },
   copy: {
     padding: SPACING.lg,
-    gap: SPACING.xs + 1,
+    gap: SPACING.xs,
     maxWidth: 560,
   },
+  // Full strength: text at an opacity is a contrast nobody measured.
   eyebrow: {
     ...TYPE.tag,
     color: COLORS.lightGrey,
-    opacity: 0.85,
   },
   title: {
     ...TYPE.title,
