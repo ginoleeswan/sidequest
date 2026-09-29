@@ -980,7 +980,7 @@ const styles = StyleSheet.create({
   lockup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm + 2,
+    gap: SPACING.sm2,
     marginBottom: SPACING.xl,
   },
   // The lockup is the page's first object; at nav size it read as
@@ -1100,7 +1100,7 @@ const styles = StyleSheet.create({
     // On the baseline, so the word sits on the numeral's feet rather
     // than floating in the middle of its height.
     alignItems: 'baseline',
-    gap: SPACING.sm + 2,
+    gap: SPACING.sm2,
     marginVertical: SPACING.sm,
   },
   sumFigure: { ...TYPE.numeral, color: COLORS.accent },

@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     paddingVertical: 6,
-    paddingHorizontal: SPACING.sm + 2,
+    paddingHorizontal: SPACING.sm2,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: COLORS.stroke,

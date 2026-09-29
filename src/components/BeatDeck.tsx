@@ -18,6 +18,7 @@ import { Rise } from './Rise';
 import { SEAM_LIP_HEIGHT } from './Seam';
 import { Words } from './Words';
 import type { Game } from '@/api/types';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { beatAnchor, beatIndexAt, beatStops } from '@/lib/beatDeck';
 import { COLORS } from '@/styles/colors';
 import { EASING } from '@/styles/motion';
@@ -192,6 +193,7 @@ export function BeatDeck({
 }) {
   const rail = useRef<ScrollView>(null);
   const [active, setActive] = useState(0);
+  const reduced = useReducedMotion();
   /**
    * Measured, not asked for — the same lesson the seams learned.
    * `useWindowDimensions` answered with the static render's width at
@@ -290,14 +292,15 @@ export function BeatDeck({
    * explain what went where; this one is there to be watched, and a
    * spread that merely decelerates reads as a layout settling where one
    * that carries a little past and comes back reads as cards being
-   * dealt.
+   * dealt. Under Reduce Motion it is the one thing on the page that was
+   * still showing off, so there it spreads straight, without the bounce.
    */
   const spread = progress
     ? progress.interpolate({
         inputRange: [0, SPREAD_ENDS_AT],
         outputRange: [0, 1],
         extrapolate: 'clamp',
-        easing: EASING.overshoot,
+        easing: reduced ? EASING.linear : EASING.overshoot,
       })
     : null;
 
@@ -550,7 +553,7 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     backgroundColor: COLORS.white,
     borderRadius: 999,
-    paddingVertical: SPACING.sm + 2,
+    paddingVertical: SPACING.sm2,
     paddingHorizontal: SPACING.md,
   },
   chipWord: {

@@ -423,6 +423,6 @@ const styles = StyleSheet.create({
     ...TYPE.h3,
     color: COLORS.white,
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm + 2,
+    paddingVertical: SPACING.sm2,
   },
 });

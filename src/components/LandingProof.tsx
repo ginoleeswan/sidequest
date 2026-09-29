@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(248,113,104,0.08)',
     borderRadius: 8,
     paddingVertical: 4,
-    paddingHorizontal: SPACING.sm + 2,
+    paddingHorizontal: SPACING.sm2,
   },
   reasonWord: { ...TYPE.tag, fontSize: 12, color: COLORS.coral },
 });

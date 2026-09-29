@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.stroke,
     borderRadius: RADIUS.md,
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm + 2,
+    paddingVertical: SPACING.sm2,
     backgroundColor: COLORS.raised,
   },
   text: {

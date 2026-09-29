@@ -20,7 +20,7 @@ import {
 } from '@/lib/detailHero';
 import { STAGE_BOUNDS, stageHeight } from '@/lib/stage';
 import { HOME_SHELVES } from '@/constants/categories';
-import { DURATION, EASING } from '@/styles/motion';
+import { EASING } from '@/styles/motion';
 import { GUTTER, LAYOUT, RADIUS, SHADOW_ROOM, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
@@ -51,13 +51,23 @@ const RAIL_NET = Math.round(SHADOW_ROOM.card * 0.4);
 const DESK_PAGE_MAX = 1200;
 const DESK_RAIL = 340;
 
+/**
+ * The breath of a bone.
+ *
+ * It swung from 45% to full and back every 700ms, which on a screen of
+ * twenty bones is a flicker — the page looked like it was failing to
+ * load rather than loading. Slower and shallower reads as patience.
+ */
+const PULSE_STEP = 1200;
+const PULSE_LOW = 0.55;
+
 /** Pulsing placeholder block — the atom every skeleton is built from. */
 export function Skeleton({
   style,
 }: {
   style?: ViewStyle | (ViewStyle | undefined)[];
 }) {
-  const opacity = useAnimatedValue(0.45);
+  const opacity = useAnimatedValue(PULSE_LOW);
   const reduced = useReducedMotion();
 
   useEffect(() => {
@@ -67,13 +77,13 @@ export function Skeleton({
       Animated.sequence([
         Animated.timing(opacity, {
           toValue: 1,
-          duration: DURATION.pulse,
+          duration: PULSE_STEP,
           easing: EASING.standard,
           useNativeDriver: true,
         }),
         Animated.timing(opacity, {
-          toValue: 0.45,
-          duration: DURATION.pulse,
+          toValue: PULSE_LOW,
+          duration: PULSE_STEP,
           easing: EASING.standard,
           useNativeDriver: true,
         }),
