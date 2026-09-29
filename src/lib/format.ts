@@ -25,3 +25,11 @@ export function calendarDate(
     ...(style === 'long' ? { year: 'numeric' } : {}),
   });
 }
+
+/**
+ * "1 game", "12 games": a count with its noun agreeing. The app said
+ * "1 games" on the You page, the first time anyone saved a single game.
+ */
+export function countOf(n: number, noun: string, plural = `${noun}s`): string {
+  return `${n.toLocaleString()} ${n === 1 ? noun : plural}`;
+}

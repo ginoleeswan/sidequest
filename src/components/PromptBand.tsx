@@ -1,10 +1,9 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { ScaleButton } from './ScaleButton';
+import { PrimaryButton } from './PrimaryButton';
 import { Seam } from './Seam';
 import { GrainScrim } from './Textured';
 import { useHydrated } from '@/hooks/useHydrated';
@@ -13,7 +12,7 @@ import { useDurations } from '@/lib/durations';
 import { useLibrary } from '@/lib/library';
 import { buildPrompt } from '@/lib/prompt';
 import { COLORS } from '@/styles/colors';
-import { GUTTER, ICON, RADIUS, SPACING } from '@/styles/theme';
+import { GUTTER, SPACING } from '@/styles/theme';
 import { FONT_SCALE, TYPE } from '@/styles/typography';
 
 /**
@@ -82,20 +81,15 @@ export function PromptBand({ inset = GUTTER }: { inset?: number }) {
             {prompt.headline}
           </Text>
           <Text style={styles.detail}>{prompt.detail}</Text>
-          <ScaleButton
+          {/* The app's button, not a band-only pill: amber-lettered on a
+              radius-30 ring, it was a fifth style of primary action. */}
+          <PrimaryButton
+            label={prompt.action}
             onPress={() => router.push(prompt.href)}
-            style={styles.action}
-            activeScale={0.96}
-            hoverScale={1.03}
-            accessibilityLabel={prompt.action}
-          >
-            <Text style={styles.actionLabel}>{prompt.action}</Text>
-            <Ionicons
-              name="arrow-forward"
-              size={ICON.sm}
-              color={COLORS.accent}
-            />
-          </ScaleButton>
+            variant="secondary"
+            icon="chevron-forward"
+            haptic="tap"
+          />
         </View>
       </View>
     </View>
@@ -127,20 +121,5 @@ const styles = StyleSheet.create({
     ...TYPE.body,
     color: COLORS.mediumGrey,
     marginBottom: SPACING.md,
-  },
-  action: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: SPACING.sm,
-    paddingVertical: 11,
-    paddingHorizontal: SPACING.lg,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.strokeStrong,
-  },
-  actionLabel: {
-    ...TYPE.label,
-    color: COLORS.accent,
   },
 });

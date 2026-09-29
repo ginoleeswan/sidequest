@@ -994,7 +994,11 @@ export default function PlanScreen() {
                               ? 'You can see the credits tonight.'
                               : tonight.continueGame
                                 ? 'Chip away at it — progress counts.'
-                                : 'The shortest thing you’ve saved.'}
+                                : byStatus('playing').length +
+                                      byStatus('wishlist').length ===
+                                    1
+                                  ? 'The one game on your shelf.'
+                                  : 'The shortest thing you’ve saved.'}
                           </Text>
                         </View>
                       </Touchable>
@@ -1250,9 +1254,17 @@ const styles = StyleSheet.create({
    * The page's thesis, set as one: display type, white, said once, and
    * the dial line under it opens the sheet that changes it live.
    */
+  /**
+   * The verdict, one step under the page's title.
+   *
+   * It was set in the title step, white, directly beneath the display
+   * title — 26 under 32 in the same face and the same white, two
+   * headlines shouting over each other. A step down and a shade quieter
+   * makes it what it is: the page's statement, read after its name.
+   */
   standfirst: {
-    ...TYPE.title,
-    color: COLORS.white,
+    ...TYPE.h1,
+    color: COLORS.lightGrey,
     marginTop: SPACING.xs,
     maxWidth: 640,
   },

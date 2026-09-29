@@ -34,6 +34,7 @@ import { useSync, type SyncStatus } from '@/lib/sync/SyncProvider';
 import { COLORS, alpha } from '@/styles/colors';
 import { GUTTER, ICON, LAYOUT, RADIUS, SPACING, TOUCH } from '@/styles/theme';
 import { FONT_SCALE, TYPE } from '@/styles/typography';
+import { countOf } from '@/lib/format';
 
 /** The Plan's own pace dial — the same six, so the two cannot disagree. */
 const PACE_OPTIONS: SegmentedOption<number>[] = [2, 4, 6, 8, 12, 20].map(
@@ -376,7 +377,7 @@ export default function YouScreen() {
               <Row
                 icon={CAN_COPY ? 'copy' : 'share-outline'}
                 label={CAN_COPY ? 'Copy library' : 'Send my library'}
-                value={count > 0 ? `${count} games` : undefined}
+                value={count > 0 ? countOf(count, 'game') : undefined}
                 onPress={count > 0 ? sendLibrary : undefined}
               />
             </View>

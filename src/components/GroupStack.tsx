@@ -64,7 +64,11 @@ function GroupBack() {
       accessibilityRole="button"
       accessibilityLabel="Go back"
       hitSlop={SLOP}
-      style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.button,
+        SYSTEM_GLASS ? styles.bare : styles.plated,
+        pressed && styles.pressed,
+      ]}
     >
       {/* Nudged a point left: the glyph's own bearing sits it right of
           the circle's centre, which reads as a misaligned capsule
@@ -75,6 +79,20 @@ function GroupBack() {
 }
 
 const SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
+
+/**
+ * Whether UIKit wraps header items in its own glass.
+ *
+ * From iOS 26 every bar button sits in a Liquid Glass capsule the
+ * system draws, and a custom item inside it gets that capsule for
+ * free. Our own plate inside theirs drew a disc with two rings — a
+ * button in a button, the heaviest thing on the You page. On 26 and
+ * later the glyph goes in bare and the system supplies the material;
+ * before it, and on Android, the plate is still the only thing making
+ * a chevron legible over a bright frame.
+ */
+const SYSTEM_GLASS =
+  Platform.OS === 'ios' && parseInt(String(Platform.Version), 10) >= 26;
 
 const styles = StyleSheet.create({
   /**
@@ -89,11 +107,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 18,
+    overflow: 'hidden',
+  },
+  plated: {
     backgroundColor: COLORS.plate,
     borderWidth: 1,
     borderColor: COLORS.strokeOnImage,
-    overflow: 'hidden',
   },
+  bare: {},
   pressed: { opacity: 0.7 },
   icon: { color: COLORS.lightGrey, marginLeft: -1 },
 });

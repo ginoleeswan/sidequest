@@ -10,6 +10,7 @@ import {
   withinLength,
   withoutOwned,
   dedupeGames,
+  spokenName,
 } from '../homeFeed';
 import type { LibraryEntry } from '../library';
 
@@ -240,5 +241,18 @@ describe('the billboard reason', () => {
 
   it('falls back on where it was found, never on a slogan', () => {
     expect(billboardReason(facts(), 0, NOW)).toBe('Further down the charts');
+  });
+});
+
+describe('spokenName', () => {
+  it('says the subtitle when the half before the colon is a franchise', () => {
+    expect(spokenName('The Legend of Zelda: Breath of the Wild')).toBe(
+      'Breath of the Wild'
+    );
+  });
+
+  it('keeps names without a colon, and subtitles too short to stand alone', () => {
+    expect(spokenName('Hades II')).toBe('Hades II');
+    expect(spokenName('Portal: Revelations')).toBe('Portal: Revelations');
   });
 });
