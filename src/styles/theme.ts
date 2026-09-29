@@ -129,6 +129,16 @@ export const LAYOUT = {
   railWidth: 72,
   gridGap: 18,
   shelfTileWidth: 168,
+  /**
+   * The phone's shelf tile and the gap between tiles. At 168 + 18 on a
+   * 393pt screen the third tile showed one point, so every rail read as
+   * a two-up grid that did not scroll; 150 + 12 leaves a third of a
+   * poster at the edge, which is what says "more this way".
+   */
+  shelfTileCompact: 150,
+  railGapCompact: 12,
+  /** The phone's quick-wins frame: a 16:9 poster wide enough for hours. */
+  shelfTileWideCompact: 244,
   shelfTileLarge: 220,
   /**
    * The landscape frame, for rows that break the poster rhythm.

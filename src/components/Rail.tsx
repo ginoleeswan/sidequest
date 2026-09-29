@@ -12,7 +12,10 @@ import { LAYOUT, SHADOW_ROOM } from '@/styles/theme';
  * more this way" there is. The desk keeps its wider tiles and gap; it
  * pages by chevron.
  */
-export const COMPACT_RAIL = { tileWidth: 150, gap: 12 } as const;
+export const COMPACT_RAIL = {
+  tileWidth: LAYOUT.shelfTileCompact,
+  gap: LAYOUT.railGapCompact,
+} as const;
 
 interface Props<T> {
   data: T[];
