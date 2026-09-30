@@ -111,6 +111,31 @@ describe('backlog amnesty', () => {
     );
   });
 
+  it('can be undone, whole, and forgets the reason it was given', async () => {
+    seed([
+      { id: 1, name: 'Enormous' },
+      { id: 2, name: 'Kept' },
+    ]);
+    await renderApp(<TidyScreen />);
+    await fireEvent.press(screen.getByLabelText('Enormous'));
+    await fireEvent.press(screen.getByText('Let these go'));
+    await fireEvent.press(screen.getByText('Too long for me'));
+    await waitFor(() => expect(library()['1']).toBeUndefined());
+    await fireEvent.press(screen.getByText('Undo'));
+    await waitFor(() => expect(library()['1']?.status).toBe('wishlist'));
+    expect(JSON.parse(store['sidequest.drops.v1'] ?? '{}')['too-long']).toBe(0);
+  });
+
+  it('asks, and takes “keep it” for an answer', async () => {
+    seed([{ id: 1, name: 'One' }]);
+    await renderApp(<TidyScreen />);
+    await fireEvent.press(screen.getByLabelText('One'));
+    await fireEvent.press(screen.getByText('Let these go'));
+    await fireEvent.press(screen.getByText('Keep it'));
+    expect(screen.queryByText('Why this one? Optional.')).toBeNull();
+    expect(library()['1']).toBeTruthy();
+  });
+
   it('asks in the app’s own voice, not a form’s', async () => {
     seed([{ id: 1, name: 'One' }]);
     await renderApp(<TidyScreen />);

@@ -1,3 +1,7 @@
+import { Platform, type ViewStyle } from 'react-native';
+
+import { alpha, COLORS } from './colors';
+
 /** Design tokens. Prefer these over inline magic numbers. */
 
 /**
@@ -15,11 +19,22 @@
  * every one of those almost-matches.
  */
 export const SPACING = {
+  /** Hairline air: a caption tucked under its figure. */
+  xxs: 2,
   xs: 4,
   sm: 8,
+  /**
+   * Ten was the most-used distance in the app with no name: written
+   * `SPACING.sm + 2` sixty-three times. A value spelled as arithmetic
+   * that often is a token the scale forgot.
+   */
+  sm2: 10,
   md: 16,
   lg: 20,
   xl: 32,
+  /** Between chapters of a long page, where xl is only between rows. */
+  xxl: 48,
+  xxxl: 64,
 } as const;
 
 /**
@@ -39,11 +54,55 @@ export const SPACING = {
 export const GUTTER = 20;
 
 export const RADIUS = {
+  /** Thumbnails and tags inside a row. */
+  xs: 4,
   sm: 10,
+  /**
+   * A card up to about 130pt tall. Twenty-two on a short card reads as
+   * a pill; this is the radius a card that size wants.
+   */
+  card: 14,
   md: 22,
   lg: 30,
   xl: 40,
+  /** Fully round ends, whatever the height. */
+  pill: 999,
 } as const;
+
+/**
+ * The radius a child needs to sit concentric inside its parent: the
+ * parent's radius less the distance between their edges. A row with the
+ * same radius as the panel it sits in draws corners that bulge.
+ */
+export function innerRadius(outer: number, inset: number): number {
+  return Math.max(outer - inset, 2);
+}
+
+/** Icon sizes. Sixteen sizes had grown; four do every job. */
+export const ICON = {
+  sm: 14,
+  md: 18,
+  lg: 22,
+  xl: 28,
+} as const;
+
+/**
+ * The smallest thing a finger can reliably hit: 44pt, Apple's number
+ * and near enough Android's 48dp. Controls drawn smaller make up the
+ * difference with hit slop rather than growing.
+ */
+export const TOUCH = { min: 44 } as const;
+
+/** Hit slop, for a control whose drawing is smaller than `TOUCH.min`. */
+export const HIT_SLOP = {
+  sm: { top: 8, bottom: 8, left: 8, right: 8 },
+  md: { top: 12, bottom: 12, left: 12, right: 12 },
+  /** Text links in a line: grow up and down, never into the next word. */
+  text: { top: 14, bottom: 14, left: 4, right: 4 },
+} as const;
+
+/** The dim a pressed text or icon control takes. */
+export const PRESSED_OPACITY = 0.6;
 
 /**
  * Vertical room a shadow needs to render without being clipped by a
@@ -80,6 +139,16 @@ export const LAYOUT = {
   railWidth: 72,
   gridGap: 18,
   shelfTileWidth: 168,
+  /**
+   * The phone's shelf tile and the gap between tiles. At 168 + 18 on a
+   * 393pt screen the third tile showed one point, so every rail read as
+   * a two-up grid that did not scroll; 150 + 12 leaves a third of a
+   * poster at the edge, which is what says "more this way".
+   */
+  shelfTileCompact: 150,
+  railGapCompact: 12,
+  /** The phone's quick-wins frame: a 16:9 poster wide enough for hours. */
+  shelfTileWideCompact: 244,
   shelfTileLarge: 220,
   /**
    * The landscape frame, for rows that break the poster rhythm.
@@ -117,20 +186,113 @@ export const LAYOUT = {
  * Shadows are diffuse by design: blur must comfortably exceed offset or the
  * shadow renders as a crisp shifted copy of the card (visible corners below
  * the real ones) instead of soft depth.
+ *
+ * Two layers each, because one is not how a thing sits on a surface: a
+ * tight contact shadow where it touches, and a wide, pulled-in ambient
+ * one that says how far it stands off. A single blur does neither well
+ * — it is too soft to ground the card and too hard to lift it.
+ *
+ * `boxShadow`, not the `shadow*` props, and that is a fix rather than a
+ * preference. On iOS the old props are drawn on the view's own layer,
+ * so every card that also clips its artwork (`overflow: 'hidden'`, which
+ * every cover tile does) clipped its shadow with it, and the shelves had
+ * none. They also follow the fill's alpha, and the app's panels are
+ * three per cent white — a shadow cast by almost nothing. `boxShadow` is
+ * drawn outside the border box on both platforms whatever the fill is,
+ * and the web was already reading it as CSS.
  */
 export const SHADOW = {
+  // One layer, not a contact shadow and an ambient one. Every outset box
+  // shadow on iOS is its own masked layer, re-rendered offscreen when
+  // anything above it moves; two per card doubled that on every scroll.
   card: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.32,
-    shadowRadius: 20,
-    elevation: 8,
+    boxShadow: '0 8px 20px -6px rgba(9,12,19,0.5)',
   },
   hero: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 14 },
-    shadowOpacity: 0.4,
-    shadowRadius: 34,
-    elevation: 12,
+    boxShadow:
+      '0 2px 4px rgba(9,12,19,0.30), 0 18px 40px -10px rgba(9,12,19,0.55)',
+  },
+  /** Things that float over the page: toasts, sheets, menus. */
+  float: {
+    boxShadow:
+      '0 2px 6px rgba(9,12,19,0.35), 0 16px 36px -8px rgba(9,12,19,0.6)',
   },
 } as const;
+
+/**
+ * The light along a surface's top edge.
+ *
+ * A dark UI with no highlights is lit from nowhere, and every card in
+ * it reads as a hole cut in the page or a sticker on it — never as an
+ * object. One pixel of light inside the top edge is the smallest thing
+ * that says "this is nearer the lamp than the ground is", which is all
+ * a raised surface is. An inset, so it rides inside the hairline and
+ * follows the radius without a view of its own.
+ */
+const EDGE_LIGHT = 'inset 0 1px 0 rgba(255,255,255,0.07)';
+
+/**
+ * The same light as a border colour, for surfaces that repeat. An inset
+ * shadow is drawn as an image per view; a brighter top border is a
+ * colour on a layer the view already has. Lists and panels use this;
+ * the handful of floating surfaces keep the inset.
+ */
+const TOP_EDGE = 'rgba(255,255,255,0.13)';
+
+/**
+ * The same light, falling across the face: a few per cent at the top,
+ * less at the foot. Native only — `experimental_backgroundImage` is not
+ * a property react-native-web knows, and on the desk the page's own
+ * grain and the hover states already give the panels a surface.
+ */
+const SHEEN =
+  'linear-gradient(180deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0) 70%)';
+
+/**
+ * Surfaces, as materials rather than as a colour and a border.
+ *
+ * The panels were `raised` + `stroke` + `SHADOW.card` spelled out in a
+ * dozen places, which is how the app ended up with one recipe that was
+ * right in the stylesheet and flat on the phone. These are the recipes,
+ * whole: spread one and a surface is lit, edged and lifted the same way
+ * as every other surface of its kind.
+ */
+/**
+ * A raised surface's fill: the colour `raised` makes on the page ground
+ * (darkGrey lifted three per cent toward white), at two thirds opacity.
+ *
+ * `raised` alone is three per cent white and nothing else, so a panel
+ * carried the page's grain at full strength and read as a tinted window
+ * onto the floor. A surface nearer the light is smoother than the ground
+ * it stands on; this lets a third of the grain through — enough to stay
+ * the same material, quiet enough to read as lifted.
+ */
+const RAISED_FILL = alpha('#394356', 0.66);
+
+export const MATERIAL = {
+  /** A panel on the page: the Plan's week, the library's backlog. */
+  plate: {
+    backgroundColor: RAISED_FILL,
+    borderWidth: 1,
+    borderColor: COLORS.stroke,
+    borderTopColor: TOP_EDGE,
+    boxShadow: SHADOW.card.boxShadow,
+    ...Platform.select<ViewStyle>({
+      web: {},
+      default: { experimental_backgroundImage: SHEEN },
+    }),
+  },
+  /**
+   * A row inside a list of rows. The edge, and only a contact shadow:
+   * ten cards each casting a wide shadow onto the next is a stack of
+   * smudges, not a list.
+   */
+  row: {
+    backgroundColor: RAISED_FILL,
+    borderWidth: 1,
+    borderColor: COLORS.stroke,
+    borderTopColor: TOP_EDGE,
+  },
+  /** Just the lit edge, for a surface that already has its own depth. */
+  edge: { boxShadow: EDGE_LIGHT },
+} as const satisfies Record<string, ViewStyle>;

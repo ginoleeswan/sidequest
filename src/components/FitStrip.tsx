@@ -6,7 +6,7 @@ import { fitLine, fitTitle, type Fit, type FitDay } from '@/lib/fit';
 import { eveningHours } from '@/lib/week';
 import { COLORS } from '@/styles/colors';
 import { RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
 
 /** One letter per weekday, Sunday first — the strip's own axis. */
 const LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -109,7 +109,10 @@ export function FitStrip({
                   ) : null}
                 </View>
               </View>
-              <Text style={[styles.letter, index === 0 && styles.letterToday]}>
+              <Text
+                style={[styles.letter, index === 0 && styles.letterToday]}
+                maxFontSizeMultiplier={FONT_SCALE.label}
+              >
                 {LETTERS[day.weekday]}
               </Text>
             </View>
@@ -152,13 +155,12 @@ const styles = StyleSheet.create({
   slotEnd: { backgroundColor: COLORS.mint },
   slotOff: {
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: COLORS.strokeStrong,
+    backgroundColor: COLORS.raised,
   },
   flag: { opacity: 0.95 },
   letter: {
     ...TYPE.fine,
-    fontSize: 10,
     color: COLORS.mediumGrey,
   },
   letterToday: { color: COLORS.lightGrey },

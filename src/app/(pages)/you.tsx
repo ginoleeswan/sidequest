@@ -1,20 +1,24 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DesktopShell } from '@/components/DesktopShell';
 import { BackButton } from '@/components/BackButton';
+import { BottomSheet } from '@/components/BottomSheet';
 import { CoverImage } from '@/components/CoverImage';
 import { FadeInView } from '@/components/FadeInView';
 import { Mark } from '@/components/Mark';
 import { PageTitle } from '@/components/PageTitle';
+import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
+import { Segmented, type SegmentedOption } from '@/components/Segmented';
 import { SiteFooter } from '@/components/SiteFooter';
 import { Textured } from '@/components/Textured';
 import { useToast } from '@/components/Toast';
+import { Touchable } from '@/components/Touchable';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useTopPad } from '@/hooks/useTopPad';
 import { useHydrated } from '@/hooks/useHydrated';
@@ -27,9 +31,15 @@ import { readDrops, totalDrops } from '@/lib/drops';
 import { useLibrary } from '@/lib/library';
 import { libraryStats } from '@/lib/libraryStats';
 import { useSync, type SyncStatus } from '@/lib/sync/SyncProvider';
-import { COLORS } from '@/styles/colors';
-import { GUTTER, LAYOUT, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { COLORS, alpha } from '@/styles/colors';
+import { GUTTER, ICON, LAYOUT, RADIUS, SPACING, TOUCH } from '@/styles/theme';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
+import { countOf } from '@/lib/format';
+
+/** The Plan's own pace dial — the same six, so the two cannot disagree. */
+const PACE_OPTIONS: SegmentedOption<number>[] = [2, 4, 6, 8, 12, 20].map(
+  (hours) => ({ value: hours, label: `${hours}h` })
+);
 
 /**
  * You — the shelf turned around.
@@ -104,19 +114,23 @@ function Door({
   first?: boolean;
 }) {
   return (
-    <Pressable
+    <Touchable
       onPress={onPress}
-      accessibilityRole="button"
       accessibilityLabel={`${value} ${label}`}
-      style={({ pressed }) => [
-        styles.door,
-        !first && styles.doorDivided,
-        pressed && styles.doorPressed,
-      ]}
+      style={[styles.door, !first && styles.doorDivided]}
     >
-      <Text style={[styles.doorValue, { color: colour }]}>{value}</Text>
-      <Text style={styles.doorLabel}>{label}</Text>
-    </Pressable>
+      <Text
+        style={[styles.doorValue, { color: colour }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        maxFontSizeMultiplier={FONT_SCALE.figure}
+      >
+        {value}
+      </Text>
+      <Text style={styles.doorLabel} maxFontSizeMultiplier={FONT_SCALE.label}>
+        {label}
+      </Text>
+    </Touchable>
   );
 }
 
@@ -132,24 +146,24 @@ function Row({
   onPress?: () => void;
 }) {
   const body = (
-    <View style={styles.row}>
-      <Ionicons name={icon} size={17} color={COLORS.mediumGrey} />
+    <>
+      <Ionicons name={icon} size={ICON.md} color={COLORS.mediumGrey} />
       <Text style={styles.rowLabel}>{label}</Text>
       {value ? <Text style={styles.rowValue}>{value}</Text> : null}
       {onPress ? (
-        <Ionicons name="chevron-forward" size={15} color={COLORS.mediumGrey} />
+        <Ionicons
+          name="chevron-forward"
+          size={ICON.sm}
+          color={COLORS.mediumGrey}
+        />
       ) : null}
-    </View>
+    </>
   );
-  if (!onPress) return body;
+  if (!onPress) return <View style={styles.row}>{body}</View>;
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      style={({ pressed }) => (pressed ? styles.rowPressed : undefined)}
-    >
+    <Touchable onPress={onPress} feedback="tint" style={styles.row}>
       {body}
-    </Pressable>
+    </Touchable>
   );
 }
 
@@ -176,7 +190,12 @@ export default function YouScreen() {
   const { status: syncStatus } = useSync();
   const { durationOf } = useDurations();
   const hydrated = useHydrated();
-  const [pace] = usePersistedState('sidequest.plan.pace', 6);
+  const [pace, setPace] = usePersistedState('sidequest.plan.pace', 6);
+  /** The pace, changed here rather than by a trip to the Plan. */
+  const [paceOpen, setPaceOpen] = useState(false);
+  const paceOptions = PACE_OPTIONS.some((option) => option.value === pace)
+    ? PACE_OPTIONS
+    : [...PACE_OPTIONS, { value: pace, label: `${pace}h · measured` }];
   const toast = useToast();
 
   /**
@@ -244,9 +263,14 @@ export default function YouScreen() {
 
       <Screen>
         <FadeInView>
+          {/* The band is as tall as its picture needs. With no cover
+              there is no picture, and 260 points of ground held open for
+              one was a void above the name; without it the band is the
+              name's own height, on a ground that still reads as one. */}
           <View
             style={[
               styles.masthead,
+              cover ? styles.mastheadWithCover : styles.mastheadBare,
               isExpanded && styles.mastheadExpanded,
               { paddingTop: topPad },
             ]}
@@ -266,7 +290,7 @@ export default function YouScreen() {
             {/* And one downwards, because the status bar and the back
                 button sit on whatever the publisher graded. */}
             <LinearGradient
-              colors={['rgba(39,47,63,0.8)', 'transparent']}
+              colors={[alpha(COLORS.navy, 0.8), 'transparent']}
               locations={[0, 0.45]}
               style={StyleSheet.absoluteFill}
               pointerEvents="none"
@@ -281,7 +305,10 @@ export default function YouScreen() {
             >
               <View style={[styles.avatar, session && styles.avatarSynced]}>
                 {session ? (
-                  <Text style={styles.monogram}>
+                  <Text
+                    style={styles.monogram}
+                    maxFontSizeMultiplier={FONT_SCALE.display}
+                  >
                     {who.slice(0, 1).toUpperCase()}
                   </Text>
                 ) : (
@@ -289,7 +316,18 @@ export default function YouScreen() {
                 )}
               </View>
               <View style={styles.identityText}>
-                <Text style={styles.who} numberOfLines={1}>
+                <Text
+                  style={styles.eyebrow}
+                  maxFontSizeMultiplier={FONT_SCALE.label}
+                >
+                  {session ? 'Signed in' : 'On this device'}
+                </Text>
+                <Text
+                  style={styles.who}
+                  numberOfLines={1}
+                  accessibilityRole="header"
+                  maxFontSizeMultiplier={FONT_SCALE.display}
+                >
                   {who}
                 </Text>
                 <Text style={styles.where}>
@@ -320,7 +358,7 @@ export default function YouScreen() {
               <Door
                 value={String(dropped)}
                 label="LET GO"
-                colour={dropped > 0 ? COLORS.coral : COLORS.mediumGrey}
+                colour={dropped > 0 ? COLORS.coralText : COLORS.mediumGrey}
                 onPress={() => router.push('/tidy')}
               />
             </View>
@@ -331,10 +369,10 @@ export default function YouScreen() {
                 icon="speedometer"
                 label="Your pace"
                 value={`${pace}h a week`}
-                onPress={() => router.push('/plan')}
+                onPress={() => setPaceOpen(true)}
               />
               <Row
-                icon="download"
+                icon="download-outline"
                 label="Import from Steam"
                 onPress={() => router.push('/import')}
               />
@@ -345,7 +383,7 @@ export default function YouScreen() {
               <Row
                 icon={CAN_COPY ? 'copy' : 'share-outline'}
                 label={CAN_COPY ? 'Copy library' : 'Send my library'}
-                value={count > 0 ? `${count} games` : undefined}
+                value={count > 0 ? countOf(count, 'game') : undefined}
                 onPress={count > 0 ? sendLibrary : undefined}
               />
             </View>
@@ -391,13 +429,13 @@ export default function YouScreen() {
               {LEGAL.map((page, i) => (
                 <View key={page.href} style={styles.legalItem}>
                   {i > 0 ? <Text style={styles.legalDot}>·</Text> : null}
-                  <Pressable
+                  <Touchable
                     onPress={() => router.push(page.href)}
                     accessibilityRole="link"
-                    hitSlop={8}
+                    hitSlop="text"
                   >
                     <Text style={styles.legalLink}>{page.label}</Text>
-                  </Pressable>
+                  </Touchable>
                 </View>
               ))}
             </View>
@@ -410,6 +448,34 @@ export default function YouScreen() {
             the footer is already the page's width. */}
         <SiteFooter inset={isExpanded ? SPACING.xl : 0} />
       </Screen>
+
+      <BottomSheet
+        visible={paceOpen}
+        onClose={() => setPaceOpen(false)}
+        accessibilityLabel="Your pace"
+      >
+        <View style={styles.sheet}>
+          <Text style={styles.sheetTitle} accessibilityRole="header">
+            How much do you really play?
+          </Text>
+          <Text style={styles.sheetDetail}>
+            The plan and every date in it are built on this.
+          </Text>
+          <Segmented
+            label="Hours a week"
+            options={paceOptions}
+            value={pace}
+            onChange={setPace}
+          />
+          <PrimaryButton
+            label="Done"
+            variant="secondary"
+            haptic="tap"
+            block
+            onPress={() => setPaceOpen(false)}
+          />
+        </View>
+      </BottomSheet>
     </>
   );
   return isExpanded ? (
@@ -433,12 +499,14 @@ const styles = StyleSheet.create({
   backButton: { position: 'absolute', left: GUTTER, zIndex: 10 },
 
   masthead: {
-    minHeight: WALL_HEIGHT,
     justifyContent: 'flex-end',
     paddingHorizontal: GUTTER,
     paddingBottom: SPACING.md,
     overflow: 'hidden',
   },
+  mastheadWithCover: { minHeight: WALL_HEIGHT },
+  /** No picture: the name's own height, on the page's evening ground. */
+  mastheadBare: { backgroundColor: COLORS.navy },
   /**
    * On a desk the wall runs the column's full width, flush to the
    * sidebar and the top, the way Home's stage does - not a 720-point
@@ -450,7 +518,7 @@ const styles = StyleSheet.create({
     marginHorizontal: -SPACING.xl,
     marginTop: -SPACING.lg,
     minHeight: 320,
-    paddingHorizontal: SPACING.xl * 1.5,
+    paddingHorizontal: SPACING.xxl,
     paddingBottom: SPACING.xl,
   },
   wall: {
@@ -467,7 +535,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(39,47,63,0.42)',
+    backgroundColor: alpha(COLORS.navy, 0.42),
   },
 
   identity: { gap: SPACING.xs },
@@ -493,11 +561,12 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: SPACING.lg,
   },
-  identityText: { gap: SPACING.xs, flexShrink: 1 },
+  identityText: { gap: SPACING.xxs, flexShrink: 1 },
+  eyebrow: { ...TYPE.micro, color: COLORS.lightGrey },
   avatar: {
     width: 54,
     height: 54,
-    borderRadius: 27,
+    borderRadius: RADIUS.pill,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.plate,
@@ -505,8 +574,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.strokeOnImage,
     marginBottom: SPACING.sm,
   },
-  avatarSynced: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
-  monogram: { fontFamily: 'Geom-ExtraBold', fontSize: 24, color: COLORS.navy },
+  /** Signed in: a white disc. Amber is hours, and an account is not. */
+  avatarSynced: { backgroundColor: COLORS.white, borderColor: COLORS.white },
+  monogram: { ...TYPE.h1, color: COLORS.navy },
   who: { ...TYPE.display, color: COLORS.white },
   where: { ...TYPE.caption, color: COLORS.lightGrey },
 
@@ -538,18 +608,19 @@ const styles = StyleSheet.create({
     marginTop: SPACING.md,
     marginBottom: SPACING.xs,
   },
-  door: { flex: 1, gap: 3, paddingVertical: SPACING.xs },
+  door: {
+    flex: 1,
+    gap: SPACING.xxs,
+    minHeight: TOUCH.min,
+    paddingVertical: SPACING.xs,
+  },
   doorDivided: {
     borderLeftWidth: 1,
     borderLeftColor: COLORS.stroke,
     paddingLeft: SPACING.md,
   },
-  doorPressed: { opacity: 0.6 },
-  doorValue: {
-    fontFamily: 'Geom-ExtraBold',
-    fontSize: 30,
-    letterSpacing: -0.8,
-  },
+  /** A figure, from the scale — it was hand-set at 30 with no line height. */
+  doorValue: { ...TYPE.figure },
   doorLabel: { ...TYPE.micro, color: COLORS.mediumGrey },
 
   groupLabel: {
@@ -571,11 +642,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.md,
-    paddingVertical: SPACING.md,
+    minHeight: 52,
+    paddingVertical: SPACING.sm,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.stroke,
   },
-  rowPressed: { opacity: 0.6 },
   rowLabel: { ...TYPE.body, color: COLORS.lightGrey, flex: 1 },
   rowValue: { ...TYPE.body, color: COLORS.mediumGrey },
 
@@ -587,5 +658,13 @@ const styles = StyleSheet.create({
   },
   legalItem: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   legalDot: { ...TYPE.caption, color: COLORS.mediumGrey },
-  legalLink: { ...TYPE.caption, color: COLORS.mediumGrey, paddingVertical: 12 },
+  legalLink: {
+    ...TYPE.caption,
+    color: COLORS.mediumGrey,
+    paddingVertical: SPACING.xs,
+  },
+
+  sheet: { gap: SPACING.md },
+  sheetTitle: { ...TYPE.h2, color: COLORS.white },
+  sheetDetail: { ...TYPE.p, color: COLORS.mediumGrey },
 });

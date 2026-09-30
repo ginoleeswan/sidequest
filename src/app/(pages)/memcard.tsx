@@ -1,18 +1,19 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppHeader } from '@/components/AppHeader';
 import { BackButton } from '@/components/BackButton';
-import { Chip } from '@/components/Chip';
 import { LandingMemcard } from '@/components/LandingMemcard';
 import { Message } from '@/components/Message';
+import { PageHeading } from '@/components/PageHeading';
 import { PageTitle } from '@/components/PageTitle';
+import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import { RouteError } from '@/components/RouteError';
 import { SectionHeader } from '@/components/SectionHeader';
+import { Segmented } from '@/components/Segmented';
 import { SiteFooter } from '@/components/SiteFooter';
 import { Textured } from '@/components/Textured';
 import { useToast } from '@/components/Toast';
@@ -30,8 +31,8 @@ import { buildIcs, downloadIcs, memcardEvents } from '@/lib/ics';
 import { insertEvents } from '@/lib/nativeCalendar';
 import { shareMemcard } from '@/lib/memcardImage';
 import { COLORS } from '@/styles/colors';
-import { GUTTER, LAYOUT, RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { GUTTER, LAYOUT, SPACING } from '@/styles/theme';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
 
 /**
  * The year, as a memory card.
@@ -187,28 +188,30 @@ export default function MemcardScreen() {
             },
           ]}
         >
-          <SectionHeader title="Your Memcard" eyebrow={`${shown}`} />
+          <PageHeading title="Your Memcard" eyebrow={`${shown}`} />
           <Text style={styles.lede}>
             One block per game you finished. Not how much you played — what you
             saw the end of.
           </Text>
 
           {years.length > 1 && (
-            <View style={styles.years}>
-              {years.map((option) => (
-                <Chip
-                  key={option}
-                  title={String(option)}
-                  selected={option === shown}
-                  onPress={() => setYear(option)}
-                />
-              ))}
-            </View>
+            // One year of several: a single choice, shaped like one.
+            <Segmented
+              label="Year"
+              showLabel={false}
+              options={years.map((option) => ({
+                value: option,
+                label: String(option),
+              }))}
+              value={shown}
+              onChange={setYear}
+            />
           )}
 
           {card.count === 0 ? (
             <Message
               icon="albums-outline"
+              tone="finished"
               title="No credits rolled yet"
               detail="Finish a game and it takes a block here. One short game is all it takes."
               actionLabel="Find something short"
@@ -243,7 +246,7 @@ export default function MemcardScreen() {
                   <Stat
                     value={String(stats.finished)}
                     label="finished"
-                    accent={stats.finished > 0}
+                    colour={stats.finished > 0 ? COLORS.mint : undefined}
                   />
                   {stats.medianLength > 0 && (
                     <Stat
@@ -261,7 +264,7 @@ export default function MemcardScreen() {
                     <Stat
                       value={formatMinutes(stats.measuredMinutes)}
                       label="timed here"
-                      accent
+                      colour={COLORS.accent}
                     />
                   )}
                   {totalDrops(drops) > 0 && (
@@ -276,39 +279,23 @@ export default function MemcardScreen() {
                 )}
               </View>
 
-              <Pressable
+              <PrimaryButton
+                label={busy ? 'Drawing…' : 'Save or share this card'}
+                icon="share-outline"
                 onPress={save}
                 disabled={busy}
-                style={[styles.save, busy && styles.saveBusy]}
-                accessibilityRole="button"
-              >
-                <Ionicons
-                  name="share-outline"
-                  size={16}
-                  color={COLORS.darkGrey}
-                />
-                <Text style={styles.saveText}>
-                  {busy ? 'Drawing…' : 'Save or share this card'}
-                </Text>
-              </Pressable>
+                style={styles.save}
+              />
 
               {/* Second, and quieter than the share. Posting the card is
                 what most people came for; filing the year is what the
                 few who keep a calendar will be glad of. */}
-              <Pressable
+              <PrimaryButton
+                label="Add these to my calendar"
+                icon="calendar-outline"
+                variant="secondary"
                 onPress={addToCalendar}
-                style={styles.calendar}
-                accessibilityRole="button"
-              >
-                <Ionicons
-                  name="calendar-outline"
-                  size={16}
-                  color={COLORS.lightGrey}
-                />
-                <Text style={styles.calendarText}>
-                  Add these to my calendar
-                </Text>
-              </Pressable>
+              />
               <Text style={styles.calendarNote}>
                 {Platform.OS === 'web'
                   ? 'Downloads a file Google Calendar, Apple Calendar and Outlook can all open. Nothing is sent anywhere.'
@@ -327,18 +314,27 @@ export default function MemcardScreen() {
 function Stat({
   value,
   label,
-  accent,
+  colour,
 }: {
   value: string;
   label: string;
-  accent?: boolean;
+  /**
+   * The figure in its meaning's colour: mint for games finished, amber
+   * for time. Both were amber, which said "hours" about a count.
+   */
+  colour?: string;
 }) {
   return (
     <View style={styles.stat}>
-      <Text style={[styles.statValue, accent && styles.statAccent]}>
+      <Text
+        style={[styles.statValue, colour != null && { color: colour }]}
+        maxFontSizeMultiplier={FONT_SCALE.figure}
+      >
         {value}
       </Text>
-      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={styles.statLabel} maxFontSizeMultiplier={FONT_SCALE.label}>
+        {label}
+      </Text>
     </View>
   );
 }
@@ -351,7 +347,7 @@ const styles = StyleSheet.create({
     maxWidth: LAYOUT.maxContentWidth,
     alignSelf: 'center',
     paddingHorizontal: GUTTER,
-    paddingBottom: SPACING.xl * 2,
+    paddingBottom: SPACING.xxxl,
     gap: SPACING.md,
   },
   lede: {
@@ -359,53 +355,17 @@ const styles = StyleSheet.create({
     color: COLORS.mediumGrey,
     marginTop: -SPACING.xs,
   },
-  years: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  save: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    alignSelf: 'flex-start',
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
-  },
-  saveBusy: { opacity: 0.6 },
-  saveText: {
-    ...TYPE.label,
-    color: COLORS.darkGrey,
-  },
   /**
-   * The second action, outlined rather than filled.
-   *
-   * Two solid buttons in a column read as a choice the reader has to
-   * make; a filled one and an outlined one read as the thing to do and
-   * the thing you can also do. Same height and radius as the share, so
-   * the pair sits as a pair.
+   * The share is the page's one amber act; filing the year in a
+   * calendar is the ghost beside it — the thing to do, and the thing
+   * you can also do.
    */
-  calendar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: COLORS.strokeStrong,
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
-    marginTop: SPACING.sm,
-  },
-  calendarText: {
-    ...TYPE.label,
-    color: COLORS.lightGrey,
-  },
+  save: { marginTop: SPACING.sm },
+  /** A sentence, so it is set as one — not in ten-point capitals. */
   calendarNote: {
-    ...TYPE.micro,
+    ...TYPE.caption,
     color: COLORS.mediumGrey,
     maxWidth: 420,
-    marginTop: SPACING.xs,
   },
   stats: { gap: SPACING.sm, marginTop: SPACING.lg },
   verdict: {
@@ -429,12 +389,11 @@ const styles = StyleSheet.create({
    * grid's leftover space belongs, instead of stretching whichever
    * stats happen to land on the last row.
    */
-  stat: { gap: 2, flexBasis: 132, flexGrow: 0 },
+  stat: { gap: SPACING.xxs, flexBasis: 132, flexGrow: 0 },
   statValue: {
-    ...TYPE.h3,
+    ...TYPE.figureSmall,
     color: COLORS.white,
   },
-  statAccent: { color: COLORS.accent },
   statLabel: {
     ...TYPE.micro,
     color: COLORS.mediumGrey,

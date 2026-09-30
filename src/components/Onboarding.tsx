@@ -6,7 +6,6 @@ import {
   Animated,
   Easing,
   Modal,
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -19,7 +18,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { CoverImage } from './CoverImage';
 import { Mark } from './Mark';
 import { FadeInView } from './FadeInView';
+import { PrimaryButton } from './PrimaryButton';
 import { Textured } from './Textured';
+import { IconButton, Touchable } from './Touchable';
 import { queryKeys } from '@/api/queryClient';
 import { getMustPlayGames } from '@/api/rawg';
 import type { Game, Paged } from '@/api/types';
@@ -29,10 +30,11 @@ import { useHydrated } from '@/hooks/useHydrated';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { usePersistedState } from '@/hooks/usePersistedState';
 import { formatHours } from '@/lib/duration';
+import { useDurations } from '@/lib/durations';
 import { useLibrary } from '@/lib/library';
-import { COLORS } from '@/styles/colors';
-import { LAYOUT, RADIUS, SPACING } from '@/styles/theme';
-import { TYPE, WORDMARK } from '@/styles/typography';
+import { COLORS, alpha } from '@/styles/colors';
+import { ICON, LAYOUT, RADIUS, SPACING, TOUCH } from '@/styles/theme';
+import { FONT_SCALE, TYPE, WORDMARK } from '@/styles/typography';
 
 /**
  * The covers, as the first screen's other half.
@@ -98,9 +100,9 @@ function CoverWall({ games }: { games: Game[] }) {
           screen's edge. */}
       <LinearGradient
         colors={[
-          'rgba(39,47,63,0.9)',
-          'rgba(39,47,63,0.45)',
-          'rgba(39,47,63,0.2)',
+          alpha(COLORS.navy, 0.9),
+          alpha(COLORS.navy, 0.45),
+          alpha(COLORS.navy, 0.2),
         ]}
         locations={[0.3, 0.6, 1]}
         start={{ x: 0, y: 0.5 }}
@@ -110,8 +112,8 @@ function CoverWall({ games }: { games: Game[] }) {
       <LinearGradient
         colors={[
           COLORS.navy,
-          'rgba(39,47,63,0)',
-          'rgba(39,47,63,0)',
+          alpha(COLORS.navy, 0),
+          alpha(COLORS.navy, 0),
           COLORS.navy,
         ]}
         locations={[0, 0.18, 0.82, 1]}
@@ -294,7 +296,7 @@ function BacklogFan({ games }: { games: Game[] }) {
       {/* The run does not end, it recedes. Without this the bottom edge
           is a hard line of five rectangles and reads as a gallery. */}
       <LinearGradient
-        colors={['rgba(39,47,63,0)', 'rgba(39,47,63,0.72)', COLORS.navy]}
+        colors={[alpha(COLORS.navy, 0), alpha(COLORS.navy, 0.72), COLORS.navy]}
         locations={[0, 0.66, 1]}
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
@@ -303,6 +305,14 @@ function BacklogFan({ games }: { games: Game[] }) {
   );
 }
 
+/**
+ * Three paces, each one a setting the Plan's own dial has.
+ *
+ * The third was fifteen, which the Plan does not offer: it arrived
+ * there as a seventh segment labelled "15h · Steam" — a Steam
+ * measurement for somebody who had never connected Steam, and one
+ * segment too many for the row, which truncated all seven.
+ */
 const PACES: {
   title: string;
   line: string;
@@ -321,7 +331,7 @@ const PACES: {
   {
     title: 'It’s my main thing',
     line: 'Weekends were invented for this.',
-    hours: 15,
+    hours: 12,
   },
 ];
 
@@ -353,6 +363,15 @@ export const isPublicRoute = (pathname: string): boolean =>
 /** How many games act three offers for the first saves. */
 const PICKS = 6;
 
+/**
+ * One of the six first saves.
+ *
+ * Portrait, like every tile in the app — these were 16:10 strips, the
+ * only landscape covers anywhere, on the screen that introduces what a
+ * game looks like here. And picking one changes the whole tile, not a
+ * 24pt badge in its corner: the art takes an amber ring and the badge
+ * fills, so six tiles read as "these two are mine" at a glance.
+ */
 function PickTile({
   game,
   saved,
@@ -365,24 +384,55 @@ function PickTile({
   width: number;
 }) {
   return (
-    <Pressable
+    <Touchable
       onPress={onToggle}
-      style={[styles.pick, { width }, saved && styles.pickSaved]}
-      accessibilityRole="button"
+      feedback="scale"
+      haptic="tap"
+      style={[styles.pick, { width }]}
+      accessibilityState={{ selected: saved }}
       accessibilityLabel={`${saved ? 'Remove' : 'Save'} ${game.name}`}
     >
-      <CoverImage uri={game.background_image} style={styles.pickArt} />
+      <View style={[styles.pickFrame, saved && styles.pickFrameSaved]}>
+        <CoverImage
+          uri={game.background_image}
+          style={styles.pickArt}
+          size="tile"
+        />
+        {saved ? <View style={styles.pickVeil} /> : null}
+      </View>
       <View style={[styles.pickBadge, saved && styles.pickBadgeSaved]}>
         <Ionicons
           name={saved ? 'checkmark' : 'add'}
-          size={14}
-          color={saved ? COLORS.darkGrey : COLORS.white}
+          size={ICON.sm}
+          color={saved ? COLORS.navy : COLORS.white}
         />
       </View>
-      <Text style={styles.pickName} numberOfLines={1}>
+      <Text
+        style={[styles.pickName, saved && styles.pickNameSaved]}
+        numberOfLines={1}
+        maxFontSizeMultiplier={FONT_SCALE.label}
+      >
         {game.name}
       </Text>
-    </Pressable>
+    </Touchable>
+  );
+}
+
+/**
+ * A tile's place, held while the six are on their way. The grid is the
+ * same height before and after they land, so the button under it does
+ * not jump the moment the covers arrive.
+ */
+function PickPlaceholder({ width }: { width: number }) {
+  return (
+    <View
+      style={[styles.pick, { width }]}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <View style={[styles.pickFrame, styles.pickPlate]} />
+      <View style={styles.pickNamePlate} />
+    </View>
   );
 }
 
@@ -398,6 +448,7 @@ export function Onboarding() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { setStatus, statusOf } = useLibrary();
+  const { durationOf } = useDurations();
 
   const [done, setDone] = usePersistedState('sidequest.onboarded.v1', false);
   const [, setPlanPace] = usePersistedState('sidequest.plan.pace', 6);
@@ -460,10 +511,17 @@ export function Onboarding() {
    *
    * Derived from the library rather than counted separately: the tiles
    * already read their state from `statusOf`, and a tally kept beside
-   * them is a second source of truth waiting to disagree.
+   * them is a second source of truth waiting to disagree. The lengths
+   * come from the same place the Plan's do, for the same reason — this
+   * summed RAWG's `playtime` while the Plan read `durationOf`, so the
+   * promise here and the plan it opened onto could name different
+   * numbers.
    */
   const savedGames = picks.filter((game) => statusOf(game.id) === 'wishlist');
-  const savedHours = savedGames.reduce((sum, game) => sum + game.playtime, 0);
+  const savedHours = savedGames.reduce(
+    (sum, game) => sum + durationOf(game).hours,
+    0
+  );
   const weeks = savedHours / (pace ?? 6);
 
   const contentWidth = Math.min(width - SPACING.lg * 2, 460);
@@ -484,23 +542,25 @@ export function Onboarding() {
         It works out what you can actually finish — and gives you permission to
         skip the rest.
       </Text>
-      <Pressable
+      {/* "Set me up — 20 seconds" bargained before the reader had
+          agreed to anything, and About already settled this argument
+          on its own cap: a cabinet does not explain itself, it says
+          START. Nothing hedges underneath it either — the way out is
+          "Skip", top right, on all three acts. */}
+      <PrimaryButton
+        label="Set me up"
+        icon="arrow-forward"
         onPress={() => setStep(1)}
-        style={[styles.cta, isExpanded && styles.ctaInline]}
-      >
-        {/* "Set me up — 20 seconds" bargained before the reader had
-            agreed to anything, and About already settled this argument
-            on its own cap: a cabinet does not explain itself, it says
-            START. Nothing hedges underneath it either — the way out is
-            "Skip", top right, on all three acts. */}
-        <Text style={styles.ctaText}>Set me up</Text>
-        <Ionicons name="arrow-forward" size={16} color={COLORS.darkGrey} />
-      </Pressable>
+        block={!isExpanded}
+        style={styles.cta}
+      />
     </View>,
 
     // -------------------------------------------------- act 2: your pace
     <View key="pace" style={styles.act}>
-      <Text style={styles.actLabel}>YOUR PACE</Text>
+      <Text style={styles.actLabel} maxFontSizeMultiplier={FONT_SCALE.label}>
+        YOUR PACE
+      </Text>
       <Text style={[styles.display, isExpanded && styles.displayWide]}>
         How much do{'\n'}you really play?
       </Text>
@@ -511,15 +571,17 @@ export function Onboarding() {
         {PACES.map((option) => {
           const selected = pace === option.hours;
           return (
-            <Pressable
+            <Touchable
               key={option.hours}
               onPress={() => {
                 setPace(option.hours);
                 setPlanPace(option.hours);
                 setTimeout(() => setStep(2), 260);
               }}
+              feedback="scale"
+              haptic="tap"
               style={[styles.paceCard, selected && styles.paceCardSelected]}
-              accessibilityRole="button"
+              accessibilityState={{ selected }}
               accessibilityLabel={`${option.title}, about ${option.hours} hours a week`}
             >
               {/* The number leads, because the number is the choice.
@@ -530,18 +592,14 @@ export function Onboarding() {
                   they were set small and grey off to the right. */}
               <View style={styles.paceHoursBox}>
                 <Text
-                  style={[
-                    styles.paceHoursNum,
-                    selected && styles.paceHoursNumSelected,
-                  ]}
+                  style={styles.paceHoursNum}
+                  maxFontSizeMultiplier={FONT_SCALE.figure}
                 >
                   {option.hours}
                 </Text>
                 <Text
-                  style={[
-                    styles.paceHoursUnit,
-                    selected && styles.paceLineSelected,
-                  ]}
+                  style={styles.paceHoursUnit}
+                  maxFontSizeMultiplier={FONT_SCALE.label}
                 >
                   h / week
                 </Text>
@@ -555,13 +613,9 @@ export function Onboarding() {
                 >
                   {option.title}
                 </Text>
-                <Text
-                  style={[styles.paceLine, selected && styles.paceLineSelected]}
-                >
-                  {option.line}
-                </Text>
+                <Text style={styles.paceLine}>{option.line}</Text>
               </View>
-            </Pressable>
+            </Touchable>
           );
         })}
       </View>
@@ -574,7 +628,9 @@ export function Onboarding() {
 
     // -------------------------------------------------- act 3: first saves
     <View key="picks" style={styles.act}>
-      <Text style={styles.actLabel}>FIRST SAVES</Text>
+      <Text style={styles.actLabel} maxFontSizeMultiplier={FONT_SCALE.label}>
+        FIRST SAVES
+      </Text>
       <Text style={[styles.display, isExpanded && styles.displayWide]}>
         Been meaning to{'\n'}play any of these?
       </Text>
@@ -586,7 +642,10 @@ export function Onboarding() {
         Tap the ones you have been meaning to play.
       </Text>
       <View style={styles.pickGrid}>
-        {picks.map((game) => {
+        {Array.from({ length: PICKS }, (_, slot) => {
+          const game = picks[slot];
+          if (!game)
+            return <PickPlaceholder key={`slot-${slot}`} width={tileWidth} />;
           const saved = statusOf(game.id) === 'wishlist';
           return (
             <PickTile
@@ -615,17 +674,17 @@ export function Onboarding() {
           at {pace ?? 6}h a week.
         </Text>
       )}
-      <Pressable
-        onPress={() => finish(savedCount > 0)}
-        style={[styles.cta, isExpanded && styles.ctaInline]}
-      >
-        <Text style={styles.ctaText}>
-          {savedCount > 0
+      <PrimaryButton
+        label={
+          savedCount > 0
             ? `Build my plan — ${savedCount} saved`
-            : 'Start exploring'}
-        </Text>
-        <Ionicons name="arrow-forward" size={16} color={COLORS.darkGrey} />
-      </Pressable>
+            : 'Start exploring'
+        }
+        icon="arrow-forward"
+        onPress={() => finish(savedCount > 0)}
+        block={!isExpanded}
+        style={styles.cta}
+      />
     </View>,
   ];
 
@@ -638,17 +697,14 @@ export function Onboarding() {
       <Textured style={styles.screen}>
         <View style={[styles.chrome, { top: insets.top + SPACING.md }]}>
           {step > 0 ? (
-            <Pressable
+            <IconButton
+              icon="chevron-back"
+              size="lg"
+              color={COLORS.mediumGrey}
               onPress={() => setStep(step - 1)}
               accessibilityLabel="Back"
               style={styles.chromeButton}
-            >
-              <Ionicons
-                name="chevron-back"
-                size={20}
-                color={COLORS.mediumGrey}
-              />
-            </Pressable>
+            />
           ) : (
             /* The mark, where the splash left it.
                "WELCOME TO / SIDEQUEST" said the name twice and welcomed
@@ -663,9 +719,15 @@ export function Onboarding() {
               <Text style={styles.mastheadWord}>sidequest</Text>
             </View>
           )}
-          <Pressable onPress={() => finish(false)}>
-            <Text style={styles.skip}>Skip</Text>
-          </Pressable>
+          <Touchable
+            onPress={() => finish(false)}
+            style={styles.skipTarget}
+            accessibilityLabel="Skip"
+          >
+            <Text style={styles.skip} maxFontSizeMultiplier={FONT_SCALE.label}>
+              Skip
+            </Text>
+          </Touchable>
         </View>
 
         {isExpanded ? (
@@ -723,11 +785,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     zIndex: 10,
   },
-  chromeButton: { width: 36, height: 36, justifyContent: 'center' },
+  /** The glyph sits on the column's edge; the target reaches past it. */
+  chromeButton: { marginLeft: -SPACING.sm2 },
+  skipTarget: {
+    minHeight: TOUCH.min,
+    minWidth: TOUCH.min,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: SPACING.sm,
+  },
   skip: {
     ...TYPE.labelSmall,
     color: COLORS.mediumGrey,
-    padding: SPACING.sm,
   },
   stage: { maxWidth: 460 },
   split: {
@@ -757,7 +826,7 @@ const styles = StyleSheet.create({
   },
   wallColumn: { gap: SPACING.lg, flex: 1, maxWidth: 260 },
   /** Staggered, so it reads as a wall rather than a table. */
-  wallColumnOffset: { marginTop: SPACING.xl * 2 },
+  wallColumnOffset: { marginTop: SPACING.xxxl },
   wallCover: {
     width: '100%',
     aspectRatio: LAYOUT.tileAspect,
@@ -782,7 +851,7 @@ const styles = StyleSheet.create({
    * column: the cards are rotated, so their box is wider than the art
    * and letting it stretch the act would push the headline off-centre.
    */
-  fan: { alignSelf: 'center', marginBottom: SPACING.xl * 1.25 },
+  fan: { alignSelf: 'center', marginBottom: SPACING.xl + SPACING.sm },
   fanCard: {
     position: 'absolute',
     width: FAN_W,
@@ -790,7 +859,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
+    borderColor: alpha(COLORS.white, 0.1),
     backgroundColor: COLORS.surface,
   },
   fanArt: { width: '100%', height: '100%' },
@@ -820,29 +889,12 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   ledeWide: { fontSize: 19, lineHeight: 28, maxWidth: 440 },
-  cta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    borderRadius: RADIUS.lg,
-    paddingVertical: SPACING.md + 1,
-    paddingHorizontal: SPACING.xl,
-    // The one filled button on the screen: amber, the primary action.
-    backgroundColor: COLORS.accent,
-    alignSelf: 'stretch',
-    marginTop: SPACING.sm,
-  },
   /**
-   * On a phone a full-width button is the target you want. Stretched
-   * across a desktop copy column it is a 660px pill, which reads as a
-   * banner rather than as something to press.
+   * The app's one button. On a phone full width, the target you want;
+   * on a desk it hugs its label, because stretched across a copy column
+   * it is a 660px banner rather than something to press.
    */
-  ctaInline: { alignSelf: 'flex-start' },
-  ctaText: {
-    ...TYPE.h3,
-    color: COLORS.navy,
-  },
+  cta: { marginTop: SPACING.sm },
   tally: {
     ...TYPE.caption,
     color: COLORS.mediumGrey,
@@ -870,18 +922,20 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     backgroundColor: COLORS.raised,
   },
+  /**
+   * Chosen: the amber the hours are already set in, as a ring and a
+   * wash. A white card here was a fifth selected style, and flipped the
+   * amber number to grey at the moment it became the answer.
+   */
   paceCardSelected: {
-    backgroundColor: COLORS.white,
-    borderColor: COLORS.white,
+    backgroundColor: alpha(COLORS.accent, 0.12),
+    borderColor: COLORS.accent,
   },
   paceHoursBox: { width: 62, alignItems: 'flex-start' },
   paceHoursNum: {
-    fontFamily: 'Geom-ExtraBold',
-    fontSize: 30,
-    lineHeight: 32,
+    ...TYPE.figure,
     color: COLORS.accent,
   },
-  paceHoursNumSelected: { color: COLORS.darkGrey },
   paceHoursUnit: {
     ...TYPE.micro,
     color: COLORS.mediumGrey,
@@ -892,14 +946,9 @@ const styles = StyleSheet.create({
     ...TYPE.h4,
     color: COLORS.lightGrey,
   },
-  paceTitleSelected: { color: COLORS.darkGrey },
+  paceTitleSelected: { color: COLORS.white },
   paceLine: {
     ...TYPE.caption,
-    color: COLORS.mediumGrey,
-  },
-  paceLineSelected: { color: 'rgba(30,36,50,0.7)' },
-  paceHours: {
-    ...TYPE.h4,
     color: COLORS.mediumGrey,
   },
 
@@ -910,50 +959,69 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     alignSelf: 'stretch',
   },
-  pick: { gap: 4 },
-  pickSaved: {},
-  pickArt: {
+  pick: { gap: SPACING.xs },
+  /**
+   * The ring is always drawn, clear until picked, so choosing a tile
+   * does not shift its art by the ring's width.
+   */
+  pickFrame: {
     width: '100%',
-    aspectRatio: 16 / 10,
+    aspectRatio: LAYOUT.tileAspect,
     borderRadius: RADIUS.sm,
+    borderWidth: 2,
+    borderColor: COLORS.stroke,
     overflow: 'hidden',
     backgroundColor: COLORS.navy,
-    borderWidth: 1,
-    borderColor: COLORS.stroke,
+  },
+  pickFrameSaved: { borderColor: COLORS.accent },
+  pickPlate: { backgroundColor: COLORS.raised },
+  pickArt: { width: '100%', height: '100%' },
+  /** A faint amber wash over a picked cover, so the pair reads as chosen. */
+  pickVeil: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: alpha(COLORS.accent, 0.16),
   },
   pickBadge: {
     position: 'absolute',
-    top: 6,
-    right: 6,
+    top: SPACING.sm,
+    right: SPACING.sm,
     width: 24,
     height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(13,17,25,0.72)',
+    borderRadius: RADIUS.pill,
+    backgroundColor: alpha(COLORS.ink, 0.72),
     borderWidth: 1,
     borderColor: COLORS.strokeStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
   pickBadgeSaved: {
-    backgroundColor: COLORS.white,
-    borderColor: COLORS.white,
+    backgroundColor: COLORS.accent,
+    borderColor: COLORS.accent,
   },
   pickName: {
     ...TYPE.labelTiny,
-    color: COLORS.lightGrey,
+    color: COLORS.mediumGrey,
+  },
+  pickNameSaved: { color: COLORS.white },
+  /** The name's line, held at its height while the title is on its way. */
+  pickNamePlate: {
+    height: TYPE.labelTiny.lineHeight,
+    width: '70%',
+    borderRadius: RADIUS.xs,
+    backgroundColor: COLORS.raised,
   },
 
   dots: {
     position: 'absolute',
     flexDirection: 'row',
-    gap: 8,
+    gap: SPACING.sm,
     alignSelf: 'center',
   },
   dot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: alpha(COLORS.white, 0.18),
   },
   dotActive: { backgroundColor: COLORS.white, width: 18 },
 });

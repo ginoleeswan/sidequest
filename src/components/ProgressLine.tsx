@@ -3,7 +3,7 @@ import { Animated, StyleSheet, View } from 'react-native';
 
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { COLORS } from '@/styles/colors';
+import { COLORS, alpha } from '@/styles/colors';
 import { DURATION, EASING } from '@/styles/motion';
 
 /**
@@ -56,7 +56,7 @@ const styles = StyleSheet.create({
   track: {
     height: 2,
     borderRadius: 1,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: alpha(COLORS.white, 0.06),
     overflow: 'hidden',
   },
   bar: {

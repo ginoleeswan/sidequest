@@ -92,8 +92,8 @@ export const TYPE = StyleSheet.create({
   },
   labelTiny: {
     fontFamily: 'Noah-Bold',
-    fontSize: 11.5,
-    lineHeight: 15,
+    fontSize: 12,
+    lineHeight: 16,
     color: COLORS.lightGrey,
   },
   /** Tiny uppercase labels: stats, section eyebrows, nav headings. */
@@ -108,7 +108,7 @@ export const TYPE = StyleSheet.create({
   /** Tracked, but sentence case — pills and metadata that read as words. */
   tag: {
     fontFamily: 'Noah-Bold',
-    fontSize: 10.5,
+    fontSize: 11,
     lineHeight: 14,
     letterSpacing: 1.5,
     color: COLORS.mediumGrey,
@@ -124,7 +124,7 @@ export const TYPE = StyleSheet.create({
   p: {
     fontFamily: 'Noah-Regular',
     fontSize: 13,
-    lineHeight: 19.5,
+    lineHeight: 20,
     color: COLORS.lightGrey,
   },
   caption: {
@@ -138,6 +138,39 @@ export const TYPE = StyleSheet.create({
     fontSize: 11,
     lineHeight: 15,
     color: COLORS.mediumGrey,
+  },
+
+  /**
+   * The figures the app is about: hours to finish, the backlog total,
+   * the verdict's two numbers.
+   *
+   * These were hand-set at 24, 34, 46 and 30 in four places, because
+   * the scale jumped from 32 straight to 96 and every big number had to
+   * invent its own size. Hours are the product's currency; they get a
+   * step of their own, and the page's one hero number gets the next.
+   */
+  figure: {
+    fontFamily: 'Geom-ExtraBold',
+    fontSize: 34,
+    lineHeight: 38,
+    letterSpacing: -0.6,
+    color: COLORS.white,
+  },
+  /** A figure beside the lead one: a secondary cell in a strip. */
+  figureSmall: {
+    fontFamily: 'Geom-ExtraBold',
+    fontSize: 20,
+    lineHeight: 24,
+    letterSpacing: -0.3,
+    color: COLORS.white,
+  },
+  /** A page's single hero number — the Library's total. */
+  hero: {
+    fontFamily: 'Geom-ExtraBold',
+    fontSize: 44,
+    lineHeight: 46,
+    letterSpacing: -1.1,
+    color: COLORS.white,
   },
 
   /** Oversized watermark numerals: ranked tiles, the stats hero. */
@@ -179,6 +212,22 @@ export const WORDMARK = {
   // Enforced here, not trusted to the string: a lockup that receives
   // "Sidequest" or "SIDEQUEST" from anywhere still renders lowercase.
   textTransform: 'lowercase',
+} as const;
+
+/**
+ * How far each kind of text may grow with the reader's text size.
+ *
+ * Nothing in the app answered Dynamic Type, so at the larger settings
+ * body copy grew as it should while a 34pt figure grew to 60-odd and
+ * broke its strip. Prose may double; display type and figures, which
+ * are already large and sit in measured slots, stop at a third more.
+ * Pass as `maxFontSizeMultiplier`.
+ */
+export const FONT_SCALE = {
+  display: 1.3,
+  figure: 1.3,
+  label: 1.6,
+  body: 2,
 } as const;
 
 export const OVER_IMAGE = StyleSheet.create({

@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { mediaUri } from '@/api/rawg';
 import { COLORS } from '@/styles/colors';
+import { RADIUS, SPACING } from '@/styles/theme';
 import type { Movie } from '@/api/types';
 import { TYPE } from '@/styles/typography';
 
@@ -19,7 +20,7 @@ export function TrailerCard({ trailer }: { trailer: Movie }) {
 }
 
 const styles = StyleSheet.create({
-  container: { width: 320, gap: 8 },
+  container: { width: 320, gap: SPACING.sm },
   name: {
     ...TYPE.labelTiny,
     color: COLORS.lightGrey,
@@ -27,7 +28,7 @@ const styles = StyleSheet.create({
   video: {
     width: 320,
     height: 180,
-    borderRadius: 12,
-    backgroundColor: 'black',
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.ink,
   },
 });

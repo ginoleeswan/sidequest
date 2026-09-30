@@ -32,9 +32,9 @@ describe('the query cache persister', () => {
   });
   afterEach(() => jest.useRealTimers());
 
-  /** Writes are throttled by 2s, so a test has to let that elapse. */
+  /** Writes are throttled by 5s, so a test has to let that elapse. */
   const settle = async () => {
-    jest.advanceTimersByTime(2100);
+    jest.advanceTimersByTime(5100);
     await Promise.resolve();
   };
 
@@ -58,14 +58,48 @@ describe('the query cache persister', () => {
     expect(store[KEY]).toContain('shelf');
   });
 
-  it('drops an over-large cache rather than throwing at the write', async () => {
+  it('drops what does not fit rather than throwing at the write', async () => {
     const persister = load();
     const huge = [
       { queryKey: ['big'], state: { data: 'x'.repeat(1_100_000) } },
     ];
     expect(() => persister.persistClient(client(huge))).not.toThrow();
     await settle();
-    expect(store[KEY] ?? '').toBe('');
+    expect(store[KEY] ?? '').not.toContain('xxxx');
+  });
+
+  /**
+   * Over budget, the cache used to be written as nothing at all. Now it
+   * keeps what matters most — the artwork answers that let a masthead
+   * open on its logo — and lets the bulky, refetchable pages go first.
+   */
+  it('keeps artwork and records, and drops browse pages, when over budget', () => {
+    const { fitWithin } =
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require('../persist') as typeof import('../persist');
+    const written = JSON.parse(
+      fitWithin(
+        client([
+          {
+            queryKey: ['browse', 'trending'],
+            state: { data: 'x'.repeat(4000), dataUpdatedAt: 5 },
+          },
+          {
+            queryKey: ['art', 'hades'],
+            state: { data: 'logo', dataUpdatedAt: 1 },
+          },
+          {
+            queryKey: ['game', '1'],
+            state: { data: 'record', dataUpdatedAt: 2 },
+          },
+        ]),
+        1000
+      )
+    ) as { clientState: { queries: { queryKey: string[] }[] } };
+    expect(written.clientState.queries.map((q) => q.queryKey[0])).toEqual([
+      'art',
+      'game',
+    ]);
   });
 
   it('restores nothing from an empty slot instead of failing', async () => {

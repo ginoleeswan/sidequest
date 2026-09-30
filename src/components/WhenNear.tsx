@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Platform, View, type StyleProp, type ViewStyle } from 'react-native';
 
+import { afterCurtain, isCurtainUp } from '@/lib/launch';
+
 /**
  * Holds a section's place until it is nearly on screen, then renders it.
  *
@@ -15,8 +17,9 @@ import { Platform, View, type StyleProp, type ViewStyle } from 'react-native';
  * That is the whole trick: deferring work is only free if it does not
  * cost layout shift.
  *
- * Native renders immediately — FlatList already virtualises there, and
- * IntersectionObserver is a web API.
+ * Native renders without an observer — FlatList already virtualises
+ * there, and IntersectionObserver is a web API — but not while the
+ * launch curtain is up: see lib/launch.
  */
 
 /** Start a screen ahead, so content is ready before it is reached. */
@@ -40,11 +43,20 @@ interface Props {
 }
 
 export function WhenNear({ placeholder, style, children }: Props) {
-  const [near, setNear] = useState(Platform.OS !== 'web');
+  // Native renders as soon as the launch curtain is out of the way —
+  // immediately on any later mount — and one section at a time behind
+  // it, so a screen's worth of shelves does not land in the frames the
+  // curtain is leaving in. See lib/launch.
+  const [near, setNear] = useState(Platform.OS !== 'web' && !isCurtainUp());
   const ref = useRef<View | null>(null);
 
   useEffect(() => {
-    if (near) return;
+    if (near || Platform.OS === 'web') return;
+    return afterCurtain(() => setNear(true));
+  }, [near]);
+
+  useEffect(() => {
+    if (near || Platform.OS !== 'web') return;
     const node = ref.current as unknown as Element | null;
     if (!node || typeof IntersectionObserver === 'undefined') {
       // No observer to lean on: show everything rather than nothing.

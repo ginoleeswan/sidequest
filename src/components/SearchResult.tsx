@@ -17,16 +17,22 @@ import { formatHours } from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
 import { useLibrary, type LibraryStatus } from '@/lib/library';
 import { COLORS } from '@/styles/colors';
-import { LAYOUT, RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { ICON, LAYOUT, RADIUS, SPACING } from '@/styles/theme';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
 
-/** The shelf's word for each state, in the colour the app gives it. */
+/**
+ * The shelf's word for each state, in the colour the app gives it.
+ *
+ * Saved is white, as the tile's bookmark is: amber is time, and a
+ * bookmark is not a length. Playing is the evening's violet, lifted to
+ * the shade that reads as text on the page.
+ */
 const STATUS: Record<
   LibraryStatus,
   { label: string; icon: keyof typeof Ionicons.glyphMap; color: string }
 > = {
-  wishlist: { label: 'Saved', icon: 'bookmark', color: COLORS.accent },
-  playing: { label: 'Playing', icon: 'play', color: COLORS.violet },
+  wishlist: { label: 'Saved', icon: 'bookmark', color: COLORS.white },
+  playing: { label: 'Playing', icon: 'play', color: COLORS.violetText },
   finished: {
     label: 'Finished',
     icon: 'checkmark-circle',
@@ -82,13 +88,8 @@ export function SearchResult({ game, onOpen }: Props) {
 
   const year = game.released?.slice(0, 4);
   const genre = game.genres?.[0]?.name;
-  const facts = [
-    year,
-    genre,
-    game.rating > 0 ? `★ ${game.rating.toFixed(1)}` : null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  const facts = [year, genre].filter(Boolean).join(' · ');
+  const rating = game.rating > 0 ? game.rating.toFixed(1) : null;
 
   const { hours } = durationOf(game);
   const length = hours > 0 ? formatHours(hours) : null;
@@ -107,7 +108,13 @@ export function SearchResult({ game, onOpen }: Props) {
       onPressIn={() => prefetchGame(queryClient, game)}
       style={styles.row}
       activeScale={0.98}
-      accessibilityLabel={[game.name, facts, owned?.label]
+      accessibilityLabel={[
+        game.name,
+        length ? `${length} to finish` : null,
+        facts,
+        rating ? `rated ${rating} of 5` : null,
+        owned?.label,
+      ]
         .filter(Boolean)
         .join(', ')}
     >
@@ -122,7 +129,19 @@ export function SearchResult({ game, onOpen }: Props) {
         <Text style={styles.name} numberOfLines={2}>
           {game.name}
         </Text>
-        {facts ? <Text style={styles.facts}>{facts}</Text> : null}
+        {facts || rating ? (
+          <Text style={styles.facts} maxFontSizeMultiplier={FONT_SCALE.label}>
+            {facts}
+            {facts && rating ? ' · ' : ''}
+            {rating ? (
+              <>
+                {/* An icon, not the typed ★: neither face has the glyph. */}
+                <Ionicons name="star" size={ICON.sm} color={COLORS.starGold} />
+                {` ${rating}`}
+              </>
+            ) : null}
+          </Text>
+        ) : null}
         {owned || platforms.length > 0 ? (
           <View style={styles.tail}>
             {owned ? (
@@ -160,7 +179,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.md,
-    paddingVertical: SPACING.sm + 2,
+    paddingVertical: SPACING.sm2,
   },
   poster: {
     ...LAYOUT.resultPoster,
@@ -168,7 +187,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: COLORS.navy,
   },
-  copy: { flex: 1, gap: 3 },
+  copy: { flex: 1, gap: SPACING.xxs },
   name: {
     ...TYPE.h3,
     color: COLORS.lightGrey,
@@ -186,7 +205,7 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     alignSelf: 'flex-start',
   },
-  status: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  status: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xxs },
   statusText: { ...TYPE.labelTiny },
   aside: { alignItems: 'flex-end', gap: SPACING.xs },
   // Time, in the one colour this app keeps for it; the same word the

@@ -2,7 +2,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
 import {
   Linking,
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -13,11 +12,12 @@ import {
 import { CoverImage } from './CoverImage';
 import { Rail } from './Rail';
 import { SectionHeader } from './SectionHeader';
+import { Touchable } from './Touchable';
 import { channelUrl, fetchLiveStreams } from '@/api/twitch';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
-import { COLORS } from '@/styles/colors';
+import { COLORS, alpha } from '@/styles/colors';
 import { RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
 
 /**
  * Somebody playing it, right now.
@@ -87,13 +87,14 @@ export function LiveStreams({
         data={data}
         keyExtractor={(stream) => stream.id}
         inset={inset}
-        gap={SPACING.sm + 2}
+        gap={SPACING.sm2}
         // Flat frames, no shadow, so the rail needs no room under the
         // cards - and taking it would open a gap before the footnote.
         shadowRoom={0}
         renderItem={(stream) => (
-          <Pressable
+          <Touchable
             onPress={() => Linking.openURL(channelUrl(stream.login))}
+            feedback="scale"
             accessibilityRole="link"
             accessibilityLabel={`Watch ${stream.channel} play, ${stream.viewers} watching, on Twitch`}
             style={[styles.card, { width: isExpanded ? WIDE_CARD : CARD }]}
@@ -104,7 +105,12 @@ export function LiveStreams({
                   a video somebody uploaded, it is happening. */}
               <View style={styles.liveTag}>
                 <View style={styles.dot} />
-                <Text style={styles.liveWord}>LIVE</Text>
+                <Text
+                  style={styles.liveWord}
+                  maxFontSizeMultiplier={FONT_SCALE.label}
+                >
+                  LIVE
+                </Text>
               </View>
               <View style={styles.viewers}>
                 <Ionicons name="person" size={11} color={COLORS.white} />
@@ -122,7 +128,7 @@ export function LiveStreams({
             <Text style={styles.title} numberOfLines={1}>
               {stream.title}
             </Text>
-          </Pressable>
+          </Touchable>
         )}
       />
       {/* Said once, quietly, because it is the reason this can exist at
@@ -148,12 +154,13 @@ const CARD = 224;
 const WIDE_CARD = 300;
 
 const styles = StyleSheet.create({
-  wrap: { gap: SPACING.sm + 2 },
+  wrap: { gap: SPACING.sm2 },
   card: { gap: 6 },
   shotFrame: {
     width: '100%',
     aspectRatio: 16 / 9,
-    borderRadius: RADIUS.md,
+    // The page's one media radius, the screenshots' and the tiles'.
+    borderRadius: RADIUS.sm,
     overflow: 'hidden',
     backgroundColor: COLORS.navy,
     borderWidth: 1,
@@ -169,8 +176,10 @@ const styles = StyleSheet.create({
     gap: 5,
     paddingVertical: 3,
     paddingHorizontal: 7,
-    borderRadius: 4,
-    backgroundColor: 'rgba(248,113,104,0.92)',
+    borderRadius: RADIUS.xs,
+    // Not coral: coral is letting go, and white on it measured 2.8:1.
+    // The broadcast red carries white at 4.6.
+    backgroundColor: COLORS.live,
   },
   dot: {
     width: 6,
@@ -178,12 +187,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: COLORS.white,
   },
-  liveWord: {
-    ...TYPE.micro,
-    fontSize: 9,
-    letterSpacing: 1,
-    color: COLORS.white,
-  },
+  liveWord: { ...TYPE.micro, color: COLORS.white },
   viewers: {
     position: 'absolute',
     bottom: SPACING.sm,
@@ -193,11 +197,11 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingVertical: 2,
     paddingHorizontal: 6,
-    borderRadius: 4,
-    backgroundColor: 'rgba(9,12,19,0.72)',
+    borderRadius: RADIUS.xs,
+    backgroundColor: alpha(COLORS.ink, 0.72),
   },
-  viewerCount: { ...TYPE.micro, fontSize: 10, color: COLORS.white },
+  viewerCount: { ...TYPE.micro, color: COLORS.white },
   channel: { ...TYPE.label, color: COLORS.white },
-  title: { ...TYPE.caption, fontSize: 13, color: COLORS.mediumGrey },
+  title: { ...TYPE.p, color: COLORS.mediumGrey },
   footnote: { ...TYPE.fine, color: COLORS.mediumGrey },
 });

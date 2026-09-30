@@ -1,5 +1,7 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 
+import { router } from 'expo-router';
+
 import HomeScreen from '../(tabs)/index';
 import { tonightsShape } from '@/lib/homeFeed';
 import type { Game } from '@/api/types';
@@ -114,12 +116,46 @@ describe('the home screen', () => {
     expect(screen.getByText(tonightsShape(Date.now()).eyebrow)).toBeTruthy();
   });
 
-  it('says so plainly when RAWG cannot be reached', async () => {
+  /**
+   * Plainly, in the app's own words rather than a vendor's, and with a
+   * way on: the error used to be a dead end with nothing to press.
+   */
+  it('says so plainly when the games cannot be loaded, and tries again', async () => {
     respond = () => new Response('nope', { status: 503 });
     await renderApp(<HomeScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Couldn't reach RAWG")).toBeTruthy()
+      expect(screen.getByText("Can't load games right now")).toBeTruthy()
     );
+    expect(screen.queryByText(/RAWG/)).toBeNull();
+
+    respond = () =>
+      new Response(
+        JSON.stringify({ count: games.length, next: null, results: games })
+      );
+    await fireEvent.press(screen.getByText('Try again'));
+    await waitFor(() =>
+      expect(screen.queryByText("Can't load games right now")).toBeNull()
+    );
+  });
+
+  /**
+   * On a phone a section is pushed onto the stack, so it has a back
+   * button and swipe-back; it used to swap the tab's content in place.
+   */
+  it('opens a section as a page of its own on a phone', async () => {
+    compact();
+    await renderApp(<HomeScreen />);
+    await waitFor(() =>
+      expect(screen.getByLabelText('Browse Coming soon')).toBeTruthy()
+    );
+    await fireEvent.press(screen.getByLabelText('Browse Coming soon'));
+    expect(router.push).toHaveBeenCalledWith('/browse/coming-soon');
+  });
+
+  /** Trending hands its first games to the stage; the numerals must be true. */
+  it('numbers trending from where the stage left off', async () => {
+    await renderApp(<HomeScreen />);
+    await waitFor(() => expect(screen.getByText('Nos. 6–12')).toBeTruthy());
   });
 
   it('searches after you stop typing, not on every keystroke', async () => {

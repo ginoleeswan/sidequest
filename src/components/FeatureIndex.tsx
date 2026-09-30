@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     borderWidth: 2.5,
     borderColor: 'rgba(233,235,242,0.9)',
     borderRadius: 999,
-    paddingVertical: SPACING.sm + 2,
+    paddingVertical: SPACING.sm2,
     paddingHorizontal: SPACING.lg - 2,
     // Lifted a touch off the page, as a laid-down sticker is.
     boxShadow: '0 3px 10px rgba(9,12,19,0.35)',

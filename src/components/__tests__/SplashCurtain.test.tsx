@@ -32,9 +32,14 @@ describe('the splash curtain', () => {
 
   it('gets out of the way, and does not linger', async () => {
     await render(<SplashCurtain />);
+    // No screen reports ready here, so the curtain holds its first frame
+    // for its limit and then runs.
+    await act(async () => {
+      jest.advanceTimersByTime(1000);
+    });
     await act(async () => {
       // Comfortably past the run: whatever the choreography costs, the
-      // app is not still behind a curtain two seconds in.
+      // app is not still behind a curtain a few seconds in.
       jest.advanceTimersByTime(4000);
     });
     expect(screen.queryByText('sidequest', DEEP)).toBeNull();

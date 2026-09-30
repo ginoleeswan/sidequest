@@ -1,5 +1,6 @@
 import { Asset } from 'expo-asset';
 import {
+  Image,
   ImageBackground,
   Platform,
   StyleSheet,
@@ -9,6 +10,25 @@ import {
 } from 'react-native';
 
 const NOISE = require('../../assets/images/noise.png');
+
+/**
+ * The phone's grain, drawn for the phone.
+ *
+ * `noise.png` is the web's tile, and on a phone it was two faults at
+ * once. It is a single density, so iOS drew each speck across three
+ * device pixels and smoothed it into a haze, and Android tiles at the
+ * bitmap's own pixels, which put a speck at a third of a point where
+ * nobody can see it. And it only lightens: mid-grey flecks at two per
+ * cent, which over the navy moved the page by four levels — a surface
+ * that measures as textured and reads as flat paint.
+ *
+ * `grain.png` ships at 1x, 2x and 3x so every screen draws the same
+ * 150pt tile with crisp specks, and it carries dark specks as well as
+ * light ones, so the ground has tooth rather than dust. Drawn by
+ * `scripts/make-grain.mjs`; rerun that rather than editing the files.
+ */
+const GRAIN = require('../../assets/images/grain.png');
+const LAMP = require('../../assets/images/lamp.png');
 
 /**
  * How far the grain takes to reach full strength at the top of a page.
@@ -43,8 +63,18 @@ const TOP_FADE = `linear-gradient(to bottom, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 16
 const CHROME_BRIDGE =
   'linear-gradient(to bottom, #272F3F 0px, #272F3F 14px, rgba(39,47,63,0.6) 40%, rgba(39,47,63,0.25) 72%, rgba(39,47,63,0) 100%)';
 
+/** How far down the page the lamplight reaches before it is gone. */
+const LAMP_REACH = 460;
+
 const styles = StyleSheet.create({
   noInteraction: { pointerEvents: 'none' },
+  lamp: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: LAMP_REACH,
+  },
 });
 
 interface Props {
@@ -125,12 +155,49 @@ export function Textured({ children, style, fill = false }: Props) {
 
   return (
     <ImageBackground
-      source={NOISE}
+      source={GRAIN}
       resizeMode="repeat"
       style={[base, fill && styles.noInteraction]}
     >
+      {fill ? null : <Lamplight />}
       {children}
     </ImageBackground>
+  );
+}
+
+/**
+ * The light the page is read by.
+ *
+ * A flat ground is lit from nowhere, and that is most of why a dark
+ * screen reads as a colour rather than as a place: nothing on it is
+ * nearer the light than anything else. Two pools at the top of every
+ * page fix that — amber from the left, the app's own lamp, and the
+ * evening's violet from the right — each a few per cent, gone well
+ * before the first fold. They sit under the scroller, so the page
+ * moves across the light rather than the light moving with the page.
+ *
+ * A picture, not SVG: radial gradients are painted on the main thread
+ * each time a page mounts, which on a phone is during the splash and
+ * during every push. Drawn by `scripts/make-lamp.mjs`.
+ *
+ * Native only. On the web the page's first rows have to match the
+ * browser's own chrome to the unit (see `CHROME_BRIDGE`), and a glow
+ * there would draw the line the bridge exists to remove.
+ */
+function Lamplight() {
+  return (
+    <View
+      style={styles.lamp}
+      pointerEvents="none"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <Image
+        source={LAMP}
+        style={StyleSheet.absoluteFill}
+        resizeMode="stretch"
+      />
+    </View>
   );
 }
 
@@ -139,7 +206,8 @@ export function Textured({ children, style, fill = false }: Props) {
  * page's textured background gives itself away at the hand-off - the
  * gradient is clean while the page is grainy. Masking the same noise tile
  * with a fade dithers the blend so the texture arrives with the colour.
- * Web-only: the mask is CSS; native heroes keep their plain gradient.
+ * Web-only: the mask is CSS, and on native the page's grain shows
+ * through the dissolve without the cost of a layer mask per frame.
  */
 export function GrainScrim({
   style,
@@ -153,6 +221,11 @@ export function GrainScrim({
    */
   solidAt?: 'top' | 'bottom' | 'band';
 }) {
+  // Web only. On native this was a layer mask, and a masked layer is
+  // re-rendered offscreen on every frame anything around it moves — the
+  // game page's masthead, the prompt band and every category hero paid
+  // it on each scroll frame, for a dither the page's own grain showing
+  // through the dissolve already gives.
   if (Platform.OS !== 'web') return null;
   const uri = Asset.fromModule(NOISE).uri;
   const fade =

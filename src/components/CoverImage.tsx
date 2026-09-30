@@ -65,6 +65,34 @@ interface Props {
  * image fails to load, show a textured plate with a controller glyph
  * instead of a flat empty box.
  */
+/**
+ * A tiny cut of the same picture, to paint while the real one arrives.
+ *
+ * A frame used to sit flat navy until its cover had decoded, and then
+ * fade in — on a shelf of eight that is eight empty plates filling in
+ * one by one. A two-hundred-pixel cut arrives in a fraction of the time
+ * and, stretched to the frame, is the picture out of focus: the page
+ * has its colours at once and sharpens, which is how a shelf feels
+ * loaded rather than loading. Only for hosts that serve sized cuts;
+ * anything else goes straight to the full file.
+ */
+export function previewUri(src: string): string | null {
+  let tiny: string | undefined;
+  if (src.includes('/media/resize/') || src.includes('/media/crop/')) {
+    tiny = src.replace(
+      /\/media\/(resize|crop)\/[^/]+\/[^/]+\//,
+      '/media/resize/200/-/'
+    );
+  } else if (src.includes('images.igdb.com')) {
+    tiny = src.replace(
+      /\/t_(cover_big|cover_big_2x|720p|1080p|screenshot_big|screenshot_huge)\//,
+      (_, size: string) =>
+        size.startsWith('cover') ? '/t_cover_small/' : '/t_screenshot_med/'
+    );
+  }
+  return tiny && tiny !== src ? tiny : null;
+}
+
 export function CoverImage({
   uri,
   fallbackUri,
@@ -92,6 +120,10 @@ export function CoverImage({
     mediaUri(fallbackUri, SLOT_WIDTH[size]),
   ].filter((candidate): candidate is string => Boolean(candidate));
   const src = candidates.find((candidate) => !failed.has(candidate)) ?? null;
+  // Only for the big frames. On a shelf of tiles a preview doubled every
+  // request and every decode for a picture that small; a hero is where
+  // the wait is long enough to be seen.
+  const preview = src && size === 'hero' ? previewUri(src) : null;
 
   if (!src) {
     return (
@@ -120,6 +152,8 @@ export function CoverImage({
         // reusing one the platform has already marked broken.
         key={src}
         source={{ uri: src }}
+        placeholder={preview ? { uri: preview } : undefined}
+        placeholderContentFit={contentFit}
         style={StyleSheet.absoluteFill}
         contentFit={contentFit}
         blurRadius={blurRadius}

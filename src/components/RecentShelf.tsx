@@ -10,12 +10,18 @@ import { CoverImage } from './CoverImage';
 import { Rail } from './Rail';
 import { ScaleButton } from './ScaleButton';
 import { SectionHeader } from './SectionHeader';
+import { useToast } from './Toast';
 import { warmGame } from '@/api/gameDetail';
 import { useHydrated } from '@/hooks/useHydrated';
-import { clearRecent, readRecent } from '@/lib/recent';
-import { COLORS } from '@/styles/colors';
-import { RADIUS, SHADOW, SPACING } from '@/styles/theme';
-import { OVER_IMAGE, TYPE } from '@/styles/typography';
+import {
+  clearRecent,
+  readRecent,
+  rememberGame,
+  type RecentGame,
+} from '@/lib/recent';
+import { alpha, COLORS } from '@/styles/colors';
+import { ICON, RADIUS, SHADOW, SPACING } from '@/styles/theme';
+import { FONT_SCALE, OVER_IMAGE, TYPE } from '@/styles/typography';
 
 /**
  * Where you left off.
@@ -28,6 +34,7 @@ export function RecentShelf({ inset = SPACING.md }: { inset?: number }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const hydrated = useHydrated();
+  const toast = useToast();
   const [games, setGames] = useState(() => (hydrated ? readRecent() : []));
   // The pre-rendered HTML had no history, so the hydration render must
   // not either; the real list arrives on the next commit.
@@ -38,6 +45,28 @@ export function RecentShelf({ inset = SPACING.md }: { inset?: number }) {
   }
 
   if (games.length < 2) return null;
+
+  /**
+   * Clear, with a way back.
+   *
+   * Twelve games of history went in one tap on a small grey word, with
+   * nothing to say it had happened and no way to have it back. The toast
+   * now offers Undo, which writes the list back oldest first so the
+   * newest ends up at the front, exactly as it was.
+   */
+  const clear = () => {
+    const previous: RecentGame[] = games;
+    clearRecent();
+    setGames([]);
+    toast('Cleared where you left off', 'trash-outline', {
+      label: 'Undo',
+      onPress: () => {
+        for (const game of [...previous].reverse())
+          rememberGame({ ...game, slug: game.slug ?? '' }, game.seenAt);
+        setGames(readRecent());
+      },
+    });
+  };
 
   return (
     <View style={styles.block}>
@@ -50,10 +79,8 @@ export function RecentShelf({ inset = SPACING.md }: { inset?: number }) {
         eyebrow="Pick up the thread"
         title="Where you left off"
         actionLabel="Clear"
-        onAction={() => {
-          clearRecent();
-          setGames([]);
-        }}
+        actionAccessibilityLabel="Clear where you left off"
+        onAction={clear}
       />
       {/* A rail, not a wrapping grid. Wrapped, a two-line title made
           its own row taller than the others, so the gaps between rows
@@ -86,15 +113,23 @@ export function RecentShelf({ inset = SPACING.md }: { inset?: number }) {
               iconSize={22}
             />
             <LinearGradient
-              colors={['#00000000', '#00000066', '#000000b8']}
+              colors={[
+                alpha(COLORS.ink, 0),
+                alpha(COLORS.ink, 0.4),
+                alpha(COLORS.ink, 0.72),
+              ]}
               locations={[0.4, 0.75, 1]}
               style={StyleSheet.absoluteFill}
               pointerEvents="none"
             />
             <View style={styles.resume} pointerEvents="none">
-              <Ionicons name="play" size={11} color={COLORS.white} />
+              <Ionicons name="play" size={ICON.sm} color={COLORS.white} />
             </View>
-            <Text style={[styles.name, OVER_IMAGE.heading]} numberOfLines={2}>
+            <Text
+              style={[styles.name, OVER_IMAGE.heading]}
+              numberOfLines={2}
+              maxFontSizeMultiplier={FONT_SCALE.label}
+            >
               {game.name}
             </Text>
           </ScaleButton>
@@ -111,17 +146,19 @@ const styles = StyleSheet.create({
    * next section's eyebrow, which is what made the block read as badly
    * spaced however tidy the row itself was.
    */
-  block: { gap: SPACING.sm + 2, marginBottom: SPACING.xl },
+  block: { gap: SPACING.sm2, marginBottom: SPACING.xl },
+  // A minimum, so a larger text size grows the card rather than pushing
+  // the name up into the resume glyph.
   card: {
     width: 216,
-    height: 122,
-    borderRadius: RADIUS.md,
+    minHeight: 122,
+    borderRadius: RADIUS.card,
     overflow: 'hidden',
     backgroundColor: COLORS.navy,
     borderWidth: 1,
     borderColor: COLORS.stroke,
     justifyContent: 'flex-end',
-    padding: SPACING.sm + 4,
+    padding: SPACING.sm2,
     ...SHADOW.card,
   },
   resume: {
@@ -130,12 +167,12 @@ const styles = StyleSheet.create({
     left: SPACING.sm,
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: RADIUS.pill,
     // The plate, at the strength every other on-art control keeps.
-    backgroundColor: 'rgba(0,0,0,0.38)',
+    backgroundColor: alpha(COLORS.ink, 0.42),
     alignItems: 'center',
     justifyContent: 'center',
-    paddingLeft: 2,
+    paddingLeft: SPACING.xxs,
   },
   name: {
     ...TYPE.labelSmall,

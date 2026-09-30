@@ -1,8 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
+import { PrimaryButton } from './PrimaryButton';
 import { useToast } from './Toast';
+import { Touchable } from './Touchable';
 import type { Game } from '@/api/types';
 import { useHydrated } from '@/hooks/useHydrated';
 import { useLibrary } from '@/lib/library';
@@ -16,8 +18,8 @@ import {
   type RunningSession,
 } from '@/lib/sessions';
 import { COLORS } from '@/styles/colors';
-import { RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { ICON, RADIUS, SPACING } from '@/styles/theme';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
 
 /** The clock only has to look right, so a minute is plenty. */
 const TICK_MS = 15_000;
@@ -80,25 +82,25 @@ export function SessionTimer({
         <Text style={styles.done}>
           {formatMinutes(justPlayed)} on {game.name}. Did you see the credits?
         </Text>
+        {/* The app's one button and its ghost, not a white lozenge of
+            its own: this is the same "yes" the decision asks for, and
+            finishing is the moment the hand should feel. */}
         <View style={styles.row}>
-          <Pressable
+          <PrimaryButton
+            label="Yes — finished it"
+            haptic="celebrate"
             onPress={() => {
               setStatus(game, 'finished');
               setJustPlayed(null);
               toast('Credits rolled', 'checkmark-circle');
             }}
-            style={styles.primary}
-            accessibilityRole="button"
-          >
-            <Text style={styles.primaryText}>Yes — finished it</Text>
-          </Pressable>
-          <Pressable
+          />
+          <PrimaryButton
+            label="Not yet"
+            variant="secondary"
+            haptic="tap"
             onPress={() => setJustPlayed(null)}
-            style={styles.ghost}
-            accessibilityRole="button"
-          >
-            <Text style={styles.ghostText}>Not yet</Text>
-          </Pressable>
+          />
         </View>
       </View>
     );
@@ -113,7 +115,10 @@ export function SessionTimer({
           <Text style={styles.clock}>Playing · {formatMinutes(minutes)}</Text>
         </View>
         <View style={styles.row}>
-          <Pressable
+          <PrimaryButton
+            label="Stop"
+            icon="stop"
+            accessibilityHint="Stops playing and records the time"
             onPress={() => {
               const logged = endSession();
               setRunning(null);
@@ -121,32 +126,31 @@ export function SessionTimer({
               addPlayTime(game, logged.minutes / 60);
               setJustPlayed(logged.minutes);
             }}
-            style={styles.primary}
-            accessibilityRole="button"
-            accessibilityLabel="Stop playing and record the time"
-          >
-            <Ionicons name="stop" size={14} color={COLORS.darkGrey} />
-            <Text style={styles.primaryText}>Stop</Text>
-          </Pressable>
-          <Pressable
+          />
+          <PrimaryButton
+            label="Discard"
+            variant="secondary"
+            haptic="warn"
+            accessibilityHint="Throws this session away"
             onPress={() => {
               cancelSession();
               setRunning(null);
               toast('Session discarded', 'close-circle');
             }}
-            style={styles.ghost}
-            accessibilityRole="button"
-            accessibilityLabel="Throw this session away"
-          >
-            <Text style={styles.ghostText}>Discard</Text>
-          </Pressable>
+          />
         </View>
       </View>
     );
   }
 
   return (
-    <Pressable
+    <Touchable
+      // Starting the clock is a commitment, and lands like one. Inline
+      // it is a line of text, so it grows to a thumb's height without
+      // reaching into the toggles beside it.
+      haptic="impact"
+      hitSlop={block ? undefined : 'text'}
+      feedback={block ? 'scale' : 'opacity'}
       onPress={() => {
         // The label says "stops X", so stopping must mean what it means
         // everywhere else: the other game's time is logged and credited,
@@ -167,20 +171,22 @@ export function SessionTimer({
         setNow(Date.now());
       }}
       style={block ? styles.startBlock : styles.start}
-      accessibilityRole="button"
       accessibilityLabel={`Start a session on ${game.name}`}
     >
       <Ionicons
         name="play"
-        size={block ? 15 : 14}
+        size={ICON.sm}
         color={block ? COLORS.white : COLORS.lightGrey}
       />
-      <Text style={[styles.startText, block && styles.startBlockText]}>
+      <Text
+        style={[styles.startText, block && styles.startBlockText]}
+        maxFontSizeMultiplier={FONT_SCALE.label}
+      >
         {running
           ? `Start a session (stops ${running.name})`
           : 'Start a session'}
       </Text>
-    </Pressable>
+    </Touchable>
   );
 }
 
@@ -193,7 +199,12 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     backgroundColor: COLORS.raised,
   },
-  row: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  row: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
   live: {
     width: 8,
     height: 8,
@@ -243,7 +254,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: SPACING.sm,
-    paddingVertical: SPACING.sm + 4,
+    paddingVertical: SPACING.sm + SPACING.xs,
     // The status control's radius, its stroke and its ground — all
     // three, not just the radius. On COLORS.raised this was a light
     // plate under a dark one: two adjacent controls on two different
@@ -257,28 +268,4 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.plate,
   },
   startBlockText: { ...TYPE.label, color: COLORS.white },
-  primary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm + 2,
-  },
-  primaryText: {
-    ...TYPE.labelSmall,
-    color: COLORS.darkGrey,
-  },
-  ghost: {
-    borderWidth: 1,
-    borderColor: COLORS.strokeStrong,
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm + 2,
-  },
-  ghostText: {
-    ...TYPE.labelSmall,
-    color: COLORS.lightGrey,
-  },
 });

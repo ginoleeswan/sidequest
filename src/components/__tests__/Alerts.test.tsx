@@ -148,6 +148,29 @@ describe('letting a game go from the alert', () => {
     expect(store[DROPS]).toBeUndefined();
   });
 
+  it('can be taken back before anything goes', async () => {
+    // Asking is not deciding: a mis-tap on "Let it go" needs a way back
+    // that is not leaving the screen.
+    await renderApp(<Alerts alerts={[alert()]} />);
+    await fireEvent.press(screen.getByText('Let it go'));
+    await fireEvent.press(screen.getByText('Keep it'));
+    expect(screen.queryByText('Why this one? Optional.')).toBeNull();
+    expect(saved()).toBeTruthy();
+  });
+
+  it('can be undone after it goes, whole', async () => {
+    await renderApp(<Alerts alerts={[alert()]} />);
+    await fireEvent.press(screen.getByText('Let it go'));
+    await fireEvent.press(screen.getByText('Too long for me'));
+    await waitFor(() => expect(saved()).toBeUndefined());
+    await fireEvent.press(screen.getByText('Undo'));
+    // The entry comes back as it was — its date included — and the
+    // reason is taken back with it.
+    await waitFor(() => expect(saved()?.status).toBe('playing'));
+    expect(saved().deadline).toBeGreaterThan(0);
+    expect(JSON.parse(store[DROPS] ?? '{}')['too-long']).toBe(0);
+  });
+
   it('offers it only where it makes sense', async () => {
     // A game an evening from its credits is not one to let go of.
     await renderApp(<Alerts alerts={[alert({ kind: 'nearly-done' })]} />);

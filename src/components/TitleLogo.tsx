@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+  Animated,
   Platform,
   StyleSheet,
   View,
@@ -9,9 +10,16 @@ import {
 } from 'react-native';
 
 import type { ArtAsset } from '@/api/art';
-import { DURATION } from '@/styles/motion';
+import { useAnimatedValue } from '@/hooks/useAnimatedValue';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { DURATION, EASING } from '@/styles/motion';
 
 interface Props {
+  /**
+   * The mark. `undefined` while the lookup is still out, `null` when it
+   * came back with nothing — two different answers, and the difference
+   * decides whether the typed title should appear at all.
+   */
   logo: ArtAsset | null | undefined;
   /** The game's name, for the screen reader and as the fallback. */
   name: string;
@@ -27,6 +35,35 @@ interface Props {
   align?: 'center' | 'start';
   /** What to show until, or instead of, the logo: the typed title. */
   children: React.ReactNode;
+  /**
+   * Called once the title is decided — the mark is on screen, there is
+   * definitely none, or the wait ran out and the name was set. A parent
+   * that stages an entrance around the title waits for this, so the
+   * title arrives in its place in the sequence instead of after it.
+   */
+  onSettle?: () => void;
+}
+
+/**
+ * How long the slot may stay quiet waiting for the mark before the
+ * typed title steps in.
+ *
+ * The title used to paint at once and be replaced when the mark landed:
+ * a game's name set in this app's face, then the publisher's drawing of
+ * it a beat later — two different shapes for the same word, which on a
+ * device read as the page changing its mind. Most marks arrive inside
+ * this window (the lookup is edge-cached, the file is usually on disk),
+ * so most of the time the typed title is simply never seen.
+ */
+const HOLD = 800;
+
+/**
+ * The file to ask for. The smaller cut where it is enough: a mark at
+ * two pixels a point under the thumb's five hundred, and the full file
+ * can run to a couple of megabytes.
+ */
+export function logoUri(logo: ArtAsset, width: number): string {
+  return width * 2 <= 480 ? logo.thumb : logo.url;
 }
 
 /**
@@ -38,10 +75,10 @@ interface Props {
  * a box from the dimensions the server already knows, so the layout is
  * settled before a byte of it arrives and nothing under it moves.
  *
- * The typed title is never gone: it is what shows while the answer is
- * unknown, what shows when there is no logo or the file will not load,
- * and what a screen reader is told either way — a picture of the word
- * "Hades" is still the word Hades.
+ * The typed title is never gone for a reader who needs it: it is what
+ * shows when there is no logo, when the file will not load, or when the
+ * mark is slow; and it is what a screen reader is told either way — a
+ * picture of the word "Hades" is still the word Hades.
  */
 export function TitleLogo({
   logo,
@@ -51,31 +88,97 @@ export function TitleLogo({
   style,
   align = 'center',
   children,
+  onSettle,
 }: Props) {
+  const reduced = useReducedMotion();
   const [failed, setFailed] = useState<string | null>(null);
   const [loaded, setLoaded] = useState<string | null>(null);
-  if (!logo || failed === logo.url || maxWidth <= 0) return <>{children}</>;
+  // Whether the wait has run out and the typed title has been asked for.
+  const [overdue, setOverdue] = useState(false);
+  const words = useAnimatedValue(0);
+  const mark = useAnimatedValue(0);
 
-  const aspect = logo.width / logo.height;
-  const height = Math.min(maxHeight, maxWidth / aspect);
+  const usable = logo && failed !== logo.url && maxWidth > 0 ? logo : null;
+  const aspect = usable ? usable.width / usable.height : 1;
+  const height = usable ? Math.min(maxHeight, maxWidth / aspect) : 0;
   const width = height * aspect;
-  // The smaller cut where it is enough: a phone masthead at two pixels
-  // a point is under the thumb's five hundred, and the full file can
-  // run to a couple of megabytes.
-  const uri = width * 2 <= 480 ? logo.thumb : logo.url;
-  const shown = loaded === uri;
+  const uri = usable ? logoUri(usable, width) : null;
+  const shown = uri != null && loaded === uri;
 
-  /**
-   * The typed title stays until the mark has actually arrived.
-   *
-   * Knowing a logo EXISTS and having it are half a second to several
-   * seconds apart: the manifest is edge-cached JSON, the mark itself is
-   * a transparent PNG from a third-party CDN. Dropping the words the
-   * moment the JSON landed left the masthead's title slot empty for
-   * that whole window — the game page opened, said the game's name, and
-   * then unsaid it. So the words are underneath, the mark fades in over
-   * them, and only once it is on screen do they go.
-   */
+  // No answer yet, or an answer whose file has not arrived: wait, then
+  // give up waiting and set the name.
+  const waiting = logo === undefined || (uri != null && !shown);
+  useEffect(() => {
+    if (!waiting || overdue) return;
+    const timer = setTimeout(() => setOverdue(true), HOLD);
+    return () => clearTimeout(timer);
+  }, [waiting, overdue]);
+
+  // The words are wanted when there is definitely no mark, or when the
+  // mark has kept the reader waiting long enough.
+  const wantWords = !shown && (!waiting || overdue);
+  const settled = shown || wantWords;
+  useEffect(() => {
+    if (settled) onSettle?.();
+  }, [settled, onSettle]);
+
+  // Where the words' fade last came to rest. Rendered as a plain style
+  // once it has, so the settled page carries no animated props at all.
+  const [wordsAt, setWordsAt] = useState<0 | 1 | null>(null);
+  // A known "no logo" is not an arrival: the name is set as if it had
+  // always been there. Only words that step in late, or step aside for
+  // the mark, fade.
+  const instant = reduced || (wantWords && !overdue);
+  useEffect(() => {
+    if (instant) return;
+    const to = wantWords ? 1 : 0;
+    const animation = Animated.timing(words, {
+      toValue: to,
+      duration: to === 1 ? DURATION.base : DURATION.slow,
+      easing: to === 1 ? EASING.standard : EASING.exit,
+      useNativeDriver: true,
+    });
+    animation.start(({ finished }) => finished && setWordsAt(to));
+    return () => animation.stop();
+  }, [wantWords, instant, words]);
+  const wordsOpacity = instant
+    ? wantWords
+      ? 1
+      : 0
+    : wordsAt === (wantWords ? 1 : 0)
+      ? wordsAt
+      : words;
+
+  useEffect(() => {
+    if (!shown) {
+      mark.setValue(0);
+      return;
+    }
+    if (reduced) {
+      mark.setValue(1);
+      return;
+    }
+    // The mark dissolves in over the words' dissolve out: the same
+    // duration, so there is never a frame with neither.
+    const animation = Animated.timing(mark, {
+      toValue: 1,
+      duration: DURATION.slow,
+      easing: EASING.standard,
+      useNativeDriver: true,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [shown, reduced, mark]);
+
+  // No mark to wait for: the typed title, in flow, as it always was.
+  if (!usable || !uri) {
+    return (
+      <Animated.View style={{ opacity: wordsOpacity }}>
+        {children}
+      </Animated.View>
+    );
+  }
+
   return (
     <View
       style={[{ width, height }, style]}
@@ -84,36 +187,38 @@ export function TitleLogo({
       accessibilityLabel={name}
       testID="title-logo"
     >
-      {shown ? null : (
-        <View
-          style={[
-            styles.standIn,
-            /* The slot's full width, not the mark's. The box is
-               measured for the picture - for a tall mark it is 190
-               points wide - and words wrapped into it broke a name
-               that fits on one line into three, then cut it off. */
-            {
-              width: maxWidth,
-              left: align === 'center' ? (width - maxWidth) / 2 : 0,
-            },
-          ]}
-          pointerEvents="none"
-        >
-          {children}
-        </View>
-      )}
-      <Image
-        source={{ uri }}
-        style={{ width, height }}
-        contentFit="contain"
-        contentPosition={Platform.OS === 'web' ? 'left' : 'left center'}
-        transition={DURATION.base}
-        priority="high"
-        onLoad={() => setLoaded(uri)}
-        onError={() => setFailed(logo.url)}
-        alt={name}
-        accessible={false}
-      />
+      <Animated.View
+        style={[
+          styles.standIn,
+          /* The slot's full width, not the mark's. The box is measured
+             for the picture - for a tall mark it is 190 points wide -
+             and words wrapped into it broke a name that fits on one
+             line into three, then cut it off. */
+          {
+            width: maxWidth,
+            left: align === 'center' ? (width - maxWidth) / 2 : 0,
+            opacity: wordsOpacity,
+          },
+        ]}
+        pointerEvents="none"
+      >
+        {children}
+      </Animated.View>
+      <Animated.View style={{ width, height, opacity: mark }}>
+        <Image
+          source={{ uri }}
+          style={{ width, height }}
+          contentFit="contain"
+          contentPosition={Platform.OS === 'web' ? 'left' : 'left center'}
+          priority="high"
+          cachePolicy="memory-disk"
+          onLoad={() => setLoaded(uri)}
+          onError={() => setFailed(usable.url)}
+          alt={name}
+          accessible={false}
+          testID="title-logo-image"
+        />
+      </Animated.View>
     </View>
   );
 }

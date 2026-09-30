@@ -1,13 +1,15 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppHeader } from '@/components/AppHeader';
 import { BackButton } from '@/components/BackButton';
 import { HorizonStrip } from '@/components/HorizonStrip';
 import { Message } from '@/components/Message';
+import { PageHeading } from '@/components/PageHeading';
 import { PageTitle } from '@/components/PageTitle';
+import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import { RouteError } from '@/components/RouteError';
 import { SectionHeader } from '@/components/SectionHeader';
@@ -22,8 +24,8 @@ import { planColour } from '@/lib/planColours';
 import { decodePlan, sharedSummary, type SharedPlan } from '@/lib/planLink';
 import { planSchedule, type ScheduledItem } from '@/lib/scheduler';
 import { COLORS } from '@/styles/colors';
-import { GUTTER, LAYOUT, RADIUS, SHADOW, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { GUTTER, LAYOUT, MATERIAL, RADIUS, SPACING } from '@/styles/theme';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
 
 /**
  * Somebody else's plan, drawn as a plan.
@@ -118,7 +120,11 @@ export default function SharedPlanScreen() {
             />
           ) : (
             <>
-              <SectionHeader title="A plan" eyebrow="SHARED WITH YOU" />
+              <PageHeading
+                title="A plan"
+                eyebrow="Shared with you"
+                tone="plan"
+              />
               <Text style={styles.summary}>{sharedSummary(plan)}</Text>
               {/* Said once, plainly. The alternative is a page of dates
                   nobody promised, presented as though they had. */}
@@ -128,20 +134,22 @@ export default function SharedPlanScreen() {
               </Text>
 
               <View style={styles.section}>
-                <SectionHeader
-                  title="The week"
-                  eyebrow="Their evenings — the free ones count"
-                />
+                <SectionHeader title="The week" eyebrow="Their evenings" />
+                <Text style={styles.bandNote}>The free ones count too.</Text>
                 <WeekView scheduled={scheduled} now={now} readOnly />
               </View>
 
               <View style={styles.section}>
-                <SectionHeader
-                  title="The month"
-                  eyebrow="Where the credits land"
-                />
+                <SectionHeader title="The month" eyebrow="Credits" />
+                <Text style={styles.bandNote}>Where the credits land.</Text>
                 <View style={styles.monthCard}>
-                  <HorizonStrip scheduled={scheduled} now={now} />
+                  <HorizonStrip
+                    scheduled={scheduled}
+                    now={now}
+                    // The route below names every game; it need not be
+                    // counted twice.
+                    countBeyond={false}
+                  />
                   <View style={styles.monthRule} />
                   <View>
                     {scheduled.map((item, index) => (
@@ -163,6 +171,7 @@ export default function SharedPlanScreen() {
                               styles.nodeText,
                               { color: planColour(index) },
                             ]}
+                            maxFontSizeMultiplier={FONT_SCALE.label}
                           >
                             {index + 1}
                           </Text>
@@ -202,16 +211,11 @@ export default function SharedPlanScreen() {
                 given something, which makes it the one place the app
                 has earned the right to ask.
               */}
-              <Pressable
+              <PrimaryButton
+                label="Build your own"
                 onPress={() => router.push('/plan')}
-                accessibilityRole="button"
-                style={({ pressed }) => [
-                  styles.build,
-                  pressed && styles.buildPressed,
-                ]}
-              >
-                <Text style={styles.buildText}>Build your own</Text>
-              </Pressable>
+                style={styles.build}
+              />
             </>
           )}
         </View>
@@ -229,7 +233,7 @@ const styles = StyleSheet.create({
     maxWidth: LAYOUT.maxContentWidth,
     alignSelf: 'center',
     paddingHorizontal: GUTTER,
-    paddingBottom: SPACING.xl * 2,
+    paddingBottom: SPACING.xxxl,
     gap: SPACING.md,
   },
   summary: {
@@ -244,16 +248,19 @@ const styles = StyleSheet.create({
     maxWidth: 520,
   },
   /** The same rhythm the plan page uses: blocks, not a column of things. */
-  section: { gap: SPACING.sm + 2, marginTop: SPACING.lg },
+  section: { gap: SPACING.sm2, marginTop: SPACING.lg },
+  /** A band's sentence, set as one rather than in tracked capitals. */
+  bandNote: {
+    ...TYPE.caption,
+    color: COLORS.mediumGrey,
+    marginTop: -SPACING.xs,
+  },
 
   monthCard: {
     gap: SPACING.md,
     padding: SPACING.lg,
     borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.stroke,
-    backgroundColor: COLORS.raised,
-    ...SHADOW.card,
+    ...MATERIAL.plate,
   },
   monthRule: { height: 1, backgroundColor: COLORS.stroke },
 
@@ -261,7 +268,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.md,
-    paddingVertical: SPACING.sm + 2,
+    paddingVertical: SPACING.sm2,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.stroke,
   },
@@ -270,33 +277,19 @@ const styles = StyleSheet.create({
   node: {
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: RADIUS.pill,
     backgroundColor: COLORS.surface,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  nodeText: { ...TYPE.h4 },
-  body: { flex: 1, gap: 1 },
+  nodeText: { ...TYPE.label },
+  body: { flex: 1, gap: SPACING.xxs },
   name: { ...TYPE.label, color: COLORS.lightGrey },
   hours: { ...TYPE.caption, color: COLORS.mediumGrey },
-  date: { ...TYPE.h4, color: COLORS.lightGrey },
+  date: { ...TYPE.label, color: COLORS.lightGrey },
 
-  build: {
-    marginTop: SPACING.lg,
-    alignSelf: 'flex-start',
-    backgroundColor: COLORS.accent,
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm + 2,
-    ...Platform.select({ web: { cursor: 'pointer' } }),
-  },
-  buildPressed: { opacity: 0.85 },
-  buildText: {
-    ...TYPE.label,
-    // Dark on the amber face, like every other amber control here.
-    color: COLORS.navy,
-  },
+  build: { marginTop: SPACING.lg },
   note: {
     ...TYPE.caption,
     color: COLORS.mediumGrey,

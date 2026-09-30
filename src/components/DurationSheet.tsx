@@ -1,20 +1,16 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
-import {
-  Platform,
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { BottomSheet } from './BottomSheet';
+import { PrimaryButton } from './PrimaryButton';
+import { Touchable } from './Touchable';
 import { COLORS } from '@/styles/colors';
 import { formatHours, parseHours, type Duration } from '@/lib/duration';
 import { useDurations } from '@/lib/durations';
-import { RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { impact } from '@/lib/haptics';
+import { ICON, RADIUS, SPACING, TOUCH, innerRadius } from '@/styles/theme';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
 
 /** Lengths people actually reach for, so most corrections are one tap. */
 const PRESETS = [2, 5, 10, 20, 40, 80];
@@ -32,6 +28,11 @@ interface Props {
  * looking at it usually knows better than the average. This makes their
  * number the one that counts — one tap for the common lengths, free text
  * for anything else, and a way back to the estimate.
+ *
+ * A sheet from the bottom edge, not a dialog in the middle: the numeric
+ * keyboard used to rise straight over Save, because nothing held the
+ * dialog above it. The sheet rides the keyboard, and committing a
+ * length lands with a small bump — the plan just moved.
  */
 export function DurationSheet({ game, duration, onClose }: Props) {
   if (!game) return null;
@@ -59,80 +60,94 @@ function Sheet({
   };
 
   return (
-    <Modal transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-          <Text style={styles.eyebrow}>HOW LONG DOES IT TAKE?</Text>
-          <Text style={styles.title} numberOfLines={2}>
-            {game.name}
-          </Text>
-          <Text style={styles.detail}>
-            {duration?.source === 'yours'
-              ? `Your answer: ${formatHours(duration.hours)}. The plan uses it everywhere.`
-              : duration?.source === 'unknown'
-                ? 'No estimate exists for this one, so the plan can’t place it yet.'
-                : `Estimated at ${formatHours(duration?.hours ?? 0)}${
-                    duration?.rough ? ' — but that number looks shaky.' : '.'
-                  }`}
-          </Text>
+    <BottomSheet
+      visible
+      onClose={onClose}
+      accessibilityLabel={`How long ${game.name} takes`}
+    >
+      <Text style={styles.eyebrow} maxFontSizeMultiplier={FONT_SCALE.label}>
+        HOW LONG DOES IT TAKE?
+      </Text>
+      <Text
+        style={styles.title}
+        numberOfLines={2}
+        accessibilityRole="header"
+        maxFontSizeMultiplier={FONT_SCALE.display}
+      >
+        {game.name}
+      </Text>
+      <Text style={styles.detail}>
+        {duration?.source === 'yours'
+          ? `Your answer: ${formatHours(duration.hours)}. The plan uses it everywhere.`
+          : duration?.source === 'unknown'
+            ? 'No estimate exists for this one, so the plan can’t place it yet.'
+            : `Estimated at ${formatHours(duration?.hours ?? 0)}${
+                duration?.rough ? ' — but that number looks shaky.' : '.'
+              }`}
+      </Text>
 
-          <View style={styles.presets}>
-            {PRESETS.map((hours) => {
-              const selected =
-                duration?.source === 'yours' && duration.hours === hours;
-              return (
-                <Pressable
-                  key={hours}
-                  onPress={() => commit(hours)}
-                  style={[styles.preset, selected && styles.presetOn]}
-                  accessibilityRole="button"
-                >
-                  <Text
-                    style={[styles.presetText, selected && styles.presetTextOn]}
-                  >
-                    {hours}h
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <View style={styles.exactRow}>
-            <TextInput
-              value={text}
-              onChangeText={setText}
-              placeholder="or type it — 14, 2.5, 90m"
-              placeholderTextColor={COLORS.mediumGrey}
-              keyboardType="numeric"
-              style={[styles.input, WEB_INPUT]}
-              onSubmitEditing={() => typed && commit(typed)}
-              accessibilityLabel="Hours to finish"
-            />
-            <Pressable
-              onPress={() => typed && commit(typed)}
-              disabled={!typed}
-              style={[styles.save, !typed && styles.saveOff]}
-              accessibilityRole="button"
+      <View style={styles.presets}>
+        {PRESETS.map((hours) => {
+          const selected =
+            duration?.source === 'yours' && duration.hours === hours;
+          return (
+            <Touchable
+              key={hours}
+              onPress={() => commit(hours)}
+              haptic="impact"
+              style={[styles.preset, selected && styles.presetOn]}
+              accessibilityState={{ selected }}
+              accessibilityLabel={`${hours} hours`}
             >
-              <Text style={styles.saveText}>Save</Text>
-            </Pressable>
-          </View>
+              <Text
+                style={[styles.presetText, selected && styles.presetTextOn]}
+                maxFontSizeMultiplier={FONT_SCALE.label}
+              >
+                {hours}h
+              </Text>
+            </Touchable>
+          );
+        })}
+      </View>
 
-          {duration?.source === 'yours' && (
-            <Pressable
-              onPress={() => {
-                clearDuration(game.id);
-                onClose();
-              }}
-              style={styles.reset}
-            >
-              <Ionicons name="refresh" size={14} color={COLORS.mediumGrey} />
-              <Text style={styles.resetText}>Use the estimate again</Text>
-            </Pressable>
-          )}
-        </Pressable>
-      </Pressable>
-    </Modal>
+      <View style={styles.exactRow}>
+        <TextInput
+          value={text}
+          onChangeText={setText}
+          placeholder="or type it — 14, 2.5, 90m"
+          placeholderTextColor={COLORS.mediumGrey}
+          keyboardType="numeric"
+          style={[styles.input, WEB_INPUT]}
+          onSubmitEditing={() => {
+            if (!typed) return;
+            impact();
+            commit(typed);
+          }}
+          accessibilityLabel="Hours to finish"
+        />
+        <PrimaryButton
+          label="Save"
+          onPress={() => {
+            if (typed) commit(typed);
+          }}
+          disabled={!typed}
+        />
+      </View>
+
+      {duration?.source === 'yours' && (
+        <Touchable
+          onPress={() => {
+            clearDuration(game.id);
+            onClose();
+          }}
+          hitSlop="text"
+          style={styles.reset}
+        >
+          <Ionicons name="refresh" size={ICON.sm} color={COLORS.mediumGrey} />
+          <Text style={styles.resetText}>Use the estimate again</Text>
+        </Touchable>
+      )}
+    </BottomSheet>
   );
 }
 
@@ -140,25 +155,9 @@ function Sheet({
 const WEB_INPUT = Platform.OS === 'web' ? { fontSize: 16 } : null;
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(13,17,25,0.82)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: SPACING.lg,
-  },
-  sheet: {
-    width: '100%',
-    maxWidth: 420,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.strokeStrong,
-    borderRadius: RADIUS.md,
-    padding: SPACING.lg,
-    gap: SPACING.sm,
-  },
   eyebrow: {
     ...TYPE.tag,
+    // How long is time, and time is amber.
     color: COLORS.accent,
   },
   title: {
@@ -175,19 +174,28 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
     marginTop: SPACING.xs,
   },
+  /**
+   * Squared to the sheet they sit in. Pills at 30 inside a sheet at 22
+   * were two shape languages in one card; these take the sheet's corner
+   * less its padding.
+   */
   preset: {
+    minWidth: 56,
+    minHeight: TOUCH.min,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: COLORS.strokeStrong,
-    borderRadius: RADIUS.lg,
+    borderRadius: innerRadius(RADIUS.md, SPACING.lg),
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
   },
-  presetOn: { backgroundColor: COLORS.white, borderColor: COLORS.white },
+  /** The length you gave, in the colour lengths are. */
+  presetOn: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
   presetText: {
     ...TYPE.labelSmall,
     color: COLORS.lightGrey,
   },
-  presetTextOn: { color: COLORS.darkGrey },
+  presetTextOn: { color: COLORS.navy },
   exactRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -197,25 +205,14 @@ const styles = StyleSheet.create({
   input: {
     ...TYPE.body,
     flex: 1,
+    minHeight: 48,
     borderWidth: 1,
     borderColor: COLORS.strokeStrong,
     borderRadius: RADIUS.sm,
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm + 1,
     // 16px or larger: iOS zooms the page for anything smaller.
     color: COLORS.lightGrey,
     outlineWidth: 0,
-  },
-  save: {
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.sm,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm + 3,
-  },
-  saveOff: { opacity: 0.4 },
-  saveText: {
-    ...TYPE.h4,
-    color: COLORS.darkGrey,
   },
   reset: {
     flexDirection: 'row',

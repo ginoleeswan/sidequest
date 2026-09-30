@@ -46,9 +46,7 @@ describe('a play session', () => {
       startedAt: Date.now() - 90 * 60_000,
     });
     await renderApp(<SessionTimer game={game} />);
-    await fireEvent.press(
-      screen.getByLabelText('Stop playing and record the time')
-    );
+    await fireEvent.press(screen.getByLabelText('Stop'));
     await waitFor(() => expect(saved().hoursPlayed).toBe(1.5));
     expect(screen.getByText(/Did you see the credits\?/)).toBeTruthy();
   });
@@ -60,9 +58,7 @@ describe('a play session', () => {
       startedAt: Date.now() - 30 * 60_000,
     });
     await renderApp(<SessionTimer game={game} />);
-    await fireEvent.press(
-      screen.getByLabelText('Stop playing and record the time')
-    );
+    await fireEvent.press(screen.getByLabelText('Stop'));
     await waitFor(() => expect(saved().status).toBe('playing'));
   });
 
@@ -73,9 +69,7 @@ describe('a play session', () => {
       startedAt: Date.now() - 60 * 60_000,
     });
     await renderApp(<SessionTimer game={game} />);
-    await fireEvent.press(
-      screen.getByLabelText('Stop playing and record the time')
-    );
+    await fireEvent.press(screen.getByLabelText('Stop'));
     await fireEvent.press(screen.getByText('Yes — finished it'));
     await waitFor(() => expect(saved().status).toBe('finished'));
   });
@@ -87,7 +81,7 @@ describe('a play session', () => {
       startedAt: Date.now() - 60 * 60_000,
     });
     await renderApp(<SessionTimer game={game} />);
-    await fireEvent.press(screen.getByLabelText('Throw this session away'));
+    await fireEvent.press(screen.getByLabelText('Discard'));
     await waitFor(() =>
       expect(screen.getByLabelText('Start a session on Celeste')).toBeTruthy()
     );
@@ -115,9 +109,7 @@ describe('a play session', () => {
     });
     await renderApp(<SessionTimer game={game} />);
     await act(async () => {
-      await fireEvent.press(
-        screen.getByLabelText('Stop playing and record the time')
-      );
+      await fireEvent.press(screen.getByLabelText('Stop'));
     });
     await waitFor(() => expect(saved().hoursPlayed).toBe(5));
   });

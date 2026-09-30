@@ -1,6 +1,7 @@
 import type { Game } from '@/api/types';
 import type { LibraryEntry } from './library';
 import type { Section } from '@/constants/categories';
+import { spokenName } from './format';
 
 /**
  * What the home page shows today.
@@ -145,13 +146,15 @@ function pending(entries: LibraryEntry[]): LibraryEntry[] {
  * accumulated over years describes who someone used to be, and the game
  * saved on Tuesday describes what they are in the mood for.
  */
+export { spokenName };
+
 export function becauseYouSaved(entries: LibraryEntry[]): PersonalShelf | null {
   for (const entry of pending(entries)) {
     const genre = entry.game.genres?.[0];
     if (genre?.slug)
       return {
         key: `because-${genre.slug}`,
-        title: `More ${genre.name.toLowerCase()}, like ${entry.game.name}`,
+        title: `More ${genre.name.toLowerCase()}, like ${spokenName(entry.game.name)}`,
         eyebrow: 'BECAUSE YOU SAVED IT',
         genre: genre.slug,
       };
@@ -178,7 +181,7 @@ export function becauseYouFinished(
     if (genre?.slug)
       return {
         key: `finished-${genre.slug}`,
-        title: `Because you finished ${entry.game.name}`,
+        title: `Because you finished ${spokenName(entry.game.name)}`,
         eyebrow: 'YOU SAW THE CREDITS',
         genre: genre.slug,
       };
@@ -251,4 +254,30 @@ export function withinLength(
   return games.filter(
     (game) => game.playtime >= window.min && game.playtime <= window.max
   );
+}
+
+/**
+ * Why the billboard is showing this game, in a few words.
+ *
+ * It always said "Worth the shelf space" — a reason that was true of
+ * every game and so said nothing about this one, under a stage whose
+ * every slide leads with a real one. The reason comes from the facts
+ * in hand, strongest first: a game you could finish tonight, one you
+ * could finish this weekend, one that only just came out, one the
+ * critics or the players rate, and failing all of those, where it was
+ * found.
+ */
+export function billboardReason(
+  game: Pick<Game, 'released' | 'metacritic' | 'rating'>,
+  hours: number,
+  now: number
+): string {
+  if (hours > 0 && hours <= 3) return 'One evening, start to credits';
+  if (hours > 0 && hours <= 8) return 'A weekend, not a second job';
+  const released = game.released ? Date.parse(game.released) : NaN;
+  if (!Number.isNaN(released) && released <= now && now - released < 30 * DAY)
+    return 'Out this month';
+  if ((game.metacritic ?? 0) >= 85) return 'The critics agree';
+  if (game.rating >= 4.2) return 'Players rate it highly';
+  return 'Further down the charts';
 }

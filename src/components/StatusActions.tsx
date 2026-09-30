@@ -1,15 +1,15 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { FinishCelebration } from './FinishCelebration';
 import { useToast } from './Toast';
+import { Touchable } from './Touchable';
 import type { Game } from '@/api/types';
-import { tap } from '@/lib/haptics';
 import { STATUS_META, useLibrary, type LibraryStatus } from '@/lib/library';
 import { COLORS } from '@/styles/colors';
-import { RADIUS, SPACING } from '@/styles/theme';
-import { TYPE } from '@/styles/typography';
+import { ICON, RADIUS, SPACING, TOUCH } from '@/styles/theme';
+import { FONT_SCALE, TYPE } from '@/styles/typography';
 
 const ORDER: LibraryStatus[] = ['wishlist', 'playing', 'finished'];
 
@@ -46,12 +46,17 @@ export function StatusActions({ game }: { game: Game }) {
         const active = current === status;
         const meta = STATUS_META[status];
         return (
-          <Pressable
+          <Touchable
             key={status}
+            // Felt as well as seen: a segmented control that clicks
+            // under the thumb is the platform's own behaviour.
+            haptic="tap"
+            // The segment's own plate is the feedback; a dim or a
+            // scale on one third of a group reads as the group
+            // glitching.
+            feedback="none"
+            pressedStyle={active ? null : styles.segmentPressed}
             onPress={() => {
-              // Felt as well as seen: a segmented control that clicks
-              // under the thumb is the platform's own behaviour.
-              tap();
               setStatus(game, active ? null : status);
               // Finishing gets a moment; everything else gets a toast.
               if (!active && status === 'finished') {
@@ -68,11 +73,7 @@ export function StatusActions({ game }: { game: Game }) {
             accessibilityLabel={
               active ? `Remove from ${meta.label}` : `Mark as ${meta.label}`
             }
-            style={({ pressed }) => [
-              styles.segment,
-              active && styles.segmentActive,
-              pressed && !active && styles.segmentPressed,
-            ]}
+            style={[styles.segment, active && styles.segmentActive]}
           >
             <Ionicons
               name={
@@ -80,16 +81,17 @@ export function StatusActions({ game }: { game: Game }) {
                   ? meta.icon
                   : meta.iconOutline) as keyof typeof Ionicons.glyphMap
               }
-              size={15}
+              size={ICON.sm}
               color={active ? COLORS.navy : COLORS.lightGrey}
             />
             <Text
               style={[styles.label, active && styles.labelActive]}
               numberOfLines={1}
+              maxFontSizeMultiplier={FONT_SCALE.label}
             >
               {meta.label}
             </Text>
-          </Pressable>
+          </Touchable>
         );
       })}
       <FinishCelebration
@@ -110,8 +112,8 @@ const styles = StyleSheet.create({
     // A point more air inside the frame; at 3 the segments touched
     // their own plate and the group read as compressed even when the
     // segments themselves had room.
-    padding: 4,
-    gap: 4,
+    padding: SPACING.xs,
+    gap: SPACING.xs,
   },
   segment: {
     flex: 1,
@@ -121,8 +123,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: SPACING.sm + 2,
-    borderRadius: RADIUS.sm - 4,
+    // A whole thumb, measured: 37pt was the page's most-pressed
+    // control and the one furthest under the minimum.
+    minHeight: TOUCH.min,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.sm - SPACING.xs,
   },
   segmentActive: { backgroundColor: COLORS.accent },
   segmentPressed: { backgroundColor: COLORS.raised },

@@ -147,8 +147,33 @@ describe('the game screen', () => {
     failing = true;
     await renderApp(<GameInfoScreen />);
     await waitFor(() =>
-      expect(screen.getByText("Couldn't load this game")).toBeTruthy()
+      expect(screen.getByText("Can't load this game right now")).toBeTruthy()
     );
+  });
+
+  /**
+   * A failed load is not a dead end: the page offers to ask again, and
+   * asking again lands the game once the network answers.
+   */
+  it('tries again when asked', async () => {
+    failing = true;
+    await renderApp(<GameInfoScreen />);
+    await waitFor(() => expect(screen.getByText('Try again')).toBeTruthy());
+    failing = false;
+    await fireEvent.press(screen.getByText('Try again'));
+    await waitFor(() => expect(screen.getByText('Celeste')).toBeTruthy());
+  });
+
+  /**
+   * The star is an icon, not U+2605 — neither bundled face has the
+   * glyph — so the cell has to say what it holds.
+   */
+  it('names the players’ score without a typed star', async () => {
+    await renderApp(<GameInfoScreen />);
+    await waitFor(() =>
+      expect(screen.getByLabelText('Rated 4.5 of 5 by players')).toBeTruthy()
+    );
+    expect(screen.queryByText(/★/)).toBeNull();
   });
 
   it('lays out wide when there is room for it', async () => {

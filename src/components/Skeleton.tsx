@@ -10,7 +10,6 @@ import {
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import {
   DESK_BAND,
@@ -20,7 +19,8 @@ import {
 } from '@/lib/detailHero';
 import { STAGE_BOUNDS, stageHeight } from '@/lib/stage';
 import { HOME_SHELVES } from '@/constants/categories';
-import { DURATION, EASING } from '@/styles/motion';
+import { EASING } from '@/styles/motion';
+import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { GUTTER, LAYOUT, RADIUS, SHADOW_ROOM, SPACING } from '@/styles/theme';
 import { TYPE } from '@/styles/typography';
 
@@ -33,8 +33,12 @@ import { TYPE } from '@/styles/typography';
  * scale changed. Taken from the same token the component uses, a bone
  * cannot drift from the text it stands in for.
  */
-/** GameTile title. */
-const TILE_TITLE_H = TYPE.h4.lineHeight;
+/** GameTile's lead line: the hours, in the tile's own step. */
+const TILE_LEAD_H = TYPE.labelSmall.lineHeight;
+/** The same line on the quick-wins row, where hours are a figure. */
+const TILE_LEAD_BIG_H = TYPE.figureSmall.lineHeight;
+/** GameTile title: two lines held open, as the tile holds them. */
+const TILE_TITLE_H = TYPE.labelSmall.lineHeight * 2;
 /** GameTile meta. */
 const TILE_META_H = TYPE.fine.lineHeight;
 /** SectionHeader title. */
@@ -51,46 +55,101 @@ const RAIL_NET = Math.round(SHADOW_ROOM.card * 0.4);
 const DESK_PAGE_MAX = 1200;
 const DESK_RAIL = 340;
 
+/**
+ * The breath of a bone.
+ *
+ * It swung from 45% to full and back every 700ms, which on a screen of
+ * twenty bones is a flicker — the page looked like it was failing to
+ * load rather than loading. Slower and shallower reads as patience.
+ */
+const PULSE_STEP = 1200;
+const PULSE_LOW = 0.55;
+
+/**
+ * One breath for every bone on screen.
+ *
+ * Each bone used to run its own loop: a home page loading was sixty
+ * animations started in the same frame the splash curtain was trying
+ * to leave in, and sixty clocks that drifted out of phase within a few
+ * seconds, so the page shimmered unevenly instead of breathing. One
+ * value, one loop, read by all of them — started by the first bone to
+ * mount and stopped when the last one goes.
+ */
+const pulse = new Animated.Value(PULSE_LOW);
+let breathing: Animated.CompositeAnimation | null = null;
+let bones = 0;
+
+function holdBreath(): () => void {
+  bones += 1;
+  if (!breathing) {
+    breathing = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: PULSE_STEP,
+          easing: EASING.standard,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: PULSE_LOW,
+          duration: PULSE_STEP,
+          easing: EASING.standard,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    breathing.start();
+  }
+  return () => {
+    bones -= 1;
+    if (bones === 0 && breathing) {
+      breathing.stop();
+      breathing = null;
+      pulse.setValue(PULSE_LOW);
+    }
+  };
+}
+
 /** Pulsing placeholder block — the atom every skeleton is built from. */
 export function Skeleton({
   style,
 }: {
   style?: ViewStyle | (ViewStyle | undefined)[];
 }) {
-  const opacity = useAnimatedValue(0.45);
   const reduced = useReducedMotion();
 
-  useEffect(() => {
-    // A pulse is decorative: without it the bones still say "loading".
-    if (reduced) return;
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: DURATION.pulse,
-          easing: EASING.standard,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 0.45,
-          duration: DURATION.pulse,
-          easing: EASING.standard,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [opacity, reduced]);
+  // A pulse is decorative: without it the bones still say "loading".
+  useEffect(() => (reduced ? undefined : holdBreath()), [reduced]);
 
-  return <Animated.View style={[styles.block, style, { opacity }]} />;
+  return (
+    <Animated.View
+      style={[styles.block, style, { opacity: reduced ? PULSE_LOW : pulse }]}
+    />
+  );
 }
 
-/** Cover tile silhouette: art block plus two text lines. */
-export function SkeletonTile({ width }: { width?: number }) {
+/**
+ * Cover tile silhouette: the art, then the caption the tile sets under
+ * it — hours first, a title held at two lines, one fact.
+ */
+export function SkeletonTile({
+  width,
+  wide = false,
+  bigHours = false,
+}: {
+  width?: number;
+  /** The 16:9 frame of the quick-wins row. */
+  wide?: boolean;
+  bigHours?: boolean;
+}) {
   return (
     <View style={[styles.tile, width != null ? { width } : styles.flexCell]}>
-      <Skeleton style={styles.tileArt} />
+      <Skeleton
+        style={[styles.tileArt, wide ? styles.tileArtWide : undefined]}
+      />
+      <Skeleton
+        style={[styles.tileLead, bigHours ? styles.tileLeadBig : undefined]}
+      />
       <Skeleton style={styles.tileTitle} />
       <Skeleton style={styles.tileMeta} />
     </View>
@@ -102,7 +161,9 @@ export function SkeletonShelf({
   tiles = 6,
   inset = 0,
   eyebrow = false,
-  tileWidth = LAYOUT.shelfTileWidth,
+  tileWidth,
+  wide = false,
+  bigHours = false,
 }: {
   tiles?: number;
   /**
@@ -113,9 +174,16 @@ export function SkeletonShelf({
   inset?: number;
   /** Ranked shelves carry a "Top 10" line above the title. */
   eyebrow?: boolean;
-  /** Wider frames for the prestige rows. */
+  /** Wider frames for the prestige rows. Defaults to the rail's own. */
   tileWidth?: number;
+  wide?: boolean;
+  bigHours?: boolean;
 }) {
+  const { isCompact } = useBreakpoint();
+  // The rail's own measures, so the bones peek exactly as the tiles do.
+  const width =
+    tileWidth ?? (isCompact ? LAYOUT.shelfTileCompact : LAYOUT.shelfTileWidth);
+  const gap = isCompact ? LAYOUT.railGapCompact : LAYOUT.gridGap;
   return (
     <View style={styles.shelf}>
       <View style={styles.headingGroup}>
@@ -125,6 +193,7 @@ export function SkeletonShelf({
       <View
         style={[
           styles.row,
+          { gap },
           styles.railRoom,
           inset > 0 && {
             marginHorizontal: -inset,
@@ -133,7 +202,7 @@ export function SkeletonShelf({
         ]}
       >
         {Array.from({ length: tiles }, (_, i) => (
-          <SkeletonTile key={i} width={tileWidth} />
+          <SkeletonTile key={i} width={width} wide={wide} bigHours={bigHours} />
         ))}
       </View>
     </View>
@@ -287,16 +356,27 @@ export function SkeletonCompactHome() {
           stage runs up behind the floating header rather than below it. */}
       <Skeleton style={[styles.stage, stageBone(height)]} />
       <View style={styles.compactShelves}>
-        {/* "Finish it this weekend" — the signature row, and the only one
-            set in the large frames. */}
+        {/* "Finish it this weekend" — the signature row, directly under
+            the stage in wide frames with the hours set as a figure. */}
         <SkeletonShelf
           tiles={2}
           inset={GUTTER}
           eyebrow
-          tileWidth={LAYOUT.shelfTileLarge}
+          tileWidth={LAYOUT.shelfTileWideCompact}
+          wide
+          bigHours
         />
-        {/* Trending: ranked, so it carries a "Top 10" line. */}
+        {/* Trending: ranked, so it carries a "Nos." line. */}
         <SkeletonShelf tiles={3} inset={GUTTER} eyebrow />
+        {/* The doors, which now follow Trending rather than the stage. */}
+        <View style={styles.compactDoors}>
+          <Skeleton style={styles.heading} />
+          <View style={[styles.row, { gap: LAYOUT.railGapCompact }]}>
+            <Skeleton style={styles.compactDoor} />
+            <Skeleton style={styles.compactDoor} />
+            <Skeleton style={styles.compactDoor} />
+          </View>
+        </View>
         <SkeletonBand inset={GUTTER} />
         {/* Only "out this week" carries an eyebrow; the rest of the pool
             is genres, whose rows are a title alone. */}
@@ -395,73 +475,60 @@ export function SkeletonDetailExpanded() {
 }
 
 /**
- * Detail-page silhouette, measured against the page it stands in for.
+ * Detail-page silhouette, in the order the phone page now reads.
  *
- * It used to describe a page this app does not have: a plain hero, then
- * a title BELOW it, three stat chips, two pills and a shelf of three
- * tiles. Rendered beside the real thing at 390 points, the title sat
- * 115 points low, the meta row 92, the status control was missing
- * altogether and the tile shelf landed where the description goes. A
- * silhouette of a different page is a worse promise than no silhouette,
- * because the reader has already started reading it.
- *
- * The real masthead carries the title, the hours, the pace line and the
- * genres OVER the artwork — see `StatStrip` — so this does too, hung
- * from the bottom of the hero. The numbers below are that page
- * measured, not guessed: title at 325, hours at 373, byline at 415,
- * genres at 440, hero ending at 480, the status control 495 to 630, the
- * About heading at 649 and its prose at 683.
+ * It had drifted into describing a page that no longer exists: an
+ * identity line below the band when it lives inside it, an "About"
+ * heading the page dropped, no gallery, and a verdict card where the
+ * verdict is flush. These bones follow the page as it is laid out now —
+ * the band with the mark and the identity row in it, the answer (the
+ * verdict sentence over the strip of figures), the decision, the
+ * evenings, the gallery — so the swap is a dissolve, not a rearrangement.
  */
 export function SkeletonDetail() {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   return (
     <View>
-      {/* The band the art will fill, with the mark's slot at its foot —
-          the same constants the loaded masthead is built from, so the
-          swap is a dissolve rather than a jump. */}
+      {/* The band the art will fill, with the mark's slot and the
+          identity row at its foot — the same constants the loaded
+          masthead is built from. */}
       <View
         style={[
           styles.detailHero,
           { height: bannerHeight(width, insets.top, height) },
         ]}
       >
-        {/* One picture fills the band; the mark's slot sits low on it —
-            the same measures the loaded masthead is built from. */}
         <Skeleton style={styles.detailHeroFill} />
         <Skeleton style={styles.detailTitle} />
+        <Skeleton style={styles.detailIdentity} />
       </View>
       <View style={styles.detailBody}>
-        {/* The identity line, the strip of figures and its note, then
-            the status segments and the session line under them. */}
-        <View style={styles.detailFigures}>
-          <Skeleton style={styles.detailIdentity} />
+        {/* The answer: the verdict sentence, then the strip of figures,
+            hours and finish rate wider than the two beside them. */}
+        <View style={styles.detailAnswer}>
+          <Skeleton style={styles.detailSaid} />
           <View style={styles.detailStrip}>
-            <Skeleton style={styles.detailStripCell} />
+            <Skeleton style={[styles.detailStripCell, styles.detailLead]} />
+            <Skeleton style={[styles.detailStripCell, styles.detailLead]} />
             <Skeleton style={styles.detailStripCell} />
             <Skeleton style={styles.detailStripCell} />
           </View>
-          <Skeleton style={styles.detailPace} />
         </View>
-        <View style={styles.detailControls}>
+        {/* The decision: one full-width button and the quiet row. */}
+        <View style={styles.detailDecision}>
           <Skeleton style={styles.detailControl} />
-          <Skeleton style={styles.detailSession} />
+          <Skeleton style={styles.detailQuiet} />
         </View>
-        <View style={styles.detailSection}>
+        {/* The evenings. */}
+        <View style={styles.detailFit}>
           <Skeleton style={styles.detailHeading} />
-          {/* Prose sets solid, the way text does: three lines and the
-              Read More under them with no gaps between, or the link
-              drifts below where it will actually land. */}
-          <View style={styles.detailProse}>
-            <Skeleton style={styles.detailLine} />
-            <Skeleton style={styles.detailLine} />
-            <Skeleton style={styles.detailLineShort} />
-            <Skeleton style={styles.detailReadMore} />
-          </View>
+          <Skeleton style={styles.detailFitStrip} />
         </View>
-        <View style={[styles.detailSection, styles.detailSectionApart]}>
-          <Skeleton style={styles.detailHeading} />
-          <Skeleton style={styles.detailVerdict} />
+        {/* The gallery, a frame and the edge of the next. */}
+        <View style={[styles.row, styles.detailMedia]}>
+          <Skeleton style={[styles.detailFrame, { width: width - 64 }]} />
+          <Skeleton style={[styles.detailFrame, { width: width - 64 }]} />
         </View>
       </View>
     </View>
@@ -474,17 +541,24 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.sm,
   },
   flexCell: { flex: 1 },
-  tile: { gap: SPACING.xs + 1 },
-  tileArt: { width: '100%', aspectRatio: LAYOUT.tileAspect },
+  tile: { gap: SPACING.xxs },
+  tileArt: {
+    width: '100%',
+    aspectRatio: LAYOUT.tileAspect,
+    marginBottom: SPACING.xs,
+  },
+  tileArtWide: { aspectRatio: LAYOUT.tileAspectWide },
+  tileLead: { height: TILE_LEAD_H, width: '30%' },
+  tileLeadBig: { height: TILE_LEAD_BIG_H, width: '34%' },
   lineWide: { height: 12, width: '80%' },
   lineNarrow: { height: 10, width: '45%' },
-  tileTitle: { height: TILE_TITLE_H, width: '82%', marginTop: 2 },
+  tileTitle: { height: TILE_TITLE_H, width: '82%' },
   tileMeta: { height: TILE_META_H, width: '52%' },
   headingGroup: { gap: 2 },
   heading: { height: HEADING_H, width: 118 },
   eyebrow: { height: EYEBROW_H, width: 52 },
   railRoom: { marginBottom: RAIL_NET },
-  shelf: { marginBottom: SPACING.xl, gap: SPACING.sm + 2 },
+  shelf: { marginBottom: SPACING.xl, gap: SPACING.sm2 },
   row: { flexDirection: 'row', gap: LAYOUT.gridGap, overflow: 'hidden' },
   hero: {
     flexDirection: 'row',
@@ -507,7 +581,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.md,
-    paddingVertical: SPACING.sm + 2,
+    paddingVertical: SPACING.sm2,
   },
   rowThumb: { ...LAYOUT.resultPoster, borderRadius: RADIUS.sm },
   rowLines: { flex: 1, gap: SPACING.sm },
@@ -521,8 +595,10 @@ const styles = StyleSheet.create({
   compactShelves: {
     paddingHorizontal: GUTTER,
     paddingTop: SPACING.lg,
-    paddingBottom: SPACING.xl * 1.5,
+    paddingBottom: SPACING.xxl,
   },
+  compactDoors: { marginBottom: SPACING.xl, gap: SPACING.sm2 },
+  compactDoor: { width: 148, height: 84, borderRadius: RADIUS.card },
   /** Height comes from stageHeight, so the two cannot drift again. */
   stage: { borderRadius: 0 },
   band: {
@@ -557,30 +633,26 @@ const styles = StyleSheet.create({
     borderRadius: 0,
   },
   detailTitle: { height: TITLE_SLOT * 0.62, width: '62%', alignSelf: 'center' },
-  detailIdentity: { height: 17, width: '62%' },
-  detailFigures: { gap: SPACING.sm + 2, paddingTop: SPACING.xs },
-  detailStrip: { flexDirection: 'row', gap: SPACING.sm },
-  detailStripCell: { flex: 1, height: 56 },
-  detailPace: { height: 17, width: '54%', marginHorizontal: SPACING.xs },
-  detailControls: { gap: SPACING.sm + 2, paddingTop: SPACING.xs },
-  detailSession: { height: 20, width: 132, marginHorizontal: SPACING.xs },
-  detailBody: {
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.md,
-    gap: 18,
+  detailIdentity: {
+    height: 17,
+    width: '58%',
+    alignSelf: 'center',
+    marginTop: SPACING.sm2,
   },
-  /** The status segments and the session row, as one card. */
-  detailControl: { height: 46, borderRadius: RADIUS.sm },
-  detailSection: { gap: 10 },
-  /** The extra air the page leaves before Player verdict. */
-  detailSectionApart: { marginTop: 22 },
-  detailProse: { gap: 0 },
-  detailHeading: { height: 24, width: 108 },
-  detailLine: { height: 23, width: '100%' },
-  detailLineShort: { height: 23, width: '72%' },
-  detailReadMore: { height: 23, width: 90 },
-  /** The ratings breakdown, which is a card rather than a shelf. */
-  detailVerdict: { height: 228, borderRadius: RADIUS.md },
+  detailBody: { paddingHorizontal: SPACING.md },
+  detailAnswer: { paddingTop: SPACING.md, gap: SPACING.sm2 },
+  detailSaid: { height: 21, width: '70%', alignSelf: 'center' },
+  detailStrip: { flexDirection: 'row', gap: SPACING.sm },
+  detailStripCell: { flex: 1, height: 71 },
+  detailLead: { flex: 1.35 },
+  detailDecision: { paddingTop: SPACING.lg, gap: SPACING.sm2 },
+  detailControl: { height: 48, borderRadius: RADIUS.sm },
+  detailQuiet: { height: 25, width: '64%', alignSelf: 'center' },
+  detailFit: { paddingTop: SPACING.xl, gap: SPACING.sm2 },
+  detailHeading: { height: 24, width: 140 },
+  detailFitStrip: { height: 96 },
+  detailMedia: { marginTop: SPACING.xl, gap: SPACING.sm2 },
+  detailFrame: { aspectRatio: 16 / 9, borderRadius: RADIUS.sm },
   /** Still the expanded masthead's, which lays its stats out in a row. */
   detailStat: { height: 34, width: 64 },
   detailChip: { height: 26, width: 84, borderRadius: 14 },

@@ -2,6 +2,7 @@ import type { Game } from '@/api/types';
 import type { Section } from '@/constants/categories';
 import {
   becauseYouSaved,
+  billboardReason,
   dayNumber,
   feedSeed,
   likeYouFinish,
@@ -9,6 +10,7 @@ import {
   withinLength,
   withoutOwned,
   dedupeGames,
+  spokenName,
 } from '../homeFeed';
 import type { LibraryEntry } from '../library';
 
@@ -207,5 +209,50 @@ describe('dedupeGames', () => {
       game(2, 'MOUSE: P.I. For Hire'),
     ]);
     expect(rows).toHaveLength(2);
+  });
+});
+
+/** The billboard says why this game, not "Worth the shelf space". */
+describe('the billboard reason', () => {
+  const NOW = Date.parse('2026-09-29T12:00:00Z');
+  const facts = (over: Partial<Game> = {}) =>
+    ({ released: '2019-01-01', metacritic: null, rating: 3, ...over }) as Game;
+
+  it('leads with the length when the length is the news', () => {
+    expect(billboardReason(facts(), 2, NOW)).toBe(
+      'One evening, start to credits'
+    );
+    expect(billboardReason(facts(), 6, NOW)).toBe(
+      'A weekend, not a second job'
+    );
+  });
+
+  it('then with how new it is, then with how well it is rated', () => {
+    expect(billboardReason(facts({ released: '2026-09-20' }), 40, NOW)).toBe(
+      'Out this month'
+    );
+    expect(billboardReason(facts({ metacritic: 91 }), 40, NOW)).toBe(
+      'The critics agree'
+    );
+    expect(billboardReason(facts({ rating: 4.5 }), 0, NOW)).toBe(
+      'Players rate it highly'
+    );
+  });
+
+  it('falls back on where it was found, never on a slogan', () => {
+    expect(billboardReason(facts(), 0, NOW)).toBe('Further down the charts');
+  });
+});
+
+describe('spokenName', () => {
+  it('says the subtitle when the half before the colon is a franchise', () => {
+    expect(spokenName('The Legend of Zelda: Breath of the Wild')).toBe(
+      'Breath of the Wild'
+    );
+  });
+
+  it('keeps names without a colon, and subtitles too short to stand alone', () => {
+    expect(spokenName('Hades II')).toBe('Hades II');
+    expect(spokenName('Portal: Revelations')).toBe('Portal: Revelations');
   });
 });

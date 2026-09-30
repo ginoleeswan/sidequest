@@ -10,19 +10,19 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
   FlatList,
   Platform,
-  Pressable,
-  RefreshControl,
   StyleSheet,
   Text,
   TextInput,
   useWindowDimensions,
   View,
+  type RefreshControlProps,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { queryKeys } from '@/api/queryClient';
 import {
@@ -40,7 +40,8 @@ import { HomeStage } from '@/components/HomeStage';
 import { GameTile } from '@/components/GameTile';
 import { Message } from '@/components/Message';
 import { PageTitle } from '@/components/PageTitle';
-import { Screen } from '@/components/Screen';
+import { Screen, useRefreshControl } from '@/components/Screen';
+import { IconButton, Touchable } from '@/components/Touchable';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { PromptBand } from '@/components/PromptBand';
 import { Billboard } from '@/components/Billboard';
@@ -85,7 +86,9 @@ import {
 } from '@/constants/categories';
 import { useHydrated } from '@/hooks/useHydrated';
 import { useStage } from '@/hooks/useStage';
+import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { stageHeight as stageHeightFor } from '@/lib/stage';
+import { useOnline } from '@/lib/network';
 import { useDurations } from '@/lib/durations';
 import { useLibrary } from '@/lib/library';
 import {
@@ -106,11 +109,12 @@ import {
   withinLength,
   withoutOwned,
 } from '@/lib/homeFeed';
+import { markScreenReady } from '@/lib/launch';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useDebounced } from '@/hooks/useDebounced';
-import { COLORS } from '@/styles/colors';
-import { GUTTER, LAYOUT, SPACING } from '@/styles/theme';
-import { TYPE, WORDMARK } from '@/styles/typography';
+import { alpha, COLORS } from '@/styles/colors';
+import { GUTTER, ICON, LAYOUT, SPACING, TOUCH } from '@/styles/theme';
+import { FONT_SCALE, TYPE, WORDMARK } from '@/styles/typography';
 
 /**
  * How much of a long list is alive at once, on native.
@@ -441,11 +445,19 @@ export default function HomeScreen({
     );
   })();
 
-  // On the web a section is a page of its own, so choosing one is a
-  // navigation - the address bar, the back button and a shared link all
-  // agree on where you are. Native keeps the door inside the tab.
+  /**
+   * A section is a page of its own, so choosing one is a navigation.
+   *
+   * On the web that is what makes the address bar, the back button and
+   * a shared link agree on where you are. On a phone it is what gives
+   * you a way out: the door used to swap the tab's content through
+   * state, so there was no back button, swipe-back did nothing, and
+   * Android's back left the tab altogether. Pushed onto the stack, the
+   * section gets all three for free. Only a native desk keeps the swap,
+   * where the sidebar beside it is the way back.
+   */
   const selectSection = (s: Section) => {
-    if (Platform.OS === 'web') {
+    if (Platform.OS === 'web' || !isExpanded) {
       router.push(`/browse/${s.key}`);
       return;
     }
@@ -487,13 +499,8 @@ export default function HomeScreen({
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const refresh = (
-    <RefreshControl
-      refreshing={list.isRefetching && !list.isFetchingNextPage}
-      onRefresh={list.refetch}
-      tintColor={COLORS.lightGrey}
-    />
-  );
+  // The grid's pull-to-refresh, in the same amber as Home's.
+  const refresh = useRefreshControl(() => list.refetch());
 
   // Every list ends on the footer band, so the document's last pixels are
   // the colour Safari paints its toolbar with.
@@ -508,11 +515,30 @@ export default function HomeScreen({
     </>
   );
 
+  /**
+   * A failure you can do something about.
+   *
+   * It was a dead end: no retry, outside the scroller so pulling down did
+   * nothing, a vendor's name for a title, and on Home the glyph ran up
+   * under the header. It now says what happened in the app's words,
+   * offers the one thing to do, sits in a scroller that pulls to
+   * refresh, and clears the header. The offline glyph only when the
+   * phone really is offline — otherwise it blamed a connection that was
+   * fine.
+   */
+  const online = useOnline();
+  const retry = () => (isHome ? refreshHome() : list.refetch());
   const status = list.error ? (
     <Message
-      icon="cloud-offline-outline"
-      title="Couldn't reach RAWG"
-      detail={friendlyError(list.error)}
+      icon={online ? 'alert-circle-outline' : 'cloud-offline-outline'}
+      title="Can't load games right now"
+      detail={
+        online
+          ? friendlyError(list.error)
+          : "You're offline. They'll load when you're back."
+      }
+      actionLabel="Try again"
+      onAction={retry}
     />
   ) : !list.isPending && !list.isPlaceholderData && games.length === 0 ? (
     searching ? (
@@ -524,12 +550,164 @@ export default function HomeScreen({
         onAction={() => setQuery('')}
       />
     ) : (
-      <Message icon="game-controller-outline" title="Nothing here yet" />
+      <Message
+        icon="game-controller-outline"
+        title="Nothing here yet"
+        actionLabel="Back to Home"
+        onAction={goHome}
+      />
     )
+  ) : null;
+
+  const statusPage = status ? (
+    <Screen
+      onRefresh={list.error ? retry : undefined}
+      style={[styles.statusPage, !isExpanded && { paddingTop: headerHeight }]}
+    >
+      {status}
+    </Screen>
   ) : null;
 
   // Previous results are on screen while the new key resolves.
   const refining = list.isPlaceholderData;
+
+  /**
+   * The header, once the stage has gone.
+   *
+   * Over the picture it is a long dissolve, which is right while there
+   * is a picture under it; below the stage the same dissolve fogged
+   * every shelf title that passed beneath it. Driven by the home
+   * scroller's own offset on the native thread: across the last stretch
+   * of the stage the fog gives way to solid navy with a hairline, at the
+   * height of the row it carries. Native only — on the web the document
+   * scrolls, and the header behaves as it did.
+   */
+  const scrollY = useAnimatedValue(0);
+  const scrollAware = Platform.OS !== 'web' && isHome && !searchOpen;
+  useEffect(() => {
+    // A home scroller that remounts starts at the top; so must the header.
+    if (!scrollAware) scrollY.setValue(0);
+  }, [scrollAware, scrollY]);
+  /*
+   * Two handovers in sequence, never a crossfade.
+   *
+   * The fog and the bar used to trade places over the same 32 points,
+   * so halfway through both were at half strength and the header went
+   * see-through — the stutter that made the change feel unfinished. The
+   * bar now comes up first, over a longer run, on top of the fog; only
+   * once it is whole does the fog underneath let go, and nothing is
+   * ever uncovered.
+   */
+  const solidAt =
+    stage.length > 0 ? Math.max(stageHeight - headerHeight, 1) : SPACING.xl;
+  const solidFrom = Math.max(solidAt - SPACING.xxl, 0);
+  const solid = scrollAware
+    ? scrollY.interpolate({
+        inputRange: [solidFrom, solidAt],
+        outputRange: [0, 1],
+        extrapolate: 'clamp',
+      })
+    : 0;
+  const fog = scrollAware
+    ? scrollY.interpolate({
+        inputRange: [solidAt, solidAt + SPACING.md],
+        outputRange: [1, 0],
+        extrapolate: 'clamp',
+      })
+    : 1;
+  const onHomeScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+    { useNativeDriver: true }
+  );
+  const homeRefresh = useRefreshControl(refreshHome);
+
+  /**
+   * On a section pushed onto the native stack, the stack's own back
+   * chevron sits where the wordmark would. The wordmark gives it the
+   * room; the section's hero says where you are.
+   */
+  const backRoom = routed && Platform.OS !== 'web';
+
+  /**
+   * The rows built from your library, under a chapter of their own.
+   *
+   * They used to spread Trending's section, which is a ranked one — so
+   * "More like Hades" was cut to ten and numbered 1 to 10 in 52pt
+   * numerals, a Top 10 of nothing. They take their own shapes now: the
+   * saved-mood row wide, the finished row in posters, the length row
+   * as the time row it is. And they sit under one heading, so the page
+   * turns from the shop to you somewhere you can see.
+   */
+  const moodGames = withoutOwned(moodShelf.data ?? [], library);
+  const finishedGames = withoutOwned(finishedShelf.data ?? [], library);
+  // A row whose answer is still coming holds its place with bones; one
+  // that came back empty is not drawn at all.
+  const showMood =
+    personal.mood != null && (moodGames.length > 0 || moodShelf.isLoading);
+  const showFinished =
+    personal.finished != null &&
+    (finishedGames.length > 0 || finishedShelf.isLoading);
+  const showLength = personal.length != null && lengthShelf.length > 0;
+  const forYou = (inset: number) => {
+    // A phone's rail is a dozen; a desk's pages by chevron through all.
+    const cap = isExpanded ? undefined : 12;
+    if (!showMood && !showFinished && !showLength) return null;
+    return (
+      <>
+        <View style={styles.chapter}>
+          <SectionHeader chapter eyebrow="For you" title="From your shelf" />
+        </View>
+        {showMood && personal.mood ? (
+          <Shelf
+            section={{
+              ...DISCOVER[0],
+              key: personal.mood.key,
+              title: personal.mood.title,
+              eyebrow: personal.mood.eyebrow,
+              variant: 'wide',
+            }}
+            games={moodGames.slice(0, cap)}
+            loading={moodShelf.isLoading}
+            inset={inset}
+          />
+        ) : null}
+        {showFinished && personal.finished ? (
+          <Shelf
+            section={{
+              ...DISCOVER[0],
+              key: personal.finished.key,
+              title: personal.finished.title,
+              eyebrow: personal.finished.eyebrow,
+              variant: 'default',
+            }}
+            games={finishedGames.slice(0, cap)}
+            loading={finishedShelf.isLoading}
+            tone="finished"
+            inset={inset}
+          />
+        ) : null}
+        {showLength && personal.length ? (
+          <Shelf
+            section={{
+              ...QUICK_WINS,
+              key: personal.length.key,
+              title: personal.length.title,
+              eyebrow: personal.length.eyebrow,
+              variant: 'default',
+            }}
+            games={lengthShelf}
+            tone="time"
+            inset={inset}
+          />
+        ) : null}
+        {/* And back to the shop, so the rows below are not read as
+            more of yours. */}
+        <View style={styles.chapter}>
+          <SectionHeader chapter eyebrow="The shop" title="Still looking" />
+        </View>
+      </>
+    );
+  };
 
   /**
    * The phone's results head. The box above already shows the query,
@@ -690,7 +868,7 @@ export default function HomeScreen({
       >
         <PageTitle>{pageTitle}</PageTitle>
         <>
-          {status ??
+          {statusPage ??
             (list.isPending ? (
               isHome ? (
                 <View style={styles.homeScroll}>
@@ -719,7 +897,7 @@ export default function HomeScreen({
                       // A masthead's margin, not a shelf's: the copy
                       // sits a step further into the picture than
                       // the rails below sit into the page.
-                      inset={SPACING.xl * 1.5}
+                      inset={SPACING.xxl}
                     />
                   </View>
                 </FadeInView>
@@ -729,7 +907,7 @@ export default function HomeScreen({
                 {!isDesk && (
                   <DiscoverRail onOpen={selectSection} inset={SPACING.xl} />
                 )}
-                <SeriesNews inset={SPACING.xl} />
+                <SeriesNews />
                 <RecentShelf inset={SPACING.xl} />
                 <Shelf
                   section={{
@@ -738,12 +916,14 @@ export default function HomeScreen({
                     eyebrow: session.eyebrow,
                   }}
                   games={quickWins}
+                  tone="time"
                   inset={SPACING.xl}
                 />
                 <Shelf
                   section={DISCOVER[0]}
                   games={trendingShelf}
                   onViewAll={selectSection}
+                  rankOffset={FEATURED_COUNT}
                   inset={SPACING.xl}
                 />
                 {billboard ? (
@@ -753,42 +933,7 @@ export default function HomeScreen({
                 ) : null}
                 <MoodShelf onOpen={selectSection} inset={SPACING.xl} />
                 <PromptBand inset={SPACING.xl} />
-                {personal.mood && (moodShelf.data?.length ?? 0) > 0 && (
-                  <Shelf
-                    section={{
-                      ...DISCOVER[0],
-                      key: personal.mood.key,
-                      title: personal.mood.title,
-                      eyebrow: personal.mood.eyebrow,
-                    }}
-                    games={withoutOwned(moodShelf.data ?? [], library)}
-                    inset={SPACING.xl}
-                  />
-                )}
-                {personal.finished && (finishedShelf.data?.length ?? 0) > 0 && (
-                  <Shelf
-                    section={{
-                      ...DISCOVER[0],
-                      key: personal.finished.key,
-                      title: personal.finished.title,
-                      eyebrow: personal.finished.eyebrow,
-                    }}
-                    games={withoutOwned(finishedShelf.data ?? [], library)}
-                    inset={SPACING.xl}
-                  />
-                )}
-                {personal.length && lengthShelf.length > 0 && (
-                  <Shelf
-                    section={{
-                      ...QUICK_WINS,
-                      key: personal.length.key,
-                      title: personal.length.title,
-                      eyebrow: personal.length.eyebrow,
-                    }}
-                    games={lengthShelf}
-                    inset={SPACING.xl}
-                  />
-                )}
+                {forYou(SPACING.xl)}
                 {homeShelves.map((shelf, index) => (
                   <WhenNear
                     key={shelf.key}
@@ -824,7 +969,8 @@ export default function HomeScreen({
   return (
     <Textured style={styles.background}>
       <PageTitle>{pageTitle}</PageTitle>
-      <View style={styles.compactShell}>
+      {/* Its first layout is the launch curtain's cue: see lib/launch. */}
+      <View style={styles.compactShell} onLayout={markScreenReady}>
         <Reveal
           // The landing has nothing to load: its rows are on the device
           // and its rail is what the storefront already fetched.
@@ -882,10 +1028,13 @@ export default function HomeScreen({
               paddingBottom={SPACING.xl + insets.bottom}
             />
           ) : (
-            (status ??
+            (statusPage ??
             (isHome ? (
-              <Screen
+              <HomeScroller
+                onScroll={onHomeScroll}
+                refreshControl={homeRefresh}
                 onRefresh={refreshHome}
+                bottom={insets.bottom}
                 style={[
                   styles.compactHome,
                   stage.length === 0 && { paddingTop: headerHeight },
@@ -902,9 +1051,10 @@ export default function HomeScreen({
                   inset={GUTTER}
                 />
                 <View style={styles.compactShelves}>
-                  <DiscoverRail onOpen={selectSection} inset={GUTTER} />
-                  <SeriesNews inset={GUTTER} />
+                  <SeriesNews />
                   <RecentShelf inset={GUTTER} />
+                  {/* The row the app is for, straight under the stage and
+                      above the fold. */}
                   <Shelf
                     section={{
                       ...QUICK_WINS,
@@ -912,14 +1062,17 @@ export default function HomeScreen({
                       eyebrow: session.eyebrow,
                     }}
                     games={quickWins}
+                    tone="time"
                     inset={GUTTER}
                   />
                   <Shelf
                     section={DISCOVER[0]}
                     games={trendingShelf.slice(0, 12)}
                     onViewAll={selectSection}
+                    rankOffset={FEATURED_COUNT}
                     inset={GUTTER}
                   />
+                  <DiscoverRail onOpen={selectSection} inset={GUTTER} />
                   {billboard ? (
                     <View style={styles.billboardSlot}>
                       <Billboard game={billboard} />
@@ -930,49 +1083,7 @@ export default function HomeScreen({
                       than a second header, and above the rows that are
                       about you rather than about the shop. */}
                   <PromptBand inset={GUTTER} />
-                  {personal.mood && (moodShelf.data?.length ?? 0) > 0 && (
-                    <Shelf
-                      section={{
-                        ...DISCOVER[0],
-                        key: personal.mood.key,
-                        title: personal.mood.title,
-                        eyebrow: personal.mood.eyebrow,
-                      }}
-                      games={withoutOwned(moodShelf.data ?? [], library).slice(
-                        0,
-                        12
-                      )}
-                      inset={GUTTER}
-                    />
-                  )}
-                  {personal.finished &&
-                    (finishedShelf.data?.length ?? 0) > 0 && (
-                      <Shelf
-                        section={{
-                          ...DISCOVER[0],
-                          key: personal.finished.key,
-                          title: personal.finished.title,
-                          eyebrow: personal.finished.eyebrow,
-                        }}
-                        games={withoutOwned(
-                          finishedShelf.data ?? [],
-                          library
-                        ).slice(0, 12)}
-                        inset={GUTTER}
-                      />
-                    )}
-                  {personal.length && lengthShelf.length > 0 && (
-                    <Shelf
-                      section={{
-                        ...QUICK_WINS,
-                        key: personal.length.key,
-                        title: personal.length.title,
-                        eyebrow: personal.length.eyebrow,
-                      }}
-                      games={lengthShelf}
-                      inset={GUTTER}
-                    />
-                  )}
+                  {forYou(GUTTER)}
                   {homeShelves.map((shelf, index) => (
                     <WhenNear
                       key={shelf.key}
@@ -986,6 +1097,7 @@ export default function HomeScreen({
                       <Shelf
                         section={shelf}
                         games={(shelfGames[index] ?? []).slice(0, 12)}
+                        loading={shelves[index]?.isLoading}
                         onViewAll={selectSection}
                         inset={GUTTER}
                       />
@@ -996,7 +1108,7 @@ export default function HomeScreen({
                   </View>
                 </View>
                 <SiteFooter />
-              </Screen>
+              </HomeScroller>
             ) : searching ? (
               <FlatList
                 // The first match is drawn in the head; the rows are the rest.
@@ -1043,37 +1155,66 @@ export default function HomeScreen({
           ]}
           onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
         >
-          {/* Opaque behind the wordmark only, then a long dissolve the
-              chips ride down.
-
-              This used to stay solid for 72 of its 128 pixels, which put
-              the chip row inside the chrome and left the whole dissolve
-              below them carrying nothing — a fade for its own sake, and
-              128 pixels of artwork spent on a bar. The opaque band now
-              ends under the wordmark, so the chips sit on the lip with
-              the picture coming up behind them. */}
-          <LinearGradient
-            colors={
-              searchOpen
-                ? [COLORS.navy, COLORS.navy, 'rgba(39,47,63,0)']
-                : [
-                    COLORS.navy,
-                    COLORS.darkGrey,
-                    'rgba(51,61,81,0.72)',
-                    'rgba(51,61,81,0.34)',
-                    'rgba(51,61,81,0)',
-                  ]
-            }
-            locations={searchOpen ? [0, 0.72, 1] : [0, 0.3, 0.52, 0.78, 1]}
-            style={StyleSheet.absoluteFill}
+          {/* Opaque behind the wordmark only, then a long dissolve over
+              the picture below it. The opaque band ends under the
+              wordmark so the artwork comes up behind the row rather than
+              being spent on a bar. Once the stage has scrolled away the
+              dissolve has nothing left to dissolve into, and gives way
+              to the solid layer beneath. */}
+          <Animated.View
+            style={[StyleSheet.absoluteFill, { opacity: fog }]}
             pointerEvents="none"
-          />
-          <GrainScrim style={StyleSheet.absoluteFill} solidAt="band" />
+          >
+            <LinearGradient
+              colors={
+                searchOpen
+                  ? [COLORS.navy, COLORS.navy, alpha(COLORS.navy, 0)]
+                  : [
+                      COLORS.navy,
+                      COLORS.darkGrey,
+                      alpha(COLORS.darkGrey, 0.72),
+                      alpha(COLORS.darkGrey, 0.34),
+                      alpha(COLORS.darkGrey, 0),
+                    ]
+              }
+              locations={searchOpen ? [0, 0.72, 1] : [0, 0.3, 0.52, 0.78, 1]}
+              style={StyleSheet.absoluteFill}
+            />
+            {/* Web only here. On a phone this band sits over the stage's
+                drifting artwork, and a masked layer over moving content
+                is re-rendered offscreen on every frame — the header was
+                paying that for the whole of the splash curtain's exit
+                and every second after. The page's own grain shows
+                through the dissolve instead. */}
+            {Platform.OS === 'web' ? (
+              <GrainScrim style={StyleSheet.absoluteFill} solidAt="band" />
+            ) : null}
+          </Animated.View>
+          <Animated.View
+            style={[
+              styles.headerSolid,
+              {
+                height: Math.max(headerHeight - SPACING.xl, 0),
+                opacity: solid,
+              },
+            ]}
+            pointerEvents="none"
+          >
+            {/* The page's own grain, so the bar reads as the page
+                continuing over the shelves rather than a slab laid on
+                them; and under it a short shadow instead of a rule, so
+                what slides beneath goes under an edge, not a cut. */}
+            <Textured fill />
+            <LinearGradient
+              colors={[alpha(COLORS.ink, 0.28), alpha(COLORS.ink, 0)]}
+              style={styles.headerSolidShade}
+            />
+          </Animated.View>
           {/* Search is a mode, not a field wedged between the wordmark
               and the icons: tapping the glass hands the whole row over to
               the query, and dismissing gives the row back. */}
           {searchOpen ? (
-            <View style={styles.titleRow}>
+            <View style={[styles.titleRow, backRoom && styles.titleRowBack]}>
               <SearchInput
                 value={query}
                 onChangeText={setQuery}
@@ -1082,43 +1223,57 @@ export default function HomeScreen({
                 autoFocus
                 onSubmit={keepSearch}
               />
-              <Pressable
+              <Touchable
                 onPress={closeSearch}
-                hitSlop={10}
-                accessibilityRole="button"
+                hitSlop="text"
+                style={styles.cancelHit}
                 accessibilityLabel="Close search"
               >
-                <Text style={styles.cancel}>Cancel</Text>
-              </Pressable>
+                <Text
+                  style={styles.cancel}
+                  maxFontSizeMultiplier={FONT_SCALE.label}
+                >
+                  Cancel
+                </Text>
+              </Touchable>
             </View>
           ) : (
             <View style={styles.titleRow}>
-              <Pressable
-                onPress={goHome}
-                style={styles.brand}
-                accessibilityRole="link"
-                accessibilityLabel="Sidequest home"
-              >
-                <Mark size={20} />
-                <Text style={styles.wordmark}>sidequest</Text>
-              </Pressable>
+              {backRoom ? (
+                <View style={styles.backRoom} />
+              ) : (
+                <Touchable
+                  onPress={goHome}
+                  hitSlop="text"
+                  style={styles.brand}
+                  accessibilityRole="link"
+                  accessibilityLabel="Sidequest home"
+                >
+                  <Mark size={20} />
+                  <Text
+                    style={styles.wordmark}
+                    maxFontSizeMultiplier={FONT_SCALE.display}
+                  >
+                    sidequest
+                  </Text>
+                </Touchable>
+              )}
+              {/* 44pt targets, where the glyphs alone were 29. The row
+                  pulls them out by their own slack so the glyphs, not
+                  the boxes, line up with the shelves' right edge. */}
               <View style={styles.headerIcons}>
-                <Ionicons
-                  name="search"
-                  size={21}
+                <IconButton
+                  icon="search-outline"
                   color={COLORS.lightGrey}
                   onPress={openSearch}
                   accessibilityLabel="Search games"
-                  style={styles.libraryButton}
                 />
                 {/* The one destination the tab bar does not carry. */}
-                <Ionicons
-                  name="person-circle-outline"
-                  size={23}
+                <IconButton
+                  icon="person-circle-outline"
                   color={COLORS.lightGrey}
                   onPress={() => router.push('/you')}
                   accessibilityLabel="You"
-                  style={styles.libraryButton}
                 />
               </View>
             </View>
@@ -1129,8 +1284,61 @@ export default function HomeScreen({
   );
 }
 
+/**
+ * Home's scroller: `Screen` on the web, where the document scrolls, and
+ * on native an animated ScrollView whose offset the header reads on the
+ * native thread. The same pull-to-refresh and home-indicator clearance
+ * `Screen` gives every other page.
+ */
+function HomeScroller({
+  children,
+  style,
+  onScroll,
+  refreshControl,
+  onRefresh,
+  bottom,
+}: {
+  children: React.ReactNode;
+  style: StyleProp<ViewStyle>;
+  onScroll: (...args: unknown[]) => void;
+  refreshControl: React.ReactElement<RefreshControlProps> | undefined;
+  onRefresh: () => Promise<unknown>;
+  bottom: number;
+}) {
+  if (Platform.OS === 'web') {
+    return (
+      <Screen style={style} onRefresh={onRefresh}>
+        {children}
+      </Screen>
+    );
+  }
+  return (
+    <Animated.ScrollView
+      style={styles.fill}
+      contentContainerStyle={[style, { paddingBottom: bottom }]}
+      showsVerticalScrollIndicator={false}
+      onScroll={onScroll}
+      scrollEventThrottle={16}
+      refreshControl={refreshControl}
+    >
+      {children}
+    </Animated.ScrollView>
+  );
+}
+
 const styles = StyleSheet.create({
   background: { flexGrow: 1, backgroundColor: COLORS.darkGrey },
+  fill: { flex: 1 },
+  /** A failure or an empty result, centred in a scroller of its own. */
+  statusPage: { flexGrow: 1 },
+  /**
+   * A chapter break: the row above keeps its own 32 beneath it, and this
+   * adds the rest of a chapter's 48.
+   */
+  chapter: {
+    marginTop: SPACING.xxl - SPACING.xl,
+    marginBottom: SPACING.md,
+  },
   container: { flex: 1 },
 
   // expanded
@@ -1199,7 +1407,7 @@ const styles = StyleSheet.create({
   compactShelves: {
     paddingHorizontal: GUTTER,
     paddingTop: SPACING.lg,
-    paddingBottom: SPACING.xl * 1.5,
+    paddingBottom: SPACING.xxl,
   },
   /** An offer, not an interruption: last thing before the footer. */
   /** A shelf-sized break: the shelf margin below, the page gutter at the sides. */
@@ -1234,30 +1442,56 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.xl,
   },
   headerFloatSearch: { paddingBottom: SPACING.sm },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  /**
+   * The header once the stage has gone: the page's own ground at row
+   * height, not navy. Navy was a band a shade darker than everything
+   * under it — a slab across the top of the screen that looked stuck
+   * on rather than part of the page.
+   */
+  headerSolid: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: alpha(COLORS.darkGrey, 0.96),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.stroke,
+  },
+  headerSolidShade: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    height: SPACING.md,
+  },
+  brand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    minHeight: TOUCH.min,
+  },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: SPACING.md,
     paddingHorizontal: GUTTER,
-    // Clear of the opaque band, so the chips land on the dissolve.
-    marginBottom: SPACING.md + 2,
   },
+  /** Clear of the native stack's back chevron, on a pushed section. */
+  titleRowBack: { paddingLeft: GUTTER + TOUCH.min },
+  backRoom: { width: TOUCH.min, height: TOUCH.min },
   wordmark: { ...WORDMARK, flexShrink: 0 },
   searchFull: { flex: 1, width: 'auto', maxWidth: undefined },
-  headerIcons: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  headerIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: -(TOUCH.min - ICON.lg) / 2,
+  },
+  cancelHit: { minHeight: TOUCH.min, justifyContent: 'center' },
   cancel: {
     ...TYPE.labelSmall,
     color: COLORS.lightGrey,
     paddingHorizontal: SPACING.xs,
-  },
-  libraryButton: { padding: 4 },
-  chips: {
-    alignItems: 'center',
-    paddingHorizontal: GUTTER,
-    gap: SPACING.sm,
-    height: 46,
   },
 
   list: { flexGrow: 1, paddingHorizontal: GUTTER },

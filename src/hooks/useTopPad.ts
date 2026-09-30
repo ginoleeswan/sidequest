@@ -19,7 +19,8 @@ import { SPACING } from '@/styles/theme';
  * genuinely differs by platform here, because the chrome does.
  *
  * @param hasBackButton Whether a floating back button sits over this
- * screen on native. True for anything pushed onto the stack.
+ * screen on native. True for anything pushed onto the stack; false for
+ * a tab root, whose wordmark row is laid out above the page.
  */
 export function useTopPad(hasBackButton: boolean): number {
   const insets = useSafeAreaInsets();
@@ -36,6 +37,13 @@ export function useTopPad(hasBackButton: boolean): number {
   // own back button over the top, and clears it the way a phone does.
   if (isExpanded && !hasBackButton) return SPACING.md;
 
-  const clears = hasBackButton || Platform.OS === 'web';
-  return insets.top + (clears ? SPACING.xl * 2 : SPACING.md);
+  if (hasBackButton || Platform.OS === 'web')
+    return insets.top + SPACING.xl * 2;
+
+  // A native tab root opens on its wordmark row, and that row sits in
+  // the flow above the page having already cleared the status bar. The
+  // page used to clear it a second time — sixty dead points between the
+  // brand and the title on every tab, the first thing the screenshots
+  // showed. What is left is only the air between a row and a heading.
+  return SPACING.sm;
 }

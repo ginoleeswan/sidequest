@@ -96,6 +96,22 @@ describe('the you screen', () => {
 });
 
 /**
+ * "Your pace" is a setting, so it is changed where it is shown. It used
+ * to throw the reader onto the Plan to find a dial under the verdict.
+ */
+describe('the pace row', () => {
+  it('changes the pace in place, without leaving', async () => {
+    await renderApp(<YouScreen />);
+    await fireEvent.press(screen.getByText('Your pace'));
+    await fireEvent.press(screen.getByLabelText('Hours a week: 12h'));
+    await waitFor(() =>
+      expect(store['sidequest.plan.pace']).toBe(JSON.stringify(12))
+    );
+    expect(router.push).not.toHaveBeenCalled();
+  });
+});
+
+/**
  * The three figures are doors, not a scoreboard: what is ahead, what you
  * finished, what you let go, each opening the screen that holds it. That
  * is the whole reason they are allowed to repeat numbers the Library and

@@ -5,6 +5,7 @@ import { Animated, StyleSheet } from 'react-native';
 import { mediaUri } from '@/api/rawg';
 import type { Movie } from '@/api/types';
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { DURATION, EASING } from '@/styles/motion';
 
 /**
@@ -22,6 +23,17 @@ import { DURATION, EASING } from '@/styles/motion';
  * unmounts it the moment the page changes.
  */
 export function StageTrailer({ movie }: { movie: Movie }) {
+  const reduced = useReducedMotion();
+  /*
+   * Footage nobody pressed play on is exactly the movement Reduce
+   * Motion asks to be spared, so under it the still stays a still -
+   * whichever page forgot to ask before mounting this.
+   */
+  if (reduced) return null;
+  return <Playing movie={movie} />;
+}
+
+function Playing({ movie }: { movie: Movie }) {
   const opacity = useAnimatedValue(0);
   const player = useVideoPlayer(mediaUri(movie.data.max) ?? '', (p) => {
     p.muted = true;

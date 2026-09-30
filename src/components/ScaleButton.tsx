@@ -1,12 +1,15 @@
 import {
   Animated,
   Pressable,
+  type AccessibilityActionEvent,
+  type AccessibilityActionInfo,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
 
 import { useAnimatedValue } from '@/hooks/useAnimatedValue';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { haptic as feel, type Haptic } from '@/lib/haptics';
 import { SPRING } from '@/styles/motion';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -29,6 +32,11 @@ interface Props {
    * network time, and by then the user has committed.
    */
   onPressIn?: () => void;
+  /** What the finger feels when the press lands. */
+  haptic?: Haptic;
+  accessibilityHint?: string;
+  accessibilityActions?: readonly AccessibilityActionInfo[];
+  onAccessibilityAction?: (event: AccessibilityActionEvent) => void;
 }
 
 /**
@@ -45,12 +53,24 @@ export function ScaleButton({
   hoverScale = 1,
   accessibilityLabel,
   onPressIn,
+  haptic,
+  accessibilityHint,
+  accessibilityActions,
+  onAccessibilityAction,
 }: Props) {
   const scale = useAnimatedValue(1);
+  const dim = useAnimatedValue(1);
   const reduced = useReducedMotion();
 
   const to = (value: number) => {
-    if (reduced) return;
+    if (reduced) {
+      // Reduce Motion asks for less movement, not for no answer. With
+      // the spring switched off this used to give no feedback at all,
+      // so every card went dead under the finger for exactly the people
+      // who had asked the phone to be calmer. A dim is not motion.
+      dim.setValue(value < 1 ? 0.7 : 1);
+      return;
+    }
     Animated.spring(scale, {
       toValue: value,
       ...SPRING.press,
@@ -62,7 +82,13 @@ export function ScaleButton({
     <AnimatedPressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      onPress={onPress}
+      accessibilityHint={accessibilityHint}
+      accessibilityActions={accessibilityActions}
+      onAccessibilityAction={onAccessibilityAction}
+      onPress={() => {
+        feel(haptic);
+        onPress();
+      }}
       onPressIn={() => {
         onPressIn?.();
         to(activeScale);
@@ -70,7 +96,7 @@ export function ScaleButton({
       onPressOut={() => to(hoverScale > 1 ? hoverScale : 1)}
       onHoverIn={() => hoverScale !== 1 && to(hoverScale)}
       onHoverOut={() => to(1)}
-      style={[style, { transform: [{ scale }] }]}
+      style={[style, { opacity: dim, transform: [{ scale }] }]}
     >
       {children}
     </AnimatedPressable>
