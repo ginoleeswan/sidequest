@@ -12,7 +12,7 @@
  * The export has to be one built as a tablet sees it — the wide layout
  * with no desk chrome — which `useBreakpoint` does when asked:
  *
- *   EXPO_PUBLIC_PREVIEW_TABLET=1 npx expo export --platform web --output-dir dist-ipad
+ *   EXPO_PUBLIC_PREVIEW_TABLET=1 npx expo export --platform web --clear --output-dir dist-ipad
  *   npm run shots:ipad           # → e2e/ipad-shots/<size>/<screen>.png
  *
  * Chrome is not WebKit and react-native-web is not UIKit, so what this

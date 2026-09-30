@@ -48,6 +48,20 @@ import { WORDMARK } from '@/styles/typography';
 const FOLD_BELOW = 1200;
 const RAIL_KEY = 'sidequest.rail.v1';
 
+/**
+ * Whether this build can ever stand on a tablet.
+ *
+ * Decided once, from two things the bundler already knows: the
+ * platform, and the iPad preview seam `useBreakpoint` reads. Both are
+ * inlined at build time, so on an ordinary web build this folds to
+ * `false`, the tablet branch below is unreachable, and the minifier
+ * drops `TabletShell` from a bundle that could never show it — the
+ * web pays for the sheet and the rail, not for a shell it has no tab
+ * bar to pair with. The preview export sets the seam and keeps it.
+ */
+const TABLET =
+  Platform.OS !== 'web' || process.env.EXPO_PUBLIC_PREVIEW_TABLET === '1';
+
 export function DesktopShell({
   activeKey,
   onHome,
@@ -88,7 +102,7 @@ export function DesktopShell({
   // The same question the page asked to get here, answered the same
   // way: the sidebar exists where the breakpoint says there is a desk.
   const { isDesk } = useBreakpoint();
-  if (!isDesk) {
+  if (TABLET && !isDesk) {
     return (
       <TabletShell bar={bar} onHome={onHome} search={search} flush={flush}>
         {children}

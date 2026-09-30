@@ -74,7 +74,7 @@ What ships:
 - **Threshold.** Native goes wide at 800 points (`BREAKPOINTS.tablet`): every iPad in portrait except the mini, and every iPad in landscape. The mini in portrait and a Split View pane keep the phone layout, which they are the size of. Rotation re-lays the page (everything reads `useWindowDimensions`).
 - **Short pages find the floor.** The native scroller now grows to the viewport, so a footer pins to the bottom of Import, Account and the legal pages instead of floating mid-screen with empty ground under it.
 
-How to look at it without a Mac: `EXPO_PUBLIC_PREVIEW_TABLET=1 npx expo export --platform web --output-dir dist-ipad && npm run shots:ipad` renders every screen at every iPad size (both orientations) into `e2e/ipad-shots/`. It is react-native-web in Chromium, so it shows the layout, not UIKit's chrome — the simulator run in step 5 confirms the rest.
+How to look at it without a Mac: `EXPO_PUBLIC_PREVIEW_TABLET=1 npx expo export --platform web --clear --output-dir dist-ipad && npm run shots:ipad` renders every screen at every iPad size (both orientations) into `e2e/ipad-shots/`. It is react-native-web in Chromium, so it shows the layout, not UIKit's chrome — the simulator run in step 5 confirms the rest.
 
 ### Decisions to make (defaults chosen; change if you disagree)
 

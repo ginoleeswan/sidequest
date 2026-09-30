@@ -114,7 +114,7 @@ wide layout without the web's sidebar, so the export has to be built the
 same way:
 
 ```bash
-EXPO_PUBLIC_PREVIEW_TABLET=1 npx expo export --platform web --output-dir dist-ipad
+EXPO_PUBLIC_PREVIEW_TABLET=1 npx expo export --platform web --clear --output-dir dist-ipad
 npm run shots:ipad     # → e2e/ipad-shots/<size>/<screen>.png
 ```
 
