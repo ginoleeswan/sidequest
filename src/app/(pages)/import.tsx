@@ -123,7 +123,7 @@ export default function ImportScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const topPad = useTopPad(true);
-  const { isExpanded } = useBreakpoint();
+  const { isDesk } = useBreakpoint();
   const { addGames } = useLibrary();
   const toast = useToast();
 
@@ -361,7 +361,7 @@ export default function ImportScreen() {
   return (
     <Textured style={styles.background}>
       <PageTitle>Import from Steam — Sidequest</PageTitle>
-      {isExpanded ? (
+      {isDesk ? (
         <AppHeader />
       ) : (
         <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>

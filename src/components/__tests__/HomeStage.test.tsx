@@ -18,6 +18,7 @@ jest.mock('@/hooks/useBreakpoint', () => ({
     width: 390,
     isCompact: true,
     isExpanded: false,
+    isDesk: false,
     columns: 2,
   })),
 }));
@@ -188,6 +189,7 @@ describe('the home stage', () => {
         width: 1280,
         isCompact: false,
         isExpanded: true,
+        isDesk: true,
         columns: 4,
       })
     );
@@ -196,6 +198,7 @@ describe('the home stage', () => {
         width: 390,
         isCompact: true,
         isExpanded: false,
+        isDesk: false,
         columns: 2,
       })
     );
@@ -308,6 +311,7 @@ describe('the stage trailer dwell', () => {
       width: 1280,
       isCompact: false,
       isExpanded: true,
+      isDesk: true,
       columns: 4,
     });
 
@@ -320,6 +324,7 @@ describe('the stage trailer dwell', () => {
       width: 390,
       isCompact: true,
       isExpanded: false,
+      isDesk: false,
       columns: 2,
     });
     jest.mocked(getMovies).mockClear();

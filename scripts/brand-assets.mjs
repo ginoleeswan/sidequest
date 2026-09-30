@@ -113,10 +113,11 @@ function mark({
  * glyph closer to two thirds of the tile than five sixths. The margin
  * is the design, not wasted space.
  */
-function icon({ maskable = false } = {}) {
-  const plate = maskable
-    ? `<rect width="100" height="100" fill="${NAVY}"/>`
-    : `<rect width="100" height="100" rx="22" fill="${NAVY}"/>`;
+function icon({ maskable = false, bleed = false } = {}) {
+  const plate =
+    maskable || bleed
+      ? `<rect width="100" height="100" fill="${NAVY}"/>`
+      : `<rect width="100" height="100" rx="22" fill="${NAVY}"/>`;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">${plate}${mark({ scale: maskable ? 0.66 : 0.72 })}</svg>`;
 }
 
@@ -279,6 +280,23 @@ await shoot(wrap(icon({ maskable: true }), 1024), {
   width: 1024,
   height: 1024,
   out: 'adaptive-icon.png',
+  dir: ASSETS,
+});
+/**
+ * The iOS icon is the `any` icon with its corners filled in.
+ *
+ * Apple draws its own corner mask over every icon, and App Store
+ * Connect refuses a 1024 icon with an alpha channel. Expo handles the
+ * second by flattening icon.png onto white — which turns the rounded
+ * plate's transparent corners into white ones, and Apple's mask is a
+ * touch larger than ours, so a white sliver showed at all four corners
+ * of the installed icon. Same plate, same mark at the same size, no
+ * rounding: the mask supplies it.
+ */
+await shoot(wrap(icon({ bleed: true }), 1024), {
+  width: 1024,
+  height: 1024,
+  out: 'icon-ios.png',
   dir: ASSETS,
 });
 await shoot(wrap(icon(), 64), {

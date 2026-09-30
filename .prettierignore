@@ -21,3 +21,5 @@ android
 targets/**/Assets.xcassets
 .vercel
 .playwright-mcp/
+dist-ipad
+e2e/ipad-shots

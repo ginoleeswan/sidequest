@@ -116,6 +116,16 @@ export const SHADOW_ROOM = {
 export const BREAKPOINTS = {
   /** At/above this width the app switches to a sidebar + grid layout. */
   expanded: 900,
+  /**
+   * Where a native screen is a tablet, not a phone.
+   *
+   * Lower than the web's, on purpose: the web spends up to 232 points
+   * of that width on the sidebar, while a native tablet has none and
+   * every point is the page's. An 11-inch iPad is 834 wide in portrait
+   * and should read as the tablet it is; the mini (744) and a Split
+   * View pane keep the phone layout, which they are the size of.
+   */
+  tablet: 800,
   wide: 1400,
 } as const;
 

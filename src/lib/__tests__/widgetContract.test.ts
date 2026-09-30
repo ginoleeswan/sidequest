@@ -340,7 +340,10 @@ describe('the fonts the widget target ships', () => {
  * correct thing to do with it, not a contract to keep.
  */
 describe('the keys the two binaries share', () => {
-  const bridge = readFileSync(join(__dirname, '..', 'widgetBridge.ts'), 'utf8');
+  const bridge = readFileSync(
+    join(__dirname, '..', 'widgetBridge.native.ts'),
+    'utf8'
+  );
   const swift = read('Shared.swift');
 
   const written = Array.from(

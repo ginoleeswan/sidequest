@@ -24,12 +24,18 @@ import { SPACING } from '@/styles/theme';
  */
 export function useTopPad(hasBackButton: boolean): number {
   const insets = useSafeAreaInsets();
-  const { isExpanded } = useBreakpoint();
+  const { isExpanded, isDesk } = useBreakpoint();
 
   // A desk page stands in the sidebar shell, whose column already pads
   // the top; forty-eight more was the clearance for a top bar that no
   // longer exists, and it read as a page that had forgotten to start.
-  if (isExpanded) return SPACING.md;
+  if (isDesk) return SPACING.md;
+
+  // A tablet's tab root stands in the shell too — under its brand bar,
+  // which has already cleared the status bar — so it starts the same
+  // way. A pushed screen on a tablet is not in the shell: it draws its
+  // own back button over the top, and clears it the way a phone does.
+  if (isExpanded && !hasBackButton) return SPACING.md;
 
   if (hasBackButton || Platform.OS === 'web')
     return insets.top + SPACING.xl * 2;

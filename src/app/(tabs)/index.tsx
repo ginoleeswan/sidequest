@@ -195,7 +195,7 @@ export default function HomeScreen({
     ? 'Sidequest — Discover your next game'
     : `${section.title} — Sidequest`;
 
-  const { isExpanded, columns } = useBreakpoint();
+  const { isExpanded, isDesk, columns } = useBreakpoint();
   const { height: windowHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const searchRef = useRef<TextInput | null>(null);
@@ -901,6 +901,12 @@ export default function HomeScreen({
                     />
                   </View>
                 </FadeInView>
+                {/* The desk browses from the sidebar. A tablet has the
+                    tab bar instead, so the sections stand where the
+                    phone keeps them: first under the stage. */}
+                {!isDesk && (
+                  <DiscoverRail onOpen={selectSection} inset={SPACING.xl} />
+                )}
                 <SeriesNews />
                 <RecentShelf inset={SPACING.xl} />
                 <Shelf

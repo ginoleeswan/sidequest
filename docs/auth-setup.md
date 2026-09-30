@@ -91,8 +91,18 @@ it uses the ID token flow and never touches this secret.
 
 Current secret expires: **19 Feb 2027**.
 
+## Account deletion
+
+`supabase/migrations/0004_delete_account.sql` adds `delete_account()`,
+the one function the app calls from Account → Delete account. It has to
+be applied to the live project (`supabase db push`, or the SQL editor)
+before a build that offers deletion goes anywhere near review — the
+App Store requires the button, and a button that returns "function not
+found" is worse than no button.
+
 ## Still to do
 
+- Apply migration 0004 to the live project (see above)
 - Publish the Google consent screen (currently testing-mode only)
 - Configure SMTP — "Confirm email" is on, and Supabase's shared sender
   is rate-limited and not for production

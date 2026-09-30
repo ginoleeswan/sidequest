@@ -61,6 +61,7 @@ Open in [Expo Go](https://expo.dev/go), an emulator, or press `w` for web.
 | `npm run test:icons`                 | every named icon draws from the subset font            |
 | `npm run test:data`                  | data-full screens say the sentences a reader acts on   |
 | `npm run test:perf`                  | 4G + 4x CPU: bytes, FCP, LCP, CLS against budgets      |
+| `npm run shots:ipad`                 | every screen at every iPad size, as PNGs (see below)   |
 | `npm run test:live`                  | sync against a real Supabase project (see below)       |
 | `npm run build`                      | sitemap + static web export into `dist/`               |
 | `node scripts/subset-icons.mjs`      | regenerate the Ionicons subset (after adding an icon)  |
@@ -105,6 +106,17 @@ It runs on plain Node rather than the app's jest preset, which matters:
 jest-expo installs React Native's `fetch`, and in a test process that is
 a stub which resolves with no status and no body — a suite that cannot
 reach the network while looking like it did.
+
+`shots:ipad` is the iPad review without a Mac: it renders the export at
+every iPad size Apple sells, portrait and landscape, and writes a
+screenshot per screen for a person to look at. Native gives a tablet the
+wide layout without the web's sidebar, so the export has to be built the
+same way:
+
+```bash
+EXPO_PUBLIC_PREVIEW_TABLET=1 npx expo export --platform web --clear --output-dir dist-ipad
+npm run shots:ipad     # → e2e/ipad-shots/<size>/<screen>.png
+```
 
 ## Deploy (Vercel)
 
@@ -171,6 +183,15 @@ e2e/            # the browser battery: hydration, a11y, perf, icons
 assets/         # fonts, icons, images
 docs/           # product spec, validation, screenshots
 ```
+
+## App Store
+
+Everything the iOS submission needs is under [`docs/app-store/`](./docs/app-store/):
+the audit and runbook (`SUBMISSION.md`), every listing field with the
+App Privacy and age-rating answers (`listing.md`), and the EAS Metadata
+file (`store.config.json`) that `eas metadata:push` reads.
+`scripts/store-screenshots.sh` captures the store screenshots from the
+simulator.
 
 ## Author
 

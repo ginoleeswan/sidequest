@@ -13,7 +13,10 @@ import { AuthProvider, useAuth } from '../auth';
 
 type Listener = (event: string, session: unknown) => void;
 const mockUnsubscribe = jest.fn();
-const mockSignOut = jest.fn(async () => ({ error: null }));
+const mockSignOut = jest.fn(async (_opts?: unknown) => ({ error: null }));
+const mockRpc = jest.fn(
+  async (_fn: string) => ({ error: null }) as { error: Error | null }
+);
 let mockListener: Listener | null = null;
 let mockGetSession: jest.Mock;
 
@@ -27,6 +30,7 @@ jest.mock('../supabase', () => ({
   // The real parser: the link-adoption test below feeds it real links.
   sessionFromUrl: jest.requireActual('../supabase').sessionFromUrl,
   getSupabase: async () => ({
+    rpc: (fn: string) => mockRpc(fn),
     auth: {
       setSession: (args: unknown) => mockSetSession(args),
       exchangeCodeForSession: (code: string) => mockExchangeCode(code),
@@ -35,7 +39,7 @@ jest.mock('../supabase', () => ({
         mockListener = fn;
         return { data: { subscription: { unsubscribe: mockUnsubscribe } } };
       },
-      signOut: () => mockSignOut(),
+      signOut: (opts?: unknown) => mockSignOut(opts),
       signInWithIdToken: (args: unknown) => mockSignInWithIdToken(args),
       signInWithOtp: (args: unknown) => mockSignInWithOtp(args),
       signInWithOAuth: (args: unknown) => mockSignInWithOAuth(args),
@@ -253,5 +257,32 @@ describe('AuthProvider', () => {
     // On a shared browser the next person must not open on the previous
     // person's synced shelves.
     expect(mockRemoveItem).toHaveBeenCalledWith('sidequest.query-cache.v1');
+  });
+
+  it('deleting the account asks the server first, then signs out locally', async () => {
+    const { result } = await setup();
+    await act(async () => {});
+    await act(async () => result.current.deleteAccount());
+    // The one function the migration exposes, and no argument: there
+    // is no other user to name.
+    expect(mockRpc).toHaveBeenCalledWith('delete_account');
+    // The token was issued to a user who no longer exists; asking the
+    // server to revoke it would be refused. Local only.
+    expect(mockSignOut).toHaveBeenCalledWith({ scope: 'local' });
+    // Same device hygiene as sign-out: the cache and the sync cursor go.
+    expect(mockRemoveItem).toHaveBeenCalledWith('sidequest.query-cache.v1');
+  });
+
+  it('a refused deletion leaves the session exactly where it was', async () => {
+    mockRpc.mockResolvedValueOnce({ error: new Error('permission denied') });
+    const { result } = await setup();
+    await act(async () => {});
+    await expect(
+      act(async () => result.current.deleteAccount())
+    ).rejects.toThrow('permission denied');
+    // A "deleted" state over an account that still exists is the worst
+    // outcome available, so nothing local moves either.
+    expect(mockSignOut).not.toHaveBeenCalled();
+    expect(result.current.session).toEqual(SESSION);
   });
 });

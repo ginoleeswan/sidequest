@@ -106,6 +106,21 @@ export function Screen({ children, style, onEndReached, onRefresh }: Props) {
    */
   const clearance = insets.bottom;
 
+  /**
+   * At least as tall as the scroller, so a footer can sit at the foot.
+   *
+   * `SiteFooter` ends every page with `marginTop: 'auto'`, which pins it
+   * to the bottom of whatever it is in — and a ScrollView's content is
+   * exactly as tall as its children unless told otherwise. On a phone
+   * every page runs past the fold and nobody notices. On an iPad, the
+   * short ones — Import before Steam is connected, the account page,
+   * a legal page — ended halfway down the screen with the footer
+   * floating in the middle and half a screen of empty ground under it.
+   * Growing the container to the viewport lets the footer find the
+   * bottom; a page taller than the viewport is unaffected.
+   */
+  const grow = { flexGrow: 1 };
+
   const onScroll = onEndReached
     ? (event: NativeSyntheticEvent<NativeScrollEvent>) => {
         const { contentOffset, layoutMeasurement, contentSize } =
@@ -122,7 +137,7 @@ export function Screen({ children, style, onEndReached, onRefresh }: Props) {
   return (
     <ScrollView
       style={styles.fill}
-      contentContainerStyle={[style, { paddingBottom: clearance }]}
+      contentContainerStyle={[grow, style, { paddingBottom: clearance }]}
       showsVerticalScrollIndicator={false}
       onScroll={onScroll}
       scrollEventThrottle={onScroll ? 64 : undefined}

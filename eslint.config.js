@@ -62,6 +62,13 @@ module.exports = defineConfig([
     },
   },
   {
-    ignores: ['dist/*', '.expo/*', 'node_modules/*', 'coverage/*'],
+    ignores: [
+      'dist/*',
+      'dist-ipad/*',
+      '.expo/*',
+      'node_modules/*',
+      'coverage/*',
+      'e2e/ipad-shots/*',
+    ],
   },
 ]);

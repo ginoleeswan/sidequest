@@ -43,6 +43,7 @@ const EXPLORE_COMPACT = EXPLORE.filter((link) => link.href === '/about');
 const LEGAL = [
   { label: 'Terms', href: '/terms' },
   { label: 'Privacy', href: '/privacy' },
+  { label: 'Support', href: '/support' },
 ] as const;
 
 function LinkColumn({
@@ -268,7 +269,7 @@ export function SiteFooter({
    */
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const { isCompact } = useBreakpoint();
+  const { isDesk } = useBreakpoint();
   /**
    * The ghost wordmark, sized to its stage. Fixed at 128 it overflowed
    * a phone and the visible tail read as a different product name; the
@@ -287,7 +288,9 @@ export function SiteFooter({
           // The safe area is the tab bar's to pay on a phone; paying it
           // here too left a band of nothing between the sign-off and
           // the bar.
-          { paddingBottom: (isCompact ? 0 : insets.bottom) + SPACING.lg },
+          // Native pays the home indicator in its scroller already; only
+          // the web's desk has nothing else standing under this.
+          { paddingBottom: (isDesk ? insets.bottom : 0) + SPACING.lg },
         ]}
       >
         <Text
@@ -333,7 +336,9 @@ export function SiteFooter({
             <View style={styles.cols}>
               <LinkColumn
                 heading="Explore"
-                links={isCompact ? EXPLORE_COMPACT : EXPLORE}
+                // The roots are in the tab bar on native, whatever the
+                // width; only the desk has nowhere else to list them.
+                links={isDesk ? EXPLORE : EXPLORE_COMPACT}
               />
               <LinkColumn heading="Legal" links={LEGAL} />
             </View>

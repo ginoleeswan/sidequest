@@ -46,6 +46,7 @@ const STATIC = [
     })),
   { path: '/terms', changefreq: 'yearly', priority: '0.3' },
   { path: '/privacy', changefreq: 'yearly', priority: '0.3' },
+  { path: '/support', changefreq: 'monthly', priority: '0.3' },
 ];
 
 /** Enough to be useful to a crawler without pretending to be a catalogue. */

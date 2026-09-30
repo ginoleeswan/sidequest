@@ -11,6 +11,7 @@ jest.mock('@/hooks/useBreakpoint', () => ({
     width: 390,
     isCompact: true,
     isExpanded: false,
+    isDesk: false,
     columns: 2,
   })),
 }));
@@ -180,6 +181,7 @@ describe('the game screen', () => {
       width: 1280,
       isCompact: false,
       isExpanded: true,
+      isDesk: true,
       columns: 4,
     });
     await renderApp(<GameInfoScreen />);

@@ -1,7 +1,12 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { publishArt, publishPlan, clearWidgets, KINDS } from '../widgetBridge';
+import {
+  publishArt,
+  publishPlan,
+  clearWidgets,
+  KINDS,
+} from '../widgetBridge.native';
 import type { PlanDay } from '../widgetData';
 
 /**

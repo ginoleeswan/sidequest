@@ -76,7 +76,7 @@ export default function SharedPlanScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const topPad = useTopPad(true);
-  const { isExpanded } = useBreakpoint();
+  const { isDesk } = useBreakpoint();
   const params = useLocalSearchParams<{ p?: string }>();
 
   // The plan is on the URL, and the pre-rendered HTML was built without
@@ -91,7 +91,7 @@ export default function SharedPlanScreen() {
   return (
     <Textured style={styles.background}>
       <PageTitle>A plan — Sidequest</PageTitle>
-      {isExpanded ? (
+      {isDesk ? (
         <AppHeader />
       ) : (
         <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>

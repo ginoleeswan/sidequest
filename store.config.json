@@ -1,0 +1,66 @@
+{
+  "configVersion": 0,
+  "apple": {
+    "version": "1.0.0",
+    "copyright": "2026 Gino Swanepoel",
+    "categories": ["ENTERTAINMENT", "UTILITIES"],
+    "release": {
+      "automaticRelease": false,
+      "phasedRelease": false
+    },
+    "info": {
+      "en-US": {
+        "title": "Sidequest",
+        "subtitle": "Your backlog, minus the guilt",
+        "description": "Sidequest is for the adult who still loves games and has almost no time left for them. You own hundreds. You get forty-five minutes after bedtime. Sidequest tells you what you can actually finish, and gives you permission to let the rest go.\n\nTONIGHT\nOne decision, made for you: the game that fits the evening you actually have, with how far you are through it and how many evenings are left. Open the app, read one line, go and play.\n\nTHE PLAN\nSet your pace, or connect Steam and let your real hours set it for you. Sidequest reads how long each game takes and lays your library across the weeks ahead: what fits, what's on the edge, and what was never going to fit — said plainly, so you can drop it without guilt.\n\nCONNECT STEAM\nPaste your profile and your library arrives with hours played, so progress and pace are measured instead of guessed. No password, no login through us: Steam's public API only.\n\nMY LIBRARY\nA shelf, not a to-do list. Sort games into ahead, playing and finished; add notes, tags, ratings and deadlines; import a CSV; correct any game's length and Sidequest will use your number.\n\nWIDGETS\nTonight's pick on your Home Screen and Lock Screen. This week as an agenda of evenings. The month as a horizon with deadlines drawn as weather. The year as your Memcard. They never go online — the app writes the plan, the widgets read it.\n\nYOUR MEMCARD\nEvery finished game fills one block on a memory card, stamped ROLL CREDITS. Share the year, or the month, as one image.\n\nALSO\n• Evenings written into a calendar of their own, if you want them there\n• Reminders for a planned evening or a deadline — sparse by design\n• Trailers, screenshots, live streams and store links for every game\n• Backlog amnesty: archive the pile in one tap\n• Works entirely without an account. Sign in only if you want your library and plan on another device; delete the account from the app whenever you like\n\nGame data from RAWG, IGDB, Steam, SteamGridDB and Twitch.",
+        "keywords": [
+          "backlog",
+          "games",
+          "planner",
+          "steam",
+          "time to beat",
+          "widget",
+          "gaming",
+          "tracker",
+          "library",
+          "finish",
+          "evening",
+          "howlongtobeat"
+        ],
+        "releaseNotes": "The first release. Tonight's pick, the plan, Steam connect, the library, widgets for tonight, the week, the month and the year, and your Memcard.",
+        "promoText": "Connect Steam, see how much time you really have, and get a plan for the games you'll actually finish. Widgets for tonight, this week and the month.",
+        "privacyPolicyUrl": "https://gosidequest.vercel.app/privacy",
+        "supportUrl": "https://gosidequest.vercel.app/support",
+        "marketingUrl": "https://gosidequest.vercel.app"
+      }
+    },
+    "advisory": {
+      "alcoholTobaccoOrDrugUseOrReferences": "NONE",
+      "contests": "NONE",
+      "gamblingSimulated": "NONE",
+      "horrorOrFearThemes": "INFREQUENT_OR_MILD",
+      "matureOrSuggestiveThemes": "INFREQUENT_OR_MILD",
+      "medicalOrTreatmentInformation": "NONE",
+      "profanityOrCrudeHumor": "INFREQUENT_OR_MILD",
+      "sexualContentGraphicAndNudity": "NONE",
+      "sexualContentOrNudity": "INFREQUENT_OR_MILD",
+      "violenceCartoonOrFantasy": "INFREQUENT_OR_MILD",
+      "violenceRealistic": "INFREQUENT_OR_MILD",
+      "violenceRealisticProlongedGraphicOrSadistic": "NONE",
+      "gambling": false,
+      "unrestrictedWebAccess": false,
+      "kidsAgeBand": null,
+      "seventeenPlus": false
+    },
+    "review": {
+      "firstName": "Gino",
+      "lastName": "Swanepoel",
+      "email": "REPLACE_WITH_APP_STORE_CONNECT_EMAIL",
+      "phone": "REPLACE_WITH_PHONE_E164",
+      "demoUsername": "",
+      "demoPassword": "",
+      "demoRequired": false,
+      "notes": "Sidequest is a game backlog planner. Nothing in the app is gated behind an account: the home screen, search, every game page, the library, the plan and the widgets all work signed out, so no demo credentials are needed.\n\nSign-in exists only to sync the library to another device. It offers Sign in with Apple, Google, and an emailed magic link (there is no password sign-in, so no demo password exists). To exercise it, use Sign in with Apple with any Apple ID: You tab → Account → Continue with Apple. Account deletion is on the same screen: Account → Delete account → Delete for good. It deletes the account and all synced data on the server immediately.\n\nTo see the plan with real data: The Plan tab → Connect Steam → paste a Steam profile URL or vanity name whose game details are public, for example REPLACE_WITH_PUBLIC_STEAM_VANITY. Or simply save a few games from the home screen and set a pace on The Plan; Tonight and the week fill in immediately.\n\nWidgets: after saving a few games and opening The Plan once, add the Sidequest widgets (Tonight, This week, This month, The year) from the Home Screen widget gallery.\n\nCalendar and notification permissions are requested only when the user asks for those features (The Plan → calendar / reminders), never at launch.\n\nGame titles, artwork and video are licensed third-party data from the RAWG, IGDB, Steam, SteamGridDB and Twitch APIs, used under their API terms with attribution in the app."
+    }
+  }
+}

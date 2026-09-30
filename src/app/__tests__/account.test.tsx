@@ -1,4 +1,4 @@
-import { fireEvent, screen } from '@testing-library/react-native';
+import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 
 import AccountScreen from '../(pages)/account';
 import { useAuth } from '@/lib/auth';
@@ -21,6 +21,7 @@ const unconfigured = { session: null, available: false };
 const signedIn = {
   session: { user: { id: 'user-1', email: 'you@example.com' } },
   available: true,
+  deleteAccount: jest.fn(async () => undefined),
 };
 
 beforeAll(() => {
@@ -55,7 +56,10 @@ describe('the account screen', () => {
   });
 
   describe('signed in', () => {
-    beforeEach(() => mockedAuth.mockReturnValue(signedIn));
+    beforeEach(() => {
+      signedIn.deleteAccount.mockClear();
+      mockedAuth.mockReturnValue(signedIn);
+    });
 
     it('names what does not travel, not only what does', async () => {
       // The screen used to claim SYNCED unconditionally while nothing
@@ -128,6 +132,45 @@ describe('the account screen', () => {
       await renderApp(<AccountScreen />);
       fireEvent.press(screen.getByText('Sync now'));
       expect(syncNow).toHaveBeenCalled();
+    });
+
+    it('offers deletion, but only behind a second press that says what goes', async () => {
+      await renderApp(<AccountScreen />);
+      // Nothing decisive on first render: no server call is one press away.
+      expect(screen.queryByText('Delete for good')).toBeNull();
+      await fireEvent.press(screen.getByText('Delete account'));
+      await waitFor(() =>
+        expect(screen.getByText('Delete this account?')).toBeTruthy()
+      );
+      expect(
+        screen.getByText(/Nothing on this device is deleted/)
+      ).toBeTruthy();
+      expect(signedIn.deleteAccount).not.toHaveBeenCalled();
+    });
+
+    it('a change of mind costs nothing', async () => {
+      await renderApp(<AccountScreen />);
+      await fireEvent.press(screen.getByText('Delete account'));
+      await waitFor(() => expect(screen.getByText('Keep it')).toBeTruthy());
+      await fireEvent.press(screen.getByText('Keep it'));
+      await waitFor(() =>
+        expect(screen.queryByText('Delete for good')).toBeNull()
+      );
+      expect(signedIn.deleteAccount).not.toHaveBeenCalled();
+    });
+
+    it('the second press is the one that deletes', async () => {
+      await renderApp(<AccountScreen />);
+      await fireEvent.press(screen.getByText('Delete account'));
+      await waitFor(() =>
+        expect(screen.getByText('Delete for good')).toBeTruthy()
+      );
+      await fireEvent.press(screen.getByText('Delete for good'));
+      await waitFor(() =>
+        expect(signedIn.deleteAccount).toHaveBeenCalledTimes(1)
+      );
+      // And says so, in the same words sign-out uses for the same fact.
+      expect(screen.getByText(/everything stayed on this device/)).toBeTruthy();
     });
   });
 });

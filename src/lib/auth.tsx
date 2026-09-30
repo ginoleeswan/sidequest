@@ -34,6 +34,30 @@ interface AuthValue {
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
+  /**
+   * Deletes the account on the server — and everything synced to it —
+   * then signs this device out. The device's own copy of the library
+   * stays, exactly as it does on sign-out.
+   */
+  deleteAccount: () => Promise<void>;
+}
+
+/**
+ * What leaving an account means for this device, whichever way it
+ * happens.
+ *
+ * The persisted query cache is the one thing that DOES go: it can hold
+ * synced shelves, and on a shared browser the next person would see
+ * the previous person's games painted on first frame. It is a cache —
+ * dropping it costs a refetch, nothing more.
+ *
+ * And where sync had got to. The library stays — it is this device's —
+ * but the cursor belongs to the account that just left, and handing it
+ * to the next one would skip every row written before this moment.
+ */
+function forgetAccountOnDevice() {
+  kv.removeItem('sidequest.query-cache.v1');
+  forgetSyncCursors();
 }
 
 const AuthContext = createContext<AuthValue | null>(null);
@@ -249,17 +273,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signOut: async () => {
         const client = await getSupabase();
         await client.auth.signOut();
-        // The persisted query cache is the one thing that DOES go: it
-        // can hold synced shelves, and on a shared browser the next
-        // person would see the previous person's games painted on first
-        // frame. It is a cache — dropping it costs a refetch, nothing
-        // more, and the device-owned library above is untouched.
-        kv.removeItem('sidequest.query-cache.v1');
-        // And where sync had got to. The library stays — it is this
-        // device's — but the cursor belongs to the account that just
-        // left, and handing it to the next one would skip every row
-        // written before this moment.
-        forgetSyncCursors();
+        forgetAccountOnDevice();
+      },
+
+      /**
+       * Deletion is sign-out with the server side removed first.
+       *
+       * `delete_account` (supabase/migrations/0004) deletes the caller's
+       * own auth row, and the schema cascades from there — profile,
+       * library, durations, sessions, drops, preferences, in one
+       * statement. If the server refuses, nothing here changes and the
+       * error goes to the screen: a "deleted" toast over an account that
+       * still exists would be the worst outcome available.
+       *
+       * The sign-out that follows is local only. The token this device
+       * holds was issued to a user who no longer exists, so asking the
+       * server to revoke it would be refused — and there is nothing left
+       * on the server to revoke.
+       */
+      deleteAccount: async () => {
+        const client = await getSupabase();
+        const { error } = await client.rpc('delete_account');
+        if (error) throw error;
+        await client.auth.signOut({ scope: 'local' });
+        forgetAccountOnDevice();
       },
     }),
     [session, loading]

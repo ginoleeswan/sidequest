@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppHeader } from '@/components/AppHeader';
@@ -13,6 +14,7 @@ import { Screen } from '@/components/Screen';
 import { SignInRows } from '@/components/SignInRows';
 import { SiteFooter } from '@/components/SiteFooter';
 import { Textured } from '@/components/Textured';
+import { useToast } from '@/components/Toast';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useTopPad } from '@/hooks/useTopPad';
 import { useAuth } from '@/lib/auth';
@@ -98,6 +100,78 @@ function stuckLine(
   return `${list} — the server would not accept ${stuck.length === 1 ? 'it' : 'them'} (${stuck[0].reason}). Everything else on your account is up to date. Editing the game tries again.`;
 }
 
+/**
+ * Deleting the account, as two presses rather than a system alert.
+ *
+ * The App Store requires that an account can be deleted from inside
+ * the app, and a native alert would do — but this screen is also a web
+ * page, and the same control has to work there. Two presses in place
+ * gives the confirmation a full sentence's worth of room to say what
+ * goes and what stays, which a dialog's one line never could. The
+ * decisive button is named for what it does, not "OK".
+ */
+function DeleteAccount({ onDelete }: { onDelete: () => Promise<void> }) {
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const toast = useToast();
+
+  const run = async () => {
+    setBusy(true);
+    try {
+      await onDelete();
+      toast('Account deleted — everything stayed on this device');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      toast(`Could not delete the account — ${message}`);
+      setBusy(false);
+      setConfirming(false);
+    }
+  };
+
+  if (!confirming) {
+    return (
+      <Pressable
+        onPress={() => setConfirming(true)}
+        accessibilityRole="button"
+        style={styles.deleteRow}
+      >
+        <Text style={styles.deleteLabel}>Delete account</Text>
+      </Pressable>
+    );
+  }
+
+  return (
+    <View style={styles.confirm}>
+      <Text style={styles.confirmTitle}>Delete this account?</Text>
+      <Text style={styles.confirmBody}>
+        It removes your account and everything synced to it from our servers,
+        for good. Nothing on this device is deleted — your library and plan stay
+        here, signed out.
+      </Text>
+      <View style={styles.confirmRow}>
+        <Pressable
+          onPress={run}
+          disabled={busy}
+          accessibilityRole="button"
+          style={[styles.confirmButton, busy && styles.confirmButtonBusy]}
+        >
+          <Text style={styles.confirmButtonLabel}>
+            {busy ? 'Deleting…' : 'Delete for good'}
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setConfirming(false)}
+          disabled={busy}
+          accessibilityRole="button"
+          style={styles.keep}
+        >
+          <Text style={styles.keepLabel}>Keep it</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
 const EYEBROW: Record<SyncStatus['state'], string> = {
   idle: 'SIGNED IN',
   syncing: 'SYNCING',
@@ -108,9 +182,9 @@ const EYEBROW: Record<SyncStatus['state'], string> = {
 export default function AccountScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isExpanded } = useBreakpoint();
+  const { isDesk } = useBreakpoint();
   const topPad = useTopPad(true);
-  const { session, available } = useAuth();
+  const { session, available, deleteAccount } = useAuth();
   const { status, stuck, syncNow } = useSync();
   const { entries } = useLibrary();
 
@@ -119,7 +193,7 @@ export default function AccountScreen() {
   return (
     <Textured style={styles.background}>
       <PageTitle>Account — Sidequest</PageTitle>
-      {isExpanded ? (
+      {isDesk ? (
         <AppHeader />
       ) : (
         <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
@@ -222,6 +296,8 @@ export default function AccountScreen() {
                   leaves every one of these lists here.
                 </Text>
 
+                {session && <DeleteAccount onDelete={deleteAccount} />}
+
                 {!session && (
                   <Text style={styles.fine}>
                     Signing in means you accept the{' '}
@@ -318,6 +394,44 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
     ...Platform.select({ web: { cursor: 'pointer' } }),
   },
+
+  deleteRow: {
+    marginTop: SPACING.xl,
+    paddingVertical: SPACING.sm,
+    alignSelf: 'flex-start',
+    ...Platform.select({ web: { cursor: 'pointer' } }),
+  },
+  deleteLabel: { ...TYPE.label, color: COLORS.coral },
+  confirm: {
+    marginTop: SPACING.xl,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.coral,
+    gap: SPACING.sm,
+  },
+  confirmTitle: { ...TYPE.label, color: COLORS.white },
+  confirmBody: { ...TYPE.caption, color: COLORS.mediumGrey },
+  confirmRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    marginTop: SPACING.xs,
+  },
+  confirmButton: {
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.coral,
+    ...Platform.select({ web: { cursor: 'pointer' } }),
+  },
+  confirmButtonBusy: { opacity: 0.6 },
+  confirmButtonLabel: { ...TYPE.label, color: COLORS.navy },
+  keep: {
+    paddingVertical: SPACING.sm,
+    ...Platform.select({ web: { cursor: 'pointer' } }),
+  },
+  keepLabel: { ...TYPE.label, color: COLORS.mediumGrey },
 });
 
 /** One bad screen degrades locally rather than blanking the app. */

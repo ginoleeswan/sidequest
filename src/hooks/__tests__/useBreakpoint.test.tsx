@@ -42,19 +42,33 @@ describe('useBreakpoint', () => {
       const bp = await at(width);
       expect(bp.columns).toBe(columns);
       expect(bp.isExpanded).toBe(expanded);
+      expect(bp.isDesk).toBe(expanded);
       expect(bp.isCompact).toBe(!expanded);
     }
   );
 
   /**
-   * The desk is a web layout. A tablet gets the phone's layout at the
-   * tablet's column count — never the sidebar shell, which duplicates
-   * the native tab bar and has no safe-area clearance.
+   * A tablet is wide, and is not a desk.
+   *
+   * The layout follows the width on every platform; the sidebar shell
+   * is the web's alone. An 11-inch iPad in portrait (834) is a tablet;
+   * the mini in portrait (744) and a Split View pane are phones.
    */
-  it('never expands on native, however wide the screen', async () => {
-    const bp = await at(1024);
-    expect(bp.isExpanded).toBe(false);
-    expect(bp.isCompact).toBe(true);
-    expect(bp.columns).toBe(4);
-  });
+  it.each([
+    [390, false, 2],
+    [744, false, 4],
+    [834, true, 4],
+    [1024, true, 4],
+    [1194, true, 5],
+    [1366, true, 5],
+  ])(
+    'on native, %spt → expanded=%s, %s columns',
+    async (width, expanded, columns) => {
+      const bp = await at(width);
+      expect(bp.isExpanded).toBe(expanded);
+      expect(bp.isCompact).toBe(!expanded);
+      expect(bp.isDesk).toBe(false);
+      expect(bp.columns).toBe(columns);
+    }
+  );
 });

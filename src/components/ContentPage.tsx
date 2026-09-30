@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppHeader } from './AppHeader';
@@ -30,11 +30,11 @@ export function ContentPage({
 }: Props) {
   const insets = useSafeAreaInsets();
   const topPad = useTopPad(true);
-  const { isExpanded } = useBreakpoint();
+  const { isDesk } = useBreakpoint();
   return (
     <Textured style={styles.background}>
       <PageTitle>{`${documentTitle ?? title} — Sidequest`}</PageTitle>
-      {isExpanded ? (
+      {isDesk ? (
         <AppHeader />
       ) : (
         <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
@@ -74,7 +74,27 @@ export function H({ children }: { children: React.ReactNode }) {
   return <Text style={styles.h}>{children}</Text>;
 }
 
+/** An outbound link inside a paragraph: the system browser, both platforms. */
+export function A({ href, children }: { href: string; children: string }) {
+  return (
+    <Text
+      style={styles.a}
+      accessibilityRole="link"
+      onPress={() => {
+        void Linking.openURL(href);
+      }}
+    >
+      {children}
+    </Text>
+  );
+}
+
 const styles = StyleSheet.create({
+  a: {
+    color: COLORS.lightGrey,
+    textDecorationLine: 'underline',
+    ...Platform.select({ web: { cursor: 'pointer' } }),
+  },
   background: { flexGrow: 1, backgroundColor: COLORS.darkGrey },
   backButton: { position: 'absolute', left: SPACING.lg, zIndex: 30 },
   scroll: { flexGrow: 1 },

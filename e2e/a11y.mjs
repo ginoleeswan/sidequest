@@ -33,6 +33,7 @@ const ROUTES = [
   '/by/developer?id=9&name=Supergiant%20Games',
   '/about',
   '/privacy',
+  '/support',
 ];
 const VIEWPORTS = [
   { name: 'mobile', width: 390, height: 844, isMobile: true },

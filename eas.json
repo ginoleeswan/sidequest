@@ -70,6 +70,12 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleTeamId": "A85929B4HV",
+        "ascAppId": "REPLACE_WITH_APP_STORE_CONNECT_APP_ID",
+        "metadataPath": "./store.config.json"
+      }
+    }
   }
 }

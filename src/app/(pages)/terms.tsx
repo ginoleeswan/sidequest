@@ -3,23 +3,32 @@ import { RouteError } from '@/components/RouteError';
 
 export default function TermsScreen() {
   return (
-    <ContentPage title="Terms of Use" updated="August 2026">
+    <ContentPage title="Terms of Use" updated="September 2026">
       <P>
-        Sidequest is a free, independent game-discovery site provided as-is. By
-        using it you agree to the points below.
+        Sidequest is a free, independent app and website for planning what to
+        play, provided as-is. By using it you agree to the points below.
       </P>
       <H>The service</H>
       <P>
-        Sidequest displays video game information for personal, non-commercial
-        discovery. We don’t sell games — store links take you to third-party
-        storefronts governed by their own terms.
+        Sidequest shows video game information and helps you plan your own time
+        around it, for personal, non-commercial use. We don’t sell games — store
+        links take you to third-party storefronts governed by their own terms.
+      </P>
+      <H>Your account</H>
+      <P>
+        An account is optional. If you create one, you are responsible for the
+        sign-in method you use and for what you sync to it. You can delete it
+        from the app at any time, which removes the account and everything
+        synced to it. We may remove an account that is used to abuse the
+        service.
       </P>
       <H>The data</H>
       <P>
         Game titles, artwork, and metadata belong to their respective publishers
-        and are provided via the RAWG API under RAWG’s terms. Accuracy isn’t
-        guaranteed: release dates, scores, and availability can change or be
-        wrong.
+        and are provided via the RAWG, IGDB, Steam, SteamGridDB and Twitch APIs
+        under their terms. Accuracy isn’t guaranteed: release dates, lengths,
+        scores, and availability can change or be wrong, and a plan is an
+        estimate, not a promise.
       </P>
       <H>No warranty</H>
       <P>

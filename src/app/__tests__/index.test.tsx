@@ -13,15 +13,27 @@ jest.mock('@/hooks/useBreakpoint', () => ({
     width: 1280,
     isCompact: false,
     isExpanded: true,
+    isDesk: true,
     columns: 4,
   })),
 }));
+
+/** An iPad: the wide layout, and a tab bar instead of a sidebar. */
+const tablet = () =>
+  jest.mocked(useBreakpoint).mockReturnValue({
+    width: 1024,
+    isCompact: false,
+    isExpanded: true,
+    isDesk: false,
+    columns: 4,
+  });
 
 const compact = () =>
   jest.mocked(useBreakpoint).mockReturnValue({
     width: 390,
     isCompact: true,
     isExpanded: false,
+    isDesk: false,
     columns: 2,
   });
 
@@ -68,6 +80,7 @@ beforeEach(() => {
     width: 1280,
     isCompact: false,
     isExpanded: true,
+    isDesk: true,
     columns: 4,
   });
   for (const k of Object.keys(store)) delete store[k];
@@ -239,6 +252,19 @@ describe('the home screen', () => {
     await waitFor(() =>
       expect(screen.queryByText(tonightsShape(Date.now()).title)).toBeNull()
     );
+  });
+
+  it('a tablet keeps the wide storefront and browses from a rail, not a sidebar', async () => {
+    tablet();
+    await renderApp(<HomeScreen />);
+    // The shelf and the browse chip — no third copy in a sidebar nav.
+    await waitFor(() =>
+      expect(screen.getAllByText('Trending now').length).toBe(2)
+    );
+    expect(screen.getByText('Critically acclaimed')).toBeTruthy();
+    expect(screen.queryByText('My Library')).toBeNull();
+    // The bar carries the brand and You where the tab bar cannot.
+    expect(screen.getByLabelText('You')).toBeTruthy();
   });
 
   it('drops the sidebar on a phone', async () => {

@@ -46,7 +46,7 @@ export default function MemcardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const topPad = useTopPad(true);
-  const { isExpanded, width } = useBreakpoint();
+  const { isExpanded, isDesk, width } = useBreakpoint();
   const { entries } = useLibrary();
   const { durationOf } = useDurations();
   const toast = useToast();
@@ -171,7 +171,7 @@ export default function MemcardScreen() {
   return (
     <Textured style={styles.background}>
       <PageTitle>{`Your ${shown} — Sidequest`}</PageTitle>
-      {isExpanded ? (
+      {isDesk ? (
         <AppHeader />
       ) : (
         <View style={[styles.backButton, { top: insets.top + SPACING.sm }]}>
